@@ -271,14 +271,6 @@ const AdsConfig = () => {
                     <h1>Magick AD</h1>
                     <p className="description">广告配置与投放规则管理</p>
                 </div>
-                <Button
-                    variant="primary"
-                    onClick={handleSave}
-                    isBusy={isSaving}
-                    disabled={isSaving}
-                >
-                    {isSaving ? '保存中...' : '保存更改'}
-                </Button>
             </div>
 
             {notice && (
@@ -298,7 +290,7 @@ const AdsConfig = () => {
                 </Notice>
             )}
 
-            <div className="magick-ad-layout">
+            <div className="magick-ad-grid">
                 <aside className="magick-ad-sidebar">
                     <Card>
                         <CardBody>
@@ -354,236 +346,328 @@ const AdsConfig = () => {
                     </Card>
                 </aside>
 
-                <section className="magick-ad-detail">
-                    {!selectedAd && (
-                        <Card>
-                            <CardBody>
-                                <p>请选择一个广告组进行配置。</p>
-                            </CardBody>
-                        </Card>
-                    )}
-                    {selectedAd && (
-                        <Card>
-                            <CardBody>
-                                <Panel>
-                                    <PanelBody title="基础信息" initialOpen>
-                                        <TextControl
-                                            label="广告名称"
-                                            value={selectedAd.name || ''}
-                                            onChange={(value) =>
-                                                updateAdGroup(selectedAd.id, {
-                                                    name: value,
-                                                })
-                                            }
-                                        />
-                                        <ToggleControl
-                                            label="启用此广告"
-                                            checked={
-                                                selectedAd.options?.enabled ??
-                                                true
-                                            }
-                                            onChange={(value) =>
-                                                handleUpdateOptions({
-                                                    enabled: value,
-                                                })
-                                            }
-                                        />
-                                    </PanelBody>
+                <section className="magick-ad-main">
+                    <Card className="magick-ad-main-card">
+                        <CardBody>
+                            {!selectedAd && (
+                                <div className="magick-ad-empty">
+                                    <p>请选择一个广告组进行配置。</p>
+                                </div>
+                            )}
+                            {selectedAd && (
+                                <TabPanel
+                                    className="magick-ad-inner-tabs"
+                                    tabs={[
+                                        { name: 'content', title: '内容' },
+                                        { name: 'rules', title: '配置' },
+                                    ]}
+                                >
+                                    {(tab) =>
+                                        tab.name === 'content' ? (
+                                            <Panel>
+                                                <PanelBody
+                                                    title="内容配置"
+                                                    initialOpen
+                                                >
+                                                    <TextControl
+                                                        label="跳转链接"
+                                                        value={
+                                                            selectedAd.content
+                                                                ?.link || ''
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateContent(
+                                                                {
+                                                                    link: value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <TextControl
+                                                        label="HTML 内容"
+                                                        value={
+                                                            selectedAd.content
+                                                                ?.html || ''
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateContent(
+                                                                {
+                                                                    html: value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <div className="magick-ad-field">
+                                                        <p className="magick-ad-field__label">
+                                                            图片
+                                                        </p>
+                                                        <ImagePicker
+                                                            value={
+                                                                selectedAd
+                                                                    .content
+                                                                    ?.image ||
+                                                                null
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateContent(
+                                                                    {
+                                                                        image: value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
+                                                </PanelBody>
+                                            </Panel>
+                                        ) : (
+                                            <Panel>
+                                                <PanelBody
+                                                    title="基础信息"
+                                                    initialOpen
+                                                >
+                                                    <TextControl
+                                                        label="广告名称"
+                                                        value={
+                                                            selectedAd.name ||
+                                                            ''
+                                                        }
+                                                        onChange={(value) =>
+                                                            updateAdGroup(
+                                                                selectedAd.id,
+                                                                { name: value }
+                                                            )
+                                                        }
+                                                    />
+                                                </PanelBody>
 
-                                    <PanelBody title="展示规则" initialOpen>
-                                        {showValidation &&
-                                            !selectedAd.options
-                                                ?.show_position && (
-                                                <Notice status="error" isDismissible={false}>
-                                                    请先选择展示位置
-                                                </Notice>
-                                            )}
-                                        <SelectControl
-                                            label="展示页面"
-                                            value={
-                                                selectedAd.options?.show_page ||
-                                                'all'
-                                            }
-                                            options={[
-                                                { label: '全站', value: 'all' },
-                                                {
-                                                    label: '仅文章页',
-                                                    value: 'posts',
-                                                },
-                                                {
-                                                    label: '仅页面',
-                                                    value: 'pages',
-                                                },
-                                                { label: '首页', value: 'home' },
-                                                {
-                                                    label: '归档页',
-                                                    value: 'archive',
-                                                },
-                                            ]}
-                                            onChange={(value) =>
-                                                handleUpdateOptions({
-                                                    show_page: value,
-                                                })
-                                            }
-                                        />
+                                                <PanelBody
+                                                    title="展示规则"
+                                                    initialOpen
+                                                >
+                                                    {showValidation &&
+                                                        !selectedAd.options
+                                                            ?.show_position && (
+                                                            <Notice
+                                                                status="error"
+                                                                isDismissible={false}
+                                                            >
+                                                                请先选择展示位置
+                                                            </Notice>
+                                                        )}
+                                                    <SelectControl
+                                                        label="展示页面"
+                                                        value={
+                                                            selectedAd.options
+                                                                ?.show_page ||
+                                                            'all'
+                                                        }
+                                                        options={[
+                                                            {
+                                                                label: '全站',
+                                                                value: 'all',
+                                                            },
+                                                            {
+                                                                label: '仅文章页',
+                                                                value: 'posts',
+                                                            },
+                                                            {
+                                                                label: '仅页面',
+                                                                value: 'pages',
+                                                            },
+                                                            {
+                                                                label: '首页',
+                                                                value: 'home',
+                                                            },
+                                                            {
+                                                                label: '归档页',
+                                                                value: 'archive',
+                                                            },
+                                                        ]}
+                                                        onChange={(value) =>
+                                                            handleUpdateOptions(
+                                                                {
+                                                                    show_page:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
 
-                                        <SelectControl
-                                            label="展示位置"
-                                            value={
-                                                selectedAd.options
-                                                    ?.show_position || 'footer'
-                                            }
-                                            className={
-                                                showValidation &&
-                                                !selectedAd.options
-                                                    ?.show_position
-                                                    ? 'magick-ad-control--error'
-                                                    : undefined
-                                            }
-                                            help={
-                                                showValidation &&
-                                                !selectedAd.options
-                                                    ?.show_position
-                                                    ? '请选择展示位置'
-                                                    : undefined
-                                            }
-                                            options={[
-                                                { label: '页眉', value: 'head' },
-                                                {
-                                                    label: '页脚',
-                                                    value: 'footer',
-                                                },
-                                                {
-                                                    label: '正文插入',
-                                                    value: 'content',
-                                                },
-                                                { label: '弹窗', value: 'popup' },
-                                                { label: '横栏', value: 'bar' },
-                                            ]}
-                                            onChange={(value) =>
-                                                handleUpdateOptions({
-                                                    show_position: value,
-                                                })
-                                            }
-                                        />
+                                                    <SelectControl
+                                                        label="展示位置"
+                                                        value={
+                                                            selectedAd.options
+                                                                ?.show_position ||
+                                                            'footer'
+                                                        }
+                                                        className={
+                                                            showValidation &&
+                                                            !selectedAd.options
+                                                                ?.show_position
+                                                                ? 'magick-ad-control--error'
+                                                                : undefined
+                                                        }
+                                                        help={
+                                                            showValidation &&
+                                                            !selectedAd.options
+                                                                ?.show_position
+                                                                ? '请选择展示位置'
+                                                                : undefined
+                                                        }
+                                                        options={[
+                                                            {
+                                                                label: '页眉',
+                                                                value: 'head',
+                                                            },
+                                                            {
+                                                                label: '页脚',
+                                                                value: 'footer',
+                                                            },
+                                                            {
+                                                                label: '正文插入',
+                                                                value: 'content',
+                                                            },
+                                                            {
+                                                                label: '弹窗',
+                                                                value: 'popup',
+                                                            },
+                                                            {
+                                                                label: '横栏',
+                                                                value: 'bar',
+                                                            },
+                                                        ]}
+                                                        onChange={(value) =>
+                                                            handleUpdateOptions(
+                                                                {
+                                                                    show_position:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
 
-                                        {selectedAd.options?.show_position ===
-                                            'content' && (
-                                            <TextControl
-                                                label="第 N 段后插入"
-                                                type="number"
-                                                min={1}
-                                                value={
-                                                    selectedAd.options
-                                                        ?.insert_after || 2
-                                                }
-                                                onChange={(value) =>
-                                                    handleUpdateOptions({
-                                                        insert_after:
-                                                            Number(value),
-                                                    })
-                                                }
-                                            />
-                                        )}
+                                                    {selectedAd.options
+                                                        ?.show_position ===
+                                                        'content' && (
+                                                        <TextControl
+                                                            label="第 N 段后插入"
+                                                            type="number"
+                                                            min={1}
+                                                            value={
+                                                                selectedAd
+                                                                    .options
+                                                                    ?.insert_after ||
+                                                                2
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateOptions(
+                                                                    {
+                                                                        insert_after:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                    )}
 
-                                        <SelectControl
-                                            label="设备限制"
-                                            value={
-                                                selectedAd.options?.device ||
-                                                'all'
-                                            }
-                                            options={[
-                                                {
-                                                    label: '全部设备',
-                                                    value: 'all',
-                                                },
-                                                {
-                                                    label: '仅移动端',
-                                                    value: 'mobile',
-                                                },
-                                                {
-                                                    label: '仅桌面端',
-                                                    value: 'desktop',
-                                                },
-                                            ]}
-                                            onChange={(value) =>
-                                                handleUpdateOptions({
-                                                    device: value,
-                                                })
-                                            }
-                                        />
+                                                    <SelectControl
+                                                        label="设备限制"
+                                                        value={
+                                                            selectedAd.options
+                                                                ?.device ||
+                                                            'all'
+                                                        }
+                                                        options={[
+                                                            {
+                                                                label: '全部设备',
+                                                                value: 'all',
+                                                            },
+                                                            {
+                                                                label: '仅移动端',
+                                                                value: 'mobile',
+                                                            },
+                                                            {
+                                                                label: '仅桌面端',
+                                                                value: 'desktop',
+                                                            },
+                                                        ]}
+                                                        onChange={(value) =>
+                                                            handleUpdateOptions(
+                                                                {
+                                                                    device:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
 
-                                        <SelectControl
-                                            label="登录状态"
-                                            value={
-                                                selectedAd.options?.login ||
-                                                'all'
-                                            }
-                                            options={[
-                                                { label: '全部用户', value: 'all' },
-                                                {
-                                                    label: '仅登录用户',
-                                                    value: 'logged-in',
-                                                },
-                                                {
-                                                    label: '仅未登录用户',
-                                                    value: 'logged-out',
-                                                },
-                                            ]}
-                                            onChange={(value) =>
-                                                handleUpdateOptions({
-                                                    login: value,
-                                                })
-                                            }
-                                        />
-                                    </PanelBody>
-
-                                    <PanelBody title="内容配置" initialOpen>
-                                        <TextControl
-                                            label="跳转链接"
-                                            value={
-                                                selectedAd.content?.link || ''
-                                            }
-                                            onChange={(value) =>
-                                                handleUpdateContent({
-                                                    link: value,
-                                                })
-                                            }
-                                        />
-                                        <TextControl
-                                            label="HTML 内容"
-                                            value={
-                                                selectedAd.content?.html || ''
-                                            }
-                                            onChange={(value) =>
-                                                handleUpdateContent({
-                                                    html: value,
-                                                })
-                                            }
-                                        />
-                                        <div className="magick-ad-field">
-                                            <p className="magick-ad-field__label">
-                                                图片
-                                            </p>
-                                            <ImagePicker
-                                                value={
-                                                    selectedAd.content?.image ||
-                                                    null
-                                                }
-                                                onChange={(value) =>
-                                                    handleUpdateContent({
-                                                        image: value,
-                                                    })
-                                                }
-                                            />
-                                        </div>
-                                    </PanelBody>
-
-                                </Panel>
-                            </CardBody>
-                        </Card>
-                    )}
+                                                    <SelectControl
+                                                        label="登录状态"
+                                                        value={
+                                                            selectedAd.options
+                                                                ?.login || 'all'
+                                                        }
+                                                        options={[
+                                                            {
+                                                                label: '全部用户',
+                                                                value: 'all',
+                                                            },
+                                                            {
+                                                                label: '仅登录用户',
+                                                                value: 'logged-in',
+                                                            },
+                                                            {
+                                                                label: '仅未登录用户',
+                                                                value: 'logged-out',
+                                                            },
+                                                        ]}
+                                                        onChange={(value) =>
+                                                            handleUpdateOptions(
+                                                                {
+                                                                    login:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                </PanelBody>
+                                            </Panel>
+                                        )
+                                    }
+                                </TabPanel>
+                            )}
+                        </CardBody>
+                    </Card>
                 </section>
+
+                <aside className="magick-ad-publish">
+                    <Card>
+                        <CardBody>
+                            <div className="magick-ad-publish__header">
+                                <h2>发布</h2>
+                            </div>
+                            <ToggleControl
+                                label="启用此广告"
+                                checked={selectedAd?.options?.enabled ?? true}
+                                disabled={!selectedAd}
+                                onChange={(value) =>
+                                    selectedAd &&
+                                    handleUpdateOptions({ enabled: value })
+                                }
+                            />
+                            <Button
+                                variant="primary"
+                                onClick={handleSave}
+                                isBusy={isSaving}
+                                disabled={isSaving || !selectedAd}
+                            >
+                                {isSaving ? '保存中...' : '保存'}
+                            </Button>
+                        </CardBody>
+                    </Card>
+                </aside>
             </div>
 
             <Card>

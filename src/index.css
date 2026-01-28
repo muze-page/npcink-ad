@@ -11,10 +11,49 @@
     margin-bottom: 16px;
 }
 
-.magick-ad-layout {
+.magick-ad-grid {
     display: grid;
-    grid-template-columns: 260px minmax(0, 1fr);
+    grid-template-columns: 260px minmax(0, 1fr) 280px;
     gap: 16px;
+}
+
+.magick-ad-main-card .components-tab-panel__tabs {
+    border-bottom: 1px solid #dcdcde;
+    margin: -4px -4px 16px;
+    padding: 0 4px 0;
+}
+
+.magick-ad-main-card .components-tab-panel__tabs .components-button {
+    padding: 8px 12px;
+}
+
+.magick-ad-main-card .components-tab-panel__tabs-item.is-active {
+    border-bottom: 2px solid #2271b1;
+}
+
+.magick-ad-main-card .components-tab-panel__tabs-item.is-active .components-button {
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.magick-ad-empty {
+    padding: 16px;
+    border: 1px dashed #dcdcde;
+    border-radius: 6px;
+    background: #fbfbfc;
+}
+
+.magick-ad-publish {
+    position: sticky;
+    top: 32px;
+    align-self: start;
+}
+
+.magick-ad-publish__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
 }
 
 .magick-ad-sidebar__header {
@@ -159,7 +198,7 @@
 }
 
 @media (max-width: 960px) {
-    .magick-ad-layout {
+    .magick-ad-grid {
         grid-template-columns: 1fr;
     }
 
