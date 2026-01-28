@@ -1002,6 +1002,12 @@ const AdsConfig = () => {
                                                             onInputChange={
                                                                 handleTargetSearch
                                                             }
+                                                            onFocus={() =>
+                                                                handleTargetSearch(
+                                                                    ''
+                                                                )
+                                                            }
+                                                            __experimentalExpandOnFocus
                                                             onChange={(
                                                                 tokens
                                                             ) => {
