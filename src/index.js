@@ -215,6 +215,7 @@ const AdsConfig = () => {
     const noticeTimerRef = useRef(null);
     const targetSearchTimerRef = useRef(null);
     const targetRequestRef = useRef(0);
+    const targetCacheRef = useRef({});
 
     useEffect(() => {
         fetchFromDB();
@@ -347,6 +348,81 @@ const AdsConfig = () => {
             });
     }, [selectedAd?.id, selectedAd?.options?.target_type, targetIdsKey]);
 
+    useEffect(() => {
+        if (!selectedAd || selectedAd.options?.ad_type !== 'targeted') {
+            setTargetSuggestions([]);
+            return;
+        }
+        const targetType = selectedAd.options?.target_type;
+        if (!targetType) {
+            setTargetSuggestions([]);
+            return;
+        }
+        const cached = targetCacheRef.current[targetType];
+        if (cached && cached.length) {
+            setTargetSuggestions(cached);
+            return;
+        }
+        const endpoint = getTargetEndpoint(targetType);
+        if (!endpoint) {
+            setTargetSuggestions([]);
+            return;
+        }
+        const requestId = ++targetRequestRef.current;
+        setTargetLoading(true);
+        const fetchAll = async () => {
+            let page = 1;
+            let totalPages = 1;
+            let allItems = [];
+            do {
+                const pathBase = `/wp/v2/${endpoint}?per_page=100&page=${page}`;
+                const path =
+                    targetType === 'author'
+                        ? `${pathBase}&who=authors`
+                        : pathBase;
+                // apiFetch parse: false lets us read headers for pagination.
+                const response = await apiFetch({ path, parse: false });
+                const data = await response.json();
+                if (!Array.isArray(data)) {
+                    break;
+                }
+                allItems = allItems.concat(data);
+                const totalHeader = response.headers.get('X-WP-TotalPages');
+                totalPages = totalHeader ? Number(totalHeader) : 1;
+                page += 1;
+            } while (page <= totalPages);
+            return allItems;
+        };
+
+        fetchAll()
+            .then((items) => {
+                if (requestId !== targetRequestRef.current) {
+                    return;
+                }
+                const normalized = Array.isArray(items)
+                    ? items
+                          .map((item) =>
+                              normalizeTargetItem(targetType, item)
+                          )
+                          .filter(Boolean)
+                    : [];
+                targetCacheRef.current[targetType] = normalized;
+                setTargetSuggestions(normalized);
+            })
+            .catch(() => {
+                if (requestId !== targetRequestRef.current) {
+                    return;
+                }
+                setTargetSuggestions([]);
+            })
+            .finally(() => {
+                if (requestId !== targetRequestRef.current) {
+                    return;
+                }
+                setTargetLoading(false);
+            });
+    }, [selectedAd?.id, selectedAd?.options?.target_type]);
+
     const handleTargetSearch = (query) => {
         if (targetSearchTimerRef.current) {
             window.clearTimeout(targetSearchTimerRef.current);
@@ -363,6 +439,20 @@ const AdsConfig = () => {
             const endpoint = getTargetEndpoint(targetType);
             if (!endpoint) {
                 setTargetSuggestions([]);
+                return;
+            }
+            const cached = targetCacheRef.current[targetType];
+            if (cached && cached.length) {
+                const keyword = (query || '').trim().toLowerCase();
+                if (!keyword) {
+                    setTargetSuggestions(cached);
+                    return;
+                }
+                setTargetSuggestions(
+                    cached.filter((item) =>
+                        item.label.toLowerCase().includes(keyword)
+                    )
+                );
                 return;
             }
             const requestId = ++targetRequestRef.current;
