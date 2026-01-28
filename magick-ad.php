@@ -285,14 +285,10 @@ class Magick_AD_Engine {
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $ad_type = isset($options['ad_type']) ? $options['ad_type'] : 'global';
-            if ($ad_type !== 'global') {
-                continue;
-            }
             if (empty($options['show_position'])) {
                 return new WP_Error(
                     'magick_ad_missing_position',
-                    'show_position is required for each global ad.',
+                    'show_position is required for each ad.',
                     array('status' => 400)
                 );
             }

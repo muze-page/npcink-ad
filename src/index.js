@@ -263,13 +263,7 @@ const AdsConfig = () => {
         if (!showValidation) {
             return;
         }
-        const globalAds = ads.filter(
-            (ad) => ad.options?.ad_type === 'global'
-        );
-        if (
-            globalAds.length === 0 ||
-            globalAds.every((ad) => ad.options?.show_position)
-        ) {
+        if (ads.every((ad) => ad.options?.show_position)) {
             setShowValidation(false);
         }
     }, [ads, showValidation]);
@@ -286,6 +280,17 @@ const AdsConfig = () => {
             ...getPositionOptions(page),
         ];
     }, [selectedAd?.options?.show_page]);
+
+    const targetPositionOptions = useMemo(() => {
+        const targetType = selectedAd?.options?.target_type || '';
+        if (!targetType) {
+            return [{ label: '请选择展示位置', value: '' }];
+        }
+        return [
+            { label: '请选择展示位置', value: '' },
+            ...getPositionOptions(targetType),
+        ];
+    }, [selectedAd?.options?.target_type]);
 
     const targetIdsKey = useMemo(() => {
         const ids = selectedAd?.options?.target_ids || [];
@@ -400,13 +405,7 @@ const AdsConfig = () => {
 
     const missingPositionIds = useMemo(() => {
         return new Set(
-            ads
-                .filter(
-                    (ad) =>
-                        ad.options?.ad_type === 'global' &&
-                        !ad.options?.show_position
-                )
-                .map((ad) => ad.id)
+            ads.filter((ad) => !ad.options?.show_position).map((ad) => ad.id)
         );
     }, [ads]);
 
@@ -442,15 +441,13 @@ const AdsConfig = () => {
         setNotice(null);
 
         const missingPosition = ads.filter(
-            (ad) =>
-                ad.options?.ad_type === 'global' &&
-                !ad.options?.show_position
+            (ad) => !ad.options?.show_position
         );
         if (missingPosition.length > 0) {
             setShowValidation(true);
             setNotice({
                 status: 'error',
-                message: `请为 ${missingPosition.length} 个全局广告选择展示位置。`,
+                message: `请为 ${missingPosition.length} 个广告选择展示位置。`,
             });
             noticeTimerRef.current = window.setTimeout(() => {
                 setNotice(null);
@@ -826,15 +823,80 @@ const AdsConfig = () => {
                                                                 setTargetSuggestions(
                                                                     []
                                                                 );
+                                                                const allowedPositions =
+                                                                    value
+                                                                        ? getPositionOptions(
+                                                                              value
+                                                                          ).map(
+                                                                              (
+                                                                                  option
+                                                                              ) =>
+                                                                                  option.value
+                                                                          )
+                                                                        : [];
+                                                                const nextPosition =
+                                                                    allowedPositions.includes(
+                                                                        selectedAd
+                                                                            .options
+                                                                            ?.show_position
+                                                                    )
+                                                                        ? selectedAd
+                                                                              .options
+                                                                              ?.show_position
+                                                                        : '';
                                                                 handleUpdateOptions(
                                                                     {
                                                                         target_type:
                                                                             value,
                                                                         target_ids:
                                                                             [],
+                                                                        show_position:
+                                                                            nextPosition,
                                                                     }
                                                                 );
                                                             }}
+                                                        />
+
+                                                        <SelectControl
+                                                            label="展示位置"
+                                                            value={
+                                                                selectedAd
+                                                                    .options
+                                                                    ?.show_position ||
+                                                                ''
+                                                            }
+                                                            className={
+                                                                showValidation &&
+                                                                !selectedAd
+                                                                    .options
+                                                                    ?.show_position
+                                                                    ? 'magick-ad-control--error'
+                                                                    : undefined
+                                                            }
+                                                            help={
+                                                                showValidation &&
+                                                                !selectedAd
+                                                                    .options
+                                                                    ?.show_position
+                                                                    ? '请选择展示位置'
+                                                                    : undefined
+                                                            }
+                                                            options={
+                                                                targetPositionOptions
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateOptions(
+                                                                    {
+                                                                        show_position:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                !selectedAd
+                                                                    .options
+                                                                    ?.target_type
+                                                            }
                                                         />
 
                                                         <FormTokenField
@@ -927,7 +989,7 @@ const AdsConfig = () => {
                                                                     false
                                                                 }
                                                             >
-                                                                请选择展示类型后再选择具体页面。
+                                                                请选择展示类型后再选择具体页面与展示位置。
                                                             </Notice>
                                                         )}
                                                     </PanelBody>
@@ -937,17 +999,6 @@ const AdsConfig = () => {
                                                     title="展示规则"
                                                     initialOpen
                                                 >
-                                                    {selectedAd.options
-                                                        ?.ad_type !==
-                                                        'global' && (
-                                                        <Notice
-                                                            status="info"
-                                                            isDismissible={false}
-                                                        >
-                                                            指定广告的展示位置由定向规则决定。
-                                                        </Notice>
-                                                    )}
-
                                                     <SelectControl
                                                         label="是否展示"
                                                         value={
