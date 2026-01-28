@@ -156,6 +156,13 @@ function magick_ad_enqueue_frontend_assets() {
         return;
     }
 
+    wp_enqueue_style(
+        'magick-ad-frontend',
+        MAGICK_AD_PLUGIN_URL . 'assets/magick-ad-frontend.css',
+        array(),
+        MAGICK_AD_PLUGIN_VERSION
+    );
+
     wp_enqueue_script(
         'magick-ad-track',
         MAGICK_AD_PLUGIN_URL . 'assets/magick-ad-track.js',
@@ -391,10 +398,20 @@ class Magick_AD_Engine {
 }
 
 class Magick_AD_Frontend {
+    private static $loop_before_rendered = false;
+    private static $loop_after_rendered = false;
+    private static $comments_template_original = null;
+
     public static function init() {
         add_filter('the_content', array(__CLASS__, 'inject_content_ads'));
         add_action('wp_head', array(__CLASS__, 'render_head_ads'));
         add_action('wp_footer', array(__CLASS__, 'render_footer_ads'));
+        add_action('wp_body_open', array(__CLASS__, 'render_body_top_ads'));
+        add_action('loop_start', array(__CLASS__, 'render_loop_before_ads'));
+        add_action('loop_end', array(__CLASS__, 'render_loop_after_ads'));
+        add_action('comment_form_before', array(__CLASS__, 'render_comment_form_before_ads'));
+        add_action('comment_form_after', array(__CLASS__, 'render_comment_form_after_ads'));
+        add_filter('comments_template', array(__CLASS__, 'filter_comments_template'), 9);
     }
 
     public static function rest_track(WP_REST_Request $request) {
@@ -444,9 +461,29 @@ class Magick_AD_Frontend {
         }
 
         $insert_map = array();
+        $prepend = '';
+        $append = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
             $position = isset($options['show_position']) ? $options['show_position'] : '';
+            if (in_array($position, array('content_before', 'post_top'), true)) {
+                $prepend .= self::build_ad_markup($ad, $position);
+                continue;
+            }
+            if (in_array($position, array('content_after', 'post_bottom'), true)) {
+                $append .= self::build_ad_markup($ad, $position);
+                continue;
+            }
+            if ($position === 'paragraph_3') {
+                $markup = self::build_ad_markup($ad, $position);
+                if ($markup) {
+                    if (!isset($insert_map[3])) {
+                        $insert_map[3] = array();
+                    }
+                    $insert_map[3][] = $markup;
+                }
+                continue;
+            }
             if ($position !== 'content') {
                 continue;
             }
@@ -465,11 +502,18 @@ class Magick_AD_Frontend {
             }
         }
 
-        if (empty($insert_map)) {
-            return $content;
+        if (!empty($insert_map)) {
+            $content = self::insert_after_paragraphs($content, $insert_map);
         }
 
-        return self::insert_after_paragraphs($content, $insert_map);
+        if ($prepend) {
+            $content = self::wrap_zone_markup($prepend, 'content-before') . $content;
+        }
+        if ($append) {
+            $content .= self::wrap_zone_markup($append, 'content-after');
+        }
+
+        return $content;
     }
 
     public static function render_head_ads() {
@@ -493,7 +537,7 @@ class Magick_AD_Frontend {
         }
 
         if ($markup) {
-            echo $markup;
+            echo self::wrap_zone_markup($markup, 'head');
         }
     }
 
@@ -511,14 +555,229 @@ class Magick_AD_Frontend {
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
             $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if (!in_array($position, array('footer', 'popup', 'bar'), true)) {
+            if (!in_array($position, array('footer', 'popup', 'bar', 'bottom'), true)) {
                 continue;
             }
             $markup .= self::build_ad_markup($ad, $position);
         }
 
         if ($markup) {
-            echo '<div class="magick-ad-footer-container">' . $markup . '</div>';
+            echo self::wrap_zone_markup($markup, 'footer');
+        }
+    }
+
+    public static function render_body_top_ads() {
+        if (is_admin()) {
+            return;
+        }
+
+        $ads = self::get_matching_ads();
+        if (empty($ads)) {
+            return;
+        }
+
+        $markup = '';
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $position = isset($options['show_position']) ? $options['show_position'] : '';
+            if ($position !== 'top') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, $position);
+        }
+
+        if ($markup) {
+            echo self::wrap_zone_markup($markup, 'top');
+        }
+    }
+
+    public static function render_loop_before_ads($query) {
+        if (is_admin() || !($query instanceof WP_Query) || !$query->is_main_query()) {
+            return;
+        }
+        if (is_singular() || self::$loop_before_rendered) {
+            return;
+        }
+
+        $ads = self::get_matching_ads();
+        if (empty($ads)) {
+            return;
+        }
+
+        $markup = '';
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $position = isset($options['show_position']) ? $options['show_position'] : '';
+            if ($position !== 'content_before') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, $position);
+        }
+
+        if ($markup) {
+            self::$loop_before_rendered = true;
+            echo self::wrap_zone_markup($markup, 'loop-before');
+        }
+    }
+
+    public static function render_loop_after_ads($query) {
+        if (is_admin() || !($query instanceof WP_Query) || !$query->is_main_query()) {
+            return;
+        }
+        if (is_singular() || self::$loop_after_rendered) {
+            return;
+        }
+
+        $ads = self::get_matching_ads();
+        if (empty($ads)) {
+            return;
+        }
+
+        $markup = '';
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $position = isset($options['show_position']) ? $options['show_position'] : '';
+            if ($position !== 'content_after') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, $position);
+        }
+
+        if ($markup) {
+            self::$loop_after_rendered = true;
+            echo self::wrap_zone_markup($markup, 'loop-after');
+        }
+    }
+
+    public static function filter_comments_template($template) {
+        if (is_admin() || !is_singular()) {
+            return $template;
+        }
+
+        $ads = self::get_matching_ads();
+        if (empty($ads)) {
+            return $template;
+        }
+
+        $needs_wrapper = false;
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $position = isset($options['show_position']) ? $options['show_position'] : '';
+            if (in_array($position, array('comments_top', 'comments_bottom'), true)) {
+                $needs_wrapper = true;
+                break;
+            }
+        }
+
+        if (!$needs_wrapper) {
+            return $template;
+        }
+
+        self::$comments_template_original = $template;
+        return plugin_dir_path(__FILE__) . 'templates/comments-wrapper.php';
+    }
+
+    public static function get_comments_template_original() {
+        return self::$comments_template_original;
+    }
+
+    public static function render_comments_top_ads() {
+        if (is_admin() || !is_singular()) {
+            return;
+        }
+
+        $ads = self::get_matching_ads();
+        if (empty($ads)) {
+            return;
+        }
+
+        $markup = '';
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $position = isset($options['show_position']) ? $options['show_position'] : '';
+            if ($position !== 'comments_top') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, $position);
+        }
+
+        if ($markup) {
+            echo self::wrap_zone_markup($markup, 'comments-top');
+        }
+    }
+
+    public static function render_comments_bottom_ads() {
+        if (is_admin() || !is_singular()) {
+            return;
+        }
+
+        $ads = self::get_matching_ads();
+        if (empty($ads)) {
+            return;
+        }
+
+        $markup = '';
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $position = isset($options['show_position']) ? $options['show_position'] : '';
+            if ($position !== 'comments_bottom') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, $position);
+        }
+
+        if ($markup) {
+            echo self::wrap_zone_markup($markup, 'comments-bottom');
+        }
+    }
+
+    public static function render_comment_form_before_ads() {
+        if (is_admin() || !is_singular()) {
+            return;
+        }
+
+        $ads = self::get_matching_ads();
+        if (empty($ads)) {
+            return;
+        }
+
+        $markup = '';
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $position = isset($options['show_position']) ? $options['show_position'] : '';
+            if ($position !== 'comment_form_before') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, $position);
+        }
+
+        if ($markup) {
+            echo self::wrap_zone_markup($markup, 'comment-form-before');
+        }
+    }
+
+    public static function render_comment_form_after_ads() {
+        if (is_admin() || !is_singular()) {
+            return;
+        }
+
+        $ads = self::get_matching_ads();
+        if (empty($ads)) {
+            return;
+        }
+
+        $markup = '';
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $position = isset($options['show_position']) ? $options['show_position'] : '';
+            if ($position !== 'comment_form_after') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, $position);
+        }
+
+        if ($markup) {
+            echo self::wrap_zone_markup($markup, 'comment-form-after');
         }
     }
 
@@ -727,7 +986,14 @@ class Magick_AD_Frontend {
             return '';
         }
 
-        return '<div class="magick-ad magick-ad--' . esc_attr($position) . '" data-ad-id="' . esc_attr(isset($ad['id']) ? $ad['id'] : '') . '">' . $body . '</div>';
+        return '<div class="magick-ad-unit magick-ad-unit--' . esc_attr($position) . '" data-ad-id="' . esc_attr(isset($ad['id']) ? $ad['id'] : '') . '" data-ad-position="' . esc_attr($position) . '"><div class="magick-ad-unit__inner">' . $body . '</div></div>';
+    }
+
+    private static function wrap_zone_markup($markup, $zone) {
+        if (!$markup) {
+            return '';
+        }
+        return '<div class="magick-ad-zone magick-ad-zone--' . esc_attr($zone) . '">' . $markup . '</div>';
     }
 }
 
