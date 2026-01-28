@@ -109,6 +109,44 @@ const ImagePicker = ({ value, onChange }) => {
     );
 };
 
+const DISPLAY_PAGE_OPTIONS = [
+    { label: '全站', value: 'all' },
+    { label: '仅首页', value: 'home' },
+    { label: '仅文章页', value: 'posts' },
+    { label: '仅单页', value: 'pages' },
+    { label: '仅分类页', value: 'category' },
+    { label: '仅标签页', value: 'tag' },
+    { label: '仅搜索结果页', value: 'search' },
+    { label: '仅404页', value: '404' },
+    { label: '仅作者页', value: 'author' },
+];
+
+const GENERIC_POSITION_OPTIONS = [
+    { label: '顶部', value: 'top' },
+    { label: '内容前', value: 'content_before' },
+    { label: '内容后', value: 'content_after' },
+    { label: '底部', value: 'bottom' },
+];
+
+const POST_POSITION_OPTIONS = [
+    { label: '顶部', value: 'top' },
+    { label: '内容前', value: 'content_before' },
+    { label: '文章顶部', value: 'post_top' },
+    { label: '位置第三段', value: 'paragraph_3' },
+    { label: '文章底部', value: 'post_bottom' },
+    { label: '评论列表顶部', value: 'comments_top' },
+    { label: '评论框上方', value: 'comment_form_before' },
+    { label: '评论框下方', value: 'comment_form_after' },
+    { label: '评论列表底部', value: 'comments_bottom' },
+    { label: '内容后', value: 'content_after' },
+    { label: '底部', value: 'bottom' },
+];
+
+const isPostLikePage = (page) => page === 'posts' || page === 'pages';
+
+const getPositionOptions = (page) =>
+    isPostLikePage(page) ? POST_POSITION_OPTIONS : GENERIC_POSITION_OPTIONS;
+
 const AdsConfig = () => {
     const ads = useStore((state) => state.ads);
     const isLoading = useStore((state) => state.isLoading);
@@ -193,6 +231,14 @@ const AdsConfig = () => {
         () => ads.find((ad) => ad.id === selectedId),
         [ads, selectedId]
     );
+
+    const positionOptions = useMemo(() => {
+        const page = selectedAd?.options?.show_page || 'all';
+        return [
+            { label: '请选择展示位置', value: '' },
+            ...getPositionOptions(page),
+        ];
+    }, [selectedAd?.options?.show_page]);
 
     const missingPositionIds = useMemo(() => {
         return new Set(
@@ -515,36 +561,40 @@ const AdsConfig = () => {
                                                                     ?.show_page ||
                                                                 'all'
                                                             }
-                                                            options={[
-                                                                {
-                                                                    label: '全站',
-                                                                    value: 'all',
-                                                                },
-                                                                {
-                                                                    label: '仅文章页',
-                                                                    value: 'posts',
-                                                                },
-                                                                {
-                                                                    label: '仅页面',
-                                                                    value: 'pages',
-                                                                },
-                                                                {
-                                                                    label: '首页',
-                                                                    value: 'home',
-                                                                },
-                                                                {
-                                                                    label: '归档页',
-                                                                    value: 'archive',
-                                                                },
-                                                            ]}
-                                                            onChange={(value) =>
+                                                            options={
+                                                                DISPLAY_PAGE_OPTIONS
+                                                            }
+                                                            onChange={(
+                                                                value
+                                                            ) => {
+                                                                const allowedPositions =
+                                                                    getPositionOptions(
+                                                                        value
+                                                                    ).map(
+                                                                        (
+                                                                            option
+                                                                        ) =>
+                                                                            option.value
+                                                                    );
+                                                                const nextPosition =
+                                                                    allowedPositions.includes(
+                                                                        selectedAd
+                                                                            .options
+                                                                            ?.show_position
+                                                                    )
+                                                                        ? selectedAd
+                                                                              .options
+                                                                              ?.show_position
+                                                                        : '';
                                                                 handleUpdateOptions(
                                                                     {
                                                                         show_page:
                                                                             value,
+                                                                        show_position:
+                                                                            nextPosition,
                                                                     }
-                                                                )
-                                                            }
+                                                                );
+                                                            }}
                                                         />
 
                                                         <SelectControl
@@ -571,32 +621,9 @@ const AdsConfig = () => {
                                                                     ? '请选择展示位置'
                                                                     : undefined
                                                             }
-                                                            options={[
-                                                                {
-                                                                    label: '请选择展示位置',
-                                                                    value: '',
-                                                                },
-                                                                {
-                                                                    label: '页眉',
-                                                                    value: 'head',
-                                                                },
-                                                                {
-                                                                    label: '页脚',
-                                                                    value: 'footer',
-                                                                },
-                                                                {
-                                                                    label: '正文插入',
-                                                                    value: 'content',
-                                                                },
-                                                                {
-                                                                    label: '弹窗',
-                                                                    value: 'popup',
-                                                                },
-                                                                {
-                                                                    label: '横栏',
-                                                                    value: 'bar',
-                                                                },
-                                                            ]}
+                                                            options={
+                                                                positionOptions
+                                                            }
                                                             onChange={(value) =>
                                                                 handleUpdateOptions(
                                                                     {
@@ -607,33 +634,6 @@ const AdsConfig = () => {
                                                             }
                                                         />
 
-                                                        {selectedAd.options
-                                                            ?.show_position ===
-                                                            'content' && (
-                                                            <TextControl
-                                                                label="第 N 段后插入"
-                                                                type="number"
-                                                                min={1}
-                                                                value={
-                                                                    selectedAd
-                                                                        .options
-                                                                        ?.insert_after ||
-                                                                    2
-                                                                }
-                                                                onChange={(
-                                                                    value
-                                                                ) =>
-                                                                    handleUpdateOptions(
-                                                                        {
-                                                                            insert_after:
-                                                                                Number(
-                                                                                    value
-                                                                                ),
-                                                                        }
-                                                                    )
-                                                                }
-                                                            />
-                                                        )}
                                                     </PanelBody>
                                                 )}
 

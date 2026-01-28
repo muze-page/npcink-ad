@@ -9,7 +9,7 @@ const createAdGroupTemplate = (type = 'global') => ({
         ad_type: type,
         display_mode: 'show',
         show_page: 'all',
-        show_position: 'footer',
+        show_position: 'bottom',
         insert_after: 2,
         device: 'all',
         login: 'all',
@@ -21,6 +21,19 @@ const createAdGroupTemplate = (type = 'global') => ({
         link: '',
     },
 });
+
+const normalizeShowPosition = (value) => {
+    if (!value) {
+        return '';
+    }
+    if (value === 'footer') {
+        return 'bottom';
+    }
+    if (value === 'head') {
+        return 'top';
+    }
+    return value;
+};
 
 const normalizeAd = (ad) => {
     const safeAd = ad && typeof ad === 'object' ? ad : {};
@@ -35,7 +48,7 @@ const normalizeAd = (ad) => {
             ad_type: options.ad_type || 'global',
             display_mode: options.display_mode || 'show',
             show_page: options.show_page || 'all',
-            show_position: options.show_position || 'footer',
+            show_position: normalizeShowPosition(options.show_position) || 'bottom',
             insert_after: Number(options.insert_after || 2),
             device: options.device || 'all',
             login: options.login || 'all',
