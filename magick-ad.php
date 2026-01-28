@@ -555,12 +555,30 @@ class Magick_AD_Frontend {
 
     private static function random_display($ad_id) {
         static $cache = array();
-        $key = $ad_id ? $ad_id : uniqid('ad_', true);
+        $time_bucket = (int) floor(current_time('timestamp') / 300);
+        $key = ($ad_id ? $ad_id : uniqid('ad_', true)) . '|' . $time_bucket;
         if (isset($cache[$key])) {
             return $cache[$key];
         }
-        $cache[$key] = (bool) wp_rand(0, 1);
-        return $cache[$key];
+
+        $seed = '';
+        $user_id = get_current_user_id();
+        if ($user_id) {
+            $seed = 'user:' . $user_id;
+        } else {
+            if (!isset($_COOKIE['magick_ad_uid']) || !is_string($_COOKIE['magick_ad_uid'])) {
+                $uid = wp_generate_uuid4();
+                setcookie('magick_ad_uid', $uid, time() + MONTH_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                $_COOKIE['magick_ad_uid'] = $uid;
+            }
+            $seed = 'cookie:' . sanitize_text_field(wp_unslash($_COOKIE['magick_ad_uid']));
+        }
+
+        $hash = md5($seed . '|' . $key);
+        $result = (hexdec(substr($hash, 0, 2)) % 2) === 1;
+        $cache[$key] = $result;
+
+        return $result;
     }
 
     private static function is_expired($options) {
