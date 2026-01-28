@@ -342,6 +342,11 @@ class Magick_AD_Engine {
                 ),
                 ''
             ),
+            'content_type' => self::sanitize_choice(
+                isset($options['content_type']) ? $options['content_type'] : 'image',
+                array('html', 'image', 'video', 'popup', 'bar'),
+                'image'
+            ),
             'insert_after' => isset($options['insert_after']) ? absint($options['insert_after']) : 2,
             'device' => self::sanitize_choice(
                 isset($options['device']) ? $options['device'] : 'all',
@@ -1019,19 +1024,27 @@ class Magick_AD_Frontend {
 
     private static function build_ad_markup($ad, $position) {
         $content = isset($ad['content']) ? $ad['content'] : array();
+        $options = isset($ad['options']) ? $ad['options'] : array();
+        $content_type = isset($options['content_type']) ? $options['content_type'] : 'image';
         $html = isset($content['html']) ? $content['html'] : '';
         $link = isset($content['link']) ? $content['link'] : '';
         $image = isset($content['image']) ? $content['image'] : array();
 
         $body = '';
-        if ($html) {
-            $body = $html;
-        } elseif (!empty($image['url'])) {
-            $img_tag = '<img src="' . esc_url($image['url']) . '" alt="' . esc_attr(isset($image['alt']) ? $image['alt'] : '') . '" />';
-            if ($link) {
-                $img_tag = '<a href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . $img_tag . '</a>';
+        if ($content_type === 'html') {
+            if ($html) {
+                $body = $html;
             }
-            $body = $img_tag;
+        } elseif ($content_type === 'image') {
+            if (!empty($image['url'])) {
+                $img_tag = '<img src="' . esc_url($image['url']) . '" alt="' . esc_attr(isset($image['alt']) ? $image['alt'] : '') . '" />';
+                if ($link) {
+                    $img_tag = '<a href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . $img_tag . '</a>';
+                }
+                $body = $img_tag;
+            }
+        } else {
+            return '';
         }
 
         if (!$body) {

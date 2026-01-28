@@ -706,6 +706,7 @@ const AdsConfig = () => {
                                     {(tab) =>
                                         tab.name === 'content' ? (
                                             <TabPanel
+                                                key={selectedAd.id}
                                                 className="magick-ad-sub-tabs"
                                                 tabs={[
                                                     {
@@ -729,76 +730,101 @@ const AdsConfig = () => {
                                                         title: '横栏广告',
                                                     },
                                                 ]}
+                                                initialTabName={
+                                                    selectedAd.options
+                                                        ?.content_type ||
+                                                    'image'
+                                                }
+                                                onSelect={(name) =>
+                                                    handleUpdateOptions({
+                                                        content_type: name,
+                                                    })
+                                                }
                                             >
-                                                {(subTab) =>
-                                                    subTab.name ===
-                                                    'image' ? (
-                                                        <Panel>
-                                                            <PanelBody
-                                                                title="内容配置"
-                                                                initialOpen
-                                                            >
-                                                                <TextControl
-                                                                    label="跳转链接"
-                                                                    value={
-                                                                        selectedAd
-                                                                            .content
-                                                                            ?.link ||
-                                                                        ''
-                                                                    }
-                                                                    onChange={(
-                                                                        value
-                                                                    ) =>
-                                                                        handleUpdateContent(
-                                                                            {
-                                                                                link: value,
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                />
-                                                                <TextControl
-                                                                    label="HTML 内容"
-                                                                    value={
-                                                                        selectedAd
-                                                                            .content
-                                                                            ?.html ||
-                                                                        ''
-                                                                    }
-                                                                    onChange={(
-                                                                        value
-                                                                    ) =>
-                                                                        handleUpdateContent(
-                                                                            {
-                                                                                html: value,
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                />
-                                                                <div className="magick-ad-field">
-                                                                    <p className="magick-ad-field__label">
-                                                                        图片
-                                                                    </p>
-                                                                    <ImagePicker
+                                                {(subTab) => {
+                                                    if (subTab.name === 'image') {
+                                                        return (
+                                                            <Panel>
+                                                                <PanelBody
+                                                                    title="内容配置"
+                                                                    initialOpen
+                                                                >
+                                                                    <TextControl
+                                                                        label="跳转链接"
                                                                         value={
                                                                             selectedAd
                                                                                 .content
-                                                                                ?.image ||
-                                                                            null
+                                                                                ?.link ||
+                                                                            ''
                                                                         }
                                                                         onChange={(
                                                                             value
                                                                         ) =>
                                                                             handleUpdateContent(
                                                                                 {
-                                                                                    image: value,
+                                                                                    link: value,
                                                                                 }
                                                                             )
                                                                         }
                                                                     />
-                                                                </div>
-                                                            </PanelBody>
-                                                        </Panel>
-                                                    ) : (
+                                                                    <div className="magick-ad-field">
+                                                                        <p className="magick-ad-field__label">
+                                                                            图片
+                                                                        </p>
+                                                                        <ImagePicker
+                                                                            value={
+                                                                                selectedAd
+                                                                                    .content
+                                                                                    ?.image ||
+                                                                                null
+                                                                            }
+                                                                            onChange={(
+                                                                                value
+                                                                            ) =>
+                                                                                handleUpdateContent(
+                                                                                    {
+                                                                                        image: value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </div>
+                                                                </PanelBody>
+                                                            </Panel>
+                                                        );
+                                                    }
+
+                                                    if (subTab.name === 'html') {
+                                                        return (
+                                                            <Panel>
+                                                                <PanelBody
+                                                                    title="内容配置"
+                                                                    initialOpen
+                                                                >
+                                                                    <TextControl
+                                                                        label="HTML 内容"
+                                                                        value={
+                                                                            selectedAd
+                                                                                .content
+                                                                                ?.html ||
+                                                                            ''
+                                                                        }
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContent(
+                                                                                {
+                                                                                    html: value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </PanelBody>
+                                                            </Panel>
+                                                        );
+                                                    }
+
+                                                    return (
                                                         <Panel>
                                                             <PanelBody
                                                                 title="内容配置"
@@ -814,8 +840,8 @@ const AdsConfig = () => {
                                                                 </Notice>
                                                             </PanelBody>
                                                         </Panel>
-                                                    )
-                                                }
+                                                    );
+                                                }}
                                             </TabPanel>
                                         ) : (
                                             <Panel>
