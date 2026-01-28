@@ -6,8 +6,12 @@ import {
     useState,
 } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
+import './index.css';
 import {
     Button,
+    Card,
+    CardBody,
+    Notice,
     Panel,
     PanelBody,
     SelectControl,
@@ -114,6 +118,8 @@ const AdsConfig = () => {
     const fetchFromDB = useStore((state) => state.fetchFromDB);
 
     const [selectedId, setSelectedId] = useState(null);
+    const [notice, setNotice] = useState(null);
+    const noticeTimerRef = useRef(null);
 
     useEffect(() => {
         fetchFromDB();
@@ -154,180 +160,281 @@ const AdsConfig = () => {
         });
     };
 
+    const handleSave = async () => {
+        if (noticeTimerRef.current) {
+            window.clearTimeout(noticeTimerRef.current);
+            noticeTimerRef.current = null;
+        }
+        setNotice(null);
+        try {
+            await saveToDB();
+            setNotice({ status: 'success', message: '保存成功' });
+            noticeTimerRef.current = window.setTimeout(() => {
+                setNotice(null);
+                noticeTimerRef.current = null;
+            }, 2500);
+        } catch (err) {
+            const message =
+                err?.data?.message ||
+                err?.message ||
+                '保存失败，请检查网络或权限设置。';
+            setNotice({ status: 'error', message });
+            noticeTimerRef.current = window.setTimeout(() => {
+                setNotice(null);
+                noticeTimerRef.current = null;
+            }, 4000);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (noticeTimerRef.current) {
+                window.clearTimeout(noticeTimerRef.current);
+            }
+        };
+    }, []);
+
     return (
         <div className="magick-ad-config">
             <div className="magick-ad-header">
-                <h1>Magick AD</h1>
+                <div>
+                    <h1>Magick AD</h1>
+                    <p className="description">广告配置与投放规则管理</p>
+                </div>
                 <Button
                     variant="primary"
-                    onClick={saveToDB}
+                    onClick={handleSave}
                     isBusy={isSaving}
                     disabled={isSaving}
                 >
-                    {isSaving ? '保存中...' : '保存'}
+                    {isSaving ? '保存中...' : '保存更改'}
                 </Button>
             </div>
 
-            {isLoading && <p>加载中...</p>}
-            {error && <p>错误: {error.message || '请求失败'}</p>}
+            {notice && (
+                <Notice
+                    status={notice.status}
+                    isDismissible
+                    onRemove={() => setNotice(null)}
+                >
+                    {notice.message}
+                </Notice>
+            )}
+
+            {isLoading && <Notice status="info">正在加载配置…</Notice>}
+            {error && (
+                <Notice status="error" isDismissible>
+                    {error.message || '请求失败'}
+                </Notice>
+            )}
 
             <div className="magick-ad-layout">
                 <aside className="magick-ad-sidebar">
-                    <div className="magick-ad-sidebar__header">
-                        <h2>广告组</h2>
-                        <Button variant="secondary" onClick={addAdGroup}>
-                            新增
-                        </Button>
-                    </div>
-                    {ads.length === 0 && <p>暂无广告组。</p>}
-                    <div className="magick-ad-sidebar__list">
-                        {ads.map((ad, index) => (
-                            <div
-                                key={ad.id}
-                                className={`magick-ad-sidebar__item ${
-                                    selectedId === ad.id
-                                        ? 'is-active'
-                                        : ''
-                                }`}
-                            >
-                                <Button
-                                    variant="tertiary"
-                                    onClick={() => setSelectedId(ad.id)}
-                                >
-                                    {ad.name || `广告组 ${index + 1}`}
-                                </Button>
-                                <Button
-                                    variant="tertiary"
-                                    isDestructive
-                                    onClick={() => removeAdGroup(ad.id)}
-                                >
-                                    删除
+                    <Card>
+                        <CardBody>
+                            <div className="magick-ad-sidebar__header">
+                                <h2>广告组</h2>
+                                <Button variant="secondary" onClick={addAdGroup}>
+                                    新增广告组
                                 </Button>
                             </div>
-                        ))}
-                    </div>
+                            {ads.length === 0 && (
+                                <p className="description">暂无广告组。</p>
+                            )}
+                            <nav className="magick-ad-sidebar__list">
+                                {ads.map((ad, index) => (
+                                    <div
+                                        key={ad.id}
+                                        className={`magick-ad-sidebar__item ${
+                                            selectedId === ad.id
+                                                ? 'is-active'
+                                                : ''
+                                        }`}
+                                    >
+                                        <Button
+                                            variant="tertiary"
+                                            isPressed={selectedId === ad.id}
+                                            onClick={() => setSelectedId(ad.id)}
+                                        >
+                                            {ad.name || `广告组 ${index + 1}`}
+                                        </Button>
+                                        <Button
+                                            variant="tertiary"
+                                            isDestructive
+                                            onClick={() => removeAdGroup(ad.id)}
+                                        >
+                                            删除
+                                        </Button>
+                                    </div>
+                                ))}
+                            </nav>
+                        </CardBody>
+                    </Card>
                 </aside>
 
                 <section className="magick-ad-detail">
-                    {!selectedAd && <p>请选择一个广告组进行配置。</p>}
+                    {!selectedAd && (
+                        <Card>
+                            <CardBody>
+                                <p>请选择一个广告组进行配置。</p>
+                            </CardBody>
+                        </Card>
+                    )}
                     {selectedAd && (
-                        <Panel>
-                            <PanelBody title="基础信息" initialOpen>
-                                <TextControl
-                                    label="广告名称"
-                                    value={selectedAd.name || ''}
-                                    onChange={(value) =>
-                                        updateAdGroup(selectedAd.id, {
-                                            name: value,
-                                        })
-                                    }
-                                />
-                                <ToggleControl
-                                    label="启用此广告"
-                                    checked={selectedAd.options?.enabled ?? true}
-                                    onChange={(value) =>
-                                        handleUpdateOptions({
-                                            enabled: value,
-                                        })
-                                    }
-                                />
-                            </PanelBody>
+                        <Card>
+                            <CardBody>
+                                <Panel>
+                                    <PanelBody title="基础信息" initialOpen>
+                                        <TextControl
+                                            label="广告名称"
+                                            value={selectedAd.name || ''}
+                                            onChange={(value) =>
+                                                updateAdGroup(selectedAd.id, {
+                                                    name: value,
+                                                })
+                                            }
+                                        />
+                                        <ToggleControl
+                                            label="启用此广告"
+                                            checked={
+                                                selectedAd.options?.enabled ??
+                                                true
+                                            }
+                                            onChange={(value) =>
+                                                handleUpdateOptions({
+                                                    enabled: value,
+                                                })
+                                            }
+                                        />
+                                    </PanelBody>
 
-                            <PanelBody title="展示规则" initialOpen>
-                                <SelectControl
-                                    label="展示页面"
-                                    value={
-                                        selectedAd.options?.displayPage || 'all'
-                                    }
-                                    options={[
-                                        { label: '全站', value: 'all' },
-                                        { label: '仅文章页', value: 'posts' },
-                                        { label: '仅页面', value: 'pages' },
-                                    ]}
-                                    onChange={(value) =>
-                                        handleUpdateOptions({
-                                            displayPage: value,
-                                        })
-                                    }
-                                />
+                                    <PanelBody title="展示规则" initialOpen>
+                                        <SelectControl
+                                            label="展示页面"
+                                            value={
+                                                selectedAd.options?.displayPage ||
+                                                'all'
+                                            }
+                                            options={[
+                                                { label: '全站', value: 'all' },
+                                                {
+                                                    label: '仅文章页',
+                                                    value: 'posts',
+                                                },
+                                                {
+                                                    label: '仅页面',
+                                                    value: 'pages',
+                                                },
+                                            ]}
+                                            onChange={(value) =>
+                                                handleUpdateOptions({
+                                                    displayPage: value,
+                                                })
+                                            }
+                                        />
 
-                                {selectedAd.options?.displayPage === 'posts' && (
-                                    <SelectControl
-                                        label="文章内部位置"
-                                        value={
-                                            selectedAd.options?.postPosition ||
-                                            'content-bottom'
-                                        }
-                                        options={[
-                                            {
-                                                label: '正文开头',
-                                                value: 'content-top',
-                                            },
-                                            {
-                                                label: '正文中间',
-                                                value: 'content-middle',
-                                            },
-                                            {
-                                                label: '正文结尾',
-                                                value: 'content-bottom',
-                                            },
-                                        ]}
-                                        onChange={(value) =>
-                                            handleUpdateOptions({
-                                                postPosition: value,
-                                            })
-                                        }
-                                    />
-                                )}
+                                        {selectedAd.options?.displayPage ===
+                                            'posts' && (
+                                            <SelectControl
+                                                label="文章内部位置"
+                                                value={
+                                                    selectedAd.options
+                                                        ?.postPosition ||
+                                                    'content-bottom'
+                                                }
+                                                options={[
+                                                    {
+                                                        label: '正文开头',
+                                                        value: 'content-top',
+                                                    },
+                                                    {
+                                                        label: '正文中间',
+                                                        value: 'content-middle',
+                                                    },
+                                                    {
+                                                        label: '正文结尾',
+                                                        value: 'content-bottom',
+                                                    },
+                                                ]}
+                                                onChange={(value) =>
+                                                    handleUpdateOptions({
+                                                        postPosition: value,
+                                                    })
+                                                }
+                                            />
+                                        )}
 
-                                <SelectControl
-                                    label="展示位置"
-                                    value={
-                                        selectedAd.options?.placement || 'sidebar'
-                                    }
-                                    options={[
-                                        { label: '侧边栏', value: 'sidebar' },
-                                        { label: '页眉', value: 'header' },
-                                        { label: '页脚', value: 'footer' },
-                                    ]}
-                                    onChange={(value) =>
-                                        handleUpdateOptions({
-                                            placement: value,
-                                        })
-                                    }
-                                />
-                            </PanelBody>
+                                        <SelectControl
+                                            label="展示位置"
+                                            value={
+                                                selectedAd.options?.placement ||
+                                                'sidebar'
+                                            }
+                                            options={[
+                                                {
+                                                    label: '侧边栏',
+                                                    value: 'sidebar',
+                                                },
+                                                {
+                                                    label: '页眉',
+                                                    value: 'header',
+                                                },
+                                                {
+                                                    label: '页脚',
+                                                    value: 'footer',
+                                                },
+                                            ]}
+                                            onChange={(value) =>
+                                                handleUpdateOptions({
+                                                    placement: value,
+                                                })
+                                            }
+                                        />
+                                    </PanelBody>
 
-                            <PanelBody title="内容配置" initialOpen>
-                                <TextControl
-                                    label="跳转链接"
-                                    value={selectedAd.content?.link || ''}
-                                    onChange={(value) =>
-                                        handleUpdateContent({ link: value })
-                                    }
-                                />
-                                <TextControl
-                                    label="HTML 内容"
-                                    value={selectedAd.content?.html || ''}
-                                    onChange={(value) =>
-                                        handleUpdateContent({ html: value })
-                                    }
-                                />
-                                <div className="magick-ad-field">
-                                    <p className="magick-ad-field__label">
-                                        图片
-                                    </p>
-                                    <ImagePicker
-                                        value={selectedAd.content?.image || null}
-                                        onChange={(value) =>
-                                            handleUpdateContent({
-                                                image: value,
-                                            })
-                                        }
-                                    />
-                                </div>
-                            </PanelBody>
-                        </Panel>
+                                    <PanelBody title="内容配置" initialOpen>
+                                        <TextControl
+                                            label="跳转链接"
+                                            value={
+                                                selectedAd.content?.link || ''
+                                            }
+                                            onChange={(value) =>
+                                                handleUpdateContent({
+                                                    link: value,
+                                                })
+                                            }
+                                        />
+                                        <TextControl
+                                            label="HTML 内容"
+                                            value={
+                                                selectedAd.content?.html || ''
+                                            }
+                                            onChange={(value) =>
+                                                handleUpdateContent({
+                                                    html: value,
+                                                })
+                                            }
+                                        />
+                                        <div className="magick-ad-field">
+                                            <p className="magick-ad-field__label">
+                                                图片
+                                            </p>
+                                            <ImagePicker
+                                                value={
+                                                    selectedAd.content?.image ||
+                                                    null
+                                                }
+                                                onChange={(value) =>
+                                                    handleUpdateContent({
+                                                        image: value,
+                                                    })
+                                                }
+                                            />
+                                        </div>
+                                    </PanelBody>
+                                </Panel>
+                            </CardBody>
+                        </Card>
                     )}
                 </section>
             </div>
@@ -384,8 +491,11 @@ const Dashboard = () => {
 
     return (
         <div className="magick-ad-dashboard">
-            <div className="magick-ad-dashboard__header">
-                <h1>统计看板</h1>
+            <div className="magick-ad-header">
+                <div>
+                    <h1>统计看板</h1>
+                    <p className="description">近 7 / 30 天投放趋势</p>
+                </div>
                 <SelectControl
                     label="日期范围"
                     value={range}
@@ -397,65 +507,79 @@ const Dashboard = () => {
                 />
             </div>
 
-            {isLoading && <p>加载中...</p>}
-            {error && <p>错误: {error.message || '请求失败'}</p>}
+            {isLoading && <Notice status="info">加载中…</Notice>}
+            {error && (
+                <Notice status="error" isDismissible>
+                    {error.message || '请求失败'}
+                </Notice>
+            )}
 
             {!isLoading && !error && (
-                <>
+                <div className="magick-ad-dashboard__content">
                     <div className="magick-ad-dashboard__cards">
-                        <div className="magick-ad-dashboard__card">
-                            <p className="magick-ad-dashboard__label">
-                                总展示
-                            </p>
-                            <p className="magick-ad-dashboard__value">
-                                {summary.views}
-                            </p>
-                        </div>
-                        <div className="magick-ad-dashboard__card">
-                            <p className="magick-ad-dashboard__label">
-                                总点击
-                            </p>
-                            <p className="magick-ad-dashboard__value">
-                                {summary.clicks}
-                            </p>
-                        </div>
-                        <div className="magick-ad-dashboard__card">
-                            <p className="magick-ad-dashboard__label">
-                                平均 CTR
-                            </p>
-                            <p className="magick-ad-dashboard__value">
-                                {ctr}%
-                            </p>
-                        </div>
+                        <Card>
+                            <CardBody>
+                                <p className="magick-ad-dashboard__label">
+                                    总展示
+                                </p>
+                                <p className="magick-ad-dashboard__value">
+                                    {summary.views}
+                                </p>
+                            </CardBody>
+                        </Card>
+                        <Card>
+                            <CardBody>
+                                <p className="magick-ad-dashboard__label">
+                                    总点击
+                                </p>
+                                <p className="magick-ad-dashboard__value">
+                                    {summary.clicks}
+                                </p>
+                            </CardBody>
+                        </Card>
+                        <Card>
+                            <CardBody>
+                                <p className="magick-ad-dashboard__label">
+                                    平均 CTR
+                                </p>
+                                <p className="magick-ad-dashboard__value">
+                                    {ctr}%
+                                </p>
+                            </CardBody>
+                        </Card>
                     </div>
 
-                    <div className="magick-ad-dashboard__chart">
-                        <ResponsiveContainer width="100%" height={320}>
-                            <LineChart data={data}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip />
-                                <Line
-                                    type="monotone"
-                                    dataKey="views"
-                                    stroke="#1e1e1e"
-                                    strokeWidth={2}
-                                    dot={false}
-                                    name="展示"
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="clicks"
-                                    stroke="#2271b1"
-                                    strokeWidth={2}
-                                    dot={false}
-                                    name="点击"
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </>
+                    <Card>
+                        <CardBody>
+                            <div className="magick-ad-dashboard__chart">
+                                <ResponsiveContainer width="100%" height={320}>
+                                    <LineChart data={data}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="date" />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="views"
+                                            stroke="#1e1e1e"
+                                            strokeWidth={2}
+                                            dot={false}
+                                            name="展示"
+                                        />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="clicks"
+                                            stroke="#2271b1"
+                                            strokeWidth={2}
+                                            dot={false}
+                                            name="点击"
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardBody>
+                    </Card>
+                </div>
             )}
         </div>
     );

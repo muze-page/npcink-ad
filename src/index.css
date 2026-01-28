@@ -1,0 +1,123 @@
+.magick-ad-config,
+.magick-ad-dashboard {
+    padding: 16px 0 24px;
+}
+
+.magick-ad-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.magick-ad-layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 16px;
+}
+
+.magick-ad-sidebar__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.magick-ad-sidebar__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.magick-ad-sidebar__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: #f6f7f7;
+    position: relative;
+}
+
+.magick-ad-sidebar__item.is-active {
+    border-color: #2271b1;
+    background: #e7f1fb;
+    box-shadow: 0 0 0 1px rgba(34, 113, 177, 0.15);
+}
+
+.magick-ad-sidebar__item.is-active::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 6px;
+    bottom: 6px;
+    width: 4px;
+    border-radius: 4px;
+    background: #2271b1;
+}
+
+.magick-ad-detail .components-panel {
+    margin-top: 8px;
+}
+
+.magick-ad-field__label {
+    margin: 0 0 8px;
+    font-weight: 600;
+}
+
+.magick-ad-image-preview img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid #dcdcde;
+    display: block;
+}
+
+.magick-ad-image-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.magick-ad-dashboard__content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.magick-ad-dashboard__cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.magick-ad-dashboard__label {
+    margin: 0 0 6px;
+    color: #50575e;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.magick-ad-dashboard__value {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.magick-ad-dashboard__chart {
+    min-height: 320px;
+}
+
+@media (max-width: 960px) {
+    .magick-ad-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .magick-ad-dashboard__cards {
+        grid-template-columns: 1fr;
+    }
+}
