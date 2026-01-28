@@ -1,11 +1,12 @@
 # Magick AD WP
 
 #### 介绍
+
 WordPress 的广告插件，带流量点击图
 
 #### 软件架构
-软件架构说明
 
+软件架构说明
 
 #### 安装教程
 
@@ -21,15 +22,39 @@ WordPress 的广告插件，带流量点击图
 
 #### 参与贡献
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+展示页面选项下，有
+全站
+仅首页
+仅文章也
+仅单页
+仅分类页
+仅标签页
+仅搜索结果页
+仅404页
+仅作者页
 
+其中，除仅文章页和仅单页外，其他展示页面的展示位置的值，可以选
+顶部
+内容前
+内容后
+底部
+
+若是文章页和仅单页，则展示位置的值可选
+顶部
+内容前
+文章顶部
+位置第三段
+文章底部
+评论列表顶部
+评论框上方
+评论框下方
+评论列表底部
+内容后
+底部
 
 #### 特技
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
+1.  使用 Readme_XXX.md 来支持不同的语言，例如 Readme_en.md, Readme_zh.md
 2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
 3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
 4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目

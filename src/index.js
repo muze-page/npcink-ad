@@ -12,12 +12,14 @@ import {
     Card,
     CardBody,
     DropdownMenu,
+    FormTokenField,
     MenuGroup,
     MenuItem,
     Notice,
     Panel,
     PanelBody,
     SelectControl,
+    Spinner,
     TabPanel,
     TextControl,
     ToggleControl,
@@ -32,6 +34,7 @@ import {
     YAxis,
 } from 'recharts';
 import { useStore } from './store';
+import { decodeEntities } from '@wordpress/html-entities';
 
 apiFetch.use((options, next) => {
     return next({
@@ -147,6 +150,45 @@ const isPostLikePage = (page) => page === 'posts' || page === 'pages';
 const getPositionOptions = (page) =>
     isPostLikePage(page) ? POST_POSITION_OPTIONS : GENERIC_POSITION_OPTIONS;
 
+const TARGET_TYPE_OPTIONS = [
+    { label: '文章页面', value: 'posts' },
+    { label: '单页', value: 'pages' },
+    { label: '分类页', value: 'category' },
+    { label: '标签页', value: 'tag' },
+    { label: '作者页', value: 'author' },
+];
+
+const getTargetEndpoint = (type) => {
+    switch (type) {
+        case 'posts':
+            return 'posts';
+        case 'pages':
+            return 'pages';
+        case 'category':
+            return 'categories';
+        case 'tag':
+            return 'tags';
+        case 'author':
+            return 'users';
+        default:
+            return '';
+    }
+};
+
+const normalizeTargetItem = (type, item) => {
+    if (!item || typeof item !== 'object') {
+        return null;
+    }
+    const labelSource =
+        type === 'posts' || type === 'pages'
+            ? item.title?.rendered
+            : item.name;
+    const label = decodeEntities(
+        labelSource || item.slug || `#${item.id}`
+    );
+    return { id: Number(item.id), label };
+};
+
 const AdsConfig = () => {
     const ads = useStore((state) => state.ads);
     const isLoading = useStore((state) => state.isLoading);
@@ -167,7 +209,12 @@ const AdsConfig = () => {
     const [debugError, setDebugError] = useState(null);
     const [debugLocked, setDebugLocked] = useState(false);
     const [debugLogSettings, setDebugLogSettings] = useState(true);
+    const [targetItems, setTargetItems] = useState([]);
+    const [targetSuggestions, setTargetSuggestions] = useState([]);
+    const [targetLoading, setTargetLoading] = useState(false);
     const noticeTimerRef = useRef(null);
+    const targetSearchTimerRef = useRef(null);
+    const targetRequestRef = useRef(0);
 
     useEffect(() => {
         fetchFromDB();
@@ -239,6 +286,117 @@ const AdsConfig = () => {
             ...getPositionOptions(page),
         ];
     }, [selectedAd?.options?.show_page]);
+
+    const targetIdsKey = useMemo(() => {
+        const ids = selectedAd?.options?.target_ids || [];
+        return Array.isArray(ids) ? ids.join(',') : '';
+    }, [selectedAd?.options?.target_ids]);
+
+    useEffect(() => {
+        if (!selectedAd || selectedAd.options?.ad_type !== 'targeted') {
+            setTargetItems([]);
+            return;
+        }
+        const targetType = selectedAd.options?.target_type;
+        const ids = Array.isArray(selectedAd.options?.target_ids)
+            ? selectedAd.options?.target_ids
+            : [];
+        if (!targetType || ids.length === 0) {
+            setTargetItems([]);
+            return;
+        }
+        const endpoint = getTargetEndpoint(targetType);
+        if (!endpoint) {
+            setTargetItems([]);
+            return;
+        }
+        const requestId = ++targetRequestRef.current;
+        setTargetLoading(true);
+        apiFetch({
+            path: `/wp/v2/${endpoint}?include=${ids.join(
+                ','
+            )}&per_page=${Math.min(ids.length, 100)}`,
+        })
+            .then((items) => {
+                if (requestId !== targetRequestRef.current) {
+                    return;
+                }
+                const normalized = Array.isArray(items)
+                    ? items
+                          .map((item) => normalizeTargetItem(targetType, item))
+                          .filter(Boolean)
+                    : [];
+                setTargetItems(normalized);
+            })
+            .catch(() => {
+                if (requestId !== targetRequestRef.current) {
+                    return;
+                }
+                setTargetItems([]);
+            })
+            .finally(() => {
+                if (requestId !== targetRequestRef.current) {
+                    return;
+                }
+                setTargetLoading(false);
+            });
+    }, [selectedAd?.id, selectedAd?.options?.target_type, targetIdsKey]);
+
+    const handleTargetSearch = (query) => {
+        if (targetSearchTimerRef.current) {
+            window.clearTimeout(targetSearchTimerRef.current);
+        }
+        targetSearchTimerRef.current = window.setTimeout(() => {
+            if (
+                !selectedAd ||
+                selectedAd.options?.ad_type !== 'targeted'
+            ) {
+                setTargetSuggestions([]);
+                return;
+            }
+            const targetType = selectedAd.options?.target_type;
+            const endpoint = getTargetEndpoint(targetType);
+            if (!endpoint) {
+                setTargetSuggestions([]);
+                return;
+            }
+            const requestId = ++targetRequestRef.current;
+            setTargetLoading(true);
+            const baseQuery = `per_page=20&search=${encodeURIComponent(
+                query || ''
+            )}`;
+            const path =
+                targetType === 'author'
+                    ? `/wp/v2/${endpoint}?${baseQuery}&who=authors`
+                    : `/wp/v2/${endpoint}?${baseQuery}`;
+            apiFetch({ path })
+                .then((items) => {
+                    if (requestId !== targetRequestRef.current) {
+                        return;
+                    }
+                    const normalized = Array.isArray(items)
+                        ? items
+                              .map((item) =>
+                                  normalizeTargetItem(targetType, item)
+                              )
+                              .filter(Boolean)
+                        : [];
+                    setTargetSuggestions(normalized);
+                })
+                .catch(() => {
+                    if (requestId !== targetRequestRef.current) {
+                        return;
+                    }
+                    setTargetSuggestions([]);
+                })
+                .finally(() => {
+                    if (requestId !== targetRequestRef.current) {
+                        return;
+                    }
+                    setTargetLoading(false);
+                });
+        }, 300);
+    };
 
     const missingPositionIds = useMemo(() => {
         return new Set(
@@ -634,6 +792,144 @@ const AdsConfig = () => {
                                                             }
                                                         />
 
+                                                    </PanelBody>
+                                                )}
+
+                                                {selectedAd.options
+                                                    ?.ad_type ===
+                                                    'targeted' && (
+                                                    <PanelBody
+                                                        title="展示位置"
+                                                        initialOpen
+                                                    >
+                                                        <SelectControl
+                                                            label="展示类型"
+                                                            value={
+                                                                selectedAd
+                                                                    .options
+                                                                    ?.target_type ||
+                                                                ''
+                                                            }
+                                                            options={[
+                                                                {
+                                                                    label: '请选择展示类型',
+                                                                    value: '',
+                                                                },
+                                                                ...TARGET_TYPE_OPTIONS,
+                                                            ]}
+                                                            onChange={(
+                                                                value
+                                                            ) => {
+                                                                setTargetItems(
+                                                                    []
+                                                                );
+                                                                setTargetSuggestions(
+                                                                    []
+                                                                );
+                                                                handleUpdateOptions(
+                                                                    {
+                                                                        target_type:
+                                                                            value,
+                                                                        target_ids:
+                                                                            [],
+                                                                    }
+                                                                );
+                                                            }}
+                                                        />
+
+                                                        <FormTokenField
+                                                            label="展示页面"
+                                                            value={targetItems.map(
+                                                                (item) =>
+                                                                    item.label
+                                                            )}
+                                                            suggestions={targetSuggestions.map(
+                                                                (item) =>
+                                                                    item.label
+                                                            )}
+                                                            onInputChange={
+                                                                handleTargetSearch
+                                                            }
+                                                            onChange={(
+                                                                tokens
+                                                            ) => {
+                                                                const tokenMap = new Map();
+                                                                targetItems.forEach(
+                                                                    (item) => {
+                                                                        tokenMap.set(
+                                                                            item.label,
+                                                                            item
+                                                                        );
+                                                                    }
+                                                                );
+                                                                targetSuggestions.forEach(
+                                                                    (item) => {
+                                                                        tokenMap.set(
+                                                                            item.label,
+                                                                            item
+                                                                        );
+                                                                    }
+                                                                );
+                                                                const nextItems =
+                                                                    tokens
+                                                                        .map(
+                                                                            (
+                                                                                token
+                                                                            ) =>
+                                                                                tokenMap.get(
+                                                                                    token
+                                                                                )
+                                                                        )
+                                                                        .filter(
+                                                                            Boolean
+                                                                        );
+                                                                setTargetItems(
+                                                                    nextItems
+                                                                );
+                                                                handleUpdateOptions(
+                                                                    {
+                                                                        target_ids:
+                                                                            nextItems.map(
+                                                                                (
+                                                                                    item
+                                                                                ) =>
+                                                                                    item.id
+                                                                            ),
+                                                                    }
+                                                                );
+                                                            }}
+                                                            placeholder={
+                                                                selectedAd
+                                                                    .options
+                                                                    ?.target_type
+                                                                    ? '输入关键词搜索并选择'
+                                                                    : '请先选择展示类型'
+                                                            }
+                                                            disabled={
+                                                                !selectedAd
+                                                                    .options
+                                                                    ?.target_type
+                                                            }
+                                                        />
+                                                        {targetLoading && (
+                                                            <div className="magick-ad-inline-loading">
+                                                                <Spinner />
+                                                                <span>
+                                                                    正在加载列表…
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {!selectedAd.options
+                                                            ?.target_type && (
+                                                            <Notice
+                                                                status="info"
+                                                                isDismissible={
+                                                                    false
+                                                                }
+                                                            >
+                                                                请选择展示类型后再选择具体页面。
+                                                            </Notice>
+                                                        )}
                                                     </PanelBody>
                                                 )}
 

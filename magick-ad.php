@@ -358,6 +358,12 @@ class Magick_AD_Engine {
                 'all'
             ),
             'end_date' => self::sanitize_date(isset($options['end_date']) ? $options['end_date'] : ''),
+            'target_type' => self::sanitize_choice(
+                isset($options['target_type']) ? $options['target_type'] : '',
+                array('posts', 'pages', 'category', 'tag', 'author'),
+                ''
+            ),
+            'target_ids' => self::sanitize_ids(isset($options['target_ids']) ? $options['target_ids'] : array()),
         );
 
         $sanitized_content = array(
@@ -393,6 +399,20 @@ class Magick_AD_Engine {
             return '';
         }
         return date('Y-m-d', $timestamp);
+    }
+
+    private static function sanitize_ids($value) {
+        if (!is_array($value)) {
+            return array();
+        }
+        $ids = array();
+        foreach ($value as $id) {
+            $id = absint($id);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+        return array_values(array_unique($ids));
     }
 
 }
@@ -798,6 +818,7 @@ class Magick_AD_Frontend {
 
     private static function should_display_ad($ad) {
         $options = isset($ad['options']) ? $ad['options'] : array();
+        $ad_type = isset($options['ad_type']) ? $options['ad_type'] : 'global';
 
         if (isset($options['enabled']) && !$options['enabled']) {
             return false;
@@ -811,8 +832,14 @@ class Magick_AD_Frontend {
             return false;
         }
 
-        if (!self::matches_show_page($options)) {
-            return false;
+        if ($ad_type === 'targeted') {
+            if (!self::matches_targeting($options)) {
+                return false;
+            }
+        } else {
+            if (!self::matches_show_page($options)) {
+                return false;
+            }
         }
 
         if (!self::matches_device($options)) {
@@ -910,6 +937,35 @@ class Magick_AD_Frontend {
         }
 
         return true;
+    }
+
+    private static function matches_targeting($options) {
+        $type = isset($options['target_type']) ? $options['target_type'] : '';
+        $ids = isset($options['target_ids']) && is_array($options['target_ids'])
+            ? array_map('absint', $options['target_ids'])
+            : array();
+        $ids = array_filter($ids);
+        if (!$type || empty($ids)) {
+            return false;
+        }
+
+        if ($type === 'posts') {
+            return is_singular('post') && in_array(get_queried_object_id(), $ids, true);
+        }
+        if ($type === 'pages') {
+            return is_page() && in_array(get_queried_object_id(), $ids, true);
+        }
+        if ($type === 'category') {
+            return is_category() && in_array(get_queried_object_id(), $ids, true);
+        }
+        if ($type === 'tag') {
+            return is_tag() && in_array(get_queried_object_id(), $ids, true);
+        }
+        if ($type === 'author') {
+            return is_author() && in_array(get_queried_object_id(), $ids, true);
+        }
+
+        return false;
     }
 
     private static function matches_device($options) {

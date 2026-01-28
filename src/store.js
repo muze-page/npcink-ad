@@ -14,6 +14,8 @@ const createAdGroupTemplate = (type = 'global') => ({
         device: 'all',
         login: 'all',
         end_date: '',
+        target_type: '',
+        target_ids: [],
     },
     content: {
         html: '',
@@ -37,7 +39,10 @@ const normalizeShowPosition = (value) => {
 
 const normalizeAd = (ad) => {
     const safeAd = ad && typeof ad === 'object' ? ad : {};
-    const options = safeAd.options && typeof safeAd.options === 'object' ? safeAd.options : {};
+    const options =
+        safeAd.options && typeof safeAd.options === 'object'
+            ? safeAd.options
+            : {};
     const content = safeAd.content && typeof safeAd.content === 'object' ? safeAd.content : {};
     const image = content.image && typeof content.image === 'object' ? content.image : {};
 
@@ -53,6 +58,10 @@ const normalizeAd = (ad) => {
             device: options.device || 'all',
             login: options.login || 'all',
             end_date: options.end_date || '',
+            target_type: options.target_type || '',
+            target_ids: Array.isArray(options.target_ids)
+                ? options.target_ids.map((id) => Number(id)).filter(Boolean)
+                : [],
         },
         content: {
             html: content.html || '',
