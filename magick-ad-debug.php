@@ -4,6 +4,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+if (!function_exists('magick_ad_debug_log')) {
+    function magick_ad_debug_log($message) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log($message);
+        }
+    }
+}
+
 class Magick_AD_Debug {
     private static $logged_settings = false;
     private static $logged_hooks = array();
@@ -21,13 +29,17 @@ class Magick_AD_Debug {
         }
         self::$logged_settings = true;
 
+        if (!function_exists('magick_ad_debug_log_settings_enabled') || !magick_ad_debug_log_settings_enabled()) {
+            return;
+        }
+
         if (class_exists('Magick_AD_Engine') && method_exists('Magick_AD_Engine', 'get_settings')) {
             $settings = Magick_AD_Engine::get_settings();
         } else {
             $settings = get_option('magick_ad_settings', array());
         }
 
-        error_log('Magick AD Debug: settings=' . print_r($settings, true));
+        magick_ad_debug_log('Magick AD Debug: settings=' . print_r($settings, true));
     }
 
     public static function log_wp_head() {
@@ -71,7 +83,7 @@ class Magick_AD_Debug {
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
 
         if (empty($ads)) {
-            error_log('Magick AD Debug: no ads found in settings.');
+            magick_ad_debug_log('Magick AD Debug: no ads found in settings.');
             return;
         }
 
@@ -79,9 +91,9 @@ class Magick_AD_Debug {
             $result = self::evaluate_ad($ad);
             $id = isset($ad['id']) ? $ad['id'] : '(no-id)';
             if ($result['allowed']) {
-                error_log('Magick AD Debug: ad ' . $id . ' allowed=true');
+                magick_ad_debug_log('Magick AD Debug: ad ' . $id . ' allowed=true');
             } else {
-                error_log('Magick AD Debug: ad ' . $id . ' allowed=false reasons=' . implode('|', $result['reasons']));
+                magick_ad_debug_log('Magick AD Debug: ad ' . $id . ' allowed=false reasons=' . implode('|', $result['reasons']));
             }
         }
     }
@@ -136,7 +148,7 @@ class Magick_AD_Debug {
             return;
         }
         self::$logged_hooks[$key] = true;
-        error_log($message);
+        magick_ad_debug_log($message);
     }
 
     private static function bool($value) {

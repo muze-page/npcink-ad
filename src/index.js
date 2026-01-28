@@ -120,11 +120,50 @@ const AdsConfig = () => {
     const [selectedId, setSelectedId] = useState(null);
     const [notice, setNotice] = useState(null);
     const [showValidation, setShowValidation] = useState(false);
+    const [debugEnabled, setDebugEnabled] = useState(false);
+    const [debugLoading, setDebugLoading] = useState(false);
+    const [debugSaving, setDebugSaving] = useState(false);
+    const [debugError, setDebugError] = useState(null);
+    const [debugLocked, setDebugLocked] = useState(false);
+    const [debugLogSettings, setDebugLogSettings] = useState(true);
     const noticeTimerRef = useRef(null);
 
     useEffect(() => {
         fetchFromDB();
     }, [fetchFromDB]);
+
+    useEffect(() => {
+        let isMounted = true;
+        setDebugLoading(true);
+        setDebugError(null);
+
+        apiFetch({ path: '/magick-ad/v1/debug' })
+            .then((response) => {
+                if (!isMounted) {
+                    return;
+                }
+                const forced = Boolean(response?.forced);
+                setDebugLocked(forced);
+                setDebugEnabled(forced ? true : Boolean(response?.enabled));
+                setDebugLogSettings(
+                    response?.log_settings !== undefined
+                        ? Boolean(response?.log_settings)
+                        : true
+                );
+                setDebugLoading(false);
+            })
+            .catch((err) => {
+                if (!isMounted) {
+                    return;
+                }
+                setDebugError(err);
+                setDebugLoading(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     useEffect(() => {
         if (!selectedId && ads.length > 0) {
@@ -539,12 +578,125 @@ const AdsConfig = () => {
                                             />
                                         </div>
                                     </PanelBody>
+
                                 </Panel>
                             </CardBody>
                         </Card>
                     )}
                 </section>
             </div>
+
+            <Card>
+                <CardBody>
+                    <Panel>
+                        <PanelBody title="调试设置" initialOpen={false}>
+                            {debugLocked && (
+                                <Notice status="warning" isDismissible={false}>
+                                    调试已在 wp-config.php 中强制开启。
+                                </Notice>
+                            )}
+                            {debugError && (
+                                <Notice status="error" isDismissible>
+                                    {debugError.message ||
+                                        '调试开关加载失败'}
+                                </Notice>
+                            )}
+                            <ToggleControl
+                                label="启用调试日志"
+                                checked={debugEnabled}
+                                disabled={
+                                    debugLocked || debugLoading || debugSaving
+                                }
+                                onChange={(value) => {
+                                    setDebugEnabled(value);
+                                    setDebugSaving(true);
+                                    apiFetch({
+                                        path: '/magick-ad/v1/debug',
+                                        method: 'POST',
+                                        data: {
+                                            enabled: value,
+                                            log_settings: debugLogSettings,
+                                        },
+                                    })
+                                        .then(() => {
+                                            setDebugSaving(false);
+                                            setNotice({
+                                                status: 'success',
+                                                message: '调试设置已更新',
+                                            });
+                                            noticeTimerRef.current =
+                                                window.setTimeout(() => {
+                                                    setNotice(null);
+                                                    noticeTimerRef.current =
+                                                        null;
+                                                }, 2500);
+                                        })
+                                        .catch((err) => {
+                                            setDebugSaving(false);
+                                            setDebugEnabled(!value);
+                                            setDebugError(err);
+                                            setNotice({
+                                                status: 'error',
+                                                message:
+                                                    err?.message ||
+                                                    '调试设置更新失败',
+                                            });
+                                        });
+                                }}
+                                help={
+                                    debugLoading
+                                        ? '正在加载调试状态…'
+                                        : '开启后会将调试信息写入 debug.log'
+                                }
+                            />
+                            <ToggleControl
+                                label="记录设置快照（settings=Array）"
+                                checked={debugLogSettings}
+                                disabled={
+                                    debugLoading || debugSaving || !debugEnabled
+                                }
+                                onChange={(value) => {
+                                    setDebugLogSettings(value);
+                                    setDebugSaving(true);
+                                    apiFetch({
+                                        path: '/magick-ad/v1/debug',
+                                        method: 'POST',
+                                        data: {
+                                            enabled: debugEnabled,
+                                            log_settings: value,
+                                        },
+                                    })
+                                        .then(() => {
+                                            setDebugSaving(false);
+                                            setNotice({
+                                                status: 'success',
+                                                message: '调试设置已更新',
+                                            });
+                                            noticeTimerRef.current =
+                                                window.setTimeout(() => {
+                                                    setNotice(null);
+                                                    noticeTimerRef.current =
+                                                        null;
+                                                }, 2500);
+                                        })
+                                        .catch((err) => {
+                                            setDebugSaving(false);
+                                            setDebugLogSettings(!value);
+                                            setDebugError(err);
+                                            setNotice({
+                                                status: 'error',
+                                                message:
+                                                    err?.message ||
+                                                    '调试设置更新失败',
+                                            });
+                                        });
+                                }}
+                                help="控制 settings=Array 是否写入 debug.log"
+                            />
+                        </PanelBody>
+                    </Panel>
+                </CardBody>
+            </Card>
         </div>
     );
 };

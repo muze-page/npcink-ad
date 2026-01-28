@@ -13,6 +13,48 @@ if (!defined('ABSPATH')) {
 define('MAGICK_AD_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MAGICK_AD_PLUGIN_VERSION', '0.1.0');
 
+if (!function_exists('magick_ad_is_debug_enabled')) {
+    function magick_ad_is_debug_enabled() {
+        static $enabled = null;
+        if ($enabled !== null) {
+            return $enabled;
+        }
+
+        $enabled = false;
+        if (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) {
+            $enabled = true;
+        } elseif (get_option('magick_ad_debug', '0') === '1') {
+            $enabled = true;
+        }
+
+        $enabled = (bool) apply_filters('magick_ad_debug_enabled', $enabled);
+
+        return $enabled;
+    }
+}
+
+if (!function_exists('magick_ad_debug_log')) {
+    function magick_ad_debug_log($message) {
+        if (!magick_ad_is_debug_enabled()) {
+            return;
+        }
+
+        error_log($message);
+    }
+}
+
+if (!function_exists('magick_ad_debug_log_settings_enabled')) {
+    function magick_ad_debug_log_settings_enabled() {
+        if (!magick_ad_is_debug_enabled()) {
+            return false;
+        }
+
+        $enabled = (get_option('magick_ad_debug_log_settings', '1') === '1');
+
+        return (bool) apply_filters('magick_ad_debug_log_settings_enabled', $enabled);
+    }
+}
+
 function magick_ad_register_menu() {
     add_menu_page(
         'Magick AD',
@@ -26,8 +68,50 @@ function magick_ad_register_menu() {
 }
 add_action('admin_menu', 'magick_ad_register_menu');
 
+function magick_ad_register_debug_settings() {
+    register_setting(
+        'magick_ad_debug',
+        'magick_ad_debug',
+        array(
+            'type' => 'string',
+            'sanitize_callback' => 'magick_ad_sanitize_debug',
+            'default' => '0',
+        )
+    );
+
+    add_settings_section(
+        'magick_ad_debug_section',
+        esc_html__('调试设置', 'magick-ad'),
+        '__return_false',
+        'magick_ad_debug'
+    );
+
+    add_settings_field(
+        'magick_ad_debug_field',
+        esc_html__('启用调试日志', 'magick-ad'),
+        'magick_ad_render_debug_field',
+        'magick_ad_debug',
+        'magick_ad_debug_section'
+    );
+}
+add_action('admin_init', 'magick_ad_register_debug_settings');
+
+function magick_ad_sanitize_debug($value) {
+    return !empty($value) ? '1' : '0';
+}
+
+function magick_ad_render_debug_field() {
+    $value = get_option('magick_ad_debug', '0');
+    echo '<label>';
+    echo '<input type="checkbox" name="magick_ad_debug" value="1" ' . checked('1', $value, false) . ' />';
+    echo ' ' . esc_html__('记录调试日志到 debug.log', 'magick-ad');
+    echo '</label>';
+}
+
 function magick_ad_render_app() {
-    echo '<div class="wrap"><div id="magick-ad-app"></div></div>';
+    echo '<div class="wrap">';
+    echo '<div id="magick-ad-app"></div>';
+    echo '</div>';
 }
 
 function magick_ad_enqueue_admin_assets($hook) {
@@ -105,6 +189,16 @@ function magick_ad_register_rest_routes() {
     register_rest_route('magick-ad/v1', '/report', array(
         'methods' => 'GET',
         'callback' => array('Magick_AD_Reports', 'rest_report'),
+        'permission_callback' => 'magick_ad_can_manage',
+    ));
+    register_rest_route('magick-ad/v1', '/debug', array(
+        'methods' => 'GET',
+        'callback' => array('Magick_AD_Debug_Settings', 'rest_get'),
+        'permission_callback' => 'magick_ad_can_manage',
+    ));
+    register_rest_route('magick-ad/v1', '/debug', array(
+        'methods' => 'POST',
+        'callback' => array('Magick_AD_Debug_Settings', 'rest_update'),
         'permission_callback' => 'magick_ad_can_manage',
     ));
     register_rest_route('magick-ad/v1', '/track', array(
@@ -586,10 +680,60 @@ class Magick_AD_Reports {
     }
 }
 
+class Magick_AD_Debug_Settings {
+    public static function rest_get() {
+        $forced = (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) ? true : false;
+        $enabled = (get_option('magick_ad_debug', '0') === '1');
+        $log_settings = (get_option('magick_ad_debug_log_settings', '1') === '1');
+        return rest_ensure_response(array(
+            'enabled' => $enabled,
+            'forced' => $forced,
+            'log_settings' => $log_settings,
+        ));
+    }
+
+    public static function rest_update(WP_REST_Request $request) {
+        $forced = (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) ? true : false;
+        $params = $request->get_json_params();
+        $enabled = false;
+        $log_settings = null;
+
+        if (is_array($params) && array_key_exists('enabled', $params)) {
+            $enabled = (bool) $params['enabled'];
+        } else {
+            $enabled = (bool) $request->get_param('enabled');
+        }
+
+        if (is_array($params) && array_key_exists('log_settings', $params)) {
+            $log_settings = (bool) $params['log_settings'];
+        } elseif ($request->has_param('log_settings')) {
+            $log_settings = (bool) $request->get_param('log_settings');
+        }
+
+        if (!$forced) {
+            update_option('magick_ad_debug', $enabled ? '1' : '0');
+        } else {
+            $enabled = true;
+        }
+
+        if ($log_settings !== null) {
+            update_option('magick_ad_debug_log_settings', $log_settings ? '1' : '0');
+        } else {
+            $log_settings = (get_option('magick_ad_debug_log_settings', '1') === '1');
+        }
+
+        return rest_ensure_response(array(
+            'enabled' => $enabled,
+            'forced' => $forced,
+            'log_settings' => $log_settings,
+        ));
+    }
+}
+
 Magick_AD_Engine::init();
 Magick_AD_Frontend::init();
 
-if (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) {
+if (magick_ad_is_debug_enabled()) {
     require_once plugin_dir_path(__FILE__) . 'magick-ad-debug.php';
     Magick_AD_Debug::init();
 }
