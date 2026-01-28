@@ -278,10 +278,14 @@ class Magick_AD_Engine {
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
+            $ad_type = isset($options['ad_type']) ? $options['ad_type'] : 'global';
+            if ($ad_type !== 'global') {
+                continue;
+            }
             if (empty($options['show_position'])) {
                 return new WP_Error(
                     'magick_ad_missing_position',
-                    'show_position is required for each ad.',
+                    'show_position is required for each global ad.',
                     array('status' => 400)
                 );
             }
@@ -298,9 +302,14 @@ class Magick_AD_Engine {
 
         $sanitized_options = array(
             'enabled' => isset($options['enabled']) ? (bool) $options['enabled'] : true,
+            'ad_type' => self::sanitize_choice(
+                isset($options['ad_type']) ? $options['ad_type'] : 'global',
+                array('global', 'targeted'),
+                'global'
+            ),
             'show_page' => self::sanitize_choice(
                 isset($options['show_page']) ? $options['show_page'] : 'all',
-                array('all', 'posts', 'pages', 'home', 'archive'),
+                array('all', 'home', 'posts', 'pages', 'category', 'tag', 'search', '404', 'author', 'archive'),
                 'all'
             ),
             'display_mode' => self::sanitize_choice(
@@ -310,7 +319,24 @@ class Magick_AD_Engine {
             ),
             'show_position' => self::sanitize_choice(
                 isset($options['show_position']) ? $options['show_position'] : '',
-                array('head', 'footer', 'content', 'popup', 'bar'),
+                array(
+                    'top',
+                    'content_before',
+                    'content_after',
+                    'bottom',
+                    'post_top',
+                    'paragraph_3',
+                    'post_bottom',
+                    'comments_top',
+                    'comment_form_before',
+                    'comment_form_after',
+                    'comments_bottom',
+                    'head',
+                    'footer',
+                    'content',
+                    'popup',
+                    'bar',
+                ),
                 ''
             ),
             'insert_after' => isset($options['insert_after']) ? absint($options['insert_after']) : 2,
@@ -607,6 +633,21 @@ class Magick_AD_Frontend {
         }
         if ($page === 'archive') {
             return is_archive();
+        }
+        if ($page === 'category') {
+            return is_category();
+        }
+        if ($page === 'tag') {
+            return is_tag();
+        }
+        if ($page === 'search') {
+            return is_search();
+        }
+        if ($page === '404') {
+            return is_404();
+        }
+        if ($page === 'author') {
+            return is_author();
         }
 
         return true;
