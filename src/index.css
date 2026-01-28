@@ -87,6 +87,18 @@
     gap: 6px;
 }
 
+.magick-ad-type {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e7f1fb;
+    color: #1d2327;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 600;
+}
+
 .magick-ad-sidebar__item.has-error {
     border-color: #d63638;
     background: #fbeaea;

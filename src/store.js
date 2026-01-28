@@ -1,16 +1,19 @@
 import { create } from 'zustand';
 import apiFetch from '@wordpress/api-fetch';
 
-const createAdGroupTemplate = () => ({
+const createAdGroupTemplate = (type = 'global') => ({
     id: `ad_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-    name: '',
+    name: type === 'targeted' ? '指定广告' : '全局广告',
     options: {
         enabled: true,
+        ad_type: type,
+        display_mode: 'show',
         show_page: 'all',
         show_position: 'footer',
         insert_after: 2,
         device: 'all',
         login: 'all',
+        end_date: '',
     },
     content: {
         html: '',
@@ -29,11 +32,14 @@ const normalizeAd = (ad) => {
         ...safeAd,
         options: {
             enabled: options.enabled ?? true,
+            ad_type: options.ad_type || 'global',
+            display_mode: options.display_mode || 'show',
             show_page: options.show_page || 'all',
             show_position: options.show_position || 'footer',
             insert_after: Number(options.insert_after || 2),
             device: options.device || 'all',
             login: options.login || 'all',
+            end_date: options.end_date || '',
         },
         content: {
             html: content.html || '',
@@ -52,9 +58,9 @@ export const useStore = create((set, get) => ({
     isLoading: false,
     isSaving: false,
     error: null,
-    addAdGroup: () => {
+    addAdGroup: (type) => {
         set((state) => ({
-            ads: [...state.ads, createAdGroupTemplate()],
+            ads: [...state.ads, createAdGroupTemplate(type)],
         }));
     },
     removeAdGroup: (id) => {

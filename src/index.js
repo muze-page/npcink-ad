@@ -11,6 +11,9 @@ import {
     Button,
     Card,
     CardBody,
+    DropdownMenu,
+    MenuGroup,
+    MenuItem,
     Notice,
     Panel,
     PanelBody,
@@ -296,9 +299,33 @@ const AdsConfig = () => {
                         <CardBody>
                             <div className="magick-ad-sidebar__header">
                                 <h2>广告组</h2>
-                                <Button variant="secondary" onClick={addAdGroup}>
-                                    新增广告组
-                                </Button>
+                                <DropdownMenu
+                                    className="magick-ad-add-menu"
+                                    icon={null}
+                                    text="新增广告组"
+                                    toggleProps={{ variant: 'secondary' }}
+                                >
+                                    {({ onClose }) => (
+                                        <MenuGroup>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    addAdGroup('global');
+                                                    onClose();
+                                                }}
+                                            >
+                                                全局广告
+                                            </MenuItem>
+                                            <MenuItem
+                                                onClick={() => {
+                                                    addAdGroup('targeted');
+                                                    onClose();
+                                                }}
+                                            >
+                                                指定广告
+                                            </MenuItem>
+                                        </MenuGroup>
+                                    )}
+                                </DropdownMenu>
                             </div>
                             {ads.length === 0 && (
                                 <p className="description">暂无广告组。</p>
@@ -324,6 +351,12 @@ const AdsConfig = () => {
                                         >
                                             <span className="magick-ad-sidebar__label">
                                                 {ad.name || `广告组 ${index + 1}`}
+                                            </span>
+                                            <span className="magick-ad-type">
+                                                {ad.options?.ad_type ===
+                                                'targeted'
+                                                    ? '指定广告'
+                                                    : '全局广告'}
                                             </span>
                                             {missingPositionIds.has(ad.id) && (
                                                 <span className="magick-ad-sidebar__alert">
@@ -494,6 +527,38 @@ const AdsConfig = () => {
                                                     />
 
                                                     <SelectControl
+                                                        label="是否展示"
+                                                        value={
+                                                            selectedAd.options
+                                                                ?.display_mode ||
+                                                            'show'
+                                                        }
+                                                        options={[
+                                                            {
+                                                                label: '展示',
+                                                                value: 'show',
+                                                            },
+                                                            {
+                                                                label: '随机',
+                                                                value: 'random',
+                                                            },
+                                                            {
+                                                                label: '隐藏',
+                                                                value: 'hide',
+                                                            },
+                                                        ]}
+                                                        onChange={(value) =>
+                                                            handleUpdateOptions(
+                                                                {
+                                                                    display_mode:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                        help="随机：每次页面请求随机展示或隐藏"
+                                                    />
+
+                                                    <SelectControl
                                                         label="展示位置"
                                                         value={
                                                             selectedAd.options
@@ -571,6 +636,24 @@ const AdsConfig = () => {
                                                             }
                                                         />
                                                     )}
+
+                                                    <TextControl
+                                                        label="截止时间"
+                                                        type="date"
+                                                        value={
+                                                            selectedAd.options
+                                                                ?.end_date || ''
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateOptions(
+                                                                {
+                                                                    end_date:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                        help="到期后自动隐藏广告"
+                                                    />
 
                                                     <SelectControl
                                                         label="设备限制"

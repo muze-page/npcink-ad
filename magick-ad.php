@@ -303,6 +303,11 @@ class Magick_AD_Engine {
                 array('all', 'posts', 'pages', 'home', 'archive'),
                 'all'
             ),
+            'display_mode' => self::sanitize_choice(
+                isset($options['display_mode']) ? $options['display_mode'] : 'show',
+                array('show', 'random', 'hide'),
+                'show'
+            ),
             'show_position' => self::sanitize_choice(
                 isset($options['show_position']) ? $options['show_position'] : '',
                 array('head', 'footer', 'content', 'popup', 'bar'),
@@ -319,6 +324,7 @@ class Magick_AD_Engine {
                 array('all', 'logged-in', 'logged-out'),
                 'all'
             ),
+            'end_date' => self::sanitize_date(isset($options['end_date']) ? $options['end_date'] : ''),
         );
 
         $sanitized_content = array(
@@ -342,6 +348,18 @@ class Magick_AD_Engine {
     private static function sanitize_choice($value, $allowed, $default) {
         $value = is_string($value) ? $value : '';
         return in_array($value, $allowed, true) ? $value : $default;
+    }
+
+    private static function sanitize_date($value) {
+        $value = is_string($value) ? trim($value) : '';
+        if ($value === '') {
+            return '';
+        }
+        $timestamp = strtotime($value);
+        if ($timestamp === false) {
+            return '';
+        }
+        return date('Y-m-d', $timestamp);
     }
 
 }
@@ -500,6 +518,14 @@ class Magick_AD_Frontend {
             return false;
         }
 
+        if (self::is_expired($options)) {
+            return false;
+        }
+
+        if (!self::matches_display_mode($ad, $options)) {
+            return false;
+        }
+
         if (!self::matches_show_page($options)) {
             return false;
         }
@@ -513,6 +539,40 @@ class Magick_AD_Frontend {
         }
 
         return true;
+    }
+
+    private static function matches_display_mode($ad, $options) {
+        $mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
+        if ($mode === 'hide') {
+            return false;
+        }
+        if ($mode === 'random') {
+            $ad_id = isset($ad['id']) ? $ad['id'] : '';
+            return self::random_display($ad_id);
+        }
+        return true;
+    }
+
+    private static function random_display($ad_id) {
+        static $cache = array();
+        $key = $ad_id ? $ad_id : uniqid('ad_', true);
+        if (isset($cache[$key])) {
+            return $cache[$key];
+        }
+        $cache[$key] = (bool) wp_rand(0, 1);
+        return $cache[$key];
+    }
+
+    private static function is_expired($options) {
+        $end_date = isset($options['end_date']) ? $options['end_date'] : '';
+        if (!$end_date) {
+            return false;
+        }
+        $timestamp = strtotime($end_date . ' 23:59:59');
+        if ($timestamp === false) {
+            return false;
+        }
+        return current_time('timestamp') > $timestamp;
     }
 
     private static function matches_show_page($options) {
