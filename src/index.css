@@ -36,6 +36,11 @@
     color: #1d2327;
 }
 
+.magick-ad-sub-tabs .components-tab-panel__tabs {
+    margin: -4px -4px 12px;
+    border-bottom: 1px solid #dcdcde;
+}
+
 .magick-ad-empty {
     padding: 16px;
     border: 1px dashed #dcdcde;
