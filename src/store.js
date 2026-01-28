@@ -5,16 +5,47 @@ const createAdGroupTemplate = () => ({
     id: `ad_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     name: '',
     options: {
-        status: 'draft',
-        placement: '',
-        priority: 0,
+        enabled: true,
+        show_page: 'all',
+        show_position: 'footer',
+        insert_after: 2,
+        device: 'all',
+        login: 'all',
     },
     content: {
         html: '',
-        image: '',
+        image: { id: 0, url: '', alt: '' },
         link: '',
     },
 });
+
+const normalizeAd = (ad) => {
+    const safeAd = ad && typeof ad === 'object' ? ad : {};
+    const options = safeAd.options && typeof safeAd.options === 'object' ? safeAd.options : {};
+    const content = safeAd.content && typeof safeAd.content === 'object' ? safeAd.content : {};
+    const image = content.image && typeof content.image === 'object' ? content.image : {};
+
+    return {
+        ...safeAd,
+        options: {
+            enabled: options.enabled ?? true,
+            show_page: options.show_page || 'all',
+            show_position: options.show_position || 'footer',
+            insert_after: Number(options.insert_after || 2),
+            device: options.device || 'all',
+            login: options.login || 'all',
+        },
+        content: {
+            html: content.html || '',
+            link: content.link || '',
+            image: {
+                id: Number(image.id || 0),
+                url: image.url || '',
+                alt: image.alt || '',
+            },
+        },
+    };
+};
 
 export const useStore = create((set, get) => ({
     ads: [],
@@ -71,7 +102,10 @@ export const useStore = create((set, get) => ({
                 ads = response.saved.ads;
             }
 
-            set({ ads, isLoading: false });
+            set({
+                ads: ads.map((ad) => normalizeAd(ad)),
+                isLoading: false,
+            });
             return ads;
         } catch (error) {
             set({ isLoading: false, error });

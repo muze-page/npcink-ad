@@ -119,6 +119,7 @@ const AdsConfig = () => {
 
     const [selectedId, setSelectedId] = useState(null);
     const [notice, setNotice] = useState(null);
+    const [showValidation, setShowValidation] = useState(false);
     const noticeTimerRef = useRef(null);
 
     useEffect(() => {
@@ -131,10 +132,22 @@ const AdsConfig = () => {
         }
     }, [ads, selectedId]);
 
+    useEffect(() => {
+        if (showValidation && ads.every((ad) => ad.options?.show_position)) {
+            setShowValidation(false);
+        }
+    }, [ads, showValidation]);
+
     const selectedAd = useMemo(
         () => ads.find((ad) => ad.id === selectedId),
         [ads, selectedId]
     );
+
+    const missingPositionIds = useMemo(() => {
+        return new Set(
+            ads.filter((ad) => !ad.options?.show_position).map((ad) => ad.id)
+        );
+    }, [ads]);
 
     const handleUpdateOptions = (updates) => {
         if (!selectedAd) {
@@ -166,6 +179,24 @@ const AdsConfig = () => {
             noticeTimerRef.current = null;
         }
         setNotice(null);
+
+        const missingPosition = ads.filter(
+            (ad) => !ad.options?.show_position
+        );
+        if (missingPosition.length > 0) {
+            setShowValidation(true);
+            setNotice({
+                status: 'error',
+                message: `请为 ${missingPosition.length} 个广告选择展示位置。`,
+            });
+            noticeTimerRef.current = window.setTimeout(() => {
+                setNotice(null);
+                noticeTimerRef.current = null;
+            }, 4000);
+            return;
+        }
+        setShowValidation(false);
+
         try {
             await saveToDB();
             setNotice({ status: 'success', message: '保存成功' });
@@ -249,6 +280,10 @@ const AdsConfig = () => {
                                             selectedId === ad.id
                                                 ? 'is-active'
                                                 : ''
+                                        } ${
+                                            missingPositionIds.has(ad.id)
+                                                ? 'has-error'
+                                                : ''
                                         }`}
                                     >
                                         <Button
@@ -256,7 +291,15 @@ const AdsConfig = () => {
                                             isPressed={selectedId === ad.id}
                                             onClick={() => setSelectedId(ad.id)}
                                         >
-                                            {ad.name || `广告组 ${index + 1}`}
+                                            <span className="magick-ad-sidebar__label">
+                                                {ad.name || `广告组 ${index + 1}`}
+                                            </span>
+                                            {missingPositionIds.has(ad.id) && (
+                                                <span className="magick-ad-sidebar__alert">
+                                                    <span className="magick-ad-sidebar__dot" />
+                                                    需配置位置
+                                                </span>
+                                            )}
                                         </Button>
                                         <Button
                                             variant="tertiary"
@@ -309,10 +352,17 @@ const AdsConfig = () => {
                                     </PanelBody>
 
                                     <PanelBody title="展示规则" initialOpen>
+                                        {showValidation &&
+                                            !selectedAd.options
+                                                ?.show_position && (
+                                                <Notice status="error" isDismissible={false}>
+                                                    请先选择展示位置
+                                                </Notice>
+                                            )}
                                         <SelectControl
                                             label="展示页面"
                                             value={
-                                                selectedAd.options?.displayPage ||
+                                                selectedAd.options?.show_page ||
                                                 'all'
                                             }
                                             options={[
@@ -325,68 +375,125 @@ const AdsConfig = () => {
                                                     label: '仅页面',
                                                     value: 'pages',
                                                 },
+                                                { label: '首页', value: 'home' },
+                                                {
+                                                    label: '归档页',
+                                                    value: 'archive',
+                                                },
                                             ]}
                                             onChange={(value) =>
                                                 handleUpdateOptions({
-                                                    displayPage: value,
+                                                    show_page: value,
                                                 })
                                             }
                                         />
 
-                                        {selectedAd.options?.displayPage ===
-                                            'posts' && (
-                                            <SelectControl
-                                                label="文章内部位置"
+                                        <SelectControl
+                                            label="展示位置"
+                                            value={
+                                                selectedAd.options
+                                                    ?.show_position || 'footer'
+                                            }
+                                            className={
+                                                showValidation &&
+                                                !selectedAd.options
+                                                    ?.show_position
+                                                    ? 'magick-ad-control--error'
+                                                    : undefined
+                                            }
+                                            help={
+                                                showValidation &&
+                                                !selectedAd.options
+                                                    ?.show_position
+                                                    ? '请选择展示位置'
+                                                    : undefined
+                                            }
+                                            options={[
+                                                { label: '页眉', value: 'head' },
+                                                {
+                                                    label: '页脚',
+                                                    value: 'footer',
+                                                },
+                                                {
+                                                    label: '正文插入',
+                                                    value: 'content',
+                                                },
+                                                { label: '弹窗', value: 'popup' },
+                                                { label: '横栏', value: 'bar' },
+                                            ]}
+                                            onChange={(value) =>
+                                                handleUpdateOptions({
+                                                    show_position: value,
+                                                })
+                                            }
+                                        />
+
+                                        {selectedAd.options?.show_position ===
+                                            'content' && (
+                                            <TextControl
+                                                label="第 N 段后插入"
+                                                type="number"
+                                                min={1}
                                                 value={
                                                     selectedAd.options
-                                                        ?.postPosition ||
-                                                    'content-bottom'
+                                                        ?.insert_after || 2
                                                 }
-                                                options={[
-                                                    {
-                                                        label: '正文开头',
-                                                        value: 'content-top',
-                                                    },
-                                                    {
-                                                        label: '正文中间',
-                                                        value: 'content-middle',
-                                                    },
-                                                    {
-                                                        label: '正文结尾',
-                                                        value: 'content-bottom',
-                                                    },
-                                                ]}
                                                 onChange={(value) =>
                                                     handleUpdateOptions({
-                                                        postPosition: value,
+                                                        insert_after:
+                                                            Number(value),
                                                     })
                                                 }
                                             />
                                         )}
 
                                         <SelectControl
-                                            label="展示位置"
+                                            label="设备限制"
                                             value={
-                                                selectedAd.options?.placement ||
-                                                'sidebar'
+                                                selectedAd.options?.device ||
+                                                'all'
                                             }
                                             options={[
                                                 {
-                                                    label: '侧边栏',
-                                                    value: 'sidebar',
+                                                    label: '全部设备',
+                                                    value: 'all',
                                                 },
                                                 {
-                                                    label: '页眉',
-                                                    value: 'header',
+                                                    label: '仅移动端',
+                                                    value: 'mobile',
                                                 },
                                                 {
-                                                    label: '页脚',
-                                                    value: 'footer',
+                                                    label: '仅桌面端',
+                                                    value: 'desktop',
                                                 },
                                             ]}
                                             onChange={(value) =>
                                                 handleUpdateOptions({
-                                                    placement: value,
+                                                    device: value,
+                                                })
+                                            }
+                                        />
+
+                                        <SelectControl
+                                            label="登录状态"
+                                            value={
+                                                selectedAd.options?.login ||
+                                                'all'
+                                            }
+                                            options={[
+                                                { label: '全部用户', value: 'all' },
+                                                {
+                                                    label: '仅登录用户',
+                                                    value: 'logged-in',
+                                                },
+                                                {
+                                                    label: '仅未登录用户',
+                                                    value: 'logged-out',
+                                                },
+                                            ]}
+                                            onChange={(value) =>
+                                                handleUpdateOptions({
+                                                    login: value,
                                                 })
                                             }
                                         />

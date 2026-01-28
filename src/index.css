@@ -42,6 +42,42 @@
     position: relative;
 }
 
+.magick-ad-sidebar__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.magick-ad-sidebar__item.has-error {
+    border-color: #d63638;
+    background: #fbeaea;
+}
+
+.magick-ad-sidebar__item.has-error .magick-ad-sidebar__label {
+    color: #b32d2e;
+}
+
+.magick-ad-sidebar__alert {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f8d7da;
+    color: #b32d2e;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 600;
+}
+
+.magick-ad-sidebar__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #d63638;
+    display: inline-block;
+}
+
 .magick-ad-sidebar__item.is-active {
     border-color: #2271b1;
     background: #e7f1fb;
@@ -110,6 +146,16 @@
 
 .magick-ad-dashboard__chart {
     min-height: 320px;
+}
+
+.magick-ad-control--error .components-input-control__backdrop,
+.magick-ad-control--error .components-select-control__input {
+    border-color: #d63638;
+    box-shadow: 0 0 0 1px #d63638;
+}
+
+.magick-ad-control--error .components-base-control__help {
+    color: #d63638;
 }
 
 @media (max-width: 960px) {

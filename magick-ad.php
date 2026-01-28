@@ -141,6 +141,10 @@ class Magick_AD_Engine {
         }
 
         $sanitized = self::sanitize_settings($settings);
+        $validation = self::validate_settings($sanitized);
+        if (is_wp_error($validation)) {
+            return $validation;
+        }
         update_option(self::OPTION_KEY, $sanitized);
 
         return rest_ensure_response(array(
@@ -176,6 +180,22 @@ class Magick_AD_Engine {
         return array('ads' => $ads);
     }
 
+    private static function validate_settings($settings) {
+        $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            if (empty($options['show_position'])) {
+                return new WP_Error(
+                    'magick_ad_missing_position',
+                    'show_position is required for each ad.',
+                    array('status' => 400)
+                );
+            }
+        }
+
+        return true;
+    }
+
     private static function sanitize_ad($ad) {
         $ad = is_array($ad) ? $ad : array();
         $options = isset($ad['options']) && is_array($ad['options']) ? $ad['options'] : array();
@@ -185,31 +205,16 @@ class Magick_AD_Engine {
         $sanitized_options = array(
             'enabled' => isset($options['enabled']) ? (bool) $options['enabled'] : true,
             'show_page' => self::sanitize_choice(
-                isset($options['show_page']) ? $options['show_page'] : '',
+                isset($options['show_page']) ? $options['show_page'] : 'all',
                 array('all', 'posts', 'pages', 'home', 'archive'),
-                ''
-            ),
-            'displayPage' => self::sanitize_choice(
-                isset($options['displayPage']) ? $options['displayPage'] : 'all',
-                array('all', 'posts', 'pages'),
                 'all'
             ),
             'show_position' => self::sanitize_choice(
                 isset($options['show_position']) ? $options['show_position'] : '',
-                array('head', 'footer', 'content-top', 'content-middle', 'content-bottom', 'content', 'popup', 'bar'),
+                array('head', 'footer', 'content', 'popup', 'bar'),
                 ''
             ),
-            'insert_after' => isset($options['insert_after']) ? absint($options['insert_after']) : 0,
-            'postPosition' => self::sanitize_choice(
-                isset($options['postPosition']) ? $options['postPosition'] : '',
-                array('content-top', 'content-middle', 'content-bottom'),
-                ''
-            ),
-            'placement' => self::sanitize_choice(
-                isset($options['placement']) ? $options['placement'] : '',
-                array('header', 'footer', 'sidebar'),
-                ''
-            ),
+            'insert_after' => isset($options['insert_after']) ? absint($options['insert_after']) : 2,
             'device' => self::sanitize_choice(
                 isset($options['device']) ? $options['device'] : 'all',
                 array('all', 'mobile', 'desktop'),
@@ -220,8 +225,6 @@ class Magick_AD_Engine {
                 array('all', 'logged-in', 'logged-out'),
                 'all'
             ),
-            'only_mobile' => !empty($options['only_mobile']),
-            'require_login' => !empty($options['require_login']),
         );
 
         $sanitized_content = array(
@@ -252,6 +255,7 @@ class Magick_AD_Engine {
 class Magick_AD_Frontend {
     public static function init() {
         add_filter('the_content', array(__CLASS__, 'inject_content_ads'));
+        add_action('wp_head', array(__CLASS__, 'render_head_ads'));
         add_action('wp_footer', array(__CLASS__, 'render_footer_ads'));
     }
 
@@ -292,7 +296,7 @@ class Magick_AD_Frontend {
     }
 
     public static function inject_content_ads($content) {
-        if (is_admin() || !is_singular('post') || !in_the_loop() || !is_main_query()) {
+        if (is_admin() || !is_singular() || !in_the_loop() || !is_main_query()) {
             return $content;
         }
 
@@ -305,7 +309,7 @@ class Magick_AD_Frontend {
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
             $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if (!in_array($position, array('content', 'content-paragraph'), true)) {
+            if ($position !== 'content') {
                 continue;
             }
 
@@ -328,6 +332,31 @@ class Magick_AD_Frontend {
         }
 
         return self::insert_after_paragraphs($content, $insert_map);
+    }
+
+    public static function render_head_ads() {
+        if (is_admin()) {
+            return;
+        }
+
+        $ads = self::get_matching_ads();
+        if (empty($ads)) {
+            return;
+        }
+
+        $markup = '';
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $position = isset($options['show_position']) ? $options['show_position'] : '';
+            if ($position !== 'head') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, $position);
+        }
+
+        if ($markup) {
+            echo $markup;
+        }
     }
 
     public static function render_footer_ads() {
@@ -393,9 +422,7 @@ class Magick_AD_Frontend {
     }
 
     private static function matches_show_page($options) {
-        $show_page = isset($options['show_page']) ? $options['show_page'] : '';
-        $display_page = isset($options['displayPage']) ? $options['displayPage'] : '';
-        $page = $show_page ? $show_page : ($display_page ? $display_page : 'all');
+        $page = isset($options['show_page']) ? $options['show_page'] : 'all';
 
         if ($page === 'posts') {
             return is_singular('post');
@@ -414,10 +441,6 @@ class Magick_AD_Frontend {
     }
 
     private static function matches_device($options) {
-        if (!empty($options['only_mobile']) && !wp_is_mobile()) {
-            return false;
-        }
-
         $device = isset($options['device']) ? $options['device'] : 'all';
         if ($device === 'mobile') {
             return wp_is_mobile();
@@ -430,10 +453,6 @@ class Magick_AD_Frontend {
     }
 
     private static function matches_login($options) {
-        if (!empty($options['require_login']) && !is_user_logged_in()) {
-            return false;
-        }
-
         $login = isset($options['login']) ? $options['login'] : 'all';
         if ($login === 'logged-in') {
             return is_user_logged_in();
@@ -569,3 +588,8 @@ class Magick_AD_Reports {
 
 Magick_AD_Engine::init();
 Magick_AD_Frontend::init();
+
+if (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) {
+    require_once plugin_dir_path(__FILE__) . 'magick-ad-debug.php';
+    Magick_AD_Debug::init();
+}
