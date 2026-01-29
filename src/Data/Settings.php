@@ -38,12 +38,32 @@ final class Settings {
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            if (empty($options['show_position'])) {
+            if (empty($options['placement_hook'])) {
                 return new WP_Error(
                     'magick_ad_missing_position',
-                    'show_position is required for each ad.',
+                    'placement_hook is required for each ad.',
                     array('status' => 400)
                 );
+            }
+            if ($options['placement_hook'] === 'content') {
+                $position = isset($options['placement_position']) ? $options['placement_position'] : '';
+                if (!$position) {
+                    return new WP_Error(
+                        'magick_ad_missing_position',
+                        'placement_position is required for content placement.',
+                        array('status' => 400)
+                    );
+                }
+                if ($position === 'paragraph') {
+                    $paragraph = isset($options['placement_paragraph']) ? absint($options['placement_paragraph']) : 0;
+                    if ($paragraph < 1) {
+                        return new WP_Error(
+                            'magick_ad_invalid_paragraph',
+                            'placement_paragraph must be >= 1.',
+                            array('status' => 400)
+                        );
+                    }
+                }
             }
         }
 
@@ -53,6 +73,93 @@ final class Settings {
     public static function sanitize_choice($value, array $allowed, string $default): string {
         $value = is_string($value) ? $value : '';
         return in_array($value, $allowed, true) ? $value : $default;
+    }
+
+    private static function normalize_placement(array $options): array {
+        $hook = isset($options['placement_hook']) ? (string) $options['placement_hook'] : '';
+        $position = isset($options['placement_position']) ? (string) $options['placement_position'] : '';
+        $paragraph = isset($options['placement_paragraph']) ? absint($options['placement_paragraph']) : 0;
+
+        if (!$hook) {
+            $legacy = isset($options['show_position']) ? (string) $options['show_position'] : '';
+            switch ($legacy) {
+                case 'head':
+                    $hook = 'head';
+                    break;
+                case 'top':
+                    $hook = 'body_top';
+                    break;
+                case 'footer':
+                case 'bottom':
+                case 'popup':
+                case 'bar':
+                    $hook = 'footer';
+                    break;
+                case 'content_before':
+                case 'post_top':
+                    $hook = 'content';
+                    $position = 'before';
+                    break;
+                case 'content_after':
+                case 'post_bottom':
+                    $hook = 'content';
+                    $position = 'after';
+                    break;
+                case 'paragraph_3':
+                    $hook = 'content';
+                    $position = 'paragraph';
+                    $paragraph = 3;
+                    break;
+                case 'content':
+                    $hook = 'content';
+                    $position = 'paragraph';
+                    $paragraph = isset($options['insert_after']) ? absint($options['insert_after']) : 2;
+                    break;
+                case 'comments_top':
+                    $hook = 'comments_top';
+                    break;
+                case 'comments_bottom':
+                    $hook = 'comments_bottom';
+                    break;
+                case 'comment_form_before':
+                    $hook = 'comment_form_before';
+                    break;
+                case 'comment_form_after':
+                    $hook = 'comment_form_after';
+                    break;
+            }
+        }
+
+        $hook = self::sanitize_choice(
+            $hook,
+            array(
+                'content',
+                'head',
+                'footer',
+                'body_top',
+                'loop_before',
+                'loop_after',
+                'comments_top',
+                'comments_bottom',
+                'comment_form_before',
+                'comment_form_after',
+            ),
+            ''
+        );
+
+        $position = $hook === 'content'
+            ? self::sanitize_choice($position, array('before', 'after', 'paragraph'), 'before')
+            : '';
+
+        if ($hook === 'content' && $position === 'paragraph' && $paragraph < 1) {
+            $paragraph = 2;
+        }
+
+        return array(
+            'hook' => $hook,
+            'position' => $position,
+            'paragraph' => $paragraph,
+        );
     }
 
     private static function sanitize_ad($ad): array {
@@ -161,6 +268,11 @@ final class Settings {
             ),
             'target_ids' => self::sanitize_ids(isset($options['target_ids']) ? $options['target_ids'] : array()),
         );
+
+        $placement = self::normalize_placement($options);
+        $sanitized_options['placement_hook'] = $placement['hook'];
+        $sanitized_options['placement_position'] = $placement['position'];
+        $sanitized_options['placement_paragraph'] = $placement['paragraph'];
 
         $raw_blocks = isset($content['blocks']) && is_string($content['blocks']) ? $content['blocks'] : '';
         $blocks_value = $raw_blocks;

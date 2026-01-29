@@ -30,6 +30,72 @@ final class Frontend {
         add_filter('comments_template', array(__CLASS__, 'filter_comments_template'), 9);
     }
 
+    private static function get_placement(array $options): array {
+        $hook = isset($options['placement_hook']) ? (string) $options['placement_hook'] : '';
+        $position = isset($options['placement_position']) ? (string) $options['placement_position'] : '';
+        $paragraph = isset($options['placement_paragraph']) ? absint($options['placement_paragraph']) : 0;
+
+        if (!$hook) {
+            $legacy = isset($options['show_position']) ? (string) $options['show_position'] : '';
+            switch ($legacy) {
+                case 'head':
+                    $hook = 'head';
+                    break;
+                case 'top':
+                    $hook = 'body_top';
+                    break;
+                case 'footer':
+                case 'bottom':
+                case 'popup':
+                case 'bar':
+                    $hook = 'footer';
+                    break;
+                case 'content_before':
+                case 'post_top':
+                    $hook = 'content';
+                    $position = 'before';
+                    break;
+                case 'content_after':
+                case 'post_bottom':
+                    $hook = 'content';
+                    $position = 'after';
+                    break;
+                case 'paragraph_3':
+                    $hook = 'content';
+                    $position = 'paragraph';
+                    $paragraph = 3;
+                    break;
+                case 'content':
+                    $hook = 'content';
+                    $position = 'paragraph';
+                    $paragraph = isset($options['insert_after']) ? absint($options['insert_after']) : 2;
+                    break;
+                case 'comments_top':
+                    $hook = 'comments_top';
+                    break;
+                case 'comments_bottom':
+                    $hook = 'comments_bottom';
+                    break;
+                case 'comment_form_before':
+                    $hook = 'comment_form_before';
+                    break;
+                case 'comment_form_after':
+                    $hook = 'comment_form_after';
+                    break;
+            }
+        }
+
+        if ($hook === 'content' && $position === 'paragraph' && $paragraph < 1) {
+            $paragraph = 2;
+        }
+
+        return array(
+            'hook' => $hook,
+            'position' => $position,
+            'paragraph' => $paragraph,
+        );
+    }
+
     public static function enqueue_assets(): void {
         if (is_admin()) {
             return;
@@ -76,33 +142,23 @@ final class Frontend {
         $append = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if (in_array($position, array('content_before', 'post_top'), true)) {
-                $prepend .= self::build_ad_markup($ad, $position);
+            $placement = self::get_placement($options);
+            if ($placement['hook'] !== 'content') {
                 continue;
             }
-            if (in_array($position, array('content_after', 'post_bottom'), true)) {
-                $append .= self::build_ad_markup($ad, $position);
+            if ($placement['position'] === 'before') {
+                $prepend .= self::build_ad_markup($ad, 'content_before');
                 continue;
             }
-            if ($position === 'paragraph_3') {
-                $markup = self::build_ad_markup($ad, $position);
-                if ($markup) {
-                    if (!isset($insert_map[3])) {
-                        $insert_map[3] = array();
-                    }
-                    $insert_map[3][] = $markup;
-                }
+            if ($placement['position'] === 'after') {
+                $append .= self::build_ad_markup($ad, 'content_after');
                 continue;
             }
-            if ($position !== 'content') {
+            if ($placement['position'] !== 'paragraph') {
                 continue;
             }
 
-            $insert_after = isset($options['insert_after']) ? absint($options['insert_after']) : 0;
-            if ($insert_after < 1) {
-                $insert_after = 2;
-            }
+            $insert_after = $placement['paragraph'] > 0 ? $placement['paragraph'] : 2;
 
             $markup = self::build_ad_markup($ad, 'content');
             if ($markup) {
@@ -140,8 +196,8 @@ final class Frontend {
         $markup = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if ($position !== 'head') {
+            $placement = self::get_placement($options);
+            if ($placement['hook'] !== 'head') {
                 continue;
             }
             $content = isset($ad['content']) ? $ad['content'] : array();
@@ -174,11 +230,11 @@ final class Frontend {
         $markup = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if (!in_array($position, array('footer', 'popup', 'bar', 'bottom'), true)) {
+            $placement = self::get_placement($options);
+            if ($placement['hook'] !== 'footer') {
                 continue;
             }
-            $markup .= self::build_ad_markup($ad, $position);
+            $markup .= self::build_ad_markup($ad, 'footer');
         }
 
         if ($markup) {
@@ -199,11 +255,11 @@ final class Frontend {
         $markup = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if ($position !== 'top') {
+            $placement = self::get_placement($options);
+            if ($placement['hook'] !== 'body_top') {
                 continue;
             }
-            $markup .= self::build_ad_markup($ad, $position);
+            $markup .= self::build_ad_markup($ad, 'top');
         }
 
         if ($markup) {
@@ -227,11 +283,14 @@ final class Frontend {
         $markup = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if ($position !== 'content_before') {
+            $placement = self::get_placement($options);
+            if (!in_array($placement['hook'], array('loop_before', 'content'), true)) {
                 continue;
             }
-            $markup .= self::build_ad_markup($ad, $position);
+            if ($placement['hook'] === 'content' && $placement['position'] !== 'before') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, 'content_before');
         }
 
         if ($markup) {
@@ -256,11 +315,14 @@ final class Frontend {
         $markup = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if ($position !== 'content_after') {
+            $placement = self::get_placement($options);
+            if (!in_array($placement['hook'], array('loop_after', 'content'), true)) {
                 continue;
             }
-            $markup .= self::build_ad_markup($ad, $position);
+            if ($placement['hook'] === 'content' && $placement['position'] !== 'after') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, 'content_after');
         }
 
         if ($markup) {
@@ -282,8 +344,8 @@ final class Frontend {
         $needs_wrapper = false;
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if (in_array($position, array('comments_top', 'comments_bottom'), true)) {
+            $placement = self::get_placement($options);
+            if (in_array($placement['hook'], array('comments_top', 'comments_bottom'), true)) {
                 $needs_wrapper = true;
                 break;
             }
@@ -314,11 +376,11 @@ final class Frontend {
         $markup = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if ($position !== 'comments_top') {
+            $placement = self::get_placement($options);
+            if ($placement['hook'] !== 'comments_top') {
                 continue;
             }
-            $markup .= self::build_ad_markup($ad, $position);
+            $markup .= self::build_ad_markup($ad, 'comments_top');
         }
 
         if ($markup) {
@@ -339,11 +401,11 @@ final class Frontend {
         $markup = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if ($position !== 'comments_bottom') {
+            $placement = self::get_placement($options);
+            if ($placement['hook'] !== 'comments_bottom') {
                 continue;
             }
-            $markup .= self::build_ad_markup($ad, $position);
+            $markup .= self::build_ad_markup($ad, 'comments_bottom');
         }
 
         if ($markup) {
@@ -364,11 +426,11 @@ final class Frontend {
         $markup = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if ($position !== 'comment_form_before') {
+            $placement = self::get_placement($options);
+            if ($placement['hook'] !== 'comment_form_before') {
                 continue;
             }
-            $markup .= self::build_ad_markup($ad, $position);
+            $markup .= self::build_ad_markup($ad, 'comment_form_before');
         }
 
         if ($markup) {
@@ -389,11 +451,11 @@ final class Frontend {
         $markup = '';
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
-            $position = isset($options['show_position']) ? $options['show_position'] : '';
-            if ($position !== 'comment_form_after') {
+            $placement = self::get_placement($options);
+            if ($placement['hook'] !== 'comment_form_after') {
                 continue;
             }
-            $markup .= self::build_ad_markup($ad, $position);
+            $markup .= self::build_ad_markup($ad, 'comment_form_after');
         }
 
         if ($markup) {

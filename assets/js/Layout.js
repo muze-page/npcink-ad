@@ -269,13 +269,86 @@ const Layout = ({
             delay > 0 ? { animationDelay: `${delay}s` } : undefined;
 
         const placementParts = [];
+        const placement = {
+            hook: options.placement_hook || '',
+            position: options.placement_position || '',
+            paragraph: Number(options.placement_paragraph || 0),
+        };
+        if (!placement.hook) {
+            switch (options.show_position) {
+                case 'head':
+                    placement.hook = 'head';
+                    break;
+                case 'top':
+                    placement.hook = 'body_top';
+                    break;
+                case 'footer':
+                case 'bottom':
+                case 'popup':
+                case 'bar':
+                    placement.hook = 'footer';
+                    break;
+                case 'content_before':
+                case 'post_top':
+                    placement.hook = 'content';
+                    placement.position = 'before';
+                    break;
+                case 'content_after':
+                case 'post_bottom':
+                    placement.hook = 'content';
+                    placement.position = 'after';
+                    break;
+                case 'paragraph_3':
+                    placement.hook = 'content';
+                    placement.position = 'paragraph';
+                    placement.paragraph = 3;
+                    break;
+                case 'content':
+                    placement.hook = 'content';
+                    placement.position = 'paragraph';
+                    placement.paragraph = Number(options.insert_after || 2);
+                    break;
+                case 'comments_top':
+                    placement.hook = 'comments_top';
+                    break;
+                case 'comments_bottom':
+                    placement.hook = 'comments_bottom';
+                    break;
+                case 'comment_form_before':
+                    placement.hook = 'comment_form_before';
+                    break;
+                case 'comment_form_after':
+                    placement.hook = 'comment_form_after';
+                    break;
+                default:
+                    break;
+            }
+        }
+        const placementLabel = (() => {
+            if (placement.hook === 'head') return 'head';
+            if (placement.hook === 'body_top') return 'body_top';
+            if (placement.hook === 'footer') return 'footer';
+            if (placement.hook === 'comments_top') return 'comments_top';
+            if (placement.hook === 'comments_bottom') return 'comments_bottom';
+            if (placement.hook === 'comment_form_before') return 'comment_form_before';
+            if (placement.hook === 'comment_form_after') return 'comment_form_after';
+            if (placement.hook === 'content') {
+                if (placement.position === 'before') return 'content_before';
+                if (placement.position === 'after') return 'content_after';
+                if (placement.position === 'paragraph') {
+                    return `paragraph_${placement.paragraph || 2}`;
+                }
+            }
+            return '';
+        })();
+
         if (options.ad_type === 'targeted') {
             placementParts.push(options.target_type || '未选择类型');
         } else {
             placementParts.push(options.show_page || 'all');
         }
-        if (options.show_position) {
-            placementParts.push(options.show_position);
+        if (placementLabel) {
+            placementParts.push(placementLabel);
         }
         if (displayMode === 'random') {
             placementParts.unshift('随机');

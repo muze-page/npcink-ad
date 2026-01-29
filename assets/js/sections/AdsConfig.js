@@ -77,7 +77,24 @@ const AdsConfig = () => {
         if (!showValidation) {
             return;
         }
-        if (ads.every((ad) => ad.options?.show_position)) {
+        const allPlaced = ads.every((ad) => {
+            const placement = resolvePlacement(ad.options || {});
+            if (!placement.hook) {
+                return false;
+            }
+            if (placement.hook === 'content' && !placement.position) {
+                return false;
+            }
+            if (
+                placement.hook === 'content' &&
+                placement.position === 'paragraph' &&
+                placement.paragraph < 1
+            ) {
+                return false;
+            }
+            return true;
+        });
+        if (allPlaced) {
             setShowValidation(false);
         }
     }, [ads, showValidation]);
@@ -109,9 +126,189 @@ const AdsConfig = () => {
         ];
     }, [selectedAd?.options?.target_type]);
 
+    const resolvePlacement = (options) => {
+        const placement = {
+            hook: options?.placement_hook || '',
+            position: options?.placement_position || '',
+            paragraph: Number(options?.placement_paragraph || 0),
+        };
+
+        if (!placement.hook) {
+            const legacy = options?.show_position || '';
+            switch (legacy) {
+                case 'head':
+                    placement.hook = 'head';
+                    break;
+                case 'top':
+                    placement.hook = 'body_top';
+                    break;
+                case 'footer':
+                case 'bottom':
+                case 'popup':
+                case 'bar':
+                    placement.hook = 'footer';
+                    break;
+                case 'content_before':
+                case 'post_top':
+                    placement.hook = 'content';
+                    placement.position = 'before';
+                    break;
+                case 'content_after':
+                case 'post_bottom':
+                    placement.hook = 'content';
+                    placement.position = 'after';
+                    break;
+                case 'paragraph_3':
+                    placement.hook = 'content';
+                    placement.position = 'paragraph';
+                    placement.paragraph = 3;
+                    break;
+                case 'content':
+                    placement.hook = 'content';
+                    placement.position = 'paragraph';
+                    placement.paragraph = Number(options?.insert_after || 2);
+                    break;
+                case 'comments_top':
+                    placement.hook = 'comments_top';
+                    break;
+                case 'comments_bottom':
+                    placement.hook = 'comments_bottom';
+                    break;
+                case 'comment_form_before':
+                    placement.hook = 'comment_form_before';
+                    break;
+                case 'comment_form_after':
+                    placement.hook = 'comment_form_after';
+                    break;
+                default:
+                    placement.hook = '';
+            }
+        }
+
+        return placement;
+    };
+
+    const placementToLegacyValue = (placement) => {
+        if (!placement?.hook) {
+            return '';
+        }
+        if (placement.hook === 'head') {
+            return 'head';
+        }
+        if (placement.hook === 'body_top') {
+            return 'top';
+        }
+        if (placement.hook === 'footer') {
+            return 'bottom';
+        }
+        if (placement.hook === 'comments_top') {
+            return 'comments_top';
+        }
+        if (placement.hook === 'comments_bottom') {
+            return 'comments_bottom';
+        }
+        if (placement.hook === 'comment_form_before') {
+            return 'comment_form_before';
+        }
+        if (placement.hook === 'comment_form_after') {
+            return 'comment_form_after';
+        }
+        if (placement.hook === 'content') {
+            if (placement.position === 'before') {
+                return 'content_before';
+            }
+            if (placement.position === 'after') {
+                return 'content_after';
+            }
+            if (placement.position === 'paragraph') {
+                return 'paragraph_3';
+            }
+        }
+        return '';
+    };
+
+    const legacyToPlacementUpdates = (value, options) => {
+        const updates = {
+            placement_hook: '',
+            placement_position: '',
+            placement_paragraph: 0,
+            show_position: value,
+        };
+
+        switch (value) {
+            case 'head':
+                updates.placement_hook = 'head';
+                break;
+            case 'top':
+                updates.placement_hook = 'body_top';
+                break;
+            case 'bottom':
+            case 'footer':
+                updates.placement_hook = 'footer';
+                break;
+            case 'content_before':
+            case 'post_top':
+                updates.placement_hook = 'content';
+                updates.placement_position = 'before';
+                break;
+            case 'content_after':
+            case 'post_bottom':
+                updates.placement_hook = 'content';
+                updates.placement_position = 'after';
+                break;
+            case 'paragraph_3':
+                updates.placement_hook = 'content';
+                updates.placement_position = 'paragraph';
+                updates.placement_paragraph = 3;
+                updates.insert_after = 3;
+                break;
+            case 'comments_top':
+                updates.placement_hook = 'comments_top';
+                break;
+            case 'comments_bottom':
+                updates.placement_hook = 'comments_bottom';
+                break;
+            case 'comment_form_before':
+                updates.placement_hook = 'comment_form_before';
+                break;
+            case 'comment_form_after':
+                updates.placement_hook = 'comment_form_after';
+                break;
+            default:
+                updates.placement_hook = '';
+        }
+
+        if (
+            updates.placement_hook === 'content' &&
+            updates.placement_position === 'paragraph' &&
+            updates.placement_paragraph === 0
+        ) {
+            updates.placement_paragraph = Number(options?.insert_after || 2);
+            updates.insert_after = updates.placement_paragraph;
+        }
+
+        return updates;
+    };
+
     const missingPositionIds = useMemo(() => {
         return new Set(
-            ads.filter((ad) => !ad.options?.show_position).map((ad) => ad.id)
+            ads.filter((ad) => {
+                const placement = resolvePlacement(ad.options || {});
+                if (!placement.hook) {
+                    return true;
+                }
+                if (placement.hook === 'content' && !placement.position) {
+                    return true;
+                }
+                if (
+                    placement.hook === 'content' &&
+                    placement.position === 'paragraph' &&
+                    placement.paragraph < 1
+                ) {
+                    return true;
+                }
+                return false;
+            }).map((ad) => ad.id)
         );
     }, [ads]);
 
@@ -251,9 +448,23 @@ const AdsConfig = () => {
     const handleSave = async () => {
         clearNotice();
 
-        const missingPosition = ads.filter(
-            (ad) => !ad.options?.show_position
-        );
+        const missingPosition = ads.filter((ad) => {
+            const placement = resolvePlacement(ad.options || {});
+            if (!placement.hook) {
+                return true;
+            }
+            if (placement.hook === 'content' && !placement.position) {
+                return true;
+            }
+            if (
+                placement.hook === 'content' &&
+                placement.position === 'paragraph' &&
+                placement.paragraph < 1
+            ) {
+                return true;
+            }
+            return false;
+        });
         if (missingPosition.length > 0) {
             setShowValidation(true);
             showNotice(
@@ -1021,17 +1232,18 @@ const AdsConfig = () => {
                                                                         },
                                                                     ]}
                                                                     onChange={(value) => {
-                                                                        const nextPosition =
-                                                                            value !== 'inline'
-                                                                                ? 'footer'
-                                                                                : selectedAd
-                                                                                      .options
-                                                                                      ?.show_position;
+                                                                        if (value !== 'inline') {
+                                                                            handleUpdateOptions({
+                                                                                container_type: value,
+                                                                                placement_hook: 'footer',
+                                                                                placement_position: '',
+                                                                                placement_paragraph: 0,
+                                                                                show_position: 'bottom',
+                                                                            });
+                                                                            return;
+                                                                        }
                                                                         handleUpdateOptions({
                                                                             container_type: value,
-                                                                            show_position:
-                                                                                nextPosition ||
-                                                                                'footer',
                                                                         });
                                                                     }}
                                                                     help="容器决定展示形态，投放位置仍由“投放”页签控制。"
@@ -1481,8 +1693,9 @@ const AdsConfig = () => {
                                             initialOpen
                                         >
                                             {showValidation &&
-                                                !selectedAd.options
-                                                    ?.show_position && (
+                                                !resolvePlacement(
+                                                    selectedAd.options || {}
+                                                ).hook && (
                                                     <Notice
                                                         status="error"
                                                         isDismissible={false}
@@ -1505,53 +1718,68 @@ const AdsConfig = () => {
                                                             (option) =>
                                                                 option.value
                                                         );
+                                                    const currentPlacement =
+                                                        resolvePlacement(
+                                                            selectedAd.options ||
+                                                                {}
+                                                        );
+                                                    const currentValue =
+                                                        placementToLegacyValue(
+                                                            currentPlacement
+                                                        );
                                                     const nextPosition =
                                                         allowedPositions.includes(
-                                                            selectedAd.options
-                                                                ?.show_position
+                                                            currentValue
                                                         )
-                                                            ? selectedAd
-                                                                  .options
-                                                                  ?.show_position
+                                                            ? currentValue
                                                             : '';
                                                     handleUpdateOptions({
                                                         show_page: value,
-                                                        show_position:
+                                                        ...legacyToPlacementUpdates(
                                                             nextPosition,
+                                                            selectedAd.options
+                                                        ),
                                                     });
                                                 }}
                                             />
 
                                             <SelectControl
                                                 label="展示位置"
-                                                value={
-                                                    selectedAd.options
-                                                        ?.show_position || ''
-                                                }
+                                                value={placementToLegacyValue(
+                                                    resolvePlacement(
+                                                        selectedAd.options || {}
+                                                    )
+                                                )}
                                                 className={
                                                     showValidation &&
-                                                    !selectedAd.options
-                                                        ?.show_position
+                                                    !resolvePlacement(
+                                                        selectedAd.options || {}
+                                                    ).hook
                                                         ? 'magick-ad-control--error'
                                                         : undefined
                                                 }
                                                 help={
                                                     showValidation &&
-                                                    !selectedAd.options
-                                                        ?.show_position
+                                                    !resolvePlacement(
+                                                        selectedAd.options || {}
+                                                    ).hook
                                                         ? '请选择展示位置'
                                                         : undefined
                                                 }
                                                 options={positionOptions}
                                                 onChange={(value) =>
                                                     handleUpdateOptions({
-                                                        show_position: value,
+                                                        ...legacyToPlacementUpdates(
+                                                            value,
+                                                            selectedAd.options
+                                                        ),
                                                     })
                                                 }
                                                 disabled={!isInlineContainer}
                                             />
-                                            {selectedAd.options
-                                                ?.show_position === 'head' && (
+                                            {resolvePlacement(
+                                                selectedAd.options || {}
+                                            ).hook === 'head' && (
                                                 <Notice
                                                     status="warning"
                                                     isDismissible={false}
@@ -1596,46 +1824,61 @@ const AdsConfig = () => {
                                                             : [];
                                                     const nextPosition =
                                                         allowedPositions.includes(
-                                                            selectedAd.options
-                                                                ?.show_position
+                                                            placementToLegacyValue(
+                                                                resolvePlacement(
+                                                                    selectedAd.options ||
+                                                                        {}
+                                                                )
+                                                            )
                                                         )
-                                                            ? selectedAd
-                                                                  .options
-                                                                  ?.show_position
+                                                            ? placementToLegacyValue(
+                                                                  resolvePlacement(
+                                                                      selectedAd.options ||
+                                                                          {}
+                                                                  )
+                                                              )
                                                             : '';
                                                     handleUpdateOptions({
                                                         target_type: value,
                                                         target_ids: [],
-                                                        show_position:
+                                                        ...legacyToPlacementUpdates(
                                                             nextPosition,
+                                                            selectedAd.options
+                                                        ),
                                                     });
                                                 }}
                                             />
 
                                             <SelectControl
                                                 label="展示位置"
-                                                value={
-                                                    selectedAd.options
-                                                        ?.show_position || ''
-                                                }
+                                                value={placementToLegacyValue(
+                                                    resolvePlacement(
+                                                        selectedAd.options || {}
+                                                    )
+                                                )}
                                                 className={
                                                     showValidation &&
-                                                    !selectedAd.options
-                                                        ?.show_position
+                                                    !resolvePlacement(
+                                                        selectedAd.options || {}
+                                                    ).hook
                                                         ? 'magick-ad-control--error'
                                                         : undefined
                                                 }
                                                 help={
                                                     showValidation &&
-                                                    !selectedAd.options
-                                                        ?.show_position
+                                                    !resolvePlacement(
+                                                        selectedAd.options || {}
+                                                    ).hook
                                                         ? '请选择展示位置'
                                                         : undefined
                                                 }
                                                 options={targetPositionOptions}
                                                 onChange={(value) =>
                                                     handleUpdateOptions({
-                                                        show_position: value,
+                                                        ...legacyToPlacementUpdates(
+                                                            value,
+                                                            selectedAd.options
+                                                        ),
                                                     })
                                                 }
                                                 disabled={
@@ -1644,8 +1887,9 @@ const AdsConfig = () => {
                                                     !isInlineContainer
                                                 }
                                             />
-                                            {selectedAd.options
-                                                ?.show_position === 'head' && (
+                                            {resolvePlacement(
+                                                selectedAd.options || {}
+                                            ).hook === 'head' && (
                                                 <Notice
                                                     status="warning"
                                                     isDismissible={false}
@@ -1903,11 +2147,18 @@ const AdsConfig = () => {
                     if (!selectedAd) {
                         return;
                     }
-                    const nextPosition =
-                        value !== 'inline' ? 'footer' : selectedAd.options?.show_position;
+                    if (value !== 'inline') {
+                        handleUpdateOptions({
+                            container_type: value,
+                            placement_hook: 'footer',
+                            placement_position: '',
+                            placement_paragraph: 0,
+                            show_position: 'bottom',
+                        });
+                        return;
+                    }
                     handleUpdateOptions({
                         container_type: value,
-                        show_position: nextPosition || 'footer',
                     });
                 }}
                 onDevicePreviewChange={setDevicePreview}

@@ -12,6 +12,9 @@ const createAdGroupTemplate = (type = 'global') => ({
         display_mode: 'show',
         random_strategy: 'request',
         html_mode: 'safe',
+        placement_hook: 'footer',
+        placement_position: '',
+        placement_paragraph: 0,
         show_page: 'all',
         show_position: 'bottom',
         insert_after: 2,
@@ -61,17 +64,73 @@ const createAdGroupTemplate = (type = 'global') => ({
     },
 });
 
-const normalizeShowPosition = (value) => {
-    if (!value) {
-        return '';
+const normalizePlacement = (options) => {
+    const placement = {
+        hook: options.placement_hook || '',
+        position: options.placement_position || '',
+        paragraph: Number(options.placement_paragraph || 0),
+    };
+
+    if (!placement.hook) {
+        switch (options.show_position) {
+            case 'head':
+                placement.hook = 'head';
+                break;
+            case 'top':
+                placement.hook = 'body_top';
+                break;
+            case 'footer':
+            case 'bottom':
+            case 'popup':
+            case 'bar':
+                placement.hook = 'footer';
+                break;
+            case 'content_before':
+            case 'post_top':
+                placement.hook = 'content';
+                placement.position = 'before';
+                break;
+            case 'content_after':
+            case 'post_bottom':
+                placement.hook = 'content';
+                placement.position = 'after';
+                break;
+            case 'paragraph_3':
+                placement.hook = 'content';
+                placement.position = 'paragraph';
+                placement.paragraph = 3;
+                break;
+            case 'content':
+                placement.hook = 'content';
+                placement.position = 'paragraph';
+                placement.paragraph = Number(options.insert_after || 2);
+                break;
+            case 'comments_top':
+                placement.hook = 'comments_top';
+                break;
+            case 'comments_bottom':
+                placement.hook = 'comments_bottom';
+                break;
+            case 'comment_form_before':
+                placement.hook = 'comment_form_before';
+                break;
+            case 'comment_form_after':
+                placement.hook = 'comment_form_after';
+                break;
+            default:
+                placement.hook = 'footer';
+        }
     }
-    if (value === 'footer') {
-        return 'bottom';
+
+    if (
+        placement.hook === 'content' &&
+        placement.position === 'paragraph' &&
+        placement.paragraph < 1
+    ) {
+        placement.paragraph = Number(options.insert_after || 2);
     }
-    if (value === 'head') {
-        return 'top';
-    }
-    return value;
+
+    return placement;
 };
 
 const normalizeAd = (ad) => {
@@ -90,6 +149,7 @@ const normalizeAd = (ad) => {
         content.behavior && typeof content.behavior === 'object'
             ? content.behavior
             : {};
+    const placement = normalizePlacement(options);
     const imageSettings =
         content.image_settings && typeof content.image_settings === 'object'
             ? content.image_settings
@@ -142,8 +202,15 @@ const normalizeAd = (ad) => {
             html_mode: ['safe', 'full'].includes(options.html_mode)
                 ? options.html_mode
                 : 'safe',
+            placement_hook: placement.hook || 'footer',
+            placement_position:
+                placement.hook === 'content' ? placement.position || 'before' : '',
+            placement_paragraph:
+                placement.hook === 'content' && placement.position === 'paragraph'
+                    ? Number(placement.paragraph || 2)
+                    : 0,
             show_page: options.show_page || 'all',
-            show_position: normalizeShowPosition(options.show_position) || 'bottom',
+            show_position: options.show_position || '',
             insert_after: Number(options.insert_after || 2),
             device: options.device || 'all',
             login: options.login || 'all',
