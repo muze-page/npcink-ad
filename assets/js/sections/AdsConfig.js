@@ -25,6 +25,7 @@ import LinkPicker from '../components/LinkPicker';
 import ClassicEditor from '../components/ClassicEditor';
 import BlockEditor from '../components/BlockEditor';
 import TemplateLibraryModal from '../components/TemplateLibraryModal';
+import TemplateActions from '../components/TemplateActions';
 import DebugPanel from '../panels/DebugPanel';
 import useNotice from '../hooks/useNotice';
 import useTemplateLibrary from '../hooks/useTemplateLibrary';
@@ -36,7 +37,6 @@ import {
     TARGET_TYPE_OPTIONS,
     getPositionOptions,
 } from '../constants/options';
-import { HTML_TEMPLATES } from '../constants/templates';
 
 const AdsConfig = () => {
     const ads = useStore((state) => state.ads);
@@ -52,7 +52,6 @@ const AdsConfig = () => {
     const [selectedId, setSelectedId] = useState(null);
     const [showValidation, setShowValidation] = useState(false);
     const [devicePreview, setDevicePreview] = useState('desktop');
-    const [htmlTab, setHtmlTab] = useState('content');
     const { notice, showNotice, clearNotice } = useNotice();
 
     useEffect(() => {
@@ -74,12 +73,6 @@ const AdsConfig = () => {
         }
     }, [ads, showValidation]);
 
-    useEffect(() => {
-        if (!['content', 'templates'].includes(htmlTab)) {
-            setHtmlTab('content');
-        }
-    }, [htmlTab]);
-
     const selectedAd = useMemo(
         () => ads.find((ad) => ad.id === selectedId),
         [ads, selectedId]
@@ -87,10 +80,6 @@ const AdsConfig = () => {
 
     const { targetItems, targetSuggestions, targetLoading, handleTargetSearch } =
         useTargeting(selectedAd);
-
-    useEffect(() => {
-        setHtmlTab('content');
-    }, [selectedAd?.id]);
 
     const positionOptions = useMemo(() => {
         const page = selectedAd?.options?.show_page || 'all';
@@ -390,24 +379,14 @@ const AdsConfig = () => {
                         >
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                    <div className="magick-ad-template-actions">
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() =>
-                                                openTemplateLibrary('image')
-                                            }
-                                        >
-                                            模板库
-                                        </Button>
-                                        <Button
-                                            variant="tertiary"
-                                            onClick={() =>
-                                                handleSaveTemplate('image')
-                                            }
-                                        >
-                                            存为模板
-                                        </Button>
-                                    </div>
+                                    <TemplateActions
+                                        onOpen={() =>
+                                            openTemplateLibrary('image')
+                                        }
+                                        onSave={() =>
+                                            handleSaveTemplate('image')
+                                        }
+                                    />
                                     <TabPanel
                                         className="magick-ad-image-tabs"
                                         tabs={[
@@ -462,6 +441,10 @@ const AdsConfig = () => {
                                                 </>
                                             ) : (
                                                 <>
+                                                    <Notice status="info" isDismissible={false}>
+                                                        图片配置仅影响图片本体（img）。容器背景、内边距、
+                                                        阴影等请在右侧“容器外观”中设置。
+                                                    </Notice>
                                                     <div className="magick-ad-field">
                                                         <p className="magick-ad-field__label">
                                                             水印
@@ -494,7 +477,7 @@ const AdsConfig = () => {
                                                     </div>
                                                     <div className="magick-ad-image-grid">
                                                         <TextControl
-                                                            label="圆角效果"
+                                                            label="图片圆角"
                                                             type="number"
                                                             min={0}
                                                             value={
@@ -516,7 +499,7 @@ const AdsConfig = () => {
                                                             help="像素"
                                                         />
                                                         <TextControl
-                                                            label="最大宽度"
+                                                            label="图片最大宽度"
                                                             type="number"
                                                             min={0}
                                                             value={
@@ -538,7 +521,7 @@ const AdsConfig = () => {
                                                             help="像素"
                                                         />
                                                         <TextControl
-                                                            label="距离顶部"
+                                                            label="图片距离顶部"
                                                             type="number"
                                                             min={0}
                                                             value={
@@ -560,7 +543,7 @@ const AdsConfig = () => {
                                                             help="像素"
                                                         />
                                                         <TextControl
-                                                            label="距离底部"
+                                                            label="图片距离底部"
                                                             type="number"
                                                             min={0}
                                                             value={
@@ -582,7 +565,7 @@ const AdsConfig = () => {
                                                             help="像素"
                                                         />
                                                         <TextControl
-                                                            label="距离左边"
+                                                            label="图片距离左边"
                                                             type="number"
                                                             min={0}
                                                             value={
@@ -604,7 +587,7 @@ const AdsConfig = () => {
                                                             help="像素"
                                                         />
                                                         <TextControl
-                                                            label="距离右边"
+                                                            label="图片距离右边"
                                                             type="number"
                                                             min={0}
                                                             value={
@@ -643,106 +626,23 @@ const AdsConfig = () => {
                         >
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                    <TabPanel
-                                        key={selectedAd.id}
-                                        className="magick-ad-html-tabs"
-                                        tabs={[
-                                            { name: 'content', title: '内容' },
-                                            {
-                                                name: 'templates',
-                                                title: '模板库',
-                                            },
-                                        ]}
-                                        initialTabName="content"
-                                        onSelect={(name) =>
-                                            setHtmlTab(name)
+                                    <TemplateActions
+                                        onOpen={() =>
+                                            openTemplateLibrary('html')
                                         }
-                                    >
-                                        {() => null}
-                                    </TabPanel>
-
-                                    <div
-                                        className={`magick-ad-html-tab ${
-                                            htmlTab === 'content'
-                                                ? ''
-                                                : 'is-hidden'
-                                        }`}
-                                    >
-                                        <div className="magick-ad-template-actions">
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() =>
-                                                    openTemplateLibrary('html')
-                                                }
-                                            >
-                                                模板库
-                                            </Button>
-                                            <Button
-                                                variant="tertiary"
-                                                onClick={() =>
-                                                    handleSaveTemplate('html')
-                                                }
-                                            >
-                                                存为模板
-                                            </Button>
-                                        </div>
-                                        <ClassicEditor
-                                            value={
-                                                selectedAd.content?.html || ''
-                                            }
-                                            active={
-                                                activeContentType === 'html' &&
-                                                htmlTab === 'content'
-                                            }
-                                            onChange={(value) =>
-                                                handleUpdateContent({
-                                                    html: value,
-                                                })
-                                            }
-                                        />
-                                    </div>
-
-                                    <div
-                                        className={`magick-ad-html-tab ${
-                                            htmlTab === 'templates'
-                                                ? ''
-                                                : 'is-hidden'
-                                        }`}
-                                    >
-                                        <div className="magick-ad-template-grid">
-                                            {HTML_TEMPLATES.map((template) => (
-                                                <div
-                                                    key={template.id}
-                                                    className="magick-ad-template-card"
-                                                >
-                                                    <div className="magick-ad-template-card__body">
-                                                        <h4>
-                                                            {template.name}
-                                                        </h4>
-                                                        <p>
-                                                            {
-                                                                template.description
-                                                            }
-                                                        </p>
-                                                    </div>
-                                                    <div className="magick-ad-template-card__actions">
-                                                        <Button
-                                                            variant="primary"
-                                                            onClick={() =>
-                                                                handleUpdateContent(
-                                                                    {
-                                                                        ...template.data,
-                                                                    }
-                                                                )
-                                                            }
-                                                        >
-                                                            应用
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                        onSave={() =>
+                                            handleSaveTemplate('html')
+                                        }
+                                    />
+                                    <ClassicEditor
+                                        value={selectedAd.content?.html || ''}
+                                        active={activeContentType === 'html'}
+                                        onChange={(value) =>
+                                            handleUpdateContent({
+                                                html: value,
+                                            })
+                                        }
+                                    />
                                 </PanelBody>
                             </Panel>
                         </div>
@@ -750,24 +650,14 @@ const AdsConfig = () => {
                         {activeContentType === 'video' && (
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                    <div className="magick-ad-template-actions">
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() =>
+                                        <TemplateActions
+                                            onOpen={() =>
                                                 openTemplateLibrary('video')
                                             }
-                                        >
-                                            模板库
-                                        </Button>
-                                        <Button
-                                            variant="tertiary"
-                                            onClick={() =>
+                                            onSave={() =>
                                                 handleSaveTemplate('video')
                                             }
-                                        >
-                                            存为模板
-                                        </Button>
-                                    </div>
+                                        />
                                     <TextControl
                                         label="视频地址"
                                         value={
@@ -787,24 +677,14 @@ const AdsConfig = () => {
                         {activeContentType === 'block' && (
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                    <div className="magick-ad-template-actions">
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() =>
-                                                openTemplateLibrary('block')
-                                            }
-                                        >
-                                            模板库
-                                        </Button>
-                                        <Button
-                                            variant="tertiary"
-                                            onClick={() =>
-                                                handleSaveTemplate('block')
-                                            }
-                                        >
-                                            存为模板
-                                        </Button>
-                                    </div>
+                                    <TemplateActions
+                                        onOpen={() =>
+                                            openTemplateLibrary('block')
+                                        }
+                                        onSave={() =>
+                                            handleSaveTemplate('block')
+                                        }
+                                    />
                                     <BlockEditor
                                         value={
                                             selectedAd.content?.blocks || ''
@@ -873,6 +753,10 @@ const AdsConfig = () => {
                                 return (
                                     <Panel>
                                         <PanelBody title="容器外观" initialOpen>
+                                            <Notice status="info" isDismissible={false}>
+                                                容器外观仅作用于包裹层（div），不影响图片本体。图片尺寸、
+                                                圆角与外边距请在“图片配置”里调整。
+                                            </Notice>
                                             <SelectControl
                                                 label="容器类型"
                                                 value={
