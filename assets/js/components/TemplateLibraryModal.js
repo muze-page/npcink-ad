@@ -7,8 +7,10 @@ import {
     SelectControl,
     TabPanel,
     TextControl,
+    Tooltip,
 } from '@wordpress/components';
 import { useEffect, useState } from '@wordpress/element';
+import { Icon, pinSmall, starFilled } from '@wordpress/icons';
 
 const TemplateLibraryModal = ({
     isOpen,
@@ -28,6 +30,7 @@ const TemplateLibraryModal = ({
     onBulkPinned,
     onClearFavorites,
     onClearPins,
+    onRestorePreferences,
     onApply,
     onImport,
     onExport,
@@ -45,6 +48,9 @@ const TemplateLibraryModal = ({
     const [onlyFavorites, setOnlyFavorites] = useState(false);
     const [dragIndex, setDragIndex] = useState(null);
     const [dropIndex, setDropIndex] = useState(null);
+    const [insertSide, setInsertSide] = useState('left');
+    const [confirmAction, setConfirmAction] = useState(null);
+    const [undoSnapshot, setUndoSnapshot] = useState(null);
 
     useEffect(() => {
         if (type) {
@@ -70,7 +76,9 @@ const TemplateLibraryModal = ({
               }));
     const categoryNames = availableCategories.map((item) => item.name);
     const categoryColors = availableCategories.reduce((acc, item) => {
-        acc[item.name] = item.color;
+        if (item?.name) {
+            acc[item.name] = item.color;
+        }
         return acc;
     }, {});
     const hasUncategorized = templates.some(
@@ -137,7 +145,52 @@ const TemplateLibraryModal = ({
         });
     };
 
+    const requestBulkAction = (type, ids) => {
+        if (!ids || ids.length === 0) {
+            return;
+        }
+        setConfirmAction({ type, ids });
+    };
+
+    const executeBulkAction = (type, ids) => {
+        const prev = {
+            favorites: [...(favoriteIds || [])],
+            pins: [...(pinnedIds || [])],
+        };
+        setUndoSnapshot(prev);
+
+        if (type === 'favorite') {
+            onBulkFavorite?.(ids, true);
+        } else if (type === 'unfavorite') {
+            onBulkFavorite?.(ids, false);
+        } else if (type === 'pin') {
+            onBulkPinned?.(ids, true);
+        } else if (type === 'unpin') {
+            onBulkPinned?.(ids, false);
+        } else if (type === 'clearFavorites') {
+            onClearFavorites?.();
+        } else if (type === 'clearPins') {
+            onClearPins?.();
+        }
+
+        window.setTimeout(() => {
+            setUndoSnapshot(null);
+        }, 6000);
+    };
+
+    const handleUndo = () => {
+        if (!undoSnapshot) {
+            return;
+        }
+        onRestorePreferences?.(
+            undoSnapshot.favorites,
+            undoSnapshot.pins
+        );
+        setUndoSnapshot(null);
+    };
+
     return (
+        <>
         <Modal title="模板库" onRequestClose={onClose} size="large">
             <div className="magick-ad-template-toolbar">
                 <div className="magick-ad-template-toolbar__actions">
@@ -153,42 +206,44 @@ const TemplateLibraryModal = ({
                     </Button>
                     <Button
                         variant="secondary"
-                        onClick={() => onBulkFavorite?.(selected, true)}
+                        onClick={() => requestBulkAction('favorite', selected)}
                         disabled={selected.length === 0}
                     >
                         批量收藏
                     </Button>
                     <Button
                         variant="secondary"
-                        onClick={() => onBulkFavorite?.(selected, false)}
+                        onClick={() =>
+                            requestBulkAction('unfavorite', selected)
+                        }
                         disabled={selected.length === 0}
                     >
                         取消收藏
                     </Button>
                     <Button
                         variant="secondary"
-                        onClick={() => onBulkPinned?.(selected, true)}
+                        onClick={() => requestBulkAction('pin', selected)}
                         disabled={selected.length === 0}
                     >
                         批量置顶
                     </Button>
                     <Button
                         variant="secondary"
-                        onClick={() => onBulkPinned?.(selected, false)}
+                        onClick={() => requestBulkAction('unpin', selected)}
                         disabled={selected.length === 0}
                     >
                         取消置顶
                     </Button>
                     <Button
                         variant="secondary"
-                        onClick={() => onClearFavorites?.()}
+                        onClick={() => requestBulkAction('clearFavorites', ['_all'])}
                         disabled={!favoriteIds?.length}
                     >
                         清空收藏
                     </Button>
                     <Button
                         variant="secondary"
-                        onClick={() => onClearPins?.()}
+                        onClick={() => requestBulkAction('clearPins', ['_all'])}
                         disabled={!pinnedIds?.length}
                     >
                         清空置顶
@@ -249,6 +304,23 @@ const TemplateLibraryModal = ({
                 </div>
             </div>
 
+            {undoSnapshot && (
+                <Notice
+                    status="success"
+                    isDismissible
+                    onRemove={() => setUndoSnapshot(null)}
+                >
+                    操作已完成。
+                    <Button
+                        variant="link"
+                        className="magick-ad-template-undo"
+                        onClick={handleUndo}
+                    >
+                        撤销
+                    </Button>
+                </Notice>
+            )}
+
             <div className="magick-ad-template-category-manager">
                 <div className="magick-ad-template-category-list">
                     {(availableCategories || []).map((item, index) => (
@@ -256,7 +328,15 @@ const TemplateLibraryModal = ({
                             key={item.name}
                             className={`magick-ad-template-chip ${
                                 dragIndex === index ? 'is-dragging' : ''
-                            } ${dropIndex === index ? 'is-drop' : ''}`}
+                            } ${dropIndex === index ? 'is-drop' : ''} ${
+                                dropIndex === index && dragIndex !== null
+                                    ? 'is-over'
+                                    : ''
+                            } ${
+                                dropIndex === index && dragIndex !== null
+                                    ? `is-insert-${insertSide}`
+                                    : ''
+                            }`}
                             draggable
                             onDragStart={(event) => {
                                 event.dataTransfer.setData(
@@ -268,9 +348,19 @@ const TemplateLibraryModal = ({
                             onDragEnd={() => {
                                 setDragIndex(null);
                                 setDropIndex(null);
+                                setInsertSide('left');
                             }}
                             onDragEnter={() => setDropIndex(index)}
-                            onDragOver={(event) => event.preventDefault()}
+                            onDragOver={(event) => {
+                                event.preventDefault();
+                                const rect =
+                                    event.currentTarget.getBoundingClientRect();
+                                const mid = rect.left + rect.width / 2;
+                                const side =
+                                    event.clientX >= mid ? 'right' : 'left';
+                                setDropIndex(index);
+                                setInsertSide(side);
+                            }}
                             onDrop={(event) => {
                                 event.preventDefault();
                                 const from = Number(
@@ -281,7 +371,12 @@ const TemplateLibraryModal = ({
                                 }
                                 const next = [...availableCategories];
                                 const moved = next.splice(from, 1)[0];
-                                next.splice(index, 0, moved);
+                                let target =
+                                    insertSide === 'right' ? index + 1 : index;
+                                if (from < target) {
+                                    target -= 1;
+                                }
+                                next.splice(target, 0, moved);
                                 onUpdateCategories?.(next);
                                 setDropIndex(index);
                                 window.setTimeout(() => {
@@ -397,11 +492,12 @@ const TemplateLibraryModal = ({
                                                     template.type || 'html'
                                                 }`}
                                             >
-                                                {type === 'html'
+                                                {template.type === 'html'
                                                     ? '代码/HTML'
-                                                    : type === 'image'
+                                                    : template.type === 'image'
                                                       ? '图片'
-                                                      : type === 'video'
+                                                      : template.type ===
+                                                          'video'
                                                         ? '视频'
                                                         : '可视化'}
                                             </span>
@@ -477,14 +573,18 @@ const TemplateLibraryModal = ({
                                     </div>
                                     <div className="magick-ad-template-card__corner">
                                         {pinnedIds?.includes(template.id) && (
-                                            <span className="magick-ad-template-corner is-pinned">
-                                                置顶
-                                            </span>
+                                            <Tooltip text="已置顶">
+                                                <span className="magick-ad-template-corner is-pinned">
+                                                    <Icon icon={pinSmall} />
+                                                </span>
+                                            </Tooltip>
                                         )}
                                         {favoriteIds?.includes(template.id) && (
-                                            <span className="magick-ad-template-corner is-favorite">
-                                                收藏
-                                            </span>
+                                            <Tooltip text="已收藏">
+                                                <span className="magick-ad-template-corner is-favorite">
+                                                    <Icon icon={starFilled} />
+                                                </span>
+                                            </Tooltip>
                                         )}
                                     </div>
                                     <CheckboxControl
@@ -502,6 +602,38 @@ const TemplateLibraryModal = ({
                 }}
             </TabPanel>
         </Modal>
+        {confirmAction && (
+            <Modal
+                title="确认操作"
+                onRequestClose={() => setConfirmAction(null)}
+                className="magick-ad-confirm-modal"
+            >
+                <p>
+                    确认对 {confirmAction.ids.length} 个模板执行该操作吗？
+                </p>
+                <div className="magick-ad-confirm-actions">
+                    <Button
+                        variant="secondary"
+                        onClick={() => setConfirmAction(null)}
+                    >
+                        取消
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={() => {
+                            executeBulkAction(
+                                confirmAction.type,
+                                confirmAction.ids
+                            );
+                            setConfirmAction(null);
+                        }}
+                    >
+                        确认
+                    </Button>
+                </div>
+            </Modal>
+        )}
+        </>
     );
 };
 

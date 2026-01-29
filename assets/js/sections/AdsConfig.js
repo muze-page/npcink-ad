@@ -416,6 +416,7 @@ const AdsConfig = () => {
         bulkPinned,
         clearFavorites,
         clearPins,
+        restorePreferences,
         handleApplyTemplate,
         handleToggleTemplateSelect,
         handleExportTemplates,
@@ -1083,7 +1084,8 @@ const AdsConfig = () => {
                                                 status="warning"
                                                 isDismissible={false}
                                             >
-                                                检测到 <script> 标签。安全模式会移除脚本，
+                                                检测到 <code>&lt;script&gt;</code>{' '}
+                                                标签。安全模式会移除脚本，
                                                 请切换到“完全模式”并确保账号具备权限。
                                             </Notice>
                                         )}
@@ -2705,6 +2707,7 @@ const AdsConfig = () => {
                 onBulkPinned={bulkPinned}
                 onClearFavorites={clearFavorites}
                 onClearPins={clearPins}
+                onRestorePreferences={restorePreferences}
                 onApply={handleApplyTemplate}
                 onImport={handleImportTemplates}
                 onExport={handleExportTemplates}

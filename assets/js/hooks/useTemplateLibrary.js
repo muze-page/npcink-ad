@@ -422,6 +422,16 @@ const useTemplateLibrary = ({
         updatePreferences(favoritesRef.current || [], []);
     }, [updatePreferences]);
 
+    const restorePreferences = useCallback(
+        (favorites, pins) => {
+            updatePreferences(
+                Array.isArray(favorites) ? favorites : [],
+                Array.isArray(pins) ? pins : []
+            );
+        },
+        [updatePreferences]
+    );
+
     const saveTemplate = useCallback(
         async (type, name, category, containerType) => {
             if (!selectedAd) {
@@ -556,6 +566,7 @@ const useTemplateLibrary = ({
         bulkPinned,
         clearFavorites,
         clearPins,
+        restorePreferences,
         handleApplyTemplate,
         handleToggleTemplateSelect,
         handleExportTemplates,

@@ -797,6 +797,44 @@
     background: #eef4ff;
 }
 
+.magick-ad-template-card__corner {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 6px;
+}
+
+.magick-ad-template-corner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #eef2ff;
+    color: #3f51b5;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+}
+
+.magick-ad-template-corner.is-favorite {
+    background: #fff4ea;
+    color: #cc4a00;
+}
+
+.magick-ad-template-corner.is-pinned {
+    background: #eef4ff;
+    color: #0550ae;
+}
+
+.magick-ad-template-corner svg {
+    width: 14px;
+    height: 14px;
+}
+
 .magick-ad-template-category-manager {
     display: flex;
     justify-content: space-between;
@@ -823,6 +861,51 @@
     font-size: 12px;
     color: #1d2327;
     cursor: grab;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.magick-ad-template-chip.is-dragging {
+    opacity: 0.6;
+    transform: scale(0.98);
+}
+
+.magick-ad-template-chip.is-drop {
+    animation: magick-chip-drop 0.25s ease;
+}
+
+.magick-ad-template-chip.is-over {
+    outline: 2px dashed #8da2fb;
+    background: #eef2ff;
+}
+.magick-ad-template-chip.is-insert-left,
+.magick-ad-template-chip.is-insert-right {
+    position: relative;
+}
+
+.magick-ad-template-chip.is-insert-left::before,
+.magick-ad-template-chip.is-insert-right::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 3px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #4f6ef7 0%, #6aa0ff 100%);
+    box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.15);
+}
+
+.magick-ad-template-chip.is-insert-left::before {
+    left: -6px;
+}
+
+.magick-ad-template-chip.is-insert-right::before {
+    right: -6px;
+}
+
+.magick-ad-template-category-hint {
+    font-size: 12px;
+    color: #6c757d;
+    align-self: center;
 }
 
 .magick-ad-template-chip__handle {
@@ -884,6 +967,46 @@
 .magick-ad-template-badge.is-soft {
     background: #f6f7f7;
     color: #50575e;
+}
+
+.magick-ad-template-badge.is-category {
+    background: var(--badge-color, #f3f4f6);
+    color: #1d2327;
+}
+
+.magick-ad-template-badge.is-type-html {
+    background: #f3f4f6;
+    color: #1d2327;
+}
+
+.magick-ad-template-badge.is-type-image {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.magick-ad-template-badge.is-type-video {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.magick-ad-template-badge.is-type-block {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.magick-ad-template-undo {
+    margin-left: 8px;
+}
+
+@keyframes magick-chip-drop {
+    0% {
+        transform: scale(0.96);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 8px 18px rgba(17, 24, 39, 0.12);
+    }
 }
 
 .magick-ad-template-actions {
