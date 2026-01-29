@@ -3,6 +3,7 @@
 namespace MagickAD\Frontend;
 
 use MagickAD\Data\Settings;
+use MagickAD\Utils\Capabilities;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -12,9 +13,17 @@ final class Frontend {
     private static $loop_before_rendered = false;
     private static $loop_after_rendered = false;
     private static $comments_template_original = null;
+    private static $preview_ad_id = null;
+    private static $preview_ad = null;
+    private static $preview_force = false;
+    private static $preview_evaluation = array(
+        'allowed' => false,
+        'reasons' => array(),
+    );
 
     public function register(): void {
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_assets'));
+        add_action('template_redirect', array(__CLASS__, 'handle_preview_request'));
         self::init();
     }
 
@@ -67,6 +76,10 @@ final class Frontend {
             MAGICK_AD_VERSION
         );
 
+        if (self::is_preview_request()) {
+            return;
+        }
+
         wp_enqueue_script(
             'magick-ad-track',
             MAGICK_AD_URL . 'assets/magick-ad-track.js',
@@ -87,7 +100,7 @@ final class Frontend {
 
 
     public static function inject_content_ads($content) {
-        if (is_admin() || !is_singular() || !in_the_loop() || !is_main_query()) {
+        if (!self::is_preview() && (is_admin() || !is_singular() || !in_the_loop() || !is_main_query())) {
             return $content;
         }
 
@@ -423,6 +436,10 @@ final class Frontend {
     }
 
     private static function get_matching_ads() {
+        if (self::is_preview()) {
+            return array();
+        }
+
         $settings = Settings::get_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
 
@@ -472,6 +489,242 @@ final class Frontend {
         }
 
         return true;
+    }
+
+    private static function evaluate_ad($ad): array {
+        $reasons = array();
+        $options = isset($ad['options']) ? $ad['options'] : array();
+        $ad_type = isset($options['ad_type']) ? $options['ad_type'] : 'global';
+
+        if (isset($options['enabled']) && !$options['enabled']) {
+            $reasons[] = 'disabled';
+        }
+
+        if (self::is_expired($options)) {
+            $reasons[] = 'expired';
+        }
+
+        $mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
+        if ($mode === 'hide') {
+            $reasons[] = 'display_mode=hide';
+        }
+        if ($mode === 'random' && !self::matches_display_mode($ad, $options)) {
+            $reasons[] = 'display_mode=random_hidden';
+        }
+
+        if ($ad_type === 'targeted') {
+            if (!self::matches_targeting($options)) {
+                $reasons[] = 'targeting';
+            }
+        } else {
+            if (!self::matches_show_page($options)) {
+                $reasons[] = 'show_page';
+            }
+        }
+
+        if (!self::matches_device($options)) {
+            $reasons[] = 'device';
+        }
+        if (!self::matches_login($options)) {
+            $reasons[] = 'login';
+        }
+
+        return array(
+            'allowed' => empty($reasons),
+            'reasons' => $reasons,
+        );
+    }
+
+    private static function is_preview_request(): bool {
+        return isset($_GET['magick_ad_preview']);
+    }
+
+    private static function is_preview(): bool {
+        return !empty(self::$preview_ad_id);
+    }
+
+    private static function get_ad_by_id(string $ad_id): ?array {
+        $settings = Settings::get_settings();
+        $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        foreach ($ads as $ad) {
+            if (isset($ad['id']) && (string) $ad['id'] === $ad_id) {
+                return $ad;
+            }
+        }
+        return null;
+    }
+
+    private static function format_preview_reasons(array $reasons): string {
+        if (empty($reasons)) {
+            return '';
+        }
+        $map = array(
+            'disabled' => '未启用',
+            'expired' => '已过期',
+            'display_mode=hide' => '展示模式=隐藏',
+            'display_mode=random_hidden' => '随机模式未命中',
+            'targeting' => '定向条件不匹配',
+            'show_page' => '展示页面不匹配',
+            'device' => '设备不匹配',
+            'login' => '登录状态不匹配',
+        );
+        $labels = array();
+        foreach ($reasons as $reason) {
+            $labels[] = $map[$reason] ?? $reason;
+        }
+        return implode(' · ', $labels);
+    }
+
+    public static function handle_preview_request(): void {
+        if (!self::is_preview_request()) {
+            return;
+        }
+
+        if (!Capabilities::current_user_can_manage()) {
+            return;
+        }
+
+        $nonce = isset($_GET['magick_ad_preview_nonce']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_nonce'])) : '';
+        if (!$nonce || !wp_verify_nonce($nonce, 'magick_ad_preview')) {
+            return;
+        }
+
+        $ad_id = isset($_GET['magick_ad_preview_ad']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_ad'])) : '';
+        if (!$ad_id) {
+            return;
+        }
+
+        $ad = self::get_ad_by_id($ad_id);
+        if (!$ad) {
+            status_header(404);
+            exit;
+        }
+
+        self::$preview_ad_id = $ad_id;
+        self::$preview_ad = $ad;
+        self::$preview_force = isset($_GET['magick_ad_preview_force']) && $_GET['magick_ad_preview_force'] === '1';
+        self::$preview_evaluation = self::evaluate_ad($ad);
+
+        $preview_content = '<h1>Magick AD 预览页面</h1>'
+            . '<p>这是用于预览广告投放效果的真实页面环境。</p>'
+            . '<p>你可以在此观察广告的展示位置、容器样式与动画表现。</p>'
+            . '<p>切换左上角设备后，预览区域会同步改变视口尺寸。</p>'
+            . '<p>若规则未命中，将不会展示广告，并在顶部调试条提示原因。</p>'
+            . '<p>下面是示例内容段落，用于模拟文章阅读场景。</p>'
+            . '<p>继续向下滚动，查看评论区、评论框等插入位置。</p>';
+        $preview_content = apply_filters('the_content', $preview_content);
+
+        show_admin_bar(false);
+        nocache_headers();
+        status_header(200);
+
+        wp_enqueue_script(
+            'magick-ad-preview',
+            MAGICK_AD_URL . 'assets/magick-ad-preview.js',
+            array(),
+            MAGICK_AD_VERSION,
+            true
+        );
+
+        do_action('wp_enqueue_scripts');
+
+        $ad_name = isset($ad['name']) ? $ad['name'] : '未命名广告';
+        $allowed = self::$preview_evaluation['allowed'];
+        $reason_text = self::format_preview_reasons(self::$preview_evaluation['reasons']);
+        $status_label = $allowed ? '命中' : '未命中';
+        $context = array(
+            'page' => array(
+                'is_home' => is_home(),
+                'is_front_page' => is_front_page(),
+                'is_single' => is_singular('post'),
+                'is_page' => is_page(),
+                'is_archive' => is_archive(),
+                'is_category' => is_category(),
+                'is_tag' => is_tag(),
+                'is_search' => is_search(),
+                'is_404' => is_404(),
+                'is_author' => is_author(),
+            ),
+            'user' => array(
+                'logged_in' => is_user_logged_in(),
+            ),
+            'device' => array(
+                'is_mobile' => wp_is_mobile(),
+                'is_tablet' => self::is_tablet_device(),
+            ),
+        );
+
+        wp_localize_script(
+            'magick-ad-preview',
+            'MagickADPreview',
+            array(
+                'context' => $context,
+                'ad' => $ad,
+                'device' => isset($_GET['magick_ad_preview_device']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_device'])) : '',
+            )
+        );
+
+        echo '<!doctype html>';
+        echo '<html ' . get_language_attributes() . '>';
+        echo '<head>';
+        echo '<meta charset="' . esc_attr(get_bloginfo('charset')) . '">';
+        echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
+        wp_head();
+        echo '<style>
+            body.magick-ad-preview-body{margin:0;background:#f6f7fb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;}
+            .magick-ad-preview-shell{max-width:960px;margin:32px auto;padding:0 20px;}
+            .magick-ad-preview-debug{position:sticky;top:0;z-index:9999;padding:12px 20px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;gap:16px;align-items:center;font-size:14px;}
+            .magick-ad-preview-debug.is-hit{border-left:4px solid #16a34a;}
+            .magick-ad-preview-debug.is-miss{border-left:4px solid #dc2626;}
+            .magick-ad-preview-debug__title{font-weight:600;color:#111827;}
+            .magick-ad-preview-debug__status{font-weight:600;color:#111827;}
+            .magick-ad-preview-debug__reason{color:#6b7280;font-size:12px;}
+            .magick-ad-preview-zone{margin:16px 0;min-height:8px;}
+            .magick-ad-preview-zone--label{font-size:12px;color:#6b7280;margin-bottom:4px;}
+            .magick-ad-preview-comments{margin-top:32px;padding:16px;border-radius:12px;background:#fff;box-shadow:0 10px 20px rgba(0,0,0,0.06);}
+            .magick-ad-preview-comment-form{margin-top:24px;padding:16px;border-radius:12px;background:#fff;box-shadow:0 10px 20px rgba(0,0,0,0.06);}
+            .magick-ad-preview-comment-form textarea{width:100%;min-height:120px;border:1px solid #d1d5db;border-radius:8px;padding:8px;}
+        </style>';
+        echo '</head>';
+        $body_classes = implode(' ', get_body_class('magick-ad-preview-body'));
+        echo '<body class="' . esc_attr($body_classes) . '">';
+        do_action('wp_body_open');
+        echo '<div class="magick-ad-preview-debug ' . ($allowed ? 'is-hit' : 'is-miss') . '">';
+        echo '<div class="magick-ad-preview-debug__title">' . esc_html($ad_name) . '</div>';
+        echo '<div class="magick-ad-preview-debug__status">' . esc_html($status_label) . '</div>';
+        if (!$allowed && $reason_text) {
+            echo '<div class="magick-ad-preview-debug__reason">原因：' . esc_html($reason_text) . '</div>';
+        }
+        echo '</div>';
+        echo '<main class="magick-ad-preview-shell">';
+        echo '<div class="magick-ad-preview-zone" data-magick-zone="head"><div class="magick-ad-preview-zone--label">Head 区域（仅脚本/像素）</div></div>';
+        echo '<div class="magick-ad-preview-zone" data-magick-zone="body_top"></div>';
+        echo '<article class="entry-content" id="magick-ad-preview-content">';
+        echo '<div class="magick-ad-preview-zone" data-magick-zone="content_before"></div>';
+        echo $preview_content;
+        echo '<p data-magick-paragraph="1">示例段落 1：Lorem ipsum dolor sit amet, consectetur adipiscing elit。</p>';
+        echo '<p data-magick-paragraph="2">示例段落 2：Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua。</p>';
+        echo '<p data-magick-paragraph="3">示例段落 3：Ut enim ad minim veniam, quis nostrud exercitation ullamco。</p>';
+        echo '<p data-magick-paragraph="4">示例段落 4：Duis aute irure dolor in reprehenderit in voluptate velit esse。</p>';
+        echo '<div class="magick-ad-preview-zone" data-magick-zone="content_after"></div>';
+        echo '</article>';
+        echo '<div class="magick-ad-preview-zone" data-magick-zone="comments_top"></div>';
+        echo '<section class="magick-ad-preview-comments">';
+        echo '<h3>评论区</h3>';
+        echo '<p>这里是评论内容示例。</p>';
+        echo '</section>';
+        echo '<div class="magick-ad-preview-zone" data-magick-zone="comments_bottom"></div>';
+        echo '<form class="magick-ad-preview-comment-form">';
+        echo '<div class="magick-ad-preview-zone" data-magick-zone="comment_form_before"></div>';
+        echo '<label>发表评论</label>';
+        echo '<textarea placeholder="输入评论内容..."></textarea>';
+        echo '<div class="magick-ad-preview-zone" data-magick-zone="comment_form_after"></div>';
+        echo '</form>';
+        echo '<div class="magick-ad-preview-zone" data-magick-zone="footer"></div>';
+        echo '</main>';
+        wp_footer();
+        echo '</body></html>';
+        exit;
     }
 
     private static function matches_display_mode($ad, $options) {

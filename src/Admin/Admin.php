@@ -127,6 +127,8 @@ final class Admin {
                 'nonce' => wp_create_nonce('wp_rest'),
                 'restUrl' => esc_url_raw(rest_url('magick-ad/v1')),
                 'canUnfilteredHtml' => current_user_can('unfiltered_html'),
+                'previewUrl' => esc_url_raw(home_url('/')),
+                'previewNonce' => wp_create_nonce('magick_ad_preview'),
             )
         );
     }

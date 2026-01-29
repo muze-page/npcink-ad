@@ -67,6 +67,56 @@
     position: relative;
 }
 
+.magick-ad-preview-frame {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.magick-ad-preview-frame__viewport {
+    width: 100%;
+    height: 520px;
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.magick-ad-preview-frame__viewport iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+
+.magick-ad-preview-frame__label {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #fff;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    z-index: 2;
+}
+
+.magick-ad-preview-frame--tablet .magick-ad-preview-frame__viewport {
+    width: 820px;
+    max-width: 100%;
+    height: 640px;
+}
+
+.magick-ad-preview-frame--mobile .magick-ad-preview-frame__viewport {
+    width: 390px;
+    max-width: 100%;
+    height: 680px;
+}
+
 .magick-ad-mode-switch {
     display: flex;
     align-items: center;

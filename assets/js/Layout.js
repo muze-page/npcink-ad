@@ -1,4 +1,4 @@
-import { useMemo } from '@wordpress/element';
+import { useEffect, useMemo, useRef, useState } from '@wordpress/element';
 import {
     Button,
     Card,
@@ -41,6 +41,8 @@ const Layout = ({
     contentPanels,
     preview,
 }) => {
+    const iframeRef = useRef(null);
+    const [previewReady, setPreviewReady] = useState(false);
     const adTypeControls = useMemo(
         () => [
             {
@@ -374,6 +376,100 @@ const Layout = ({
         );
     }, [adData, creativeType, containerType]);
 
+    const previewSrc = useMemo(() => {
+        const previewUrl = window?.MagickAD?.previewUrl;
+        const previewNonce = window?.MagickAD?.previewNonce;
+        if (!previewUrl || !previewNonce || !adData?.id) {
+            return '';
+        }
+        const url = new URL(previewUrl, window.location.origin);
+        url.searchParams.set('magick_ad_preview', '1');
+        url.searchParams.set('magick_ad_preview_ad', adData.id);
+        url.searchParams.set('magick_ad_preview_nonce', previewNonce);
+        url.searchParams.set('magick_ad_preview_device', devicePreview);
+        return url.toString();
+    }, [adData?.id, devicePreview]);
+
+    const previewFrame = useMemo(() => {
+        if (!previewSrc) {
+            return previewBody;
+        }
+        return (
+            <div
+                className={`magick-ad-preview-frame magick-ad-preview-frame--${devicePreview}`}
+            >
+                <div className="magick-ad-preview-frame__viewport">
+                    <div className="magick-ad-preview-frame__label">
+                        {devicePreview === 'desktop'
+                            ? '桌面'
+                            : devicePreview === 'tablet'
+                            ? '平板'
+                            : '手机'}
+                    </div>
+                    <iframe
+                        ref={iframeRef}
+                        title="Magick AD 预览"
+                        src={previewSrc}
+                        loading="lazy"
+                        onLoad={() => setPreviewReady(true)}
+                    />
+                </div>
+            </div>
+        );
+    }, [previewBody, previewSrc, devicePreview]);
+
+    useEffect(() => {
+        setPreviewReady(false);
+    }, [previewSrc]);
+
+    useEffect(() => {
+        const handleMessage = (event) => {
+            if (
+                event.origin === window.location.origin &&
+                event.data?.type === 'MAGICK_AD_PREVIEW_READY'
+            ) {
+                setPreviewReady(true);
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
+
+    useEffect(() => {
+        if (!previewReady || !iframeRef.current?.contentWindow) {
+            return;
+        }
+        const previewAd = {
+            ...adData,
+            options: {
+                ...(adData?.options || {}),
+                creative_type: creativeType,
+                container_type: containerType,
+            },
+        };
+
+        const handler = window.setTimeout(() => {
+            iframeRef.current?.contentWindow?.postMessage(
+                {
+                    type: 'MAGICK_AD_PREVIEW_UPDATE',
+                    payload: {
+                        ad: previewAd,
+                        device: devicePreview,
+                    },
+                },
+                window.location.origin
+            );
+        }, 200);
+
+        return () => window.clearTimeout(handler);
+    }, [
+        previewReady,
+        adData,
+        creativeType,
+        containerType,
+        devicePreview,
+    ]);
+
     return (
         <div className="magick-ad-layout">
             <aside className="magick-ad-left">
@@ -448,7 +544,7 @@ const Layout = ({
                             </div>
                             <div className="magick-ad-editor-preview">
                                 <div className="magick-ad-preview">
-                                    {preview || previewBody}
+                                    {preview || previewFrame}
                                 </div>
                             </div>
                         </div>
