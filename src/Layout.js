@@ -69,6 +69,14 @@ const Layout = ({
         const content = adData?.content || {};
         if (adType === 'html' && content.html) {
             const containerStyle = content.container_style || {};
+            if (containerStyle.mode === 'raw') {
+                return (
+                    <div
+                        className="magick-ad-preview__html"
+                        dangerouslySetInnerHTML={{ __html: content.html }}
+                    />
+                );
+            }
             const wrapperStyle = {};
             if (containerStyle.max_width) {
                 wrapperStyle.maxWidth = `${containerStyle.max_width}${containerStyle.max_width_unit || '%'}`;
