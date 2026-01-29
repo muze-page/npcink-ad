@@ -308,7 +308,7 @@ const AdsConfig = () => {
                             <DropdownMenu
                                 className="magick-ad-add-menu"
                                 icon={null}
-                                text="新增广告组"
+                                text="新增"
                                 toggleProps={{ variant: 'secondary' }}
                             >
                                 {({ onClose }) => (

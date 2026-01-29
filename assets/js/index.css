@@ -376,7 +376,6 @@
 .magick-ad-sidebar__item.is-active {
     border-color: #3858e9;
     background: linear-gradient(90deg, rgba(56, 88, 233, 0.12), rgba(56, 88, 233, 0.02));
-    box-shadow: 0 10px 24px rgba(56, 88, 233, 0.18);
     transform: translateY(-1px);
 }
 

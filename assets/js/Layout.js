@@ -259,7 +259,7 @@ const Layout = ({
                             <div className="magick-ad-list">
                                 左侧列表区域
                             </div>
-                            <Button variant="secondary">新增广告组</Button>
+                            <Button variant="secondary">新增</Button>
                         </CardBody>
                     </Card>
                 )}
