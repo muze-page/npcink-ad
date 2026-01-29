@@ -19,6 +19,7 @@ import {
     TextControl,
     ToggleControl,
 } from '@wordpress/components';
+import { moreHorizontal } from '@wordpress/icons';
 import { useStore } from '../store';
 import Layout from '../Layout';
 import ImagePicker from '../components/ImagePicker';
@@ -341,118 +342,183 @@ const AdsConfig = () => {
                             </Button>
                         </div>
                     </div>
-                    {ads.length === 0 && (
+                    {ads.length === 0 ? (
                         <p className="description">暂无广告组。</p>
-                    )}
-                    <nav className="magick-ad-sidebar__list">
-                        {ads.map((ad, index) => (
-                            <div
-                                key={ad.id}
-                                className={`magick-ad-sidebar__item ${
-                                    selectedId === ad.id ? 'is-active' : ''
-                                } ${
-                                    missingPositionIds.has(ad.id)
-                                        ? 'has-error'
-                                        : ''
-                                } ${
-                                    ad?.options?.enabled === false
-                                        ? 'is-disabled'
-                                        : ''
-                                }`}
-                            >
-                                <div className="magick-ad-sidebar__body">
-                                    <Button
-                                        variant="tertiary"
-                                        onClick={() => setSelectedId(ad.id)}
-                                        aria-current={
-                                            selectedId === ad.id
-                                                ? 'true'
-                                                : undefined
-                                        }
-                                        className="magick-ad-sidebar__main"
-                                    >
-                                        <span className="magick-ad-sidebar__text">
-                                            <span className="magick-ad-sidebar__title-row">
-                                                <span className="magick-ad-sidebar__title">
-                                                    {ad.name ||
-                                                        `广告组 ${index + 1}`}
-                                                </span>
-                                                <span
-                                                    className={`magick-ad-status ${
-                                                        ad?.options?.enabled ===
-                                                        false
-                                                            ? 'is-disabled'
-                                                            : 'is-enabled'
-                                                    }`}
-                                                >
-                                                    {ad?.options?.enabled ===
-                                                    false
-                                                        ? '已停用'
-                                                        : '已启用'}
-                                                </span>
-                                            </span>
-                                            <span className="magick-ad-type">
-                                                {ad.options?.ad_type ===
-                                                'targeted'
-                                                    ? '指定广告'
-                                                    : '全局广告'}
-                                            </span>
+                    ) : (
+                        <nav className="magick-ad-sidebar__list">
+                            {[
+                                {
+                                    key: 'global',
+                                    title: '全局广告',
+                                    items: ads.filter(
+                                        (ad) =>
+                                            ad.options?.ad_type !== 'targeted'
+                                    ),
+                                },
+                                {
+                                    key: 'targeted',
+                                    title: '指定广告',
+                                    items: ads.filter(
+                                        (ad) =>
+                                            ad.options?.ad_type === 'targeted'
+                                    ),
+                                },
+                            ].map((section) => (
+                                <div
+                                    key={section.key}
+                                    className="magick-ad-sidebar__section"
+                                >
+                                    <div className="magick-ad-sidebar__section-title">
+                                        {section.title}
+                                        <span className="magick-ad-sidebar__section-count">
+                                            {section.items.length}
                                         </span>
-                                        {missingPositionIds.has(ad.id) && (
-                                            <span className="magick-ad-sidebar__alert">
-                                                <span className="magick-ad-sidebar__dot" />
-                                                需配置位置
-                                            </span>
-                                        )}
-                                    </Button>
-                                </div>
-                                <div className="magick-ad-sidebar__actions">
-                                    <DropdownMenu
-                                        icon="more"
-                                        label="更多操作"
-                                        className="magick-ad-item-menu"
-                                        toggleProps={{ variant: 'tertiary' }}
-                                    >
-                                        {({ onClose }) => (
-                                            <MenuGroup>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        setRenameTarget(ad);
-                                                        setRenameValue(
-                                                            ad.name || ''
-                                                        );
-                                                        onClose();
-                                                    }}
-                                                >
-                                                    修改名称
-                                                </MenuItem>
-                                                <MenuItem
-                                                    onClick={() => {
-                                                        handleToggleEnabled(ad);
-                                                        onClose();
-                                                    }}
-                                                >
-                                                    {ad?.options?.enabled ===
+                                    </div>
+                                    {section.items.length === 0 ? (
+                                        <p className="description">
+                                            暂无{section.title}
+                                        </p>
+                                    ) : (
+                                        section.items.map((ad, index) => (
+                                            <div
+                                                key={ad.id}
+                                                className={`magick-ad-sidebar__item ${
+                                                    selectedId === ad.id
+                                                        ? 'is-active'
+                                                        : ''
+                                                } ${
+                                                    missingPositionIds.has(
+                                                        ad.id
+                                                    )
+                                                        ? 'has-error'
+                                                        : ''
+                                                } ${
+                                                    ad?.options?.enabled ===
                                                     false
-                                                        ? '设为启用'
-                                                        : '设为停用'}
-                                                </MenuItem>
-                                                <MenuItem
-                                                    isDestructive
-                                                    onClick={() => {
-                                                        setDeleteTarget(ad);
-                                                        onClose();
-                                                    }}
-                                                >
-                                                    删除
-                                                </MenuItem>
-                                            </MenuGroup>
-                                        )}
-                                    </DropdownMenu>
+                                                        ? 'is-disabled'
+                                                        : ''
+                                                }`}
+                                            >
+                                                <div className="magick-ad-sidebar__body">
+                                                    <Button
+                                                        variant="tertiary"
+                                                        onClick={() =>
+                                                            setSelectedId(
+                                                                ad.id
+                                                            )
+                                                        }
+                                                        aria-current={
+                                                            selectedId ===
+                                                            ad.id
+                                                                ? 'true'
+                                                                : undefined
+                                                        }
+                                                        className="magick-ad-sidebar__main"
+                                                    >
+                                                        <span className="magick-ad-sidebar__text">
+                                                            <span className="magick-ad-sidebar__title-row">
+                                                                <span className="magick-ad-sidebar__title">
+                                                                    {ad.name ||
+                                                                        `广告组 ${index + 1}`}
+                                                                </span>
+                                                                <span
+                                                                    className={`magick-ad-status ${
+                                                                        ad?.options
+                                                                            ?.enabled ===
+                                                                        false
+                                                                            ? 'is-disabled'
+                                                                            : 'is-enabled'
+                                                                    }`}
+                                                                >
+                                                                    {ad
+                                                                        ?.options
+                                                                        ?.enabled ===
+                                                                    false
+                                                                        ? '已停用'
+                                                                        : '已启用'}
+                                                                </span>
+                                                            </span>
+                                                            <span className="magick-ad-type">
+                                                                {ad.options
+                                                                    ?.ad_type ===
+                                                                'targeted'
+                                                                    ? '指定广告'
+                                                                    : '全局广告'}
+                                                            </span>
+                                                        </span>
+                                                        {missingPositionIds.has(
+                                                            ad.id
+                                                        ) && (
+                                                            <span className="magick-ad-sidebar__alert">
+                                                                <span className="magick-ad-sidebar__dot" />
+                                                                需配置位置
+                                                            </span>
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                                <div className="magick-ad-sidebar__actions">
+                                                    <DropdownMenu
+                                                        icon={moreHorizontal}
+                                                        label="更多操作"
+                                                        className="magick-ad-item-menu"
+                                                        toggleProps={{
+                                                            variant:
+                                                                'tertiary',
+                                                        }}
+                                                    >
+                                                        {({ onClose }) => (
+                                                            <MenuGroup>
+                                                                <MenuItem
+                                                                    onClick={() => {
+                                                                        setRenameTarget(
+                                                                            ad
+                                                                        );
+                                                                        setRenameValue(
+                                                                            ad.name ||
+                                                                                ''
+                                                                        );
+                                                                        onClose();
+                                                                    }}
+                                                                >
+                                                                    修改名称
+                                                                </MenuItem>
+                                                                <MenuItem
+                                                                    onClick={() => {
+                                                                        handleToggleEnabled(
+                                                                            ad
+                                                                        );
+                                                                        onClose();
+                                                                    }}
+                                                                >
+                                                                    {ad
+                                                                        ?.options
+                                                                        ?.enabled ===
+                                                                    false
+                                                                        ? '设为启用'
+                                                                        : '设为停用'}
+                                                                </MenuItem>
+                                                                <MenuItem
+                                                                    isDestructive
+                                                                    onClick={() => {
+                                                                        setDeleteTarget(
+                                                                            ad
+                                                                        );
+                                                                        onClose();
+                                                                    }}
+                                                                >
+                                                                    删除
+                                                                </MenuItem>
+                                                            </MenuGroup>
+                                                        )}
+                                                    </DropdownMenu>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
-                            </div>
-                        ))}
-                    </nav>
+                            ))}
+                        </nav>
+                    )}
                 </CardBody>
             </Card>
             <DebugPanel onNotice={showNotice} />

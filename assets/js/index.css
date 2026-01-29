@@ -207,6 +207,38 @@
     gap: 12px;
 }
 
+.magick-ad-sidebar__section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.magick-ad-sidebar__section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475467;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0 4px;
+}
+
+.magick-ad-sidebar__section-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #364fc7;
+    font-size: 11px;
+    font-weight: 700;
+}
+
 .magick-ad-sidebar__item {
     display: flex;
     align-items: flex-start;
@@ -305,8 +337,6 @@
     display: inline-flex;
     align-items: center;
     padding: 3px 10px;
-    border-radius: 999px;
-    background: #eef2ff;
     color: #364fc7;
     font-size: 12px;
     line-height: 1;
@@ -370,19 +400,6 @@
     color: #6c757d;
 }
 
-.magick-ad-item-menu .components-button {
-    min-width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: 1px solid #e2e6ee;
-    background: #ffffff;
-    color: #344054;
-}
-
-.magick-ad-item-menu .components-button:hover {
-    border-color: #cfd6ee;
-    background: #f8f9fb;
-}
 
 .magick-ad-delete-btn {
     color: #b32d2e;
