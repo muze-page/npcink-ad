@@ -187,6 +187,7 @@
     font-size: 14px;
 }
 
+
 .magick-ad-anim--fade {
     animation: magickAdFade 0.35s ease-out both;
 }
@@ -262,8 +263,32 @@
 }
 
 .magick-ad-sub-tabs .components-tab-panel__tabs {
-    margin: -4px -4px 12px;
-    border-bottom: 1px solid #dcdcde;
+
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.magick-ad-sub-tabs .components-tab-panel__tabs-item {
+    margin: 0;
+}
+
+.magick-ad-sub-tabs .components-tab-panel__tabs-item .components-button {
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475467;
+}
+
+.magick-ad-sub-tabs .components-tab-panel__tabs-item.is-active {
+    border-bottom: none;
+}
+
+.magick-ad-sub-tabs .components-tab-panel__tabs-item.is-active .components-button {
+    background: #ffffff;
+    color: #1d2327;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
 }
 
 .magick-ad-right-tabs .components-tab-panel__tabs {
