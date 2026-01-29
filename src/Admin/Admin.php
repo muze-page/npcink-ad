@@ -23,6 +23,23 @@ final class Admin {
             'dashicons-megaphone',
             60
         );
+
+        add_submenu_page(
+            'magick-ad',
+            __('广告配置', 'magick-ad'),
+            __('广告配置', 'magick-ad'),
+            'manage_options',
+            'magick-ad',
+            array($this, 'render_app')
+        );
+
+        add_submenu_page(
+            'magick-ad',
+            __('广告列表', 'magick-ad'),
+            __('广告列表', 'magick-ad'),
+            'manage_options',
+            'edit.php?post_type=magick_ad'
+        );
     }
 
     public function register_debug_settings(): void {
