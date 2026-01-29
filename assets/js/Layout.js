@@ -103,7 +103,9 @@ const Layout = ({
 
     const previewBody = useMemo(() => {
         const content = adData?.content || {};
+        const options = adData?.options || {};
         const containerStyle = content.container_style || {};
+        const behavior = content.behavior || {};
         const wrapperStyle = {};
         if (containerStyle.max_width) {
             wrapperStyle.maxWidth = `${containerStyle.max_width}${containerStyle.max_width_unit || '%'}`;
@@ -170,14 +172,14 @@ const Layout = ({
             );
         };
 
+        let inner = null;
         if (creativeType === 'html' && content.html) {
-            return wrapContent(
+            inner = (
                 <div
                     dangerouslySetInnerHTML={{ __html: content.html }}
                 />
             );
-        }
-        if (creativeType === 'image' && content.image?.url) {
+        } else if (creativeType === 'image' && content.image?.url) {
             const settings = content.image_settings || {};
             const imageStyle = {};
             if (settings.radius) {
@@ -224,19 +226,17 @@ const Layout = ({
                 imageNode
             );
 
-            return wrapContent(wrappedImage);
-        }
-        if (creativeType === 'video' && content.video_url) {
-            return wrapContent(
+            inner = wrappedImage;
+        } else if (creativeType === 'video' && content.video_url) {
+            inner = (
                 <video
                     className="magick-ad-preview__video"
                     controls
                     src={content.video_url}
                 />
             );
-        }
-        if (creativeType === 'block' && content.blocks) {
-            return wrapContent(
+        } else if (creativeType === 'block' && content.blocks) {
+            inner = (
                 <div
                     dangerouslySetInnerHTML={{
                         __html: content.blocks,
@@ -244,8 +244,66 @@ const Layout = ({
                 />
             );
         }
-        return <div className="magick-ad-preview__empty">预览区域</div>;
-    }, [adData, creativeType]);
+
+        if (!inner) {
+            return <div className="magick-ad-preview__empty">预览区域</div>;
+        }
+
+        const displayMode = options.display_mode || 'show';
+        if (displayMode === 'hide') {
+            return (
+                <div className="magick-ad-preview__empty">
+                    当前设置为“隐藏”，前台将不展示该广告。
+                </div>
+            );
+        }
+
+        const wrapped = wrapContent(inner);
+        const animation = behavior.animation || 'none';
+        const delay = behavior.delay ?? 0;
+        const animationClass =
+            animation && animation !== 'none'
+                ? `magick-ad-anim--${animation}`
+                : '';
+        const unitStyle =
+            delay > 0 ? { animationDelay: `${delay}s` } : undefined;
+
+        const placementParts = [];
+        if (options.ad_type === 'targeted') {
+            placementParts.push(options.target_type || '未选择类型');
+        } else {
+            placementParts.push(options.show_page || 'all');
+        }
+        if (options.show_position) {
+            placementParts.push(options.show_position);
+        }
+        if (displayMode === 'random') {
+            placementParts.unshift('随机');
+        } else {
+            placementParts.unshift('展示');
+        }
+
+        return (
+            <div
+                className={`magick-ad-preview__stage magick-ad-preview__stage--${containerType}`}
+            >
+                {(containerType === 'popup' ||
+                    containerType === 'interstitial') && (
+                    <div className="magick-ad-preview__overlay" />
+                )}
+                <div
+                    className={`magick-ad-preview__unit magick-ad-preview__unit--${containerType} ${animationClass}`}
+                    style={unitStyle}
+                >
+                    {wrapped}
+                </div>
+                <div className="magick-ad-preview__placement">
+                    {placementParts.join(' · ')}
+                    {delay > 0 && ` · 延迟${delay}s`}
+                </div>
+            </div>
+        );
+    }, [adData, creativeType, containerType]);
 
     return (
         <div className="magick-ad-layout">

@@ -64,6 +64,66 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+}
+
+.magick-ad-preview__stage {
+    position: relative;
+    width: 100%;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.magick-ad-preview__stage--banner {
+    align-items: flex-end;
+}
+
+.magick-ad-preview__stage--floating {
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 12px;
+}
+
+.magick-ad-preview__overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.35);
+}
+
+.magick-ad-preview__unit {
+    position: relative;
+    width: 100%;
+    z-index: 1;
+}
+
+.magick-ad-preview__unit--banner {
+    width: 100%;
+}
+
+.magick-ad-preview__unit--floating {
+    width: 320px;
+    max-width: 100%;
+}
+
+.magick-ad-preview__unit--popup,
+.magick-ad-preview__unit--interstitial {
+    max-width: 80%;
+}
+
+.magick-ad-preview__placement {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 2;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.7);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
 }
 
 .magick-ad-preview__html {
@@ -125,6 +185,49 @@
 .magick-ad-preview__empty {
     color: #9aa0a6;
     font-size: 14px;
+}
+
+.magick-ad-anim--fade {
+    animation: magickAdFade 0.35s ease-out both;
+}
+
+.magick-ad-anim--slide-up {
+    animation: magickAdSlideUp 0.4s ease-out both;
+}
+
+.magick-ad-anim--zoom {
+    animation: magickAdZoom 0.35s ease-out both;
+}
+
+@keyframes magickAdFade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes magickAdSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes magickAdZoom {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .magick-ad-right-stack {
