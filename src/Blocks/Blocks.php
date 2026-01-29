@@ -37,11 +37,17 @@ final class Blocks {
     public static function render_ad_block($attributes) {
         $attrs = is_array($attributes) ? $attributes : array();
         $creative = isset($attrs['creativeType']) ? (string) $attrs['creativeType'] : 'html';
-        if (!in_array($creative, array('html', 'image', 'video'), true)) {
+        if (!in_array($creative, array('html', 'image', 'video', 'block'), true)) {
             $creative = 'html';
         }
 
+        $container = isset($attrs['containerType']) ? (string) $attrs['containerType'] : 'inline';
+        if (!in_array($container, array('inline', 'popup', 'banner', 'floating', 'interstitial'), true)) {
+            $container = 'inline';
+        }
+
         $html = isset($attrs['html']) ? (string) $attrs['html'] : '';
+        $blocks = isset($attrs['blocks']) ? (string) $attrs['blocks'] : '';
         if ($creative === 'html' && !current_user_can('unfiltered_html')) {
             $html = wp_kses_post($html);
         }
@@ -57,7 +63,7 @@ final class Blocks {
             'id' => 'block_' . substr(md5(wp_json_encode($attrs)), 0, 12),
             'options' => array(
                 'creative_type' => $creative,
-                'container_type' => 'inline',
+                'container_type' => $container,
                 'display_mode' => 'show',
                 'random_strategy' => 'request',
                 'placement_hook' => 'content',
@@ -66,6 +72,7 @@ final class Blocks {
             ),
             'content' => array(
                 'html' => $html,
+                'blocks' => $blocks,
                 'video_url' => $video_url,
                 'link' => $link,
                 'link_target' => $link_target,

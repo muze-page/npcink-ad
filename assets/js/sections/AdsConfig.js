@@ -60,6 +60,12 @@ const AdsConfig = () => {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [renameTarget, setRenameTarget] = useState(null);
     const [renameValue, setRenameValue] = useState('');
+    const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+    const [saveTemplateType, setSaveTemplateType] = useState('image');
+    const [saveTemplateName, setSaveTemplateName] = useState('');
+    const [saveTemplateCategory, setSaveTemplateCategory] = useState('');
+    const [saveTemplateCategoryName, setSaveTemplateCategoryName] =
+        useState('');
     const canUnfilteredHtml =
         typeof window !== 'undefined' &&
         window.MagickAD &&
@@ -375,7 +381,16 @@ const AdsConfig = () => {
     };
 
     const applyTemplate = (template) => {
-        handleUpdateOptions({ creative_type: template.type });
+        const updates = { creative_type: template.type };
+        if (template.containerType) {
+            updates.container_type = template.containerType;
+            if (template.containerType !== 'inline') {
+                updates.placement_hook = 'footer';
+                updates.placement_position = '';
+                updates.placement_paragraph = 0;
+            }
+        }
+        handleUpdateOptions(updates);
         handleUpdateContent(template.data || {});
     };
 
@@ -384,10 +399,23 @@ const AdsConfig = () => {
         templateType,
         templateLibrary,
         templateSelection,
+        templateCategories,
+        favoriteIds,
+        pinnedIds,
         fileInputRef,
         setTemplateModalOpen,
         openTemplateLibrary,
-        handleSaveTemplate,
+        loadTemplateCategories,
+        saveTemplate,
+        addTemplateCategory,
+        removeTemplateCategory,
+        updateTemplateCategories,
+        toggleFavorite,
+        togglePinned,
+        bulkFavorite,
+        bulkPinned,
+        clearFavorites,
+        clearPins,
         handleApplyTemplate,
         handleToggleTemplateSelect,
         handleExportTemplates,
@@ -440,6 +468,45 @@ const AdsConfig = () => {
                 err?.message ||
                 '保存失败，请检查网络或权限设置。';
             showNotice('error', message, 4000);
+        }
+    };
+
+    const openSaveTemplate = async (type) => {
+        setSaveTemplateType(type);
+        setSaveTemplateName('');
+        setSaveTemplateCategory('');
+        setSaveTemplateCategoryName('');
+        setSaveTemplateOpen(true);
+        await loadTemplateCategories();
+    };
+
+    const handleConfirmSaveTemplate = async () => {
+        const name = saveTemplateName.trim();
+        if (!name) {
+            showNotice('error', '请输入模板名称', 3000);
+            return;
+        }
+        const containerType = selectedAd?.options?.container_type || 'inline';
+        const isNewCategory = saveTemplateCategory === 'new';
+        const categoryName = isNewCategory
+            ? saveTemplateCategoryName.trim()
+            : saveTemplateCategory;
+        const category =
+            !categoryName || categoryName === 'uncategorized'
+                ? ''
+                : categoryName;
+        if (isNewCategory && !categoryName) {
+            showNotice('error', '请输入新分类名称', 3000);
+            return;
+        }
+        try {
+            if (isNewCategory && categoryName) {
+                await addTemplateCategory(categoryName);
+            }
+            await saveTemplate(saveTemplateType, name, category, containerType);
+            setSaveTemplateOpen(false);
+        } catch (err) {
+            // keep modal open for retry
         }
     };
 
@@ -585,30 +652,26 @@ const AdsConfig = () => {
                                                         }
                                                         className="magick-ad-sidebar__main"
                                                     >
-                                                        <span className="magick-ad-sidebar__text">
-                                                            <span className="magick-ad-sidebar__title-row">
-                                                                <span className="magick-ad-sidebar__title">
-                                                                    {ad.name ||
-                                                                        `广告组 ${index + 1}`}
-                                                                </span>
-                                                                </span>
-                                                                <span
-                                                                    className={`magick-ad-status ${
-                                                                        ad?.options
-                                                                            ?.enabled ===
-                                                                        false
-                                                                            ? 'is-disabled'
-                                                                            : 'is-enabled'
-                                                                    }`}
-                                                                >
-                                                                    {ad
-                                                                        ?.options
+                                                        <span className="magick-ad-sidebar__title-row">
+                                                            <span className="magick-ad-sidebar__title">
+                                                                {ad.name ||
+                                                                    `广告组 ${index + 1}`}
+                                                            </span>
+                                                            <span
+                                                                className={`magick-ad-status-pill ${
+                                                                    ad?.options
                                                                         ?.enabled ===
                                                                     false
-                                                                        ? '已停用'
-                                                                        : '已启用'}
-                                                                </span>
-                                                            
+                                                                        ? 'is-disabled'
+                                                                        : 'is-enabled'
+                                                                }`}
+                                                            >
+                                                                {ad?.options
+                                                                    ?.enabled ===
+                                                                false
+                                                                    ? '已停用'
+                                                                    : '已启用'}
+                                                            </span>
                                                         </span>
                                                         {missingPositionIds.has(
                                                             ad.id
@@ -628,6 +691,9 @@ const AdsConfig = () => {
                                                         toggleProps={{
                                                             variant:
                                                                 'tertiary',
+                                                            size: 'small',
+                                                            className:
+                                                                'magick-ad-item-menu__toggle',
                                                         }}
                                                     >
                                                         {({ onClose }) => (
@@ -724,9 +790,7 @@ const AdsConfig = () => {
                                         onOpen={() =>
                                             openTemplateLibrary('image')
                                         }
-                                        onSave={() =>
-                                            handleSaveTemplate('image')
-                                        }
+                                        onSave={() => openSaveTemplate('image')}
                                     />
                                     <TabPanel
                                         className="magick-ad-image-tabs"
@@ -971,9 +1035,7 @@ const AdsConfig = () => {
                                         onOpen={() =>
                                             openTemplateLibrary('html')
                                         }
-                                        onSave={() =>
-                                            handleSaveTemplate('html')
-                                        }
+                                        onSave={() => openSaveTemplate('html')}
                                     />
                                     <SelectControl
                                         label="HTML 模式"
@@ -1057,7 +1119,7 @@ const AdsConfig = () => {
                                                 openTemplateLibrary('video')
                                             }
                                             onSave={() =>
-                                                handleSaveTemplate('video')
+                                                openSaveTemplate('video')
                                             }
                                         />
                                     <TextControl
@@ -1083,9 +1145,7 @@ const AdsConfig = () => {
                                         onOpen={() =>
                                             openTemplateLibrary('block')
                                         }
-                                        onSave={() =>
-                                            handleSaveTemplate('block')
-                                        }
+                                        onSave={() => openSaveTemplate('block')}
                                     />
                                     <BlockEditor
                                         value={
@@ -1179,7 +1239,7 @@ const AdsConfig = () => {
                                         )
                                     }
                                     onSave={() =>
-                                        handleSaveTemplate(
+                                        openSaveTemplate(
                                             selectedAd.options?.creative_type ||
                                                 'image'
                                         )
@@ -2632,12 +2692,79 @@ const AdsConfig = () => {
                 type={templateType}
                 templates={templateLibrary}
                 selected={templateSelection}
+                categories={templateCategories}
+                onUpdateCategories={updateTemplateCategories}
+                favoriteIds={favoriteIds}
+                pinnedIds={pinnedIds}
+                onAddCategory={addTemplateCategory}
+                onRemoveCategory={removeTemplateCategory}
                 onToggleSelect={handleToggleTemplateSelect}
+                onToggleFavorite={toggleFavorite}
+                onTogglePinned={togglePinned}
+                onBulkFavorite={bulkFavorite}
+                onBulkPinned={bulkPinned}
+                onClearFavorites={clearFavorites}
+                onClearPins={clearPins}
                 onApply={handleApplyTemplate}
                 onImport={handleImportTemplates}
                 onExport={handleExportTemplates}
                 onClose={() => setTemplateModalOpen(false)}
             />
+
+            {saveTemplateOpen && (
+                <Modal
+                    title="存为模板"
+                    onRequestClose={() => setSaveTemplateOpen(false)}
+                    className="magick-ad-rename-modal"
+                >
+                    <TextControl
+                        label="模板名称"
+                        value={saveTemplateName}
+                        onChange={setSaveTemplateName}
+                        placeholder="请输入模板名称"
+                    />
+                    <SelectControl
+                        label="模板分类"
+                        value={saveTemplateCategory || 'uncategorized'}
+                        options={[
+                            { label: '未分类', value: 'uncategorized' },
+                            ...(templateCategories || []).map((item) => ({
+                                label: item.name,
+                                value: item.name,
+                            })),
+                            { label: '新建分类…', value: 'new' },
+                        ]}
+                        onChange={(value) => {
+                            setSaveTemplateCategory(value);
+                            if (value !== 'new') {
+                                setSaveTemplateCategoryName('');
+                            }
+                        }}
+                    />
+                    {saveTemplateCategory === 'new' && (
+                        <TextControl
+                            label="新建分类名称"
+                            value={saveTemplateCategoryName}
+                            onChange={setSaveTemplateCategoryName}
+                            placeholder="输入分类名称"
+                        />
+                    )}
+                    <div className="magick-ad-confirm-actions">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setSaveTemplateOpen(false)}
+                        >
+                            取消
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={handleConfirmSaveTemplate}
+                        >
+                            保存模板
+                        </Button>
+                    </div>
+                </Modal>
+            )}
 
             {deleteTarget && (
                 <Modal
@@ -2666,6 +2793,22 @@ const AdsConfig = () => {
                                 if (selectedId === targetId) {
                                     setSelectedId(null);
                                 }
+                                saveToDB()
+                                    .then(() => {
+                                        showNotice(
+                                            'success',
+                                            '广告组已删除',
+                                            2000
+                                        );
+                                    })
+                                    .catch((err) => {
+                                        const message =
+                                            err?.data?.message ||
+                                            err?.message ||
+                                            '删除失败，请检查网络或权限设置。';
+                                        showNotice('error', message, 4000);
+                                        fetchFromDB();
+                                    });
                             }}
                         >
                             确认删除

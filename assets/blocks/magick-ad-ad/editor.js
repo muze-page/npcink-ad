@@ -4,6 +4,7 @@
     }
 
     var registerBlockType = blocks.registerBlockType;
+    var registerBlockVariation = blocks.registerBlockVariation;
     var Fragment = element.Fragment;
     var InspectorControls = blockEditor.InspectorControls;
     var MediaUpload = blockEditor.MediaUpload;
@@ -66,6 +67,7 @@
                                 { label: 'HTML/代码', value: 'html' },
                                 { label: '图片', value: 'image' },
                                 { label: '视频', value: 'video' },
+                                { label: '可视化设计', value: 'block' },
                             ],
                             onChange: function (value) {
                                 setAttributes({ creativeType: value });
@@ -120,6 +122,16 @@
                                 onChange: function (value) {
                                     setAttributes({ videoUrl: value });
                                 },
+                            }),
+                        creativeType === 'block' &&
+                            element.createElement(TextareaControl, {
+                                label: '区块内容（序列化）',
+                                help: '这里存放 Gutenberg 序列化内容，用于模板化渲染。',
+                                value: attributes.blocks || '',
+                                onChange: function (value) {
+                                    setAttributes({ blocks: value });
+                                },
+                                rows: 6,
                             })
                     )
                 ),
@@ -139,4 +151,37 @@
             return null;
         },
     });
+
+    if (registerBlockVariation) {
+        registerBlockVariation('magick-ad/ad', [
+            {
+                name: 'adsense-responsive',
+                title: 'AdSense 响应式',
+                description: '预置 adsbygoogle 响应式结构',
+                attributes: {
+                    creativeType: 'html',
+                    html: '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXX" data-ad-slot="1234567890" data-ad-format="auto" data-full-width-responsive="true"></ins>',
+                },
+            },
+            {
+                name: 'image-banner',
+                title: '横幅图片',
+                description: '适用于文章内横幅',
+                attributes: {
+                    creativeType: 'image',
+                    imageUrl: 'https://via.placeholder.com/1200x240?text=Banner',
+                    imageAlt: 'Banner',
+                },
+            },
+            {
+                name: 'video-inline',
+                title: '内嵌视频',
+                description: '贴合正文的视频广告',
+                attributes: {
+                    creativeType: 'video',
+                    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+                },
+            },
+        ]);
+    }
 })(window.wp.blocks, window.wp.blockEditor, window.wp.components, window.wp.element);

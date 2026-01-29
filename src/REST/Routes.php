@@ -5,7 +5,8 @@ namespace MagickAD\REST;
 use MagickAD\REST\Controllers\Debug_Controller;
 use MagickAD\REST\Controllers\Reports_Controller;
 use MagickAD\REST\Controllers\Settings_Controller;
-use MagickAD\REST\Controllers\Templates_Controller;
+use MagickAD\REST\Controllers\Template_Categories_Controller;
+use MagickAD\REST\Controllers\Template_Preferences_Controller;
 use MagickAD\REST\Controllers\Track_Controller;
 use MagickAD\Utils\Capabilities;
 
@@ -49,19 +50,24 @@ final class Routes {
             'callback' => array(Track_Controller::class, 'track'),
             'permission_callback' => '__return_true',
         ));
-        register_rest_route('magick-ad/v1', '/templates', array(
+        register_rest_route('magick-ad/v1', '/template-categories', array(
             'methods' => 'GET',
-            'callback' => array(Templates_Controller::class, 'list'),
+            'callback' => array(Template_Categories_Controller::class, 'get'),
             'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
         ));
-        register_rest_route('magick-ad/v1', '/templates', array(
+        register_rest_route('magick-ad/v1', '/template-categories', array(
             'methods' => 'POST',
-            'callback' => array(Templates_Controller::class, 'create'),
+            'callback' => array(Template_Categories_Controller::class, 'update'),
             'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
         ));
-        register_rest_route('magick-ad/v1', '/templates/import', array(
+        register_rest_route('magick-ad/v1', '/template-preferences', array(
+            'methods' => 'GET',
+            'callback' => array(Template_Preferences_Controller::class, 'get'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/template-preferences', array(
             'methods' => 'POST',
-            'callback' => array(Templates_Controller::class, 'import'),
+            'callback' => array(Template_Preferences_Controller::class, 'update'),
             'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
         ));
     }

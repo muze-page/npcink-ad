@@ -16,6 +16,18 @@
             "type": "string",
             "default": "html"
         },
+        "containerType": {
+            "type": "string",
+            "default": "inline"
+        },
+        "templateCategory": {
+            "type": "string",
+            "default": ""
+        },
+        "blocks": {
+            "type": "string",
+            "default": ""
+        },
         "html": {
             "type": "string",
             "default": ""
