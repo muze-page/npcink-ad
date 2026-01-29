@@ -910,398 +910,444 @@ const AdsConfig = () => {
                                                 容器外观仅作用于包裹层（div），不影响图片本体。图片尺寸、
                                                 圆角与外边距请在“图片配置”里调整。
                                             </Notice>
-                                            <SelectControl
-                                                label="容器类型"
-                                                value={
-                                                    selectedAd.options
-                                                        ?.container_type ||
-                                                    'inline'
-                                                }
-                                                options={[
-                                                    {
-                                                        label: '默认嵌入',
-                                                        value: 'inline',
-                                                    },
-                                                    {
-                                                        label: '弹窗',
-                                                        value: 'popup',
-                                                    },
-                                                    {
-                                                        label: '吸顶/吸底横栏',
-                                                        value: 'banner',
-                                                    },
-                                                    {
-                                                        label: '角落悬浮',
-                                                        value: 'floating',
-                                                    },
-                                                    {
-                                                        label: '全屏插屏',
-                                                        value: 'interstitial',
-                                                    },
+                                            <TabPanel
+                                                className="magick-ad-sub-tabs"
+                                                tabs={[
+                                                    { name: 'base', title: '基础' },
+                                                    { name: 'size', title: '尺寸' },
+                                                    { name: 'spacing', title: '间距' },
+                                                    { name: 'appearance', title: '外观' },
+                                                    { name: 'badge', title: '角标' },
                                                 ]}
-                                                onChange={(value) => {
-                                                    const nextPosition =
-                                                        value !== 'inline'
-                                                            ? 'footer'
-                                                            : selectedAd
-                                                                  .options
-                                                                  ?.show_position;
-                                                    handleUpdateOptions({
-                                                        container_type: value,
-                                                        show_position:
-                                                            nextPosition ||
-                                                            'footer',
-                                                    });
-                                                }}
-                                                help="容器决定展示形态，投放位置仍由“投放”页签控制。"
-                                            />
-
-                                            <SelectControl
-                                                label="容器模式"
-                                                value={
-                                                    containerStyle.mode ||
-                                                    'boxed'
-                                                }
-                                                options={[
-                                                    {
-                                                        label: '包裹容器',
-                                                        value: 'boxed',
-                                                    },
-                                                    {
-                                                        label: '原始输出',
-                                                        value: 'raw',
-                                                    },
-                                                ]}
-                                                onChange={(value) =>
-                                                    handleUpdateContainerStyle(
-                                                        {
-                                                            mode: value,
-                                                        }
-                                                    )
-                                                }
-                                            />
-
-                                            {containerStyle.mode === 'raw' ? (
-                                                <Notice
-                                                    status="info"
-                                                    isDismissible={false}
-                                                >
-                                                    原始模式不会应用容器样式。
-                                                </Notice>
-                                            ) : (
-                                                <>
-                                                    <div className="magick-ad-field">
-                                                        <RangeControl
-                                                            label="最大宽度"
-                                                            min={
-                                                                containerStyle.max_width_unit ===
-                                                                'px'
-                                                                    ? 320
-                                                                    : 50
-                                                            }
-                                                            max={
-                                                                containerStyle.max_width_unit ===
-                                                                'px'
-                                                                    ? 1200
-                                                                    : 100
-                                                            }
-                                                            value={
-                                                                containerStyle.max_width ??
-                                                                100
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateContainerStyle(
-                                                                    {
-                                                                        max_width:
-                                                                            Number(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <SelectControl
-                                                            label="宽度单位"
-                                                            value={
-                                                                containerStyle.max_width_unit ||
-                                                                '%'
-                                                            }
-                                                            options={[
-                                                                {
-                                                                    label: '百分比 (%)',
-                                                                    value: '%',
-                                                                },
-                                                                {
-                                                                    label: '像素 (px)',
-                                                                    value: 'px',
-                                                                },
-                                                            ]}
-                                                            onChange={(value) =>
-                                                                handleUpdateContainerStyle(
-                                                                    {
-                                                                        max_width_unit:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                    </div>
-
-                                                    <div className="magick-ad-field">
-                                                        <p className="magick-ad-field__label">
-                                                            内边距
-                                                        </p>
-                                                        <div className="magick-ad-image-grid">
-                                                            <RangeControl
-                                                                label="上"
-                                                                min={0}
-                                                                max={80}
-                                                                value={
-                                                                    containerStyle.padding_top ??
-                                                                    0
-                                                                }
-                                                                onChange={(value) =>
-                                                                    handleUpdateContainerStyle(
-                                                                        {
-                                                                            padding_top:
-                                                                                Number(
-                                                                                    value
-                                                                                ),
-                                                                        }
-                                                                    )
-                                                                }
-                                                            />
-                                                            <RangeControl
-                                                                label="右"
-                                                                min={0}
-                                                                max={80}
-                                                                value={
-                                                                    containerStyle.padding_right ??
-                                                                    0
-                                                                }
-                                                                onChange={(value) =>
-                                                                    handleUpdateContainerStyle(
-                                                                        {
-                                                                            padding_right:
-                                                                                Number(
-                                                                                    value
-                                                                                ),
-                                                                        }
-                                                                    )
-                                                                }
-                                                            />
-                                                            <RangeControl
-                                                                label="下"
-                                                                min={0}
-                                                                max={80}
-                                                                value={
-                                                                    containerStyle.padding_bottom ??
-                                                                    0
-                                                                }
-                                                                onChange={(value) =>
-                                                                    handleUpdateContainerStyle(
-                                                                        {
-                                                                            padding_bottom:
-                                                                                Number(
-                                                                                    value
-                                                                                ),
-                                                                        }
-                                                                    )
-                                                                }
-                                                            />
-                                                            <RangeControl
-                                                                label="左"
-                                                                min={0}
-                                                                max={80}
-                                                                value={
-                                                                    containerStyle.padding_left ??
-                                                                    0
-                                                                }
-                                                                onChange={(value) =>
-                                                                    handleUpdateContainerStyle(
-                                                                        {
-                                                                            padding_left:
-                                                                                Number(
-                                                                                    value
-                                                                                ),
-                                                                        }
-                                                                    )
-                                                                }
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="magick-ad-field">
-                                                        <p className="magick-ad-field__label">
-                                                            背景色
-                                                        </p>
-                                                        <ColorPicker
-                                                            color={
-                                                                containerStyle.background ||
-                                                                'transparent'
-                                                            }
-                                                            onChangeComplete={(
-                                                                value
-                                                            ) =>
-                                                                handleUpdateContainerStyle(
-                                                                    {
-                                                                        background:
-                                                                            formatColorValue(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                            enableAlpha
-                                                        />
-                                                        <Button
-                                                            variant="tertiary"
-                                                            onClick={() =>
-                                                                handleUpdateContainerStyle(
-                                                                    {
-                                                                        background:
-                                                                            'transparent',
-                                                                    }
-                                                                )
-                                                            }
-                                                        >
-                                                            清除背景
-                                                        </Button>
-                                                    </div>
-
-                                                    <RangeControl
-                                                        label="圆角"
-                                                        min={0}
-                                                        max={50}
-                                                        value={
-                                                            containerStyle.radius ??
-                                                            0
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateContainerStyle(
-                                                                {
-                                                                    radius:
-                                                                        Number(
-                                                                            value
-                                                                        ),
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-
-                                                    <SelectControl
-                                                        label="布局"
-                                                        value={
-                                                            containerStyle.layout ||
-                                                            ''
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label: '默认',
-                                                                value: '',
-                                                            },
-                                                            {
-                                                                label: '居中',
-                                                                value: 'centered',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateContainerStyle(
-                                                                {
-                                                                    layout: value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-
-                                                    <SelectControl
-                                                        label="阴影"
-                                                        value={
-                                                            containerStyle.shadow ||
-                                                            'none'
-                                                        }
-                                                        options={SHADOW_OPTIONS}
-                                                        onChange={(value) =>
-                                                            handleUpdateContainerStyle(
-                                                                {
-                                                                    shadow:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-
-                                                    <div className="magick-ad-field">
-                                                        <ToggleControl
-                                                            label="角标 (Badge)"
-                                                            checked={Boolean(
-                                                                containerStyle.badge_enabled
-                                                            )}
-                                                            onChange={(value) =>
-                                                                handleUpdateContainerStyle(
-                                                                    {
-                                                                        badge_enabled:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        {containerStyle.badge_enabled && (
+                                                initialTabName="base"
+                                            >
+                                                {(subTab) => {
+                                                    if (subTab.name === 'base') {
+                                                        return (
                                                             <>
                                                                 <SelectControl
-                                                                    label="角标文案"
+                                                                    label="容器类型"
                                                                     value={
-                                                                        containerStyle.badge_text ||
-                                                                        '广告'
+                                                                        selectedAd
+                                                                            .options
+                                                                            ?.container_type ||
+                                                                        'inline'
                                                                     }
                                                                     options={[
                                                                         {
-                                                                            label: '广告',
-                                                                            value: '广告',
+                                                                            label: '默认嵌入',
+                                                                            value: 'inline',
                                                                         },
                                                                         {
-                                                                            label: '推广',
-                                                                            value: '推广',
+                                                                            label: '弹窗',
+                                                                            value: 'popup',
+                                                                        },
+                                                                        {
+                                                                            label: '吸顶/吸底横栏',
+                                                                            value: 'banner',
+                                                                        },
+                                                                        {
+                                                                            label: '角落悬浮',
+                                                                            value: 'floating',
+                                                                        },
+                                                                        {
+                                                                            label: '全屏插屏',
+                                                                            value: 'interstitial',
                                                                         },
                                                                     ]}
-                                                                    onChange={(
-                                                                        value
-                                                                    ) =>
+                                                                    onChange={(value) => {
+                                                                        const nextPosition =
+                                                                            value !== 'inline'
+                                                                                ? 'footer'
+                                                                                : selectedAd
+                                                                                      .options
+                                                                                      ?.show_position;
+                                                                        handleUpdateOptions({
+                                                                            container_type: value,
+                                                                            show_position:
+                                                                                nextPosition ||
+                                                                                'footer',
+                                                                        });
+                                                                    }}
+                                                                    help="容器决定展示形态，投放位置仍由“投放”页签控制。"
+                                                                />
+                                                                <SelectControl
+                                                                    label="容器模式"
+                                                                    value={
+                                                                        containerStyle.mode ||
+                                                                        'boxed'
+                                                                    }
+                                                                    options={[
+                                                                        {
+                                                                            label: '包裹容器',
+                                                                            value: 'boxed',
+                                                                        },
+                                                                        {
+                                                                            label: '原始输出',
+                                                                            value: 'raw',
+                                                                        },
+                                                                    ]}
+                                                                    onChange={(value) =>
                                                                         handleUpdateContainerStyle(
                                                                             {
-                                                                                badge_text:
-                                                                                    value,
+                                                                                mode: value,
                                                                             }
                                                                         )
                                                                     }
                                                                 />
-                                                                <p className="magick-ad-field__label">
-                                                                    角标颜色
-                                                                </p>
-                                                                <ColorPicker
-                                                                    color={
-                                                                        containerStyle.badge_color ||
-                                                                        '#1d2327'
+                                                                {containerStyle.mode === 'raw' && (
+                                                                    <Notice
+                                                                        status="info"
+                                                                        isDismissible={false}
+                                                                    >
+                                                                        原始模式不会应用容器样式。
+                                                                    </Notice>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    }
+
+                                                    if (containerStyle.mode === 'raw') {
+                                                        return (
+                                                            <Notice
+                                                                status="info"
+                                                                isDismissible={false}
+                                                            >
+                                                                当前为原始输出模式，尺寸/外观设置不会生效。
+                                                            </Notice>
+                                                        );
+                                                    }
+
+                                                    if (subTab.name === 'size') {
+                                                        return (
+                                                            <div className="magick-ad-field">
+                                                                <RangeControl
+                                                                    label="最大宽度"
+                                                                    min={
+                                                                        containerStyle.max_width_unit ===
+                                                                        'px'
+                                                                            ? 320
+                                                                            : 50
                                                                     }
-                                                                    onChangeComplete={(
-                                                                        value
-                                                                    ) =>
+                                                                    max={
+                                                                        containerStyle.max_width_unit ===
+                                                                        'px'
+                                                                            ? 1200
+                                                                            : 100
+                                                                    }
+                                                                    value={
+                                                                        containerStyle.max_width ??
+                                                                        100
+                                                                    }
+                                                                    onChange={(value) =>
                                                                         handleUpdateContainerStyle(
                                                                             {
-                                                                                badge_color:
-                                                                                    formatColorValue(
+                                                                                max_width:
+                                                                                    Number(
                                                                                         value
                                                                                     ),
                                                                             }
                                                                         )
                                                                     }
-                                                                    enableAlpha
+                                                                />
+                                                                <SelectControl
+                                                                    label="宽度单位"
+                                                                    value={
+                                                                        containerStyle.max_width_unit ||
+                                                                        '%'
+                                                                    }
+                                                                    options={[
+                                                                        {
+                                                                            label: '百分比 (%)',
+                                                                            value: '%',
+                                                                        },
+                                                                        {
+                                                                            label: '像素 (px)',
+                                                                            value: 'px',
+                                                                        },
+                                                                    ]}
+                                                                    onChange={(value) =>
+                                                                        handleUpdateContainerStyle(
+                                                                            {
+                                                                                max_width_unit:
+                                                                                    value,
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    if (subTab.name === 'spacing') {
+                                                        return (
+                                                            <div className="magick-ad-field">
+                                                                <p className="magick-ad-field__label">
+                                                                    内边距
+                                                                </p>
+                                                                <div className="magick-ad-image-grid">
+                                                                    <RangeControl
+                                                                        label="上"
+                                                                        min={0}
+                                                                        max={80}
+                                                                        value={
+                                                                            containerStyle.padding_top ??
+                                                                            0
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    padding_top:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <RangeControl
+                                                                        label="右"
+                                                                        min={0}
+                                                                        max={80}
+                                                                        value={
+                                                                            containerStyle.padding_right ??
+                                                                            0
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    padding_right:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <RangeControl
+                                                                        label="下"
+                                                                        min={0}
+                                                                        max={80}
+                                                                        value={
+                                                                            containerStyle.padding_bottom ??
+                                                                            0
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    padding_bottom:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <RangeControl
+                                                                        label="左"
+                                                                        min={0}
+                                                                        max={80}
+                                                                        value={
+                                                                            containerStyle.padding_left ??
+                                                                            0
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    padding_left:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    if (subTab.name === 'appearance') {
+                                                        return (
+                                                            <>
+                                                                <div className="magick-ad-field">
+                                                                    <p className="magick-ad-field__label">
+                                                                        背景色
+                                                                    </p>
+                                                                    <ColorPicker
+                                                                        color={
+                                                                            containerStyle.background ||
+                                                                            'transparent'
+                                                                        }
+                                                                        onChangeComplete={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    background:
+                                                                                        formatColorValue(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        enableAlpha
+                                                                    />
+                                                                    <Button
+                                                                        variant="tertiary"
+                                                                        onClick={() =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    background:
+                                                                                        'transparent',
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        清除背景
+                                                                    </Button>
+                                                                </div>
+
+                                                                <RangeControl
+                                                                    label="圆角"
+                                                                    min={0}
+                                                                    max={50}
+                                                                    value={
+                                                                        containerStyle.radius ??
+                                                                        0
+                                                                    }
+                                                                    onChange={(value) =>
+                                                                        handleUpdateContainerStyle(
+                                                                            {
+                                                                                radius:
+                                                                                    Number(
+                                                                                        value
+                                                                                    ),
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                />
+
+                                                                <SelectControl
+                                                                    label="布局"
+                                                                    value={
+                                                                        containerStyle.layout ||
+                                                                        ''
+                                                                    }
+                                                                    options={[
+                                                                        {
+                                                                            label: '默认',
+                                                                            value: '',
+                                                                        },
+                                                                        {
+                                                                            label: '居中',
+                                                                            value: 'centered',
+                                                                        },
+                                                                    ]}
+                                                                    onChange={(value) =>
+                                                                        handleUpdateContainerStyle(
+                                                                            {
+                                                                                layout: value,
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                />
+
+                                                                <SelectControl
+                                                                    label="阴影"
+                                                                    value={
+                                                                        containerStyle.shadow ||
+                                                                        'none'
+                                                                    }
+                                                                    options={
+                                                                        SHADOW_OPTIONS
+                                                                    }
+                                                                    onChange={(value) =>
+                                                                        handleUpdateContainerStyle(
+                                                                            {
+                                                                                shadow:
+                                                                                    value,
+                                                                            }
+                                                                        )
+                                                                    }
                                                                 />
                                                             </>
-                                                        )}
-                                                    </div>
-                                                </>
-                                            )}
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <div className="magick-ad-field">
+                                                            <ToggleControl
+                                                                label="角标 (Badge)"
+                                                                checked={Boolean(
+                                                                    containerStyle.badge_enabled
+                                                                )}
+                                                                onChange={(value) =>
+                                                                    handleUpdateContainerStyle(
+                                                                        {
+                                                                            badge_enabled:
+                                                                                value,
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                            {containerStyle.badge_enabled && (
+                                                                <>
+                                                                    <SelectControl
+                                                                        label="角标文案"
+                                                                        value={
+                                                                            containerStyle.badge_text ||
+                                                                            '广告'
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label: '广告',
+                                                                                value: '广告',
+                                                                            },
+                                                                            {
+                                                                                label: '推广',
+                                                                                value: '推广',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    badge_text:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <p className="magick-ad-field__label">
+                                                                        角标颜色
+                                                                    </p>
+                                                                    <ColorPicker
+                                                                        color={
+                                                                            containerStyle.badge_color ||
+                                                                            '#1d2327'
+                                                                        }
+                                                                        onChangeComplete={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    badge_color:
+                                                                                        formatColorValue(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        enableAlpha
+                                                                    />
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                }}
+                                            </TabPanel>
                                         </PanelBody>
                                     </Panel>
                                 );
