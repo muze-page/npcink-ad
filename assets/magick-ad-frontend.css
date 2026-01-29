@@ -19,11 +19,19 @@
 .magick-ad-unit__inner {
     display: block;
     max-width: 100%;
+    position: relative;
 }
 
 .magick-ad-unit img {
     display: block;
     max-width: 100%;
+    height: auto;
+}
+
+.magick-ad-video video {
+    display: block;
+    max-width: 100%;
+    width: 100%;
     height: auto;
 }
 
@@ -148,4 +156,67 @@
     border-radius: 12px;
     overflow: hidden;
     max-width: min(360px, 90vw);
+}
+
+.magick-ad-container--banner {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    margin: 0;
+    background: #fff;
+    box-shadow: 0 -8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.magick-ad-container--floating {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 9999;
+    margin: 0;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: min(320px, 90vw);
+}
+
+.magick-ad-container--popup,
+.magick-ad-container--interstitial {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.magick-ad-container--interstitial .magick-ad-popup {
+    width: min(720px, 92vw);
+    max-height: 90vh;
+    overflow: auto;
+    background: #fff;
+    border-radius: 12px;
+}
+
+.magick-ad-container--popup .magick-ad-popup {
+    width: min(520px, 92vw);
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.magick-ad-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.magick-ad-popup {
+    position: relative;
+    z-index: 1;
+    padding: 16px;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.2);
 }

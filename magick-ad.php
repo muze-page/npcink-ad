@@ -145,6 +145,9 @@ function magick_ad_enqueue_admin_assets($hook) {
     wp_enqueue_media();
     wp_enqueue_script('wplink');
     wp_enqueue_style('editor-buttons');
+    wp_enqueue_style('wp-block-library');
+    wp_enqueue_style('wp-block-editor');
+    wp_enqueue_style('wp-edit-blocks');
 
     wp_enqueue_script(
         'magick-ad-app',
@@ -337,6 +340,32 @@ class Magick_AD_Engine {
                 array('global', 'targeted'),
                 'global'
             ),
+            'creative_type' => self::sanitize_choice(
+                isset($options['creative_type'])
+                    ? $options['creative_type']
+                    : (isset($options['content_type'])
+                        ? ($options['content_type'] === 'popup' || $options['content_type'] === 'bar'
+                            ? 'html'
+                            : $options['content_type'])
+                        : 'image'),
+                array('html', 'image', 'video', 'block'),
+                'image'
+            ),
+            'container_type' => self::sanitize_choice(
+                isset($options['container_type'])
+                    ? $options['container_type']
+                    : (isset($options['content_type']) && $options['content_type'] === 'popup'
+                        ? 'popup'
+                        : (isset($options['content_type']) && $options['content_type'] === 'bar'
+                            ? 'banner'
+                            : (isset($options['show_position']) && $options['show_position'] === 'popup'
+                                ? 'popup'
+                                : (isset($options['show_position']) && $options['show_position'] === 'bar'
+                                    ? 'banner'
+                                    : 'inline')))),
+                array('inline', 'popup', 'banner', 'floating', 'interstitial'),
+                'inline'
+            ),
             'show_page' => self::sanitize_choice(
                 isset($options['show_page']) ? $options['show_page'] : 'all',
                 array('all', 'home', 'posts', 'pages', 'category', 'tag', 'search', '404', 'author', 'archive'),
@@ -369,15 +398,10 @@ class Magick_AD_Engine {
                 ),
                 ''
             ),
-            'content_type' => self::sanitize_choice(
-                isset($options['content_type']) ? $options['content_type'] : 'image',
-                array('html', 'image', 'video', 'popup', 'bar'),
-                'image'
-            ),
             'insert_after' => isset($options['insert_after']) ? absint($options['insert_after']) : 2,
             'device' => self::sanitize_choice(
                 isset($options['device']) ? $options['device'] : 'all',
-                array('all', 'mobile', 'desktop'),
+                array('all', 'mobile', 'tablet', 'desktop'),
                 'all'
             ),
             'login' => self::sanitize_choice(
@@ -394,8 +418,16 @@ class Magick_AD_Engine {
             'target_ids' => self::sanitize_ids(isset($options['target_ids']) ? $options['target_ids'] : array()),
         );
 
+        $raw_blocks = isset($content['blocks']) && is_string($content['blocks']) ? $content['blocks'] : '';
+        $blocks_value = $raw_blocks;
+        if (!current_user_can('unfiltered_html')) {
+            $blocks_value = wp_kses_post($raw_blocks);
+        }
+
         $sanitized_content = array(
             'html' => isset($content['html']) ? wp_kses_post($content['html']) : '',
+            'blocks' => $blocks_value,
+            'video_url' => isset($content['video_url']) ? esc_url_raw($content['video_url']) : '',
             'link' => isset($content['link']) ? esc_url_raw($content['link']) : '',
             'link_target' => !empty($content['link_target']),
             'image' => array(
@@ -1070,11 +1102,25 @@ class Magick_AD_Frontend {
         if ($device === 'mobile') {
             return wp_is_mobile();
         }
+        if ($device === 'tablet') {
+            return self::is_tablet_device();
+        }
         if ($device === 'desktop') {
-            return !wp_is_mobile();
+            return !wp_is_mobile() && !self::is_tablet_device();
         }
 
         return true;
+    }
+
+    private static function is_tablet_device() {
+        if (!wp_is_mobile()) {
+            return false;
+        }
+        if (!isset($_SERVER['HTTP_USER_AGENT'])) {
+            return false;
+        }
+        $ua = strtolower(sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])));
+        return (bool) preg_match('/ipad|tablet|kindle|silk|playbook|nexus 7|nexus 9|nexus 10|sm-t|lenovo tab|xiaomi pad/', $ua);
     }
 
     private static function matches_login($options) {
@@ -1121,8 +1167,10 @@ class Magick_AD_Frontend {
     private static function build_ad_markup($ad, $position) {
         $content = isset($ad['content']) ? $ad['content'] : array();
         $options = isset($ad['options']) ? $ad['options'] : array();
-        $content_type = isset($options['content_type']) ? $options['content_type'] : 'image';
+        $content_type = isset($options['creative_type']) ? $options['creative_type'] : (isset($options['content_type']) ? $options['content_type'] : 'image');
+        $container_type = isset($options['container_type']) ? $options['container_type'] : 'inline';
         $html = isset($content['html']) ? $content['html'] : '';
+        $blocks = isset($content['blocks']) ? $content['blocks'] : '';
         $link = isset($content['link']) ? $content['link'] : '';
         $link_target = !empty($content['link_target']);
         $image = isset($content['image']) ? $content['image'] : array();
@@ -1137,72 +1185,13 @@ class Magick_AD_Frontend {
             : array();
 
         $body = '';
-        if ($content_type === 'html') {
+        if ($content_type === 'block') {
+            if ($blocks) {
+                $body = do_blocks($blocks);
+            }
+        } elseif ($content_type === 'html') {
             if ($html) {
-                $mode = isset($container_style['mode']) ? $container_style['mode'] : 'boxed';
-                if ($mode === 'raw') {
-                    $body = $html;
-                } else {
-                    $styles = array();
-                    $classes = array('magick-ad-html-container');
-                    $max_width = isset($container_style['max_width']) ? absint($container_style['max_width']) : 100;
-                    $max_width_unit = isset($container_style['max_width_unit']) ? $container_style['max_width_unit'] : '%';
-                    $padding_top = isset($container_style['padding_top']) ? absint($container_style['padding_top']) : 0;
-                    $padding_right = isset($container_style['padding_right']) ? absint($container_style['padding_right']) : 0;
-                    $padding_bottom = isset($container_style['padding_bottom']) ? absint($container_style['padding_bottom']) : 0;
-                    $padding_left = isset($container_style['padding_left']) ? absint($container_style['padding_left']) : 0;
-                    $background = isset($container_style['background']) ? $container_style['background'] : 'transparent';
-                    $radius = isset($container_style['radius']) ? absint($container_style['radius']) : 0;
-                    $shadow = isset($container_style['shadow']) ? $container_style['shadow'] : 'none';
-                    $badge_enabled = !empty($container_style['badge_enabled']);
-                    $badge_text = isset($container_style['badge_text']) ? $container_style['badge_text'] : '广告';
-                    $badge_color = isset($container_style['badge_color']) ? $container_style['badge_color'] : '#1d2327';
-                    $layout = isset($container_style['layout']) ? $container_style['layout'] : '';
-
-                    if ($max_width) {
-                        $styles[] = 'max-width:' . $max_width . $max_width_unit;
-                        if ($max_width_unit === 'px') {
-                            $styles[] = 'width:100%';
-                        }
-                    }
-                    if ($padding_top || $padding_right || $padding_bottom || $padding_left) {
-                        $styles[] = sprintf(
-                            'padding:%dpx %dpx %dpx %dpx',
-                            $padding_top,
-                            $padding_right,
-                            $padding_bottom,
-                            $padding_left
-                        );
-                    }
-                    if (!empty($background) && $background !== 'transparent') {
-                        $styles[] = 'background:' . $background;
-                    }
-                    if ($radius) {
-                        $styles[] = 'border-radius:' . $radius . 'px';
-                    }
-                    if ($shadow === 'soft') {
-                        $classes[] = 'magick-ad-shadow--soft';
-                    } elseif ($shadow === 'float') {
-                        $classes[] = 'magick-ad-shadow--float';
-                    }
-                    if ($layout === 'centered') {
-                        $classes[] = 'magick-ad-layout--centered';
-                        $styles[] = 'margin-left:auto';
-                        $styles[] = 'margin-right:auto';
-                    }
-
-                    $style_attr = $styles ? ' style="' . esc_attr(implode(';', $styles)) . '"' : '';
-                    $badge_markup = '';
-                    if ($badge_enabled) {
-                        $badge_markup = '<span class="magick-ad-badge" style="background:' . esc_attr($badge_color) . ';">' . esc_html($badge_text) . '</span>';
-                    }
-                    $close_markup = '';
-                    if (!empty($behavior['close_button'])) {
-                        $close_markup = '<button type="button" class="magick-ad-close" aria-label="' . esc_attr__('关闭广告', 'magick-ad') . '">×</button>';
-                    }
-
-                    $body = '<div class="' . esc_attr(implode(' ', $classes)) . '"' . $style_attr . '>' . $badge_markup . $close_markup . '<div class="magick-ad-html-content">' . $html . '</div></div>';
-                }
+                $body = $html;
             }
         } elseif ($content_type === 'image') {
             if (!empty($image['url'])) {
@@ -1242,6 +1231,10 @@ class Magick_AD_Frontend {
                 }
                 $body = $img_tag;
             }
+        } elseif ($content_type === 'video') {
+            if (!empty($content['video_url'])) {
+                $body = '<div class="magick-ad-video"><video controls src="' . esc_url($content['video_url']) . '"></video></div>';
+            }
         } else {
             return '';
         }
@@ -1250,19 +1243,84 @@ class Magick_AD_Frontend {
             return '';
         }
 
-        $data_attrs = ' data-ad-id="' . esc_attr(isset($ad['id']) ? $ad['id'] : '') . '" data-ad-position="' . esc_attr($position) . '"';
-        if ($content_type === 'html') {
-            $delay = isset($behavior['delay']) ? absint($behavior['delay']) : 0;
-            $animation = isset($behavior['animation']) ? $behavior['animation'] : 'none';
-            if ($delay > 0) {
-                $data_attrs .= ' data-ad-delay="' . esc_attr($delay) . '"';
+        $mode = isset($container_style['mode']) ? $container_style['mode'] : 'boxed';
+        if ($mode !== 'raw') {
+            $styles = array();
+            $classes = array('magick-ad-html-container');
+            $max_width = isset($container_style['max_width']) ? absint($container_style['max_width']) : 100;
+            $max_width_unit = isset($container_style['max_width_unit']) ? $container_style['max_width_unit'] : '%';
+            $padding_top = isset($container_style['padding_top']) ? absint($container_style['padding_top']) : 0;
+            $padding_right = isset($container_style['padding_right']) ? absint($container_style['padding_right']) : 0;
+            $padding_bottom = isset($container_style['padding_bottom']) ? absint($container_style['padding_bottom']) : 0;
+            $padding_left = isset($container_style['padding_left']) ? absint($container_style['padding_left']) : 0;
+            $background = isset($container_style['background']) ? $container_style['background'] : 'transparent';
+            $radius = isset($container_style['radius']) ? absint($container_style['radius']) : 0;
+            $shadow = isset($container_style['shadow']) ? $container_style['shadow'] : 'none';
+            $badge_enabled = !empty($container_style['badge_enabled']);
+            $badge_text = isset($container_style['badge_text']) ? $container_style['badge_text'] : '广告';
+            $badge_color = isset($container_style['badge_color']) ? $container_style['badge_color'] : '#1d2327';
+            $layout = isset($container_style['layout']) ? $container_style['layout'] : '';
+
+            if ($max_width) {
+                $styles[] = 'max-width:' . $max_width . $max_width_unit;
+                if ($max_width_unit === 'px') {
+                    $styles[] = 'width:100%';
+                }
             }
-            if ($animation && $animation !== 'none') {
-                $data_attrs .= ' data-ad-anim="' . esc_attr($animation) . '"';
+            if ($padding_top || $padding_right || $padding_bottom || $padding_left) {
+                $styles[] = sprintf(
+                    'padding:%dpx %dpx %dpx %dpx',
+                    $padding_top,
+                    $padding_right,
+                    $padding_bottom,
+                    $padding_left
+                );
             }
+            if (!empty($background) && $background !== 'transparent') {
+                $styles[] = 'background:' . $background;
+            }
+            if ($radius) {
+                $styles[] = 'border-radius:' . $radius . 'px';
+            }
+            if ($shadow === 'soft') {
+                $classes[] = 'magick-ad-shadow--soft';
+            } elseif ($shadow === 'float') {
+                $classes[] = 'magick-ad-shadow--float';
+            }
+            if ($layout === 'centered') {
+                $classes[] = 'magick-ad-layout--centered';
+                $styles[] = 'margin-left:auto';
+                $styles[] = 'margin-right:auto';
+            }
+
+            $style_attr = $styles ? ' style="' . esc_attr(implode(';', $styles)) . '"' : '';
+            $badge_markup = '';
+            if ($badge_enabled) {
+                $badge_markup = '<span class="magick-ad-badge" style="background:' . esc_attr($badge_color) . ';">' . esc_html($badge_text) . '</span>';
+            }
+            $close_markup = '';
+            if (!empty($behavior['close_button'])) {
+                $close_markup = '<button type="button" class="magick-ad-close" aria-label="' . esc_attr__('关闭广告', 'magick-ad') . '">×</button>';
+            }
+
+            $body = '<div class="' . esc_attr(implode(' ', $classes)) . '"' . $style_attr . '>' . $badge_markup . $close_markup . '<div class="magick-ad-html-content">' . $body . '</div></div>';
         }
 
-        return '<div class="magick-ad-unit magick-ad-unit--' . esc_attr($position) . '"' . $data_attrs . '><div class="magick-ad-unit__inner">' . $body . '</div></div>';
+        $data_attrs = ' data-ad-id="' . esc_attr(isset($ad['id']) ? $ad['id'] : '') . '" data-ad-position="' . esc_attr($position) . '"';
+        $delay = isset($behavior['delay']) ? absint($behavior['delay']) : 0;
+        $animation = isset($behavior['animation']) ? $behavior['animation'] : 'none';
+        if ($delay > 0) {
+            $data_attrs .= ' data-ad-delay="' . esc_attr($delay) . '"';
+        }
+        if ($animation && $animation !== 'none') {
+            $data_attrs .= ' data-ad-anim="' . esc_attr($animation) . '"';
+        }
+        $container_class = 'magick-ad-container--' . esc_attr($container_type);
+        if (in_array($container_type, array('popup', 'interstitial'), true)) {
+            $body = '<div class="magick-ad-overlay"></div><div class="magick-ad-popup">' . $body . '</div>';
+        }
+
+        return '<div class="magick-ad-unit magick-ad-unit--' . esc_attr($position) . ' ' . $container_class . '"' . $data_attrs . '><div class="magick-ad-unit__inner">' . $body . '</div></div>';
     }
 
     private static function wrap_zone_markup($markup, $zone) {

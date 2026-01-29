@@ -11,7 +11,15 @@ import {
     ToolbarDropdownMenu,
     ToolbarGroup,
 } from '@wordpress/components';
-import { desktop, tablet, mobile, video, image, code } from '@wordpress/icons';
+import {
+    desktop,
+    tablet,
+    mobile,
+    video,
+    image,
+    code,
+    layout,
+} from '@wordpress/icons';
 
 const previewIcons = {
     desktop,
@@ -21,9 +29,11 @@ const previewIcons = {
 
 const Layout = ({
     adData = {},
-    adType = 'image',
+    creativeType = 'image',
+    containerType = 'inline',
     devicePreview = 'desktop',
-    onAdTypeChange,
+    onCreativeChange,
+    onContainerChange,
     onDevicePreviewChange,
     onUpdateRule,
     leftSidebar,
@@ -34,80 +44,102 @@ const Layout = ({
     const adTypeControls = useMemo(
         () => [
             {
-                title: 'HTML广告',
+                title: '代码 / HTML',
                 icon: code,
-                onClick: () => onAdTypeChange?.('html'),
-                isActive: adType === 'html',
+                onClick: () => onCreativeChange?.('html'),
+                isActive: creativeType === 'html',
             },
             {
-                title: '图片广告',
+                title: '图片',
                 icon: image,
-                onClick: () => onAdTypeChange?.('image'),
-                isActive: adType === 'image',
+                onClick: () => onCreativeChange?.('image'),
+                isActive: creativeType === 'image',
             },
             {
-                title: '视频广告',
+                title: '视频',
                 icon: video,
-                onClick: () => onAdTypeChange?.('video'),
-                isActive: adType === 'video',
+                onClick: () => onCreativeChange?.('video'),
+                isActive: creativeType === 'video',
             },
             {
-                title: '弹窗广告',
-                onClick: () => onAdTypeChange?.('popup'),
-                isActive: adType === 'popup',
-            },
-            {
-                title: '横栏广告',
-                onClick: () => onAdTypeChange?.('bar'),
-                isActive: adType === 'bar',
+                title: '可视化设计 (Block)',
+                onClick: () => onCreativeChange?.('block'),
+                isActive: creativeType === 'block',
             },
         ],
-        [adType, onAdTypeChange]
+        [creativeType, onCreativeChange]
+    );
+
+    const containerControls = useMemo(
+        () => [
+            {
+                title: '默认嵌入',
+                onClick: () => onContainerChange?.('inline'),
+                isActive: containerType === 'inline',
+            },
+            {
+                title: '弹窗',
+                onClick: () => onContainerChange?.('popup'),
+                isActive: containerType === 'popup',
+            },
+            {
+                title: '吸顶/吸底横栏',
+                onClick: () => onContainerChange?.('banner'),
+                isActive: containerType === 'banner',
+            },
+            {
+                title: '角落悬浮',
+                onClick: () => onContainerChange?.('floating'),
+                isActive: containerType === 'floating',
+            },
+            {
+                title: '全屏插屏',
+                onClick: () => onContainerChange?.('interstitial'),
+                isActive: containerType === 'interstitial',
+            },
+        ],
+        [containerType, onContainerChange]
     );
 
     const previewBody = useMemo(() => {
         const content = adData?.content || {};
-        if (adType === 'html' && content.html) {
-            const containerStyle = content.container_style || {};
+        const containerStyle = content.container_style || {};
+        const wrapperStyle = {};
+        if (containerStyle.max_width) {
+            wrapperStyle.maxWidth = `${containerStyle.max_width}${containerStyle.max_width_unit || '%'}`;
+            if (containerStyle.max_width_unit === 'px') {
+                wrapperStyle.width = '100%';
+            }
+        }
+        if (
+            containerStyle.padding_top ||
+            containerStyle.padding_right ||
+            containerStyle.padding_bottom ||
+            containerStyle.padding_left
+        ) {
+            wrapperStyle.padding = `${containerStyle.padding_top || 0}px ${containerStyle.padding_right || 0}px ${containerStyle.padding_bottom || 0}px ${containerStyle.padding_left || 0}px`;
+        }
+        if (containerStyle.background && containerStyle.background !== 'transparent') {
+            wrapperStyle.background = containerStyle.background;
+        }
+        if (containerStyle.radius) {
+            wrapperStyle.borderRadius = `${containerStyle.radius}px`;
+        }
+        if (containerStyle.shadow === 'soft') {
+            wrapperStyle.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.08)';
+        } else if (containerStyle.shadow === 'float') {
+            wrapperStyle.boxShadow = '0 16px 28px rgba(0, 0, 0, 0.16)';
+        }
+        if (containerStyle.layout === 'centered') {
+            wrapperStyle.display = 'flex';
+            wrapperStyle.justifyContent = 'center';
+            wrapperStyle.marginLeft = 'auto';
+            wrapperStyle.marginRight = 'auto';
+        }
+
+        const wrapContent = (inner) => {
             if (containerStyle.mode === 'raw') {
-                return (
-                    <div
-                        className="magick-ad-preview__html"
-                        dangerouslySetInnerHTML={{ __html: content.html }}
-                    />
-                );
-            }
-            const wrapperStyle = {};
-            if (containerStyle.max_width) {
-                wrapperStyle.maxWidth = `${containerStyle.max_width}${containerStyle.max_width_unit || '%'}`;
-                if (containerStyle.max_width_unit === 'px') {
-                    wrapperStyle.width = '100%';
-                }
-            }
-            if (
-                containerStyle.padding_top ||
-                containerStyle.padding_right ||
-                containerStyle.padding_bottom ||
-                containerStyle.padding_left
-            ) {
-                wrapperStyle.padding = `${containerStyle.padding_top || 0}px ${containerStyle.padding_right || 0}px ${containerStyle.padding_bottom || 0}px ${containerStyle.padding_left || 0}px`;
-            }
-            if (containerStyle.background && containerStyle.background !== 'transparent') {
-                wrapperStyle.background = containerStyle.background;
-            }
-            if (containerStyle.radius) {
-                wrapperStyle.borderRadius = `${containerStyle.radius}px`;
-            }
-            if (containerStyle.shadow === 'soft') {
-                wrapperStyle.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.08)';
-            } else if (containerStyle.shadow === 'float') {
-                wrapperStyle.boxShadow = '0 16px 28px rgba(0, 0, 0, 0.16)';
-            }
-            if (containerStyle.layout === 'centered') {
-                wrapperStyle.display = 'flex';
-                wrapperStyle.justifyContent = 'center';
-                wrapperStyle.marginLeft = 'auto';
-                wrapperStyle.marginRight = 'auto';
+                return inner;
             }
             return (
                 <div className="magick-ad-preview__html">
@@ -130,17 +162,22 @@ const Layout = ({
                         {content.behavior?.close_button && (
                             <span className="magick-ad-close">×</span>
                         )}
-                        <div
-                            className="magick-ad-html-content"
-                            dangerouslySetInnerHTML={{
-                                __html: content.html,
-                            }}
-                        />
+                        <div className="magick-ad-html-content">
+                            {inner}
+                        </div>
                     </div>
                 </div>
             );
+        };
+
+        if (creativeType === 'html' && content.html) {
+            return wrapContent(
+                <div
+                    dangerouslySetInnerHTML={{ __html: content.html }}
+                />
+            );
         }
-        if (adType === 'image' && content.image?.url) {
+        if (creativeType === 'image' && content.image?.url) {
             const settings = content.image_settings || {};
             const imageStyle = {};
             if (settings.radius) {
@@ -171,27 +208,44 @@ const Layout = ({
                 />
             );
 
-            if (content.link) {
-                return (
-                    <a
-                        href={content.link}
-                        target={content.link_target ? '_blank' : undefined}
-                        rel={
-                            content.link_target
-                                ? 'noopener noreferrer'
-                                : undefined
-                        }
-                    >
-                        {imageNode}
-                    </a>
-                );
-            }
-            return (
+            const wrappedImage = content.link ? (
+                <a
+                    href={content.link}
+                    target={content.link_target ? '_blank' : undefined}
+                    rel={
+                        content.link_target
+                            ? 'noopener noreferrer'
+                            : undefined
+                    }
+                >
+                    {imageNode}
+                </a>
+            ) : (
                 imageNode
+            );
+
+            return wrapContent(wrappedImage);
+        }
+        if (creativeType === 'video' && content.video_url) {
+            return wrapContent(
+                <video
+                    className="magick-ad-preview__video"
+                    controls
+                    src={content.video_url}
+                />
+            );
+        }
+        if (creativeType === 'block' && content.blocks) {
+            return wrapContent(
+                <div
+                    dangerouslySetInnerHTML={{
+                        __html: content.blocks,
+                    }}
+                />
             );
         }
         return <div className="magick-ad-preview__empty">预览区域</div>;
-    }, [adData, adType]);
+    }, [adData, creativeType]);
 
     return (
         <div className="magick-ad-layout">
@@ -220,8 +274,15 @@ const Layout = ({
                                     icon={adTypeControls.find(
                                         (item) => item.isActive
                                     )?.icon}
-                                    label="广告类型"
+                                    label="素材类型"
                                     controls={adTypeControls}
+                                />
+                            </ToolbarGroup>
+                            <ToolbarGroup>
+                                <ToolbarDropdownMenu
+                                    icon={layout}
+                                    label="容器类型"
+                                    controls={containerControls}
                                 />
                             </ToolbarGroup>
                             <ToolbarGroup>

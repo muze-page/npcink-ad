@@ -28,6 +28,16 @@ import {
     TextControl,
     ToggleControl,
 } from '@wordpress/components';
+import {
+    BlockEditorProvider,
+    BlockList,
+    BlockListAppender,
+    BlockTools,
+    ObserveTyping,
+    WritingFlow,
+} from '@wordpress/block-editor';
+import { parse, serialize } from '@wordpress/blocks';
+import { registerCoreBlocks } from '@wordpress/block-library';
 import { useStore } from './store';
 import { decodeEntities } from '@wordpress/html-entities';
 import Layout from './Layout';
@@ -276,6 +286,50 @@ const ClassicEditor = ({ value, onChange, active }) => {
             }`}
             ref={containerRef}
         />
+    );
+};
+
+let coreBlocksRegistered = false;
+const ensureCoreBlocks = () => {
+    if (!coreBlocksRegistered) {
+        registerCoreBlocks();
+        coreBlocksRegistered = true;
+    }
+};
+
+const BlockEditor = ({ value, onChange }) => {
+    const [blocks, setBlocks] = useState(() => parse(value || ''));
+
+    useEffect(() => {
+        ensureCoreBlocks();
+    }, []);
+
+    useEffect(() => {
+        setBlocks(parse(value || ''));
+    }, [value]);
+
+    return (
+        <div className="magick-ad-block-editor editor-styles-wrapper">
+            <BlockEditorProvider
+                value={blocks}
+                onChange={(nextBlocks) => {
+                    setBlocks(nextBlocks);
+                    onChange(serialize(nextBlocks));
+                }}
+                settings={{
+                    hasFixedToolbar: true,
+                    allowWideBlocks: false,
+                }}
+            >
+                <BlockTools>
+                    <WritingFlow>
+                        <ObserveTyping>
+                            <BlockList renderAppender={BlockListAppender} />
+                        </ObserveTyping>
+                    </WritingFlow>
+                </BlockTools>
+            </BlockEditorProvider>
+        </div>
     );
 };
 
@@ -1002,22 +1056,21 @@ const AdsConfig = () => {
         <TabPanel
             className="magick-ad-sub-tabs"
             tabs={[
-                { name: 'html', title: 'HTML广告' },
-                { name: 'image', title: '图片广告' },
-                { name: 'video', title: '视频广告' },
-                { name: 'popup', title: '弹窗广告' },
-                { name: 'bar', title: '横栏广告' },
+                { name: 'html', title: '代码/HTML' },
+                { name: 'image', title: '图片' },
+                { name: 'video', title: '视频' },
+                { name: 'block', title: '可视化设计' },
             ]}
-            initialTabName={selectedAd.options?.content_type || 'image'}
+            initialTabName={selectedAd.options?.creative_type || 'image'}
             onSelect={(name) =>
                 handleUpdateOptions({
-                    content_type: name,
+                    creative_type: name,
                 })
             }
         >
             {() => {
                 const activeContentType =
-                    selectedAd.options?.content_type || 'image';
+                    selectedAd.options?.creative_type || 'image';
 
                 return (
                     <>
@@ -1353,17 +1406,38 @@ const AdsConfig = () => {
                             </Panel>
                         </div>
 
-                        {['video', 'popup', 'bar'].includes(
-                            activeContentType
-                        ) && (
+                        {activeContentType === 'video' && (
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                    <Notice
-                                        status="info"
-                                        isDismissible={false}
-                                    >
-                                        该类型的配置项稍后补充。
-                                    </Notice>
+                                    <TextControl
+                                        label="视频地址"
+                                        value={
+                                            selectedAd.content?.video_url || ''
+                                        }
+                                        onChange={(value) =>
+                                            handleUpdateContent({
+                                                video_url: value,
+                                            })
+                                        }
+                                        help="支持 MP4 或外部嵌入链接"
+                                    />
+                                </PanelBody>
+                            </Panel>
+                        )}
+
+                        {activeContentType === 'block' && (
+                            <Panel>
+                                <PanelBody title="内容配置" initialOpen>
+                                    <BlockEditor
+                                        value={
+                                            selectedAd.content?.blocks || ''
+                                        }
+                                        onChange={(value) =>
+                                            handleUpdateContent({
+                                                blocks: value,
+                                            })
+                                        }
+                                    />
                                 </PanelBody>
                             </Panel>
                         )}
@@ -1413,60 +1487,95 @@ const AdsConfig = () => {
                                 selectedAd.content?.container_style || {};
                             const behavior =
                                 selectedAd.content?.behavior || {};
-                            const activeContentType =
-                                selectedAd.options?.content_type || 'image';
+
+                            const isInlineContainer =
+                                (selectedAd.options?.container_type || 'inline') ===
+                                'inline';
 
                             if (tab.name === 'container') {
                                 return (
                                     <Panel>
-                                        <PanelBody
-                                            title="容器外观"
-                                            initialOpen
-                                        >
-                                            {activeContentType !== 'html' ? (
+                                        <PanelBody title="容器外观" initialOpen>
+                                            <SelectControl
+                                                label="容器类型"
+                                                value={
+                                                    selectedAd.options
+                                                        ?.container_type ||
+                                                    'inline'
+                                                }
+                                                options={[
+                                                    {
+                                                        label: '默认嵌入',
+                                                        value: 'inline',
+                                                    },
+                                                    {
+                                                        label: '弹窗',
+                                                        value: 'popup',
+                                                    },
+                                                    {
+                                                        label: '吸顶/吸底横栏',
+                                                        value: 'banner',
+                                                    },
+                                                    {
+                                                        label: '角落悬浮',
+                                                        value: 'floating',
+                                                    },
+                                                    {
+                                                        label: '全屏插屏',
+                                                        value: 'interstitial',
+                                                    },
+                                                ]}
+                                                onChange={(value) => {
+                                                    const nextPosition =
+                                                        value !== 'inline'
+                                                            ? 'footer'
+                                                            : selectedAd
+                                                                  .options
+                                                                  ?.show_position;
+                                                    handleUpdateOptions({
+                                                        container_type: value,
+                                                        show_position:
+                                                            nextPosition ||
+                                                            'footer',
+                                                    });
+                                                }}
+                                                help="容器决定展示形态，投放位置仍由“投放”页签控制。"
+                                            />
+
+                                            <SelectControl
+                                                label="容器模式"
+                                                value={
+                                                    containerStyle.mode ||
+                                                    'boxed'
+                                                }
+                                                options={[
+                                                    {
+                                                        label: '包裹容器',
+                                                        value: 'boxed',
+                                                    },
+                                                    {
+                                                        label: '原始输出',
+                                                        value: 'raw',
+                                                    },
+                                                ]}
+                                                onChange={(value) =>
+                                                    handleUpdateContainerStyle(
+                                                        {
+                                                            mode: value,
+                                                        }
+                                                    )
+                                                }
+                                            />
+
+                                            {containerStyle.mode === 'raw' ? (
                                                 <Notice
                                                     status="info"
                                                     isDismissible={false}
                                                 >
-                                                    仅 HTML 广告支持容器外观配置。
+                                                    原始模式不会应用容器样式。
                                                 </Notice>
                                             ) : (
                                                 <>
-                                                    <SelectControl
-                                                        label="容器模式"
-                                                        value={
-                                                            containerStyle.mode ||
-                                                            'boxed'
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label: '包裹容器',
-                                                                value: 'boxed',
-                                                            },
-                                                            {
-                                                                label: '原始输出',
-                                                                value: 'raw',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateContainerStyle(
-                                                                {
-                                                                    mode: value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-
-                                                    {containerStyle.mode ===
-                                                    'raw' ? (
-                                                        <Notice
-                                                            status="info"
-                                                            isDismissible={false}
-                                                        >
-                                                            原始模式不会应用容器样式。
-                                                        </Notice>
-                                                    ) : (
-                                                        <>
                                                     <div className="magick-ad-field">
                                                         <RangeControl
                                                             label="最大宽度"
@@ -1777,8 +1886,6 @@ const AdsConfig = () => {
                                                             </>
                                                         )}
                                                     </div>
-                                                        </>
-                                                    )}
                                                 </>
                                             )}
                                         </PanelBody>
@@ -1793,68 +1900,40 @@ const AdsConfig = () => {
                                             title="交互行为"
                                             initialOpen
                                         >
-                                            {activeContentType !== 'html' ? (
-                                                <Notice
-                                                    status="info"
-                                                    isDismissible={false}
-                                                >
-                                                    仅 HTML 广告支持交互配置。
-                                                </Notice>
-                                            ) : (
-                                                <>
-                                                    <SelectControl
-                                                        label="进场动画"
-                                                        value={
-                                                            behavior.animation ||
-                                                            'none'
-                                                        }
-                                                        options={
-                                                            ANIMATION_OPTIONS
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateBehavior(
-                                                                {
-                                                                    animation:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <ToggleControl
-                                                        label="显示关闭按钮"
-                                                        checked={Boolean(
-                                                            behavior.close_button
-                                                        )}
-                                                        onChange={(value) =>
-                                                            handleUpdateBehavior(
-                                                                {
-                                                                    close_button:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <RangeControl
-                                                        label="延迟显示（秒）"
-                                                        min={0}
-                                                        max={30}
-                                                        value={
-                                                            behavior.delay ??
-                                                            0
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateBehavior(
-                                                                {
-                                                                    delay:
-                                                                        Number(
-                                                                            value
-                                                                        ),
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                </>
-                                            )}
+                                            <SelectControl
+                                                label="进场动画"
+                                                value={
+                                                    behavior.animation || 'none'
+                                                }
+                                                options={ANIMATION_OPTIONS}
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior({
+                                                        animation: value,
+                                                    })
+                                                }
+                                            />
+                                            <ToggleControl
+                                                label="显示关闭按钮"
+                                                checked={Boolean(
+                                                    behavior.close_button
+                                                )}
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior({
+                                                        close_button: value,
+                                                    })
+                                                }
+                                            />
+                                            <RangeControl
+                                                label="延迟显示（秒）"
+                                                min={0}
+                                                max={30}
+                                                value={behavior.delay ?? 0}
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior({
+                                                        delay: Number(value),
+                                                    })
+                                                }
+                                            />
                                         </PanelBody>
                                     </Panel>
                                 );
@@ -1862,6 +1941,14 @@ const AdsConfig = () => {
 
                             return (
                                 <Panel>
+                                    {!isInlineContainer && (
+                                        <Notice
+                                            status="info"
+                                            isDismissible={false}
+                                        >
+                                            当前容器为“非嵌入”模式，展示位置将固定在页脚输出。
+                                        </Notice>
+                                    )}
                                     {selectedAd.options?.ad_type ===
                                         'global' && (
                                         <PanelBody
@@ -1936,6 +2023,7 @@ const AdsConfig = () => {
                                                         show_position: value,
                                                     })
                                                 }
+                                                disabled={!isInlineContainer}
                                             />
                                         </PanelBody>
                                     )}
@@ -2017,7 +2105,8 @@ const AdsConfig = () => {
                                                 }
                                                 disabled={
                                                     !selectedAd.options
-                                                        ?.target_type
+                                                        ?.target_type ||
+                                                    !isInlineContainer
                                                 }
                                             />
 
@@ -2249,11 +2338,23 @@ const AdsConfig = () => {
 
             <Layout
                 adData={selectedAd}
-                adType={selectedAd?.options?.content_type || 'image'}
+                creativeType={selectedAd?.options?.creative_type || 'image'}
+                containerType={selectedAd?.options?.container_type || 'inline'}
                 devicePreview={devicePreview}
-                onAdTypeChange={(value) =>
-                    selectedAd && handleUpdateOptions({ content_type: value })
+                onCreativeChange={(value) =>
+                    selectedAd && handleUpdateOptions({ creative_type: value })
                 }
+                onContainerChange={(value) => {
+                    if (!selectedAd) {
+                        return;
+                    }
+                    const nextPosition =
+                        value !== 'inline' ? 'footer' : selectedAd.options?.show_position;
+                    handleUpdateOptions({
+                        container_type: value,
+                        show_position: nextPosition || 'footer',
+                    });
+                }}
                 onDevicePreviewChange={setDevicePreview}
                 onUpdateRule={(key, value) =>
                     selectedAd && handleUpdateOptions({ [key]: value })

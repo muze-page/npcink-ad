@@ -7,10 +7,11 @@ const createAdGroupTemplate = (type = 'global') => ({
     options: {
         enabled: true,
         ad_type: type,
+        creative_type: 'image',
+        container_type: 'inline',
         display_mode: 'show',
         show_page: 'all',
         show_position: 'bottom',
-        content_type: 'image',
         insert_after: 2,
         device: 'all',
         login: 'all',
@@ -20,6 +21,8 @@ const createAdGroupTemplate = (type = 'global') => ({
     },
     content: {
         html: '',
+        blocks: '',
+        video_url: '',
         image: { id: 0, url: '', alt: '' },
         link: '',
         link_target: false,
@@ -89,16 +92,48 @@ const normalizeAd = (ad) => {
         content.image_settings && typeof content.image_settings === 'object'
             ? content.image_settings
             : {};
+    const contentTypeRaw =
+        options.creative_type ||
+        options.content_type ||
+        options.type ||
+        'image';
+    const contentType =
+        contentTypeRaw === 'popup' || contentTypeRaw === 'bar'
+            ? 'html'
+            : contentTypeRaw;
+    const containerType =
+        options.container_type ||
+        options.container ||
+        ((options.content_type === 'popup' && 'popup') ||
+            (options.content_type === 'bar' && 'banner')) ||
+        (options.show_position === 'popup'
+            ? 'popup'
+            : options.show_position === 'bar'
+              ? 'banner'
+              : 'inline');
 
     return {
         ...safeAd,
         options: {
             enabled: options.enabled ?? true,
             ad_type: options.ad_type || 'global',
+            creative_type: ['html', 'image', 'video', 'block'].includes(
+                contentType
+            )
+                ? contentType
+                : 'image',
+            container_type: [
+                'inline',
+                'popup',
+                'banner',
+                'floating',
+                'interstitial',
+            ].includes(containerType)
+                ? containerType
+                : 'inline',
             display_mode: options.display_mode || 'show',
             show_page: options.show_page || 'all',
             show_position: normalizeShowPosition(options.show_position) || 'bottom',
-            content_type: options.content_type || 'image',
             insert_after: Number(options.insert_after || 2),
             device: options.device || 'all',
             login: options.login || 'all',
@@ -110,6 +145,8 @@ const normalizeAd = (ad) => {
         },
         content: {
             html: content.html || '',
+            blocks: content.blocks || '',
+            video_url: content.video_url || '',
             link: content.link || '',
             link_target: Boolean(content.link_target),
             image: {
