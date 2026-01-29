@@ -274,55 +274,13 @@ const Layout = ({
             position: options.placement_position || '',
             paragraph: Number(options.placement_paragraph || 0),
         };
-        if (!placement.hook) {
-            switch (options.show_position) {
-                case 'head':
-                    placement.hook = 'head';
-                    break;
-                case 'top':
-                    placement.hook = 'body_top';
-                    break;
-                case 'footer':
-                case 'bottom':
-                case 'popup':
-                case 'bar':
-                    placement.hook = 'footer';
-                    break;
-                case 'content_before':
-                case 'post_top':
-                    placement.hook = 'content';
-                    placement.position = 'before';
-                    break;
-                case 'content_after':
-                case 'post_bottom':
-                    placement.hook = 'content';
-                    placement.position = 'after';
-                    break;
-                case 'paragraph_3':
-                    placement.hook = 'content';
-                    placement.position = 'paragraph';
-                    placement.paragraph = 3;
-                    break;
-                case 'content':
-                    placement.hook = 'content';
-                    placement.position = 'paragraph';
-                    placement.paragraph = Number(options.insert_after || 2);
-                    break;
-                case 'comments_top':
-                    placement.hook = 'comments_top';
-                    break;
-                case 'comments_bottom':
-                    placement.hook = 'comments_bottom';
-                    break;
-                case 'comment_form_before':
-                    placement.hook = 'comment_form_before';
-                    break;
-                case 'comment_form_after':
-                    placement.hook = 'comment_form_after';
-                    break;
-                default:
-                    break;
+        if (placement.hook === 'content') {
+            if (placement.position === 'paragraph' && placement.paragraph < 1) {
+                placement.paragraph = 2;
             }
+        } else {
+            placement.position = '';
+            placement.paragraph = 0;
         }
         const placementLabel = (() => {
             if (placement.hook === 'head') return 'head';
@@ -499,10 +457,39 @@ const Layout = ({
                             <div className="magick-ad-rule-block">
                                 <SelectControl
                                     label="展示位置"
-                                    value={
-                                        adData?.options?.show_position ||
-                                        'bottom'
-                                    }
+                                    value={(() => {
+                                        const hook =
+                                            adData?.options
+                                                ?.placement_hook || '';
+                                        const position =
+                                            adData?.options
+                                                ?.placement_position || '';
+                                        const paragraph =
+                                            Number(
+                                                adData?.options
+                                                    ?.placement_paragraph || 0
+                                            );
+                                        if (hook === 'body_top') {
+                                            return 'top';
+                                        }
+                                        if (hook === 'footer') {
+                                            return 'bottom';
+                                        }
+                                        if (hook === 'content') {
+                                            if (position === 'before') {
+                                                return 'content_before';
+                                            }
+                                            if (position === 'after') {
+                                                return 'content_after';
+                                            }
+                                            if (position === 'paragraph') {
+                                                return paragraph >= 1
+                                                    ? 'paragraph_3'
+                                                    : '';
+                                            }
+                                        }
+                                        return '';
+                                    })()}
                                     options={[
                                         { label: '顶部', value: 'top' },
                                         {
@@ -510,14 +497,61 @@ const Layout = ({
                                             value: 'content_before',
                                         },
                                         {
+                                            label: '位置第三段',
+                                            value: 'paragraph_3',
+                                        },
+                                        {
                                             label: '内容后',
                                             value: 'content_after',
                                         },
                                         { label: '底部', value: 'bottom' },
                                     ]}
-                                    onChange={(value) =>
-                                        onUpdateRule?.('show_position', value)
-                                    }
+                                    onChange={(value) => {
+                                        const updates = {
+                                            placement_hook: '',
+                                            placement_position: '',
+                                            placement_paragraph: 0,
+                                        };
+                                        switch (value) {
+                                            case 'top':
+                                                updates.placement_hook =
+                                                    'body_top';
+                                                break;
+                                            case 'bottom':
+                                                updates.placement_hook =
+                                                    'footer';
+                                                break;
+                                            case 'content_before':
+                                                updates.placement_hook =
+                                                    'content';
+                                                updates.placement_position =
+                                                    'before';
+                                                break;
+                                            case 'content_after':
+                                                updates.placement_hook =
+                                                    'content';
+                                                updates.placement_position =
+                                                    'after';
+                                                break;
+                                            case 'paragraph_3':
+                                                updates.placement_hook =
+                                                    'content';
+                                                updates.placement_position =
+                                                    'paragraph';
+                                                updates.placement_paragraph =
+                                                    3;
+                                                break;
+                                            default:
+                                                updates.placement_hook = '';
+                                        }
+                                        Object.entries(updates).forEach(
+                                            ([key, nextValue]) =>
+                                                onUpdateRule?.(
+                                                    key,
+                                                    nextValue
+                                                )
+                                        );
+                                    }}
                                 />
                             </div>
                         </CardBody>

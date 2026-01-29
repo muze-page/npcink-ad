@@ -133,62 +133,19 @@ const AdsConfig = () => {
             paragraph: Number(options?.placement_paragraph || 0),
         };
 
-        if (!placement.hook) {
-            const legacy = options?.show_position || '';
-            switch (legacy) {
-                case 'head':
-                    placement.hook = 'head';
-                    break;
-                case 'top':
-                    placement.hook = 'body_top';
-                    break;
-                case 'footer':
-                case 'bottom':
-                case 'popup':
-                case 'bar':
-                    placement.hook = 'footer';
-                    break;
-                case 'content_before':
-                case 'post_top':
-                    placement.hook = 'content';
-                    placement.position = 'before';
-                    break;
-                case 'content_after':
-                case 'post_bottom':
-                    placement.hook = 'content';
-                    placement.position = 'after';
-                    break;
-                case 'paragraph_3':
-                    placement.hook = 'content';
-                    placement.position = 'paragraph';
-                    placement.paragraph = 3;
-                    break;
-                case 'content':
-                    placement.hook = 'content';
-                    placement.position = 'paragraph';
-                    placement.paragraph = Number(options?.insert_after || 2);
-                    break;
-                case 'comments_top':
-                    placement.hook = 'comments_top';
-                    break;
-                case 'comments_bottom':
-                    placement.hook = 'comments_bottom';
-                    break;
-                case 'comment_form_before':
-                    placement.hook = 'comment_form_before';
-                    break;
-                case 'comment_form_after':
-                    placement.hook = 'comment_form_after';
-                    break;
-                default:
-                    placement.hook = '';
+        if (placement.hook === 'content') {
+            if (placement.position !== 'paragraph') {
+                placement.paragraph = 0;
             }
+        } else {
+            placement.position = '';
+            placement.paragraph = 0;
         }
 
         return placement;
     };
 
-    const placementToLegacyValue = (placement) => {
+    const placementToSlotValue = (placement) => {
         if (!placement?.hook) {
             return '';
         }
@@ -227,12 +184,11 @@ const AdsConfig = () => {
         return '';
     };
 
-    const legacyToPlacementUpdates = (value, options) => {
+    const slotToPlacementUpdates = (value) => {
         const updates = {
             placement_hook: '',
             placement_position: '',
             placement_paragraph: 0,
-            show_position: value,
         };
 
         switch (value) {
@@ -260,7 +216,6 @@ const AdsConfig = () => {
                 updates.placement_hook = 'content';
                 updates.placement_position = 'paragraph';
                 updates.placement_paragraph = 3;
-                updates.insert_after = 3;
                 break;
             case 'comments_top':
                 updates.placement_hook = 'comments_top';
@@ -276,15 +231,6 @@ const AdsConfig = () => {
                 break;
             default:
                 updates.placement_hook = '';
-        }
-
-        if (
-            updates.placement_hook === 'content' &&
-            updates.placement_position === 'paragraph' &&
-            updates.placement_paragraph === 0
-        ) {
-            updates.placement_paragraph = Number(options?.insert_after || 2);
-            updates.insert_after = updates.placement_paragraph;
         }
 
         return updates;
@@ -1238,7 +1184,6 @@ const AdsConfig = () => {
                                                                                 placement_hook: 'footer',
                                                                                 placement_position: '',
                                                                                 placement_paragraph: 0,
-                                                                                show_position: 'bottom',
                                                                             });
                                                                             return;
                                                                         }
@@ -1724,7 +1669,7 @@ const AdsConfig = () => {
                                                                 {}
                                                         );
                                                     const currentValue =
-                                                        placementToLegacyValue(
+                                                        placementToSlotValue(
                                                             currentPlacement
                                                         );
                                                     const nextPosition =
@@ -1735,9 +1680,8 @@ const AdsConfig = () => {
                                                             : '';
                                                     handleUpdateOptions({
                                                         show_page: value,
-                                                        ...legacyToPlacementUpdates(
-                                                            nextPosition,
-                                                            selectedAd.options
+                                                        ...slotToPlacementUpdates(
+                                                            nextPosition
                                                         ),
                                                     });
                                                 }}
@@ -1745,7 +1689,7 @@ const AdsConfig = () => {
 
                                             <SelectControl
                                                 label="展示位置"
-                                                value={placementToLegacyValue(
+                                                value={placementToSlotValue(
                                                     resolvePlacement(
                                                         selectedAd.options || {}
                                                     )
@@ -1769,9 +1713,8 @@ const AdsConfig = () => {
                                                 options={positionOptions}
                                                 onChange={(value) =>
                                                     handleUpdateOptions({
-                                                        ...legacyToPlacementUpdates(
-                                                            value,
-                                                            selectedAd.options
+                                                        ...slotToPlacementUpdates(
+                                                            value
                                                         ),
                                                     })
                                                 }
@@ -1824,14 +1767,14 @@ const AdsConfig = () => {
                                                             : [];
                                                     const nextPosition =
                                                         allowedPositions.includes(
-                                                            placementToLegacyValue(
+                                                            placementToSlotValue(
                                                                 resolvePlacement(
                                                                     selectedAd.options ||
                                                                         {}
                                                                 )
                                                             )
                                                         )
-                                                            ? placementToLegacyValue(
+                                                            ? placementToSlotValue(
                                                                   resolvePlacement(
                                                                       selectedAd.options ||
                                                                           {}
@@ -1841,9 +1784,8 @@ const AdsConfig = () => {
                                                     handleUpdateOptions({
                                                         target_type: value,
                                                         target_ids: [],
-                                                        ...legacyToPlacementUpdates(
-                                                            nextPosition,
-                                                            selectedAd.options
+                                                        ...slotToPlacementUpdates(
+                                                            nextPosition
                                                         ),
                                                     });
                                                 }}
@@ -1851,7 +1793,7 @@ const AdsConfig = () => {
 
                                             <SelectControl
                                                 label="展示位置"
-                                                value={placementToLegacyValue(
+                                                value={placementToSlotValue(
                                                     resolvePlacement(
                                                         selectedAd.options || {}
                                                     )
@@ -1875,9 +1817,8 @@ const AdsConfig = () => {
                                                 options={targetPositionOptions}
                                                 onChange={(value) =>
                                                     handleUpdateOptions({
-                                                        ...legacyToPlacementUpdates(
-                                                            value,
-                                                            selectedAd.options
+                                                        ...slotToPlacementUpdates(
+                                                            value
                                                         ),
                                                     })
                                                 }
@@ -2153,7 +2094,6 @@ const AdsConfig = () => {
                             placement_hook: 'footer',
                             placement_position: '',
                             placement_paragraph: 0,
-                            show_position: 'bottom',
                         });
                         return;
                     }

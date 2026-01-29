@@ -16,8 +16,6 @@ const createAdGroupTemplate = (type = 'global') => ({
         placement_position: '',
         placement_paragraph: 0,
         show_page: 'all',
-        show_position: 'bottom',
-        insert_after: 2,
         device: 'all',
         login: 'all',
         end_date: '',
@@ -66,68 +64,21 @@ const createAdGroupTemplate = (type = 'global') => ({
 
 const normalizePlacement = (options) => {
     const placement = {
-        hook: options.placement_hook || '',
+        hook: options.placement_hook || 'footer',
         position: options.placement_position || '',
         paragraph: Number(options.placement_paragraph || 0),
     };
 
-    if (!placement.hook) {
-        switch (options.show_position) {
-            case 'head':
-                placement.hook = 'head';
-                break;
-            case 'top':
-                placement.hook = 'body_top';
-                break;
-            case 'footer':
-            case 'bottom':
-            case 'popup':
-            case 'bar':
-                placement.hook = 'footer';
-                break;
-            case 'content_before':
-            case 'post_top':
-                placement.hook = 'content';
-                placement.position = 'before';
-                break;
-            case 'content_after':
-            case 'post_bottom':
-                placement.hook = 'content';
-                placement.position = 'after';
-                break;
-            case 'paragraph_3':
-                placement.hook = 'content';
-                placement.position = 'paragraph';
-                placement.paragraph = 3;
-                break;
-            case 'content':
-                placement.hook = 'content';
-                placement.position = 'paragraph';
-                placement.paragraph = Number(options.insert_after || 2);
-                break;
-            case 'comments_top':
-                placement.hook = 'comments_top';
-                break;
-            case 'comments_bottom':
-                placement.hook = 'comments_bottom';
-                break;
-            case 'comment_form_before':
-                placement.hook = 'comment_form_before';
-                break;
-            case 'comment_form_after':
-                placement.hook = 'comment_form_after';
-                break;
-            default:
-                placement.hook = 'footer';
+    if (placement.hook === 'content') {
+        placement.position = placement.position || 'before';
+        if (placement.position === 'paragraph') {
+            placement.paragraph = placement.paragraph > 0 ? placement.paragraph : 2;
+        } else {
+            placement.paragraph = 0;
         }
-    }
-
-    if (
-        placement.hook === 'content' &&
-        placement.position === 'paragraph' &&
-        placement.paragraph < 1
-    ) {
-        placement.paragraph = Number(options.insert_after || 2);
+    } else {
+        placement.position = '';
+        placement.paragraph = 0;
     }
 
     return placement;
@@ -168,11 +119,7 @@ const normalizeAd = (ad) => {
         options.container ||
         ((options.content_type === 'popup' && 'popup') ||
             (options.content_type === 'bar' && 'banner')) ||
-        (options.show_position === 'popup'
-            ? 'popup'
-            : options.show_position === 'bar'
-              ? 'banner'
-              : 'inline');
+        'inline';
 
     return {
         ...safeAd,
@@ -210,8 +157,6 @@ const normalizeAd = (ad) => {
                     ? Number(placement.paragraph || 2)
                     : 0,
             show_page: options.show_page || 'all',
-            show_position: options.show_position || '',
-            insert_after: Number(options.insert_after || 2),
             device: options.device || 'all',
             login: options.login || 'all',
             end_date: options.end_date || '',

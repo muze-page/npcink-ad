@@ -35,58 +35,13 @@ final class Frontend {
         $position = isset($options['placement_position']) ? (string) $options['placement_position'] : '';
         $paragraph = isset($options['placement_paragraph']) ? absint($options['placement_paragraph']) : 0;
 
-        if (!$hook) {
-            $legacy = isset($options['show_position']) ? (string) $options['show_position'] : '';
-            switch ($legacy) {
-                case 'head':
-                    $hook = 'head';
-                    break;
-                case 'top':
-                    $hook = 'body_top';
-                    break;
-                case 'footer':
-                case 'bottom':
-                case 'popup':
-                case 'bar':
-                    $hook = 'footer';
-                    break;
-                case 'content_before':
-                case 'post_top':
-                    $hook = 'content';
-                    $position = 'before';
-                    break;
-                case 'content_after':
-                case 'post_bottom':
-                    $hook = 'content';
-                    $position = 'after';
-                    break;
-                case 'paragraph_3':
-                    $hook = 'content';
-                    $position = 'paragraph';
-                    $paragraph = 3;
-                    break;
-                case 'content':
-                    $hook = 'content';
-                    $position = 'paragraph';
-                    $paragraph = isset($options['insert_after']) ? absint($options['insert_after']) : 2;
-                    break;
-                case 'comments_top':
-                    $hook = 'comments_top';
-                    break;
-                case 'comments_bottom':
-                    $hook = 'comments_bottom';
-                    break;
-                case 'comment_form_before':
-                    $hook = 'comment_form_before';
-                    break;
-                case 'comment_form_after':
-                    $hook = 'comment_form_after';
-                    break;
+        if ($hook === 'content' && $position === 'paragraph') {
+            if ($paragraph < 1) {
+                $paragraph = 2;
             }
-        }
-
-        if ($hook === 'content' && $position === 'paragraph' && $paragraph < 1) {
-            $paragraph = 2;
+        } else {
+            $position = $hook === 'content' ? $position : '';
+            $paragraph = 0;
         }
 
         return array(
