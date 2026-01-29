@@ -3,6 +3,7 @@
 namespace MagickAD;
 
 use MagickAD\Admin\Admin;
+use MagickAD\Blocks\Bindings;
 use MagickAD\Blocks\Blocks;
 use MagickAD\Blocks\Patterns;
 use MagickAD\Data\Ads;
@@ -40,6 +41,7 @@ final class Plugin {
     }
 
     public function register(): void {
+        (new Bindings())->register();
         (new Blocks())->register();
         (new Patterns())->register();
         (new Routes())->register();

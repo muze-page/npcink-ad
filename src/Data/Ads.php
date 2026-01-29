@@ -282,6 +282,7 @@ final class Ads {
             $next['cb'] = $columns['cb'];
         }
         $next['title'] = __('广告名称', 'magick-ad');
+        $next['magick_ad_status'] = __('排期状态', 'magick-ad');
         $next['magick_ad_enabled'] = __('启用状态', 'magick-ad');
         $next['magick_ad_type'] = __('素材/容器', 'magick-ad');
         $next['magick_ad_placement'] = __('投放位置', 'magick-ad');
@@ -303,6 +304,20 @@ final class Ads {
                 $enabled = false;
             }
             echo $enabled ? esc_html__('启用', 'magick-ad') : esc_html__('停用', 'magick-ad');
+            return;
+        }
+
+        if ($column === 'magick_ad_status') {
+            $status = get_post_status($post_id);
+            if ($status === 'future') {
+                echo esc_html__('已排期', 'magick-ad');
+                return;
+            }
+            if ($status === 'publish') {
+                echo esc_html__('已发布', 'magick-ad');
+                return;
+            }
+            echo esc_html__('草稿/停用', 'magick-ad');
             return;
         }
 
