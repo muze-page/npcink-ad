@@ -35,6 +35,7 @@ import {
 } from 'recharts';
 import { useStore } from './store';
 import { decodeEntities } from '@wordpress/html-entities';
+import Layout from './Layout';
 
 apiFetch.use((options, next) => {
     return next({
@@ -212,6 +213,7 @@ const AdsConfig = () => {
     const [targetItems, setTargetItems] = useState([]);
     const [targetSuggestions, setTargetSuggestions] = useState([]);
     const [targetLoading, setTargetLoading] = useState(false);
+    const [devicePreview, setDevicePreview] = useState('desktop');
     const noticeTimerRef = useRef(null);
     const targetSearchTimerRef = useRef(null);
     const targetRequestRef = useRef(0);
@@ -575,6 +577,466 @@ const AdsConfig = () => {
         };
     }, []);
 
+    const leftSidebar = (
+        <Card>
+            <CardBody>
+                <div className="magick-ad-sidebar__header">
+                    <h2>广告组</h2>
+                    <DropdownMenu
+                        className="magick-ad-add-menu"
+                        icon={null}
+                        text="新增广告组"
+                        toggleProps={{ variant: 'secondary' }}
+                    >
+                        {({ onClose }) => (
+                            <MenuGroup>
+                                <MenuItem
+                                    onClick={() => {
+                                        addAdGroup('global');
+                                        onClose();
+                                    }}
+                                >
+                                    全局广告
+                                </MenuItem>
+                                <MenuItem
+                                    onClick={() => {
+                                        addAdGroup('targeted');
+                                        onClose();
+                                    }}
+                                >
+                                    指定广告
+                                </MenuItem>
+                            </MenuGroup>
+                        )}
+                    </DropdownMenu>
+                </div>
+                {ads.length === 0 && (
+                    <p className="description">暂无广告组。</p>
+                )}
+                <nav className="magick-ad-sidebar__list">
+                    {ads.map((ad, index) => (
+                        <div
+                            key={ad.id}
+                            className={`magick-ad-sidebar__item ${
+                                selectedId === ad.id ? 'is-active' : ''
+                            } ${
+                                missingPositionIds.has(ad.id) ? 'has-error' : ''
+                            }`}
+                        >
+                            <Button
+                                variant="tertiary"
+                                isPressed={selectedId === ad.id}
+                                onClick={() => setSelectedId(ad.id)}
+                            >
+                                <span className="magick-ad-sidebar__label">
+                                    {ad.name || `广告组 ${index + 1}`}
+                                </span>
+                                <span className="magick-ad-type">
+                                    {ad.options?.ad_type === 'targeted'
+                                        ? '指定广告'
+                                        : '全局广告'}
+                                </span>
+                                {missingPositionIds.has(ad.id) && (
+                                    <span className="magick-ad-sidebar__alert">
+                                        <span className="magick-ad-sidebar__dot" />
+                                        需配置位置
+                                    </span>
+                                )}
+                            </Button>
+                            <Button
+                                variant="tertiary"
+                                isDestructive
+                                onClick={() => removeAdGroup(ad.id)}
+                            >
+                                删除
+                            </Button>
+                        </div>
+                    ))}
+                </nav>
+            </CardBody>
+        </Card>
+    );
+
+    const contentPanels = selectedAd ? (
+        <TabPanel
+            key={`${selectedAd.id}-${selectedAd.options?.content_type || ''}`}
+            className="magick-ad-sub-tabs"
+            tabs={[
+                { name: 'html', title: 'HTML广告' },
+                { name: 'image', title: '图片广告' },
+                { name: 'video', title: '视频广告' },
+                { name: 'popup', title: '弹窗广告' },
+                { name: 'bar', title: '横栏广告' },
+            ]}
+            initialTabName={selectedAd.options?.content_type || 'image'}
+            onSelect={(name) =>
+                handleUpdateOptions({
+                    content_type: name,
+                })
+            }
+        >
+            {(subTab) => {
+                if (subTab.name === 'image') {
+                    return (
+                        <Panel>
+                            <PanelBody title="内容配置" initialOpen>
+                                <TextControl
+                                    label="跳转链接"
+                                    value={selectedAd.content?.link || ''}
+                                    onChange={(value) =>
+                                        handleUpdateContent({
+                                            link: value,
+                                        })
+                                    }
+                                />
+                                <div className="magick-ad-field">
+                                    <p className="magick-ad-field__label">
+                                        图片
+                                    </p>
+                                    <ImagePicker
+                                        value={selectedAd.content?.image || null}
+                                        onChange={(value) =>
+                                            handleUpdateContent({
+                                                image: value,
+                                            })
+                                        }
+                                    />
+                                </div>
+                            </PanelBody>
+                        </Panel>
+                    );
+                }
+
+                if (subTab.name === 'html') {
+                    return (
+                        <Panel>
+                            <PanelBody title="内容配置" initialOpen>
+                                <TextControl
+                                    label="HTML 内容"
+                                    value={selectedAd.content?.html || ''}
+                                    onChange={(value) =>
+                                        handleUpdateContent({
+                                            html: value,
+                                        })
+                                    }
+                                />
+                            </PanelBody>
+                        </Panel>
+                    );
+                }
+
+                return (
+                    <Panel>
+                        <PanelBody title="内容配置" initialOpen>
+                            <Notice status="info" isDismissible={false}>
+                                该类型的配置项稍后补充。
+                            </Notice>
+                        </PanelBody>
+                    </Panel>
+                );
+            }}
+        </TabPanel>
+    ) : (
+        <div className="magick-ad-empty">
+            <p>请选择一个广告组进行配置。</p>
+        </div>
+    );
+
+    const rightSidebar = selectedAd ? (
+        <div className="magick-ad-right-stack">
+            <Card>
+                <CardBody>
+                    <Panel>
+                        <PanelBody title="基础信息" initialOpen>
+                            <TextControl
+                                label="广告名称"
+                                value={selectedAd.name || ''}
+                                onChange={(value) =>
+                                    updateAdGroup(selectedAd.id, {
+                                        name: value,
+                                    })
+                                }
+                            />
+                        </PanelBody>
+
+                        {selectedAd.options?.ad_type === 'global' && (
+                            <PanelBody title="展示位置" initialOpen>
+                                {showValidation &&
+                                    !selectedAd.options?.show_position && (
+                                        <Notice
+                                            status="error"
+                                            isDismissible={false}
+                                        >
+                                            请先选择展示位置
+                                        </Notice>
+                                    )}
+                                <SelectControl
+                                    label="展示页面"
+                                    value={
+                                        selectedAd.options?.show_page || 'all'
+                                    }
+                                    options={DISPLAY_PAGE_OPTIONS}
+                                    onChange={(value) => {
+                                        const allowedPositions =
+                                            getPositionOptions(value).map(
+                                                (option) => option.value
+                                            );
+                                        const nextPosition =
+                                            allowedPositions.includes(
+                                                selectedAd.options?.show_position
+                                            )
+                                                ? selectedAd.options
+                                                      ?.show_position
+                                                : '';
+                                        handleUpdateOptions({
+                                            show_page: value,
+                                            show_position: nextPosition,
+                                        });
+                                    }}
+                                />
+
+                                <SelectControl
+                                    label="展示位置"
+                                    value={
+                                        selectedAd.options?.show_position || ''
+                                    }
+                                    className={
+                                        showValidation &&
+                                        !selectedAd.options?.show_position
+                                            ? 'magick-ad-control--error'
+                                            : undefined
+                                    }
+                                    help={
+                                        showValidation &&
+                                        !selectedAd.options?.show_position
+                                            ? '请选择展示位置'
+                                            : undefined
+                                    }
+                                    options={positionOptions}
+                                    onChange={(value) =>
+                                        handleUpdateOptions({
+                                            show_position: value,
+                                        })
+                                    }
+                                />
+                            </PanelBody>
+                        )}
+
+                        {selectedAd.options?.ad_type === 'targeted' && (
+                            <PanelBody title="展示位置" initialOpen>
+                                <SelectControl
+                                    label="展示类型"
+                                    value={selectedAd.options?.target_type || ''}
+                                    options={[
+                                        {
+                                            label: '请选择展示类型',
+                                            value: '',
+                                        },
+                                        ...TARGET_TYPE_OPTIONS,
+                                    ]}
+                                    onChange={(value) => {
+                                        setTargetItems([]);
+                                        setTargetSuggestions([]);
+                                        const allowedPositions = value
+                                            ? getPositionOptions(value).map(
+                                                  (option) => option.value
+                                              )
+                                            : [];
+                                        const nextPosition =
+                                            allowedPositions.includes(
+                                                selectedAd.options?.show_position
+                                            )
+                                                ? selectedAd.options
+                                                      ?.show_position
+                                                : '';
+                                        handleUpdateOptions({
+                                            target_type: value,
+                                            target_ids: [],
+                                            show_position: nextPosition,
+                                        });
+                                    }}
+                                />
+
+                                <SelectControl
+                                    label="展示位置"
+                                    value={
+                                        selectedAd.options?.show_position || ''
+                                    }
+                                    className={
+                                        showValidation &&
+                                        !selectedAd.options?.show_position
+                                            ? 'magick-ad-control--error'
+                                            : undefined
+                                    }
+                                    help={
+                                        showValidation &&
+                                        !selectedAd.options?.show_position
+                                            ? '请选择展示位置'
+                                            : undefined
+                                    }
+                                    options={targetPositionOptions}
+                                    onChange={(value) =>
+                                        handleUpdateOptions({
+                                            show_position: value,
+                                        })
+                                    }
+                                    disabled={!selectedAd.options?.target_type}
+                                />
+
+                                <FormTokenField
+                                    label="展示页面"
+                                    value={targetItems.map((item) => item.label)}
+                                    suggestions={targetSuggestions.map(
+                                        (item) => item.label
+                                    )}
+                                    onInputChange={handleTargetSearch}
+                                    onFocus={() => handleTargetSearch('')}
+                                    __experimentalExpandOnFocus
+                                    onChange={(tokens) => {
+                                        const tokenMap = new Map();
+                                        targetItems.forEach((item) => {
+                                            tokenMap.set(item.label, item);
+                                        });
+                                        targetSuggestions.forEach((item) => {
+                                            tokenMap.set(item.label, item);
+                                        });
+                                        const nextItems = tokens
+                                            .map((token) =>
+                                                tokenMap.get(token)
+                                            )
+                                            .filter(Boolean);
+                                        setTargetItems(nextItems);
+                                        handleUpdateOptions({
+                                            target_ids: nextItems.map(
+                                                (item) => item.id
+                                            ),
+                                        });
+                                    }}
+                                    placeholder={
+                                        selectedAd.options?.target_type
+                                            ? '输入关键词搜索并选择'
+                                            : '请先选择展示类型'
+                                    }
+                                    disabled={!selectedAd.options?.target_type}
+                                />
+                                {targetLoading && (
+                                    <div className="magick-ad-inline-loading">
+                                        <Spinner />
+                                        <span>正在加载列表…</span>
+                                    </div>
+                                )}
+                                {!selectedAd.options?.target_type && (
+                                    <Notice
+                                        status="info"
+                                        isDismissible={false}
+                                    >
+                                        请选择展示类型后再选择具体页面与展示位置。
+                                    </Notice>
+                                )}
+                            </PanelBody>
+                        )}
+
+                        <PanelBody title="展示规则" initialOpen>
+                            <SelectControl
+                                label="是否展示"
+                                value={
+                                    selectedAd.options?.display_mode || 'show'
+                                }
+                                options={[
+                                    { label: '展示', value: 'show' },
+                                    { label: '随机', value: 'random' },
+                                    { label: '隐藏', value: 'hide' },
+                                ]}
+                                onChange={(value) =>
+                                    handleUpdateOptions({
+                                        display_mode: value,
+                                    })
+                                }
+                                help="随机：每次页面请求随机展示或隐藏"
+                            />
+
+                            <TextControl
+                                label="截止时间"
+                                type="date"
+                                value={selectedAd.options?.end_date || ''}
+                                onChange={(value) =>
+                                    handleUpdateOptions({
+                                        end_date: value,
+                                    })
+                                }
+                                help="到期后自动隐藏广告"
+                            />
+
+                            <SelectControl
+                                label="设备限制"
+                                value={selectedAd.options?.device || 'all'}
+                                options={[
+                                    { label: '全部设备', value: 'all' },
+                                    { label: '仅移动端', value: 'mobile' },
+                                    { label: '仅桌面端', value: 'desktop' },
+                                ]}
+                                onChange={(value) =>
+                                    handleUpdateOptions({
+                                        device: value,
+                                    })
+                                }
+                            />
+
+                            <SelectControl
+                                label="登录状态"
+                                value={selectedAd.options?.login || 'all'}
+                                options={[
+                                    { label: '全部用户', value: 'all' },
+                                    { label: '仅登录用户', value: 'logged-in' },
+                                    {
+                                        label: '仅未登录用户',
+                                        value: 'logged-out',
+                                    },
+                                ]}
+                                onChange={(value) =>
+                                    handleUpdateOptions({
+                                        login: value,
+                                    })
+                                }
+                            />
+                        </PanelBody>
+                    </Panel>
+                </CardBody>
+            </Card>
+
+            <Card>
+                <CardBody>
+                    <div className="magick-ad-publish__header">
+                        <h2>发布</h2>
+                    </div>
+                    <ToggleControl
+                        label="启用此广告"
+                        checked={selectedAd?.options?.enabled ?? true}
+                        onChange={(value) =>
+                            handleUpdateOptions({ enabled: value })
+                        }
+                    />
+                    <Button
+                        variant="primary"
+                        onClick={handleSave}
+                        isBusy={isSaving}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? '保存中...' : '保存'}
+                    </Button>
+                </CardBody>
+            </Card>
+        </div>
+    ) : (
+        <Card>
+            <CardBody>
+                <Notice status="info" isDismissible={false}>
+                    请先选择一个广告组。
+                </Notice>
+            </CardBody>
+        </Card>
+    );
+
     return (
         <div className="magick-ad-config">
             <div className="magick-ad-header">
@@ -601,730 +1063,21 @@ const AdsConfig = () => {
                 </Notice>
             )}
 
-            <div className="magick-ad-grid">
-                <aside className="magick-ad-sidebar">
-                    <Card>
-                        <CardBody>
-                            <div className="magick-ad-sidebar__header">
-                                <h2>广告组</h2>
-                                <DropdownMenu
-                                    className="magick-ad-add-menu"
-                                    icon={null}
-                                    text="新增广告组"
-                                    toggleProps={{ variant: 'secondary' }}
-                                >
-                                    {({ onClose }) => (
-                                        <MenuGroup>
-                                            <MenuItem
-                                                onClick={() => {
-                                                    addAdGroup('global');
-                                                    onClose();
-                                                }}
-                                            >
-                                                全局广告
-                                            </MenuItem>
-                                            <MenuItem
-                                                onClick={() => {
-                                                    addAdGroup('targeted');
-                                                    onClose();
-                                                }}
-                                            >
-                                                指定广告
-                                            </MenuItem>
-                                        </MenuGroup>
-                                    )}
-                                </DropdownMenu>
-                            </div>
-                            {ads.length === 0 && (
-                                <p className="description">暂无广告组。</p>
-                            )}
-                            <nav className="magick-ad-sidebar__list">
-                                {ads.map((ad, index) => (
-                                    <div
-                                        key={ad.id}
-                                        className={`magick-ad-sidebar__item ${
-                                            selectedId === ad.id
-                                                ? 'is-active'
-                                                : ''
-                                        } ${
-                                            missingPositionIds.has(ad.id)
-                                                ? 'has-error'
-                                                : ''
-                                        }`}
-                                    >
-                                        <Button
-                                            variant="tertiary"
-                                            isPressed={selectedId === ad.id}
-                                            onClick={() => setSelectedId(ad.id)}
-                                        >
-                                            <span className="magick-ad-sidebar__label">
-                                                {ad.name || `广告组 ${index + 1}`}
-                                            </span>
-                                            <span className="magick-ad-type">
-                                                {ad.options?.ad_type ===
-                                                'targeted'
-                                                    ? '指定广告'
-                                                    : '全局广告'}
-                                            </span>
-                                            {missingPositionIds.has(ad.id) && (
-                                                <span className="magick-ad-sidebar__alert">
-                                                    <span className="magick-ad-sidebar__dot" />
-                                                    需配置位置
-                                                </span>
-                                            )}
-                                        </Button>
-                                        <Button
-                                            variant="tertiary"
-                                            isDestructive
-                                            onClick={() => removeAdGroup(ad.id)}
-                                        >
-                                            删除
-                                        </Button>
-                                    </div>
-                                ))}
-                            </nav>
-                        </CardBody>
-                    </Card>
-                </aside>
-
-                <section className="magick-ad-main">
-                    <Card className="magick-ad-main-card">
-                        <CardBody>
-                            {!selectedAd && (
-                                <div className="magick-ad-empty">
-                                    <p>请选择一个广告组进行配置。</p>
-                                </div>
-                            )}
-                            {selectedAd && (
-                                <TabPanel
-                                    className="magick-ad-inner-tabs"
-                                    tabs={[
-                                        { name: 'content', title: '内容' },
-                                        { name: 'rules', title: '配置' },
-                                    ]}
-                                >
-                                    {(tab) =>
-                                        tab.name === 'content' ? (
-                                            <TabPanel
-                                                key={selectedAd.id}
-                                                className="magick-ad-sub-tabs"
-                                                tabs={[
-                                                    {
-                                                        name: 'html',
-                                                        title: 'HTML广告',
-                                                    },
-                                                    {
-                                                        name: 'image',
-                                                        title: '图片广告',
-                                                    },
-                                                    {
-                                                        name: 'video',
-                                                        title: '视频广告',
-                                                    },
-                                                    {
-                                                        name: 'popup',
-                                                        title: '弹窗广告',
-                                                    },
-                                                    {
-                                                        name: 'bar',
-                                                        title: '横栏广告',
-                                                    },
-                                                ]}
-                                                initialTabName={
-                                                    selectedAd.options
-                                                        ?.content_type ||
-                                                    'image'
-                                                }
-                                                onSelect={(name) =>
-                                                    handleUpdateOptions({
-                                                        content_type: name,
-                                                    })
-                                                }
-                                            >
-                                                {(subTab) => {
-                                                    if (subTab.name === 'image') {
-                                                        return (
-                                                            <Panel>
-                                                                <PanelBody
-                                                                    title="内容配置"
-                                                                    initialOpen
-                                                                >
-                                                                    <TextControl
-                                                                        label="跳转链接"
-                                                                        value={
-                                                                            selectedAd
-                                                                                .content
-                                                                                ?.link ||
-                                                                            ''
-                                                                        }
-                                                                        onChange={(
-                                                                            value
-                                                                        ) =>
-                                                                            handleUpdateContent(
-                                                                                {
-                                                                                    link: value,
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                    <div className="magick-ad-field">
-                                                                        <p className="magick-ad-field__label">
-                                                                            图片
-                                                                        </p>
-                                                                        <ImagePicker
-                                                                            value={
-                                                                                selectedAd
-                                                                                    .content
-                                                                                    ?.image ||
-                                                                                null
-                                                                            }
-                                                                            onChange={(
-                                                                                value
-                                                                            ) =>
-                                                                                handleUpdateContent(
-                                                                                    {
-                                                                                        image: value,
-                                                                                    }
-                                                                                )
-                                                                            }
-                                                                        />
-                                                                    </div>
-                                                                </PanelBody>
-                                                            </Panel>
-                                                        );
-                                                    }
-
-                                                    if (subTab.name === 'html') {
-                                                        return (
-                                                            <Panel>
-                                                                <PanelBody
-                                                                    title="内容配置"
-                                                                    initialOpen
-                                                                >
-                                                                    <TextControl
-                                                                        label="HTML 内容"
-                                                                        value={
-                                                                            selectedAd
-                                                                                .content
-                                                                                ?.html ||
-                                                                            ''
-                                                                        }
-                                                                        onChange={(
-                                                                            value
-                                                                        ) =>
-                                                                            handleUpdateContent(
-                                                                                {
-                                                                                    html: value,
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </PanelBody>
-                                                            </Panel>
-                                                        );
-                                                    }
-
-                                                    return (
-                                                        <Panel>
-                                                            <PanelBody
-                                                                title="内容配置"
-                                                                initialOpen
-                                                            >
-                                                                <Notice
-                                                                    status="info"
-                                                                    isDismissible={
-                                                                        false
-                                                                    }
-                                                                >
-                                                                    该类型的配置项稍后补充。
-                                                                </Notice>
-                                                            </PanelBody>
-                                                        </Panel>
-                                                    );
-                                                }}
-                                            </TabPanel>
-                                        ) : (
-                                            <Panel>
-                                                <PanelBody
-                                                    title="基础信息"
-                                                    initialOpen
-                                                >
-                                                    <TextControl
-                                                        label="广告名称"
-                                                        value={
-                                                            selectedAd.name ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            updateAdGroup(
-                                                                selectedAd.id,
-                                                                { name: value }
-                                                            )
-                                                        }
-                                                    />
-                                                </PanelBody>
-
-                                                {selectedAd.options
-                                                    ?.ad_type ===
-                                                    'global' && (
-                                                    <PanelBody
-                                                        title="展示位置"
-                                                        initialOpen
-                                                    >
-                                                        {showValidation &&
-                                                            !selectedAd.options
-                                                                ?.show_position && (
-                                                                <Notice
-                                                                    status="error"
-                                                                    isDismissible={false}
-                                                                >
-                                                                    请先选择展示位置
-                                                                </Notice>
-                                                            )}
-                                                        <SelectControl
-                                                            label="展示页面"
-                                                            value={
-                                                                selectedAd
-                                                                    .options
-                                                                    ?.show_page ||
-                                                                'all'
-                                                            }
-                                                            options={
-                                                                DISPLAY_PAGE_OPTIONS
-                                                            }
-                                                            onChange={(
-                                                                value
-                                                            ) => {
-                                                                const allowedPositions =
-                                                                    getPositionOptions(
-                                                                        value
-                                                                    ).map(
-                                                                        (
-                                                                            option
-                                                                        ) =>
-                                                                            option.value
-                                                                    );
-                                                                const nextPosition =
-                                                                    allowedPositions.includes(
-                                                                        selectedAd
-                                                                            .options
-                                                                            ?.show_position
-                                                                    )
-                                                                        ? selectedAd
-                                                                              .options
-                                                                              ?.show_position
-                                                                        : '';
-                                                                handleUpdateOptions(
-                                                                    {
-                                                                        show_page:
-                                                                            value,
-                                                                        show_position:
-                                                                            nextPosition,
-                                                                    }
-                                                                );
-                                                            }}
-                                                        />
-
-                                                        <SelectControl
-                                                            label="展示位置"
-                                                            value={
-                                                                selectedAd
-                                                                    .options
-                                                                    ?.show_position ||
-                                                                ''
-                                                            }
-                                                            className={
-                                                                showValidation &&
-                                                                !selectedAd
-                                                                    .options
-                                                                    ?.show_position
-                                                                    ? 'magick-ad-control--error'
-                                                                    : undefined
-                                                            }
-                                                            help={
-                                                                showValidation &&
-                                                                !selectedAd
-                                                                    .options
-                                                                    ?.show_position
-                                                                    ? '请选择展示位置'
-                                                                    : undefined
-                                                            }
-                                                            options={
-                                                                positionOptions
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateOptions(
-                                                                    {
-                                                                        show_position:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-
-                                                    </PanelBody>
-                                                )}
-
-                                                {selectedAd.options
-                                                    ?.ad_type ===
-                                                    'targeted' && (
-                                                    <PanelBody
-                                                        title="展示位置"
-                                                        initialOpen
-                                                    >
-                                                        <SelectControl
-                                                            label="展示类型"
-                                                            value={
-                                                                selectedAd
-                                                                    .options
-                                                                    ?.target_type ||
-                                                                ''
-                                                            }
-                                                            options={[
-                                                                {
-                                                                    label: '请选择展示类型',
-                                                                    value: '',
-                                                                },
-                                                                ...TARGET_TYPE_OPTIONS,
-                                                            ]}
-                                                            onChange={(
-                                                                value
-                                                            ) => {
-                                                                setTargetItems(
-                                                                    []
-                                                                );
-                                                                setTargetSuggestions(
-                                                                    []
-                                                                );
-                                                                const allowedPositions =
-                                                                    value
-                                                                        ? getPositionOptions(
-                                                                              value
-                                                                          ).map(
-                                                                              (
-                                                                                  option
-                                                                              ) =>
-                                                                                  option.value
-                                                                          )
-                                                                        : [];
-                                                                const nextPosition =
-                                                                    allowedPositions.includes(
-                                                                        selectedAd
-                                                                            .options
-                                                                            ?.show_position
-                                                                    )
-                                                                        ? selectedAd
-                                                                              .options
-                                                                              ?.show_position
-                                                                        : '';
-                                                                handleUpdateOptions(
-                                                                    {
-                                                                        target_type:
-                                                                            value,
-                                                                        target_ids:
-                                                                            [],
-                                                                        show_position:
-                                                                            nextPosition,
-                                                                    }
-                                                                );
-                                                            }}
-                                                        />
-
-                                                        <SelectControl
-                                                            label="展示位置"
-                                                            value={
-                                                                selectedAd
-                                                                    .options
-                                                                    ?.show_position ||
-                                                                ''
-                                                            }
-                                                            className={
-                                                                showValidation &&
-                                                                !selectedAd
-                                                                    .options
-                                                                    ?.show_position
-                                                                    ? 'magick-ad-control--error'
-                                                                    : undefined
-                                                            }
-                                                            help={
-                                                                showValidation &&
-                                                                !selectedAd
-                                                                    .options
-                                                                    ?.show_position
-                                                                    ? '请选择展示位置'
-                                                                    : undefined
-                                                            }
-                                                            options={
-                                                                targetPositionOptions
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateOptions(
-                                                                    {
-                                                                        show_position:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                !selectedAd
-                                                                    .options
-                                                                    ?.target_type
-                                                            }
-                                                        />
-
-                                                        <FormTokenField
-                                                            label="展示页面"
-                                                            value={targetItems.map(
-                                                                (item) =>
-                                                                    item.label
-                                                            )}
-                                                            suggestions={targetSuggestions.map(
-                                                                (item) =>
-                                                                    item.label
-                                                            )}
-                                                            onInputChange={
-                                                                handleTargetSearch
-                                                            }
-                                                            onFocus={() =>
-                                                                handleTargetSearch(
-                                                                    ''
-                                                                )
-                                                            }
-                                                            __experimentalExpandOnFocus
-                                                            onChange={(
-                                                                tokens
-                                                            ) => {
-                                                                const tokenMap = new Map();
-                                                                targetItems.forEach(
-                                                                    (item) => {
-                                                                        tokenMap.set(
-                                                                            item.label,
-                                                                            item
-                                                                        );
-                                                                    }
-                                                                );
-                                                                targetSuggestions.forEach(
-                                                                    (item) => {
-                                                                        tokenMap.set(
-                                                                            item.label,
-                                                                            item
-                                                                        );
-                                                                    }
-                                                                );
-                                                                const nextItems =
-                                                                    tokens
-                                                                        .map(
-                                                                            (
-                                                                                token
-                                                                            ) =>
-                                                                                tokenMap.get(
-                                                                                    token
-                                                                                )
-                                                                        )
-                                                                        .filter(
-                                                                            Boolean
-                                                                        );
-                                                                setTargetItems(
-                                                                    nextItems
-                                                                );
-                                                                handleUpdateOptions(
-                                                                    {
-                                                                        target_ids:
-                                                                            nextItems.map(
-                                                                                (
-                                                                                    item
-                                                                                ) =>
-                                                                                    item.id
-                                                                            ),
-                                                                    }
-                                                                );
-                                                            }}
-                                                            placeholder={
-                                                                selectedAd
-                                                                    .options
-                                                                    ?.target_type
-                                                                    ? '输入关键词搜索并选择'
-                                                                    : '请先选择展示类型'
-                                                            }
-                                                            disabled={
-                                                                !selectedAd
-                                                                    .options
-                                                                    ?.target_type
-                                                            }
-                                                        />
-                                                        {targetLoading && (
-                                                            <div className="magick-ad-inline-loading">
-                                                                <Spinner />
-                                                                <span>
-                                                                    正在加载列表…
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        {!selectedAd.options
-                                                            ?.target_type && (
-                                                            <Notice
-                                                                status="info"
-                                                                isDismissible={
-                                                                    false
-                                                                }
-                                                            >
-                                                                请选择展示类型后再选择具体页面与展示位置。
-                                                            </Notice>
-                                                        )}
-                                                    </PanelBody>
-                                                )}
-
-                                                <PanelBody
-                                                    title="展示规则"
-                                                    initialOpen
-                                                >
-                                                    <SelectControl
-                                                        label="是否展示"
-                                                        value={
-                                                            selectedAd.options
-                                                                ?.display_mode ||
-                                                            'show'
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label: '展示',
-                                                                value: 'show',
-                                                            },
-                                                            {
-                                                                label: '随机',
-                                                                value: 'random',
-                                                            },
-                                                            {
-                                                                label: '隐藏',
-                                                                value: 'hide',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateOptions(
-                                                                {
-                                                                    display_mode:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="随机：每次页面请求随机展示或隐藏"
-                                                    />
-
-                                                    <TextControl
-                                                        label="截止时间"
-                                                        type="date"
-                                                        value={
-                                                            selectedAd.options
-                                                                ?.end_date || ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateOptions(
-                                                                {
-                                                                    end_date:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="到期后自动隐藏广告"
-                                                    />
-
-                                                    <SelectControl
-                                                        label="设备限制"
-                                                        value={
-                                                            selectedAd.options
-                                                                ?.device ||
-                                                            'all'
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label: '全部设备',
-                                                                value: 'all',
-                                                            },
-                                                            {
-                                                                label: '仅移动端',
-                                                                value: 'mobile',
-                                                            },
-                                                            {
-                                                                label: '仅桌面端',
-                                                                value: 'desktop',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateOptions(
-                                                                {
-                                                                    device:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-
-                                                    <SelectControl
-                                                        label="登录状态"
-                                                        value={
-                                                            selectedAd.options
-                                                                ?.login || 'all'
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label: '全部用户',
-                                                                value: 'all',
-                                                            },
-                                                            {
-                                                                label: '仅登录用户',
-                                                                value: 'logged-in',
-                                                            },
-                                                            {
-                                                                label: '仅未登录用户',
-                                                                value: 'logged-out',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateOptions(
-                                                                {
-                                                                    login:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                </PanelBody>
-                                            </Panel>
-                                        )
-                                    }
-                                </TabPanel>
-                            )}
-                        </CardBody>
-                    </Card>
-                </section>
-
-                <aside className="magick-ad-publish">
-                    <Card>
-                        <CardBody>
-                            <div className="magick-ad-publish__header">
-                                <h2>发布</h2>
-                            </div>
-                            <ToggleControl
-                                label="启用此广告"
-                                checked={selectedAd?.options?.enabled ?? true}
-                                disabled={!selectedAd}
-                                onChange={(value) =>
-                                    selectedAd &&
-                                    handleUpdateOptions({ enabled: value })
-                                }
-                            />
-                            <Button
-                                variant="primary"
-                                onClick={handleSave}
-                                isBusy={isSaving}
-                                disabled={isSaving || !selectedAd}
-                            >
-                                {isSaving ? '保存中...' : '保存'}
-                            </Button>
-                        </CardBody>
-                    </Card>
-                </aside>
-            </div>
+            <Layout
+                adData={selectedAd}
+                adType={selectedAd?.options?.content_type || 'image'}
+                devicePreview={devicePreview}
+                onAdTypeChange={(value) =>
+                    selectedAd && handleUpdateOptions({ content_type: value })
+                }
+                onDevicePreviewChange={setDevicePreview}
+                onUpdateRule={(key, value) =>
+                    selectedAd && handleUpdateOptions({ [key]: value })
+                }
+                leftSidebar={leftSidebar}
+                rightSidebar={rightSidebar}
+                contentPanels={contentPanels}
+            />
 
             <Card>
                 <CardBody>

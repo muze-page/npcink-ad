@@ -17,6 +17,66 @@
     gap: 16px;
 }
 
+.magick-ad-layout {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.magick-ad-left {
+    flex: 0 0 260px;
+}
+
+.magick-ad-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.magick-ad-right {
+    flex: 0 0 300px;
+}
+
+.magick-ad-toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.magick-ad-editor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 40%);
+    gap: 16px;
+}
+
+.magick-ad-editor-preview {
+    display: flex;
+    align-items: stretch;
+}
+
+.magick-ad-preview {
+    width: 100%;
+    min-height: 360px;
+    background: #f3f4f6;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.magick-ad-preview__empty {
+    color: #9aa0a6;
+    font-size: 14px;
+}
+
+.magick-ad-right-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
 .magick-ad-main-card .components-tab-panel__tabs {
     border-bottom: 1px solid #dcdcde;
     margin: -4px -4px 16px;

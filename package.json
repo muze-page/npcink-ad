@@ -10,6 +10,7 @@
     "@wordpress/scripts": "^26.19.0"
   },
   "dependencies": {
+    "@wordpress/icons": "^11.5.0",
     "recharts": "^2.15.4",
     "zustand": "^5.0.10"
   }
