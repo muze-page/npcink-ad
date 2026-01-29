@@ -76,11 +76,53 @@ const Layout = ({
             );
         }
         if (adType === 'image' && content.image?.url) {
-            return (
+            const settings = content.image_settings || {};
+            const imageStyle = {};
+            if (settings.radius) {
+                imageStyle.borderRadius = `${settings.radius}px`;
+            }
+            if (settings.max_width) {
+                imageStyle.maxWidth = `${settings.max_width}px`;
+                imageStyle.width = '100%';
+            }
+            if (settings.margin_top) {
+                imageStyle.marginTop = `${settings.margin_top}px`;
+            }
+            if (settings.margin_bottom) {
+                imageStyle.marginBottom = `${settings.margin_bottom}px`;
+            }
+            if (settings.margin_left) {
+                imageStyle.marginLeft = `${settings.margin_left}px`;
+            }
+            if (settings.margin_right) {
+                imageStyle.marginRight = `${settings.margin_right}px`;
+            }
+
+            const imageNode = (
                 <img
                     src={content.image.url}
                     alt={content.image.alt || ''}
+                    style={imageStyle}
                 />
+            );
+
+            if (content.link) {
+                return (
+                    <a
+                        href={content.link}
+                        target={content.link_target ? '_blank' : undefined}
+                        rel={
+                            content.link_target
+                                ? 'noopener noreferrer'
+                                : undefined
+                        }
+                    >
+                        {imageNode}
+                    </a>
+                );
+            }
+            return (
+                imageNode
             );
         }
         return <div className="magick-ad-preview__empty">预览区域</div>;

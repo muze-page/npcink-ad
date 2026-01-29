@@ -22,6 +22,16 @@ const createAdGroupTemplate = (type = 'global') => ({
         html: '',
         image: { id: 0, url: '', alt: '' },
         link: '',
+        link_target: false,
+        image_settings: {
+            watermark: false,
+            radius: 0,
+            max_width: 1200,
+            margin_top: 0,
+            margin_bottom: 0,
+            margin_left: 0,
+            margin_right: 0,
+        },
     },
 });
 
@@ -46,6 +56,10 @@ const normalizeAd = (ad) => {
             : {};
     const content = safeAd.content && typeof safeAd.content === 'object' ? safeAd.content : {};
     const image = content.image && typeof content.image === 'object' ? content.image : {};
+    const imageSettings =
+        content.image_settings && typeof content.image_settings === 'object'
+            ? content.image_settings
+            : {};
 
     return {
         ...safeAd,
@@ -68,10 +82,20 @@ const normalizeAd = (ad) => {
         content: {
             html: content.html || '',
             link: content.link || '',
+            link_target: Boolean(content.link_target),
             image: {
                 id: Number(image.id || 0),
                 url: image.url || '',
                 alt: image.alt || '',
+            },
+            image_settings: {
+                watermark: Boolean(imageSettings.watermark),
+                radius: Number(imageSettings.radius || 0),
+                max_width: Number(imageSettings.max_width || 1200),
+                margin_top: Number(imageSettings.margin_top || 0),
+                margin_bottom: Number(imageSettings.margin_bottom || 0),
+                margin_left: Number(imageSettings.margin_left || 0),
+                margin_right: Number(imageSettings.margin_right || 0),
             },
         },
     };

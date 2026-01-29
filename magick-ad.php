@@ -143,6 +143,8 @@ function magick_ad_enqueue_admin_assets($hook) {
 
     wp_enqueue_editor();
     wp_enqueue_media();
+    wp_enqueue_script('wplink');
+    wp_enqueue_style('editor-buttons');
 
     wp_enqueue_script(
         'magick-ad-app',
@@ -389,10 +391,20 @@ class Magick_AD_Engine {
         $sanitized_content = array(
             'html' => isset($content['html']) ? wp_kses_post($content['html']) : '',
             'link' => isset($content['link']) ? esc_url_raw($content['link']) : '',
+            'link_target' => !empty($content['link_target']),
             'image' => array(
                 'id' => isset($image['id']) ? absint($image['id']) : 0,
                 'url' => isset($image['url']) ? esc_url_raw($image['url']) : '',
                 'alt' => isset($image['alt']) ? sanitize_text_field($image['alt']) : '',
+            ),
+            'image_settings' => array(
+                'watermark' => !empty($content['image_settings']['watermark']),
+                'radius' => isset($content['image_settings']['radius']) ? absint($content['image_settings']['radius']) : 0,
+                'max_width' => isset($content['image_settings']['max_width']) ? absint($content['image_settings']['max_width']) : 1200,
+                'margin_top' => isset($content['image_settings']['margin_top']) ? absint($content['image_settings']['margin_top']) : 0,
+                'margin_bottom' => isset($content['image_settings']['margin_bottom']) ? absint($content['image_settings']['margin_bottom']) : 0,
+                'margin_left' => isset($content['image_settings']['margin_left']) ? absint($content['image_settings']['margin_left']) : 0,
+                'margin_right' => isset($content['image_settings']['margin_right']) ? absint($content['image_settings']['margin_right']) : 0,
             ),
         );
 
@@ -1047,7 +1059,11 @@ class Magick_AD_Frontend {
         $content_type = isset($options['content_type']) ? $options['content_type'] : 'image';
         $html = isset($content['html']) ? $content['html'] : '';
         $link = isset($content['link']) ? $content['link'] : '';
+        $link_target = !empty($content['link_target']);
         $image = isset($content['image']) ? $content['image'] : array();
+        $image_settings = isset($content['image_settings']) && is_array($content['image_settings'])
+            ? $content['image_settings']
+            : array();
 
         $body = '';
         if ($content_type === 'html') {
@@ -1056,9 +1072,39 @@ class Magick_AD_Frontend {
             }
         } elseif ($content_type === 'image') {
             if (!empty($image['url'])) {
-                $img_tag = '<img src="' . esc_url($image['url']) . '" alt="' . esc_attr(isset($image['alt']) ? $image['alt'] : '') . '" />';
+                $styles = array();
+                $radius = isset($image_settings['radius']) ? absint($image_settings['radius']) : 0;
+                $max_width = isset($image_settings['max_width']) ? absint($image_settings['max_width']) : 0;
+                $margin_top = isset($image_settings['margin_top']) ? absint($image_settings['margin_top']) : 0;
+                $margin_bottom = isset($image_settings['margin_bottom']) ? absint($image_settings['margin_bottom']) : 0;
+                $margin_left = isset($image_settings['margin_left']) ? absint($image_settings['margin_left']) : 0;
+                $margin_right = isset($image_settings['margin_right']) ? absint($image_settings['margin_right']) : 0;
+
+                if ($radius) {
+                    $styles[] = 'border-radius:' . $radius . 'px';
+                }
+                if ($max_width) {
+                    $styles[] = 'max-width:' . $max_width . 'px';
+                    $styles[] = 'width:100%';
+                }
+                if ($margin_top) {
+                    $styles[] = 'margin-top:' . $margin_top . 'px';
+                }
+                if ($margin_bottom) {
+                    $styles[] = 'margin-bottom:' . $margin_bottom . 'px';
+                }
+                if ($margin_left) {
+                    $styles[] = 'margin-left:' . $margin_left . 'px';
+                }
+                if ($margin_right) {
+                    $styles[] = 'margin-right:' . $margin_right . 'px';
+                }
+
+                $style_attr = $styles ? ' style="' . esc_attr(implode(';', $styles)) . '"' : '';
+                $img_tag = '<img src="' . esc_url($image['url']) . '" alt="' . esc_attr(isset($image['alt']) ? $image['alt'] : '') . '"' . $style_attr . ' />';
                 if ($link) {
-                    $img_tag = '<a href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . $img_tag . '</a>';
+                    $target = $link_target ? ' target="_blank" rel="noopener noreferrer"' : '';
+                    $img_tag = '<a href="' . esc_url($link) . '"' . $target . '>' . $img_tag . '</a>';
                 }
                 $body = $img_tag;
             }
