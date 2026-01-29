@@ -228,6 +228,17 @@
     margin-top: 8px;
 }
 
+.magick-ad-classic-host {
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+    padding: 8px;
+}
+
+.magick-ad-classic-host.is-hidden {
+    display: none;
+}
+
 .magick-ad-image-preview img {
     max-width: 100%;
     height: auto;

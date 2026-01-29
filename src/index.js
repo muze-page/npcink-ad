@@ -30,6 +30,8 @@ import { useStore } from './store';
 import { decodeEntities } from '@wordpress/html-entities';
 import Layout from './Layout';
 const Dashboard = lazy(() => import('./Dashboard'));
+const CLASSIC_EDITOR_ID = 'magick_ad_classic_editor';
+const CLASSIC_EDITOR_HOST_ID = 'magick-ad-classic-editor-host';
 
 apiFetch.use((options, next) => {
     return next({
@@ -104,6 +106,80 @@ const ImagePicker = ({ value, onChange }) => {
                 </Button>
             )}
         </div>
+    );
+};
+
+const ClassicEditor = ({ value, onChange, active }) => {
+    const containerRef = useRef(null);
+    const initializedRef = useRef(false);
+
+    useEffect(() => {
+        if (!containerRef.current || initializedRef.current) {
+            return;
+        }
+        const host = document.getElementById(CLASSIC_EDITOR_HOST_ID);
+        if (!host) {
+            return;
+        }
+        while (host.firstChild) {
+            containerRef.current.appendChild(host.firstChild);
+        }
+        initializedRef.current = true;
+    }, []);
+
+    useEffect(() => {
+        if (!active) {
+            return;
+        }
+        const editor = window.tinymce?.get(CLASSIC_EDITOR_ID);
+        if (editor && value !== editor.getContent()) {
+            editor.setContent(value || '');
+            editor.save();
+        }
+        const textarea = document.getElementById(CLASSIC_EDITOR_ID);
+        if (textarea && textarea.value !== (value || '')) {
+            textarea.value = value || '';
+        }
+    }, [active, value]);
+
+    useEffect(() => {
+        const textarea = document.getElementById(CLASSIC_EDITOR_ID);
+        const editor = window.tinymce?.get(CLASSIC_EDITOR_ID);
+        const handleChange = () => {
+            if (!active) {
+                return;
+            }
+            if (editor) {
+                onChange(editor.getContent());
+                return;
+            }
+            if (textarea) {
+                onChange(textarea.value);
+            }
+        };
+        if (editor) {
+            editor.on('change keyup', handleChange);
+        }
+        if (textarea) {
+            textarea.addEventListener('input', handleChange);
+        }
+        return () => {
+            if (editor) {
+                editor.off('change keyup', handleChange);
+            }
+            if (textarea) {
+                textarea.removeEventListener('input', handleChange);
+            }
+        };
+    }, [active, onChange]);
+
+    return (
+        <div
+            className={`magick-ad-classic-host ${
+                active ? 'is-active' : 'is-hidden'
+            }`}
+            ref={containerRef}
+        />
     );
 };
 
@@ -705,9 +781,12 @@ const AdsConfig = () => {
                     return (
                         <Panel>
                             <PanelBody title="内容配置" initialOpen>
-                                <TextControl
-                                    label="HTML 内容"
+                                <ClassicEditor
                                     value={selectedAd.content?.html || ''}
+                                    active={
+                                        selectedAd.options?.content_type ===
+                                        'html'
+                                    }
                                     onChange={(value) =>
                                         handleUpdateContent({
                                             html: value,

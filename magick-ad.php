@@ -111,6 +111,19 @@ function magick_ad_render_debug_field() {
 function magick_ad_render_app() {
     echo '<div class="wrap">';
     echo '<div id="magick-ad-app"></div>';
+    echo '<div id="magick-ad-classic-editor-host" style="display:none;">';
+    wp_editor(
+        '',
+        'magick_ad_classic_editor',
+        array(
+            'textarea_name' => 'magick_ad_classic_editor',
+            'editor_height' => 260,
+            'media_buttons' => true,
+            'teeny' => false,
+            'quicktags' => true,
+        )
+    );
+    echo '</div>';
     echo '</div>';
 }
 
@@ -124,6 +137,12 @@ function magick_ad_enqueue_admin_assets($hook) {
         'dependencies' => array('wp-element', 'wp-api-fetch'),
         'version' => MAGICK_AD_PLUGIN_VERSION,
     );
+    if (!in_array('wp-editor', $asset['dependencies'], true)) {
+        $asset['dependencies'][] = 'wp-editor';
+    }
+
+    wp_enqueue_editor();
+    wp_enqueue_media();
 
     wp_enqueue_script(
         'magick-ad-app',
