@@ -1,5 +1,7 @@
 import {
     createRoot,
+    lazy,
+    Suspense,
     useEffect,
     useMemo,
     useRef,
@@ -24,18 +26,10 @@ import {
     TextControl,
     ToggleControl,
 } from '@wordpress/components';
-import {
-    CartesianGrid,
-    Line,
-    LineChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from 'recharts';
 import { useStore } from './store';
 import { decodeEntities } from '@wordpress/html-entities';
 import Layout from './Layout';
+const Dashboard = lazy(() => import('./Dashboard'));
 
 apiFetch.use((options, next) => {
     return next({
@@ -973,6 +967,7 @@ const AdsConfig = () => {
                                 options={[
                                     { label: '全部设备', value: 'all' },
                                     { label: '仅移动端', value: 'mobile' },
+                                    { label: '仅平板端', value: 'tablet' },
                                     { label: '仅桌面端', value: 'desktop' },
                                 ]}
                                 onChange={(value) =>
@@ -1194,149 +1189,6 @@ const AdsConfig = () => {
     );
 };
 
-const Dashboard = () => {
-    const [range, setRange] = useState('7');
-    const [data, setData] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        let isMounted = true;
-        setIsLoading(true);
-        setError(null);
-
-        apiFetch({ path: `/magick-ad/v1/report?days=${range}` })
-            .then((response) => {
-                if (!isMounted) {
-                    return;
-                }
-                setData(Array.isArray(response) ? response : []);
-                setIsLoading(false);
-            })
-            .catch((err) => {
-                if (!isMounted) {
-                    return;
-                }
-                setError(err);
-                setIsLoading(false);
-            });
-
-        return () => {
-            isMounted = false;
-        };
-    }, [range]);
-
-    const summary = useMemo(() => {
-        return data.reduce(
-            (acc, item) => {
-                acc.views += Number(item.views || 0);
-                acc.clicks += Number(item.clicks || 0);
-                return acc;
-            },
-            { views: 0, clicks: 0 }
-        );
-    }, [data]);
-
-    const ctr = summary.views
-        ? ((summary.clicks / summary.views) * 100).toFixed(2)
-        : '0.00';
-
-    return (
-        <div className="magick-ad-dashboard">
-            <div className="magick-ad-header">
-                <div>
-                    <h1>统计看板</h1>
-                    <p className="description">近 7 / 30 天投放趋势</p>
-                </div>
-                <SelectControl
-                    label="日期范围"
-                    value={range}
-                    options={[
-                        { label: '最近 7 天', value: '7' },
-                        { label: '最近 30 天', value: '30' },
-                    ]}
-                    onChange={(value) => setRange(value)}
-                />
-            </div>
-
-            {isLoading && <Notice status="info">加载中…</Notice>}
-            {error && (
-                <Notice status="error" isDismissible>
-                    {error.message || '请求失败'}
-                </Notice>
-            )}
-
-            {!isLoading && !error && (
-                <div className="magick-ad-dashboard__content">
-                    <div className="magick-ad-dashboard__cards">
-                        <Card>
-                            <CardBody>
-                                <p className="magick-ad-dashboard__label">
-                                    总展示
-                                </p>
-                                <p className="magick-ad-dashboard__value">
-                                    {summary.views}
-                                </p>
-                            </CardBody>
-                        </Card>
-                        <Card>
-                            <CardBody>
-                                <p className="magick-ad-dashboard__label">
-                                    总点击
-                                </p>
-                                <p className="magick-ad-dashboard__value">
-                                    {summary.clicks}
-                                </p>
-                            </CardBody>
-                        </Card>
-                        <Card>
-                            <CardBody>
-                                <p className="magick-ad-dashboard__label">
-                                    平均 CTR
-                                </p>
-                                <p className="magick-ad-dashboard__value">
-                                    {ctr}%
-                                </p>
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    <Card>
-                        <CardBody>
-                            <div className="magick-ad-dashboard__chart">
-                                <ResponsiveContainer width="100%" height={320}>
-                                    <LineChart data={data}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="date" />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="views"
-                                            stroke="#1e1e1e"
-                                            strokeWidth={2}
-                                            dot={false}
-                                            name="展示"
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="clicks"
-                                            stroke="#2271b1"
-                                            strokeWidth={2}
-                                            dot={false}
-                                            name="点击"
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </CardBody>
-                    </Card>
-                </div>
-            )}
-        </div>
-    );
-};
-
 const App = () => {
     const tabs = [
         { name: 'ads', title: '广告配置', className: 'magick-ad-tab' },
@@ -1345,7 +1197,15 @@ const App = () => {
 
     return (
         <TabPanel tabs={tabs}>
-            {(tab) => (tab.name === 'report' ? <Dashboard /> : <AdsConfig />)}
+            {(tab) =>
+                tab.name === 'report' ? (
+                    <Suspense fallback={<Notice status="info">加载中…</Notice>}>
+                        <Dashboard />
+                    </Suspense>
+                ) : (
+                    <AdsConfig />
+                )
+            }
         </TabPanel>
     );
 };

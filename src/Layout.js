@@ -11,11 +11,11 @@ import {
     ToolbarDropdownMenu,
     ToolbarGroup,
 } from '@wordpress/components';
-import { desktop, laptop, mobile, video, image, code } from '@wordpress/icons';
+import { desktop, tablet, mobile, video, image, code } from '@wordpress/icons';
 
 const previewIcons = {
     desktop,
-    tablet: laptop,
+    tablet,
     mobile,
 };
 
