@@ -133,6 +133,12 @@
     gap: 16px;
 }
 
+.magick-ad-left-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
 .magick-ad-main-card .components-tab-panel__tabs {
     border-bottom: 1px solid #dcdcde;
     margin: -4px -4px 16px;

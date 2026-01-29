@@ -269,83 +269,88 @@ const AdsConfig = () => {
     };
 
     const leftSidebar = (
-        <Card>
-            <CardBody>
-                <div className="magick-ad-sidebar__header">
-                    <h2>广告组</h2>
-                    <DropdownMenu
-                        className="magick-ad-add-menu"
-                        icon={null}
-                        text="新增广告组"
-                        toggleProps={{ variant: 'secondary' }}
-                    >
-                        {({ onClose }) => (
-                            <MenuGroup>
-                                <MenuItem
-                                    onClick={() => {
-                                        addAdGroup('global');
-                                        onClose();
-                                    }}
-                                >
-                                    全局广告
-                                </MenuItem>
-                                <MenuItem
-                                    onClick={() => {
-                                        addAdGroup('targeted');
-                                        onClose();
-                                    }}
-                                >
-                                    指定广告
-                                </MenuItem>
-                            </MenuGroup>
-                        )}
-                    </DropdownMenu>
-                </div>
-                {ads.length === 0 && (
-                    <p className="description">暂无广告组。</p>
-                )}
-                <nav className="magick-ad-sidebar__list">
-                    {ads.map((ad, index) => (
-                        <div
-                            key={ad.id}
-                            className={`magick-ad-sidebar__item ${
-                                selectedId === ad.id ? 'is-active' : ''
-                            } ${
-                                missingPositionIds.has(ad.id) ? 'has-error' : ''
-                            }`}
+        <div className="magick-ad-left-stack">
+            <Card>
+                <CardBody>
+                    <div className="magick-ad-sidebar__header">
+                        <h2>广告组</h2>
+                        <DropdownMenu
+                            className="magick-ad-add-menu"
+                            icon={null}
+                            text="新增广告组"
+                            toggleProps={{ variant: 'secondary' }}
                         >
-                            <Button
-                                variant="tertiary"
-                                isPressed={selectedId === ad.id}
-                                onClick={() => setSelectedId(ad.id)}
+                            {({ onClose }) => (
+                                <MenuGroup>
+                                    <MenuItem
+                                        onClick={() => {
+                                            addAdGroup('global');
+                                            onClose();
+                                        }}
+                                    >
+                                        全局广告
+                                    </MenuItem>
+                                    <MenuItem
+                                        onClick={() => {
+                                            addAdGroup('targeted');
+                                            onClose();
+                                        }}
+                                    >
+                                        指定广告
+                                    </MenuItem>
+                                </MenuGroup>
+                            )}
+                        </DropdownMenu>
+                    </div>
+                    {ads.length === 0 && (
+                        <p className="description">暂无广告组。</p>
+                    )}
+                    <nav className="magick-ad-sidebar__list">
+                        {ads.map((ad, index) => (
+                            <div
+                                key={ad.id}
+                                className={`magick-ad-sidebar__item ${
+                                    selectedId === ad.id ? 'is-active' : ''
+                                } ${
+                                    missingPositionIds.has(ad.id)
+                                        ? 'has-error'
+                                        : ''
+                                }`}
                             >
-                                <span className="magick-ad-sidebar__label">
-                                    {ad.name || `广告组 ${index + 1}`}
-                                </span>
-                                <span className="magick-ad-type">
-                                    {ad.options?.ad_type === 'targeted'
-                                        ? '指定广告'
-                                        : '全局广告'}
-                                </span>
-                                {missingPositionIds.has(ad.id) && (
-                                    <span className="magick-ad-sidebar__alert">
-                                        <span className="magick-ad-sidebar__dot" />
-                                        需配置位置
+                                <Button
+                                    variant="tertiary"
+                                    isPressed={selectedId === ad.id}
+                                    onClick={() => setSelectedId(ad.id)}
+                                >
+                                    <span className="magick-ad-sidebar__label">
+                                        {ad.name || `广告组 ${index + 1}`}
                                     </span>
-                                )}
-                            </Button>
-                            <Button
-                                variant="tertiary"
-                                isDestructive
-                                onClick={() => removeAdGroup(ad.id)}
-                            >
-                                删除
-                            </Button>
-                        </div>
-                    ))}
-                </nav>
-            </CardBody>
-        </Card>
+                                    <span className="magick-ad-type">
+                                        {ad.options?.ad_type === 'targeted'
+                                            ? '指定广告'
+                                            : '全局广告'}
+                                    </span>
+                                    {missingPositionIds.has(ad.id) && (
+                                        <span className="magick-ad-sidebar__alert">
+                                            <span className="magick-ad-sidebar__dot" />
+                                            需配置位置
+                                        </span>
+                                    )}
+                                </Button>
+                                <Button
+                                    variant="tertiary"
+                                    isDestructive
+                                    onClick={() => removeAdGroup(ad.id)}
+                                >
+                                    删除
+                                </Button>
+                            </div>
+                        ))}
+                    </nav>
+                </CardBody>
+            </Card>
+            <DebugPanel onNotice={showNotice} />
+        </div>
     );
 
     const contentPanels = selectedAd ? (
@@ -723,6 +728,21 @@ const AdsConfig = () => {
                                     })
                                 }
                             />
+                            <ToggleControl
+                                label="启用此广告"
+                                checked={selectedAd?.options?.enabled ?? true}
+                                onChange={(value) =>
+                                    handleUpdateOptions({ enabled: value })
+                                }
+                            />
+                            <Button
+                                variant="primary"
+                                onClick={handleSave}
+                                isBusy={isSaving}
+                                disabled={isSaving}
+                            >
+                                {isSaving ? '保存中...' : '保存'}
+                            </Button>
                         </PanelBody>
                     </Panel>
                 </CardBody>
@@ -1538,28 +1558,6 @@ const AdsConfig = () => {
                 </CardBody>
             </Card>
 
-            <Card>
-                <CardBody>
-                    <div className="magick-ad-publish__header">
-                        <h2>发布</h2>
-                    </div>
-                    <ToggleControl
-                        label="启用此广告"
-                        checked={selectedAd?.options?.enabled ?? true}
-                        onChange={(value) =>
-                            handleUpdateOptions({ enabled: value })
-                        }
-                    />
-                    <Button
-                        variant="primary"
-                        onClick={handleSave}
-                        isBusy={isSaving}
-                        disabled={isSaving}
-                    >
-                        {isSaving ? '保存中...' : '保存'}
-                    </Button>
-                </CardBody>
-            </Card>
         </div>
     ) : (
         <Card>
@@ -1645,7 +1643,6 @@ const AdsConfig = () => {
                 onChange={handleFileChange}
             />
 
-            <DebugPanel onNotice={showNotice} />
         </div>
     );
 };
