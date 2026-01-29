@@ -12,6 +12,7 @@ const createAdGroupTemplate = (type = 'global') => ({
         display_mode: 'show',
         random_strategy: 'request',
         html_mode: 'safe',
+        editor_mode: 'design',
         placement_hook: 'footer',
         placement_position: '',
         placement_paragraph: 0,
@@ -29,6 +30,9 @@ const createAdGroupTemplate = (type = 'global') => ({
         image: { id: 0, url: '', alt: '' },
         link: '',
         link_target: false,
+        cta_text: '',
+        custom_html: '',
+        custom_css: '',
         container_style: {
             mode: 'boxed',
             max_width: 100,
@@ -48,6 +52,11 @@ const createAdGroupTemplate = (type = 'global') => ({
         behavior: {
             animation: 'none',
             close_button: false,
+            close_on_esc: true,
+            close_on_overlay: true,
+            lock_scroll: false,
+            frequency_mode: 'none',
+            frequency_limit: 1,
             delay: 0,
         },
         image_settings: {
@@ -149,6 +158,9 @@ const normalizeAd = (ad) => {
             html_mode: ['safe', 'full'].includes(options.html_mode)
                 ? options.html_mode
                 : 'safe',
+            editor_mode: ['quick', 'design', 'expert'].includes(options.editor_mode)
+                ? options.editor_mode
+                : 'design',
             placement_hook: placement.hook || 'footer',
             placement_position:
                 placement.hook === 'content' ? placement.position || 'before' : '',
@@ -171,6 +183,9 @@ const normalizeAd = (ad) => {
             video_url: content.video_url || '',
             link: content.link || '',
             link_target: Boolean(content.link_target),
+            cta_text: content.cta_text || '',
+            custom_html: content.custom_html || '',
+            custom_css: content.custom_css || '',
             image: {
                 id: Number(image.id || 0),
                 url: image.url || '',
@@ -200,15 +215,26 @@ const normalizeAd = (ad) => {
                         ? 'centered'
                         : '',
             },
-            behavior: {
-                animation: ['none', 'fade', 'slide-up', 'zoom'].includes(
-                    behavior.animation
-                )
-                    ? behavior.animation
-                    : 'none',
-                close_button: Boolean(behavior.close_button),
-                delay: Number(behavior.delay || 0),
-            },
+        behavior: {
+            animation: ['none', 'fade', 'slide-up', 'zoom'].includes(
+                behavior.animation
+            )
+                ? behavior.animation
+                : 'none',
+            close_button: Boolean(behavior.close_button),
+            close_on_esc:
+                behavior.close_on_esc === false ? false : true,
+            close_on_overlay:
+                behavior.close_on_overlay === false ? false : true,
+            lock_scroll: Boolean(behavior.lock_scroll),
+            frequency_mode: ['none', 'session', 'day', 'count'].includes(
+                behavior.frequency_mode
+            )
+                ? behavior.frequency_mode
+                : 'none',
+            frequency_limit: Number(behavior.frequency_limit || 1),
+            delay: Number(behavior.delay || 0),
+        },
             image_settings: {
                 watermark: Boolean(imageSettings.watermark),
                 radius: Number(imageSettings.radius || 0),

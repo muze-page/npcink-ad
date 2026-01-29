@@ -226,7 +226,30 @@ const Layout = ({
                 imageNode
             );
 
-            inner = wrappedImage;
+            const cta =
+                content.link && content.cta_text ? (
+                    <a
+                        className="magick-ad-preview__cta"
+                        href={content.link}
+                        target={
+                            content.link_target ? '_blank' : undefined
+                        }
+                        rel={
+                            content.link_target
+                                ? 'noopener noreferrer'
+                                : undefined
+                        }
+                    >
+                        {content.cta_text}
+                    </a>
+                ) : null;
+
+            inner = (
+                <>
+                    {wrappedImage}
+                    {cta}
+                </>
+            );
         } else if (creativeType === 'video' && content.video_url) {
             inner = (
                 <video
@@ -245,6 +268,13 @@ const Layout = ({
             );
         }
 
+        const customHtml = content.custom_html ? (
+            <div
+                className="magick-ad-preview__custom"
+                dangerouslySetInnerHTML={{ __html: content.custom_html }}
+            />
+        ) : null;
+
         if (!inner) {
             return <div className="magick-ad-preview__empty">预览区域</div>;
         }
@@ -258,7 +288,12 @@ const Layout = ({
             );
         }
 
-        const wrapped = wrapContent(inner);
+        const wrapped = wrapContent(
+            <>
+                {inner}
+                {customHtml}
+            </>
+        );
         const animation = behavior.animation || 'none';
         const delay = behavior.delay ?? 0;
         const animationClass =
@@ -318,6 +353,9 @@ const Layout = ({
             <div
                 className={`magick-ad-preview__stage magick-ad-preview__stage--${containerType}`}
             >
+                {content.custom_css && (
+                    <style>{content.custom_css}</style>
+                )}
                 {(containerType === 'popup' ||
                     containerType === 'interstitial') && (
                     <div className="magick-ad-preview__overlay" />

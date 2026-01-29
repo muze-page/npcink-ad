@@ -52,6 +52,17 @@ WordPress 的广告插件，带流量点击图
 内容后
 底部
 
+信息流类型广告
+Interactivity API
+如果你坚持现在用，我建议这样走：
+
+先把 弹窗/横栏 作为 Interactivity API 试点
+先只替换 关闭/ESC/遮罩/锁滚动
+追踪 / 随机 / 频控 仍保留原 JS
+验证无回归后，再扩展到全量交互
+这样可以把风险控制在一个小范围，不会牵扯全部前台逻辑。
+
+
 #### 特技
 
 1.  使用 Readme_XXX.md 来支持不同的语言，例如 Readme_en.md, Readme_zh.md

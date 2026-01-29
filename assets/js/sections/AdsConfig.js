@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import {
     Button,
+    ButtonGroup,
     Card,
     CardBody,
     ColorPicker,
@@ -17,6 +18,7 @@ import {
     Spinner,
     TabPanel,
     TextControl,
+    TextareaControl,
     ToggleControl,
 } from '@wordpress/components';
 import { moreHorizontal } from '@wordpress/icons';
@@ -103,6 +105,13 @@ const AdsConfig = () => {
         () => ads.find((ad) => ad.id === selectedId),
         [ads, selectedId]
     );
+
+    const editorModeRaw =
+        selectedAd?.options?.editor_mode || 'design';
+    const effectiveEditorMode =
+        editorModeRaw === 'expert' && !canUnfilteredHtml
+            ? 'design'
+            : editorModeRaw;
 
     const { targetItems, targetSuggestions, targetLoading, handleTargetSearch } =
         useTargeting(selectedAd);
@@ -1105,6 +1114,387 @@ const AdsConfig = () => {
         <div className="magick-ad-right-stack">
             <Card>
                 <CardBody>
+                    <div className="magick-ad-mode-switch">
+                        <div className="magick-ad-mode-switch__label">
+                            编辑模式
+                        </div>
+                        <ButtonGroup>
+                            <Button
+                                variant="secondary"
+                                isPressed={effectiveEditorMode === 'quick'}
+                                onClick={() =>
+                                    handleUpdateOptions({
+                                        editor_mode: 'quick',
+                                    })
+                                }
+                            >
+                                快速模式
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                isPressed={effectiveEditorMode === 'design'}
+                                onClick={() =>
+                                    handleUpdateOptions({
+                                        editor_mode: 'design',
+                                    })
+                                }
+                            >
+                                设计模式
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                isPressed={effectiveEditorMode === 'expert'}
+                                onClick={() => {
+                                    if (!canUnfilteredHtml) {
+                                        showNotice(
+                                            'error',
+                                            '当前账号无 unfiltered_html 权限，无法启用专家模式。',
+                                            3500
+                                        );
+                                        return;
+                                    }
+                                    handleUpdateOptions({
+                                        editor_mode: 'expert',
+                                    });
+                                }}
+                                disabled={!canUnfilteredHtml}
+                            >
+                                专家模式
+                            </Button>
+                        </ButtonGroup>
+                    </div>
+                    {editorModeRaw === 'expert' && !canUnfilteredHtml && (
+                        <Notice status="warning" isDismissible={false}>
+                            专家模式需要 unfiltered_html 权限，已回退为设计模式。
+                        </Notice>
+                    )}
+                    {effectiveEditorMode === 'quick' && (
+                        <Panel>
+                            <PanelBody title="快速设置" initialOpen>
+                                <TemplateActions
+                                    onOpen={() =>
+                                        openTemplateLibrary(
+                                            selectedAd.options?.creative_type ||
+                                                'image'
+                                        )
+                                    }
+                                    onSave={() =>
+                                        handleSaveTemplate(
+                                            selectedAd.options?.creative_type ||
+                                                'image'
+                                        )
+                                    }
+                                />
+                                <div className="magick-ad-field">
+                                    <p className="magick-ad-field__label">
+                                        主色
+                                    </p>
+                                    <ColorPicker
+                                        color={
+                                            selectedAd.content?.container_style
+                                                ?.background || 'transparent'
+                                        }
+                                        onChangeComplete={(value) =>
+                                            handleUpdateContainerStyle({
+                                                background: formatColorValue(
+                                                    value
+                                                ),
+                                            })
+                                        }
+                                        enableAlpha
+                                    />
+                                </div>
+                                <RangeControl
+                                    label="圆角"
+                                    min={0}
+                                    max={50}
+                                    value={
+                                        selectedAd.content?.container_style
+                                            ?.radius ?? 0
+                                    }
+                                    onChange={(value) =>
+                                        handleUpdateContainerStyle({
+                                            radius: Number(value),
+                                        })
+                                    }
+                                />
+                                {selectedAd.options?.creative_type ===
+                                    'image' && (
+                                    <TextControl
+                                        label="按钮文案"
+                                        value={
+                                            selectedAd.content?.cta_text || ''
+                                        }
+                                        onChange={(value) =>
+                                            handleUpdateContent({
+                                                cta_text: value,
+                                            })
+                                        }
+                                        help="图片广告将展示一个按钮（需设置跳转链接）。"
+                                    />
+                                )}
+                            </PanelBody>
+                            <PanelBody title="展示位置" initialOpen>
+                                    {showValidation &&
+                                        !resolvePlacement(
+                                            selectedAd.options || {}
+                                        ).hook && (
+                                            <Notice
+                                                status="error"
+                                                isDismissible={false}
+                                            >
+                                                请先选择展示位置
+                                            </Notice>
+                                        )}
+                                    {selectedAd.options?.ad_type ===
+                                        'global' && (
+                                        <>
+                                            <SelectControl
+                                                label="展示页面"
+                                                value={
+                                                    selectedAd.options
+                                                        ?.show_page || 'all'
+                                                }
+                                                options={DISPLAY_PAGE_OPTIONS}
+                                                onChange={(value) => {
+                                                    const allowedPositions =
+                                                        getPositionOptions(
+                                                            value
+                                                        ).map(
+                                                            (option) =>
+                                                                option.value
+                                                        );
+                                                    const currentPlacement =
+                                                        resolvePlacement(
+                                                            selectedAd.options ||
+                                                                {}
+                                                        );
+                                                    const currentValue =
+                                                        placementToSlotValue(
+                                                            currentPlacement
+                                                        );
+                                                    const nextPosition =
+                                                        allowedPositions.includes(
+                                                            currentValue
+                                                        )
+                                                            ? currentValue
+                                                            : '';
+                                                    handleUpdateOptions({
+                                                        show_page: value,
+                                                        ...slotToPlacementUpdates(
+                                                            nextPosition
+                                                        ),
+                                                    });
+                                                }}
+                                            />
+                                            <SelectControl
+                                                label="展示位置"
+                                                value={placementToSlotValue(
+                                                    resolvePlacement(
+                                                        selectedAd.options || {}
+                                                    )
+                                                )}
+                                                options={positionOptions}
+                                                onChange={(value) =>
+                                                    handleUpdateOptions({
+                                                        ...slotToPlacementUpdates(
+                                                            value
+                                                        ),
+                                                    })
+                                                }
+                                            />
+                                        </>
+                                    )}
+                                    {selectedAd.options?.ad_type ===
+                                        'targeted' && (
+                                        <>
+                                            <SelectControl
+                                                label="展示类型"
+                                                value={
+                                                    selectedAd.options
+                                                        ?.target_type || ''
+                                                }
+                                                options={[
+                                                    {
+                                                        label: '请选择展示类型',
+                                                        value: '',
+                                                    },
+                                                    ...TARGET_TYPE_OPTIONS,
+                                                ]}
+                                                onChange={(value) => {
+                                                    setTargetItems([]);
+                                                    setTargetSuggestions([]);
+                                                    const allowedPositions =
+                                                        value
+                                                            ? getPositionOptions(
+                                                                  value
+                                                              ).map(
+                                                                  (option) =>
+                                                                      option.value
+                                                              )
+                                                            : [];
+                                                    const nextPosition =
+                                                        allowedPositions.includes(
+                                                            placementToSlotValue(
+                                                                resolvePlacement(
+                                                                    selectedAd.options ||
+                                                                        {}
+                                                                )
+                                                            )
+                                                        )
+                                                            ? placementToSlotValue(
+                                                                  resolvePlacement(
+                                                                      selectedAd.options ||
+                                                                          {}
+                                                                  )
+                                                              )
+                                                            : '';
+                                                    handleUpdateOptions({
+                                                        target_type: value,
+                                                        target_ids: [],
+                                                        ...slotToPlacementUpdates(
+                                                            nextPosition
+                                                        ),
+                                                    });
+                                                }}
+                                            />
+                                            <SelectControl
+                                                label="展示位置"
+                                                value={placementToSlotValue(
+                                                    resolvePlacement(
+                                                        selectedAd.options || {}
+                                                    )
+                                                )}
+                                                options={targetPositionOptions}
+                                                onChange={(value) =>
+                                                    handleUpdateOptions({
+                                                        ...slotToPlacementUpdates(
+                                                            value
+                                                        ),
+                                                    })
+                                                }
+                                                disabled={
+                                                    !selectedAd.options
+                                                        ?.target_type
+                                                }
+                                            />
+                                            <FormTokenField
+                                                label="展示页面"
+                                                value={targetItems.map(
+                                                    (item) => item.label
+                                                )}
+                                                suggestions={targetSuggestions.map(
+                                                    (item) => item.label
+                                                )}
+                                                onInputChange={handleTargetSearch}
+                                                onFocus={() =>
+                                                    handleTargetSearch('')
+                                                }
+                                                __experimentalExpandOnFocus
+                                                onChange={(tokens) => {
+                                                    const tokenMap = new Map();
+                                                    targetItems.forEach(
+                                                        (item) => {
+                                                            tokenMap.set(
+                                                                item.label,
+                                                                item
+                                                            );
+                                                        }
+                                                    );
+                                                    targetSuggestions.forEach(
+                                                        (item) => {
+                                                            tokenMap.set(
+                                                                item.label,
+                                                                item
+                                                            );
+                                                        }
+                                                    );
+                                                    const nextItems = tokens
+                                                        .map((token) =>
+                                                            tokenMap.get(
+                                                                token
+                                                            )
+                                                        )
+                                                        .filter(Boolean);
+                                                    setTargetItems(nextItems);
+                                                    handleUpdateOptions({
+                                                        target_ids: nextItems.map(
+                                                            (item) => item.id
+                                                        ),
+                                                    });
+                                                }}
+                                                placeholder={
+                                                    selectedAd.options
+                                                        ?.target_type
+                                                        ? '输入关键词搜索并选择'
+                                                        : '请先选择展示类型'
+                                                }
+                                                disabled={
+                                                    !selectedAd.options
+                                                        ?.target_type
+                                                }
+                                            />
+                                        </>
+                                    )}
+                                </PanelBody>
+                                <PanelBody title="频控" initialOpen>
+                                    <SelectControl
+                                        label="频控策略"
+                                        value={
+                                            selectedAd.content?.behavior
+                                                ?.frequency_mode || 'none'
+                                        }
+                                        options={[
+                                            {
+                                                label: '不限制',
+                                                value: 'none',
+                                            },
+                                            {
+                                                label: '每会话一次',
+                                                value: 'session',
+                                            },
+                                            {
+                                                label: '每天一次',
+                                                value: 'day',
+                                            },
+                                            {
+                                                label: '最多 N 次',
+                                                value: 'count',
+                                            },
+                                        ]}
+                                        onChange={(value) =>
+                                            handleUpdateBehavior({
+                                                frequency_mode: value,
+                                            })
+                                        }
+                                    />
+                                    {selectedAd.content?.behavior
+                                        ?.frequency_mode === 'count' && (
+                                        <TextControl
+                                            label="最多展示次数"
+                                            type="number"
+                                            min={1}
+                                            value={
+                                                selectedAd.content?.behavior
+                                                    ?.frequency_limit ?? 1
+                                            }
+                                            onChange={(value) =>
+                                                handleUpdateBehavior({
+                                                    frequency_limit:
+                                                        Math.max(
+                                                            1,
+                                                            Number(
+                                                                value || 1
+                                                            )
+                                                        ),
+                                                })
+                                            }
+                                        />
+                                    )}
+                                </PanelBody>
+                        </Panel>
+                    )}
+                    {effectiveEditorMode !== 'quick' && (
                     <TabPanel
                         className="magick-ad-right-tabs"
                         tabs={[
@@ -1605,6 +1995,44 @@ const AdsConfig = () => {
                                                     })
                                                 }
                                             />
+                                            <ToggleControl
+                                                label="ESC 关闭"
+                                                checked={
+                                                    behavior.close_on_esc !==
+                                                    false
+                                                }
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior({
+                                                        close_on_esc: value,
+                                                    })
+                                                }
+                                                help="弹窗/横栏可用"
+                                            />
+                                            <ToggleControl
+                                                label="点击遮罩关闭"
+                                                checked={
+                                                    behavior.close_on_overlay !==
+                                                    false
+                                                }
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior({
+                                                        close_on_overlay: value,
+                                                    })
+                                                }
+                                                help="仅弹窗/插屏有效"
+                                            />
+                                            <ToggleControl
+                                                label="打开时锁定滚动"
+                                                checked={Boolean(
+                                                    behavior.lock_scroll
+                                                )}
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior({
+                                                        lock_scroll: value,
+                                                    })
+                                                }
+                                                help="弹窗/插屏可用"
+                                            />
                                             <RangeControl
                                                 label="延迟显示（秒）"
                                                 min={0}
@@ -1616,6 +2044,61 @@ const AdsConfig = () => {
                                                     })
                                                 }
                                             />
+                                            <SelectControl
+                                                label="频控策略"
+                                                value={
+                                                    behavior.frequency_mode ||
+                                                    'none'
+                                                }
+                                                options={[
+                                                    {
+                                                        label: '不限制',
+                                                        value: 'none',
+                                                    },
+                                                    {
+                                                        label: '每会话一次',
+                                                        value: 'session',
+                                                    },
+                                                    {
+                                                        label: '每天一次',
+                                                        value: 'day',
+                                                    },
+                                                    {
+                                                        label: '最多 N 次',
+                                                        value: 'count',
+                                                    },
+                                                ]}
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior({
+                                                        frequency_mode: value,
+                                                    })
+                                                }
+                                                help="频控仅在前台生效"
+                                            />
+                                            {behavior.frequency_mode ===
+                                                'count' && (
+                                                <TextControl
+                                                    label="最多展示次数"
+                                                    type="number"
+                                                    min={1}
+                                                    value={
+                                                        behavior.frequency_limit ??
+                                                        1
+                                                    }
+                                                    onChange={(value) =>
+                                                        handleUpdateBehavior({
+                                                            frequency_limit:
+                                                                Math.max(
+                                                                    1,
+                                                                    Number(
+                                                                        value ||
+                                                                            1
+                                                                    )
+                                                                ),
+                                                        })
+                                                    }
+                                                />
+                                            )}
                                         </PanelBody>
                                     </Panel>
                                 );
@@ -2036,6 +2519,40 @@ const AdsConfig = () => {
                             );
                         }}
                     </TabPanel>
+                    )}
+                    {effectiveEditorMode === 'expert' && (
+                        <Panel>
+                            <PanelBody title="专家模式：自定义代码" initialOpen>
+                                <Notice status="warning" isDismissible={false}>
+                                    自定义代码仅建议高级用户使用，可能影响站点安全与稳定性。
+                                </Notice>
+                                <TextareaControl
+                                    label="自定义 CSS"
+                                    value={
+                                        selectedAd.content?.custom_css || ''
+                                    }
+                                    onChange={(value) =>
+                                        handleUpdateContent({
+                                            custom_css: value,
+                                        })
+                                    }
+                                    help="会直接输出为 style 标签。"
+                                />
+                                <TextareaControl
+                                    label="自定义 HTML（追加）"
+                                    value={
+                                        selectedAd.content?.custom_html || ''
+                                    }
+                                    onChange={(value) =>
+                                        handleUpdateContent({
+                                            custom_html: value,
+                                        })
+                                    }
+                                    help="会追加在广告内容之后。"
+                                />
+                            </PanelBody>
+                        </Panel>
+                    )}
                 </CardBody>
             </Card>
 

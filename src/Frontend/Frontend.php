@@ -18,6 +18,10 @@ final class Frontend {
         self::init();
     }
 
+    public static function render_block_ad(array $ad): string {
+        return self::build_ad_markup($ad, 'content');
+    }
+
     private static function init() {
         add_filter('the_content', array(__CLASS__, 'inject_content_ads'));
         add_action('wp_head', array(__CLASS__, 'render_head_ads'));
@@ -677,7 +681,7 @@ final class Frontend {
         return $output;
     }
 
-    private static function build_ad_markup($ad, $position) {
+    public static function build_ad_markup($ad, $position) {
         $content = isset($ad['content']) ? $ad['content'] : array();
         $options = isset($ad['options']) ? $ad['options'] : array();
         $content_type = isset($options['creative_type']) ? $options['creative_type'] : (isset($options['content_type']) ? $options['content_type'] : 'image');
@@ -686,6 +690,9 @@ final class Frontend {
         $blocks = isset($content['blocks']) ? $content['blocks'] : '';
         $link = isset($content['link']) ? $content['link'] : '';
         $link_target = !empty($content['link_target']);
+        $cta_text = isset($content['cta_text']) ? (string) $content['cta_text'] : '';
+        $custom_html = isset($content['custom_html']) ? (string) $content['custom_html'] : '';
+        $custom_css = isset($content['custom_css']) ? (string) $content['custom_css'] : '';
         $image = isset($content['image']) ? $content['image'] : array();
         $container_style = isset($content['container_style']) && is_array($content['container_style'])
             ? $content['container_style']
@@ -742,6 +749,10 @@ final class Frontend {
                     $target = $link_target ? ' target="_blank" rel="noopener noreferrer"' : '';
                     $img_tag = '<a href="' . esc_url($link) . '"' . $target . '>' . $img_tag . '</a>';
                 }
+                if ($link && $cta_text) {
+                    $target = $link_target ? ' target="_blank" rel="noopener noreferrer"' : '';
+                    $img_tag .= '<a class="magick-ad-cta" href="' . esc_url($link) . '"' . $target . '>' . esc_html($cta_text) . '</a>';
+                }
                 $body = $img_tag;
             }
         } elseif ($content_type === 'video') {
@@ -754,6 +765,13 @@ final class Frontend {
 
         if (!$body) {
             return '';
+        }
+
+        if ($custom_html) {
+            $body .= $custom_html;
+        }
+        if ($custom_css) {
+            $body = '<style>' . $custom_css . '</style>' . $body;
         }
 
         $mode = isset($container_style['mode']) ? $container_style['mode'] : 'boxed';
@@ -822,8 +840,14 @@ final class Frontend {
         $display_mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
         $random_strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
         $data_attrs = ' data-ad-id="' . esc_attr(isset($ad['id']) ? $ad['id'] : '') . '" data-ad-position="' . esc_attr($position) . '"';
+        $data_attrs .= ' data-ad-container="' . esc_attr($container_type) . '"';
         $delay = isset($behavior['delay']) ? absint($behavior['delay']) : 0;
         $animation = isset($behavior['animation']) ? $behavior['animation'] : 'none';
+        $close_on_esc = array_key_exists('close_on_esc', $behavior) ? (bool) $behavior['close_on_esc'] : true;
+        $close_on_overlay = array_key_exists('close_on_overlay', $behavior) ? (bool) $behavior['close_on_overlay'] : true;
+        $lock_scroll = !empty($behavior['lock_scroll']);
+        $frequency_mode = isset($behavior['frequency_mode']) ? $behavior['frequency_mode'] : 'none';
+        $frequency_limit = isset($behavior['frequency_limit']) ? absint($behavior['frequency_limit']) : 1;
         if ($delay > 0) {
             $data_attrs .= ' data-ad-delay="' . esc_attr($delay) . '"';
         }
@@ -833,9 +857,22 @@ final class Frontend {
         if ($display_mode === 'random' && $random_strategy === 'session') {
             $data_attrs .= ' data-ad-random="session"';
         }
+        if ($close_on_esc) {
+            $data_attrs .= ' data-ad-close-esc="1"';
+        }
+        if ($close_on_overlay) {
+            $data_attrs .= ' data-ad-close-overlay="1"';
+        }
+        if ($lock_scroll) {
+            $data_attrs .= ' data-ad-lock-scroll="1"';
+        }
+        if ($frequency_mode && $frequency_mode !== 'none') {
+            $data_attrs .= ' data-ad-freq-mode="' . esc_attr($frequency_mode) . '"';
+            $data_attrs .= ' data-ad-freq-limit="' . esc_attr($frequency_limit) . '"';
+        }
         $container_class = 'magick-ad-container--' . esc_attr($container_type);
         if (in_array($container_type, array('popup', 'interstitial'), true)) {
-            $body = '<div class="magick-ad-overlay"></div><div class="magick-ad-popup">' . $body . '</div>';
+            $body = '<div class="magick-ad-overlay"></div><div class="magick-ad-popup" role="dialog" aria-modal="true" tabindex="-1">' . $body . '</div>';
         }
         $unit_class = 'magick-ad-unit magick-ad-unit--' . esc_attr($position) . ' ' . $container_class;
         if ($display_mode === 'random' && $random_strategy === 'session') {

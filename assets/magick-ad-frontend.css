@@ -44,6 +44,19 @@
     width: 100%;
 }
 
+.magick-ad-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 14px;
+    text-decoration: none;
+}
+
 .magick-ad-layout--centered {
     display: flex;
     justify-content: center;
@@ -91,6 +104,10 @@
     display: none !important;
 }
 
+body.magick-ad-lock-scroll {
+    overflow: hidden;
+}
+
 .magick-ad-anim--fade {
     animation: magickAdFade 0.35s ease-out;
 }
@@ -131,6 +148,14 @@
     to {
         opacity: 1;
         transform: scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .magick-ad-anim--fade,
+    .magick-ad-anim--slide-up,
+    .magick-ad-anim--zoom {
+        animation: none !important;
     }
 }
 

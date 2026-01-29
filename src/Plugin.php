@@ -3,6 +3,7 @@
 namespace MagickAD;
 
 use MagickAD\Admin\Admin;
+use MagickAD\Blocks\Blocks;
 use MagickAD\Data\Schema;
 use MagickAD\Data\Template_CPT;
 use MagickAD\Frontend\Frontend;
@@ -37,6 +38,7 @@ final class Plugin {
 
     public function register(): void {
         (new Template_CPT())->register();
+        (new Blocks())->register();
         (new Routes())->register();
         (new Frontend())->register();
         (new Debug())->register();

@@ -178,6 +178,11 @@ final class Settings {
                 array('safe', 'full'),
                 'safe'
             ),
+            'editor_mode' => self::sanitize_choice(
+                isset($options['editor_mode']) ? $options['editor_mode'] : 'design',
+                array('quick', 'design', 'expert'),
+                'design'
+            ),
             'device' => self::sanitize_choice(
                 isset($options['device']) ? $options['device'] : 'all',
                 array('all', 'mobile', 'tablet', 'desktop'),
@@ -218,12 +223,26 @@ final class Settings {
             }
         }
 
+        $custom_html = isset($content['custom_html']) && is_string($content['custom_html'])
+            ? $content['custom_html']
+            : '';
+        $custom_css = isset($content['custom_css']) && is_string($content['custom_css'])
+            ? $content['custom_css']
+            : '';
+        if (!current_user_can('unfiltered_html')) {
+            $custom_html = '';
+            $custom_css = '';
+        }
+
         $sanitized_content = array(
             'html' => $html_value,
             'blocks' => $blocks_value,
             'video_url' => isset($content['video_url']) ? esc_url_raw($content['video_url']) : '',
             'link' => isset($content['link']) ? esc_url_raw($content['link']) : '',
             'link_target' => !empty($content['link_target']),
+            'cta_text' => isset($content['cta_text']) ? sanitize_text_field($content['cta_text']) : '',
+            'custom_html' => $custom_html,
+            'custom_css' => $custom_css,
             'image' => array(
                 'id' => isset($image['id']) ? absint($image['id']) : 0,
                 'url' => isset($image['url']) ? esc_url_raw($image['url']) : '',
@@ -272,6 +291,17 @@ final class Settings {
                     'none'
                 ),
                 'close_button' => !empty($behavior['close_button']),
+                'close_on_esc' => array_key_exists('close_on_esc', $behavior) ? (bool) $behavior['close_on_esc'] : true,
+                'close_on_overlay' => array_key_exists('close_on_overlay', $behavior)
+                    ? (bool) $behavior['close_on_overlay']
+                    : true,
+                'lock_scroll' => !empty($behavior['lock_scroll']),
+                'frequency_mode' => self::sanitize_choice(
+                    isset($behavior['frequency_mode']) ? $behavior['frequency_mode'] : 'none',
+                    array('none', 'session', 'day', 'count'),
+                    'none'
+                ),
+                'frequency_limit' => isset($behavior['frequency_limit']) ? max(1, absint($behavior['frequency_limit'])) : 1,
                 'delay' => isset($behavior['delay']) ? absint($behavior['delay']) : 0,
             ),
             'image_settings' => array(

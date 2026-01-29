@@ -1,0 +1,48 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 2,
+    "name": "magick-ad/ad",
+    "title": "Magick AD",
+    "category": "widgets",
+    "icon": "megaphone",
+    "description": "Render a Magick AD creative block.",
+    "textdomain": "magick-ad",
+    "editorScript": "magick-ad-block-editor",
+    "supports": {
+        "html": false
+    },
+    "attributes": {
+        "creativeType": {
+            "type": "string",
+            "default": "html"
+        },
+        "html": {
+            "type": "string",
+            "default": ""
+        },
+        "imageId": {
+            "type": "number",
+            "default": 0
+        },
+        "imageUrl": {
+            "type": "string",
+            "default": ""
+        },
+        "imageAlt": {
+            "type": "string",
+            "default": ""
+        },
+        "link": {
+            "type": "string",
+            "default": ""
+        },
+        "linkTarget": {
+            "type": "boolean",
+            "default": false
+        },
+        "videoUrl": {
+            "type": "string",
+            "default": ""
+        }
+    }
+}
