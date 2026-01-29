@@ -112,6 +112,7 @@ const ImagePicker = ({ value, onChange }) => {
 const ClassicEditor = ({ value, onChange, active }) => {
     const containerRef = useRef(null);
     const initializedRef = useRef(false);
+    const editorRef = useRef(null);
 
     useEffect(() => {
         if (!containerRef.current || initializedRef.current) {
@@ -143,29 +144,46 @@ const ClassicEditor = ({ value, onChange, active }) => {
     }, [active, value]);
 
     useEffect(() => {
-        const textarea = document.getElementById(CLASSIC_EDITOR_ID);
-        const editor = window.tinymce?.get(CLASSIC_EDITOR_ID);
         const handleChange = () => {
             if (!active) {
                 return;
             }
-            if (editor) {
-                onChange(editor.getContent());
+            const currentEditor = editorRef.current;
+            if (currentEditor) {
+                onChange(currentEditor.getContent());
                 return;
             }
+            const textarea = document.getElementById(CLASSIC_EDITOR_ID);
             if (textarea) {
-                onChange(textarea.value);
+                onChange(textarea.value || '');
             }
         };
-        if (editor) {
-            editor.on('change keyup', handleChange);
-        }
+        const bindEditor = () => {
+            const currentEditor = window.tinymce?.get(CLASSIC_EDITOR_ID);
+            if (!currentEditor || currentEditor === editorRef.current) {
+                return;
+            }
+            editorRef.current = currentEditor;
+            currentEditor.on(
+                'change keyup input undo redo',
+                handleChange
+            );
+        };
+        const interval = window.setInterval(bindEditor, 300);
+        bindEditor();
+
+        const textarea = document.getElementById(CLASSIC_EDITOR_ID);
         if (textarea) {
             textarea.addEventListener('input', handleChange);
         }
         return () => {
-            if (editor) {
-                editor.off('change keyup', handleChange);
+            window.clearInterval(interval);
+            if (editorRef.current) {
+                editorRef.current.off(
+                    'change keyup input undo redo',
+                    handleChange
+                );
+                editorRef.current = null;
             }
             if (textarea) {
                 textarea.removeEventListener('input', handleChange);
