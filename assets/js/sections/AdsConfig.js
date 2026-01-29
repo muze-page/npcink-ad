@@ -6,6 +6,7 @@ import {
     ColorPicker,
     DropdownMenu,
     FormTokenField,
+    Modal,
     MenuGroup,
     MenuItem,
     Notice,
@@ -53,6 +54,7 @@ const AdsConfig = () => {
     const [showValidation, setShowValidation] = useState(false);
     const [devicePreview, setDevicePreview] = useState('desktop');
     const { notice, showNotice, clearNotice } = useNotice();
+    const [deleteTarget, setDeleteTarget] = useState(null);
 
     useEffect(() => {
         fetchFromDB();
@@ -319,16 +321,21 @@ const AdsConfig = () => {
                             >
                                 <Button
                                     variant="tertiary"
-                                    isPressed={selectedId === ad.id}
                                     onClick={() => setSelectedId(ad.id)}
+                                    aria-current={
+                                        selectedId === ad.id ? 'true' : undefined
+                                    }
+                                    className="magick-ad-sidebar__main"
                                 >
-                                    <span className="magick-ad-sidebar__label">
-                                        {ad.name || `广告组 ${index + 1}`}
-                                    </span>
-                                    <span className="magick-ad-type">
-                                        {ad.options?.ad_type === 'targeted'
-                                            ? '指定广告'
-                                            : '全局广告'}
+                                    <span className="magick-ad-sidebar__text">
+                                        <span className="magick-ad-sidebar__title">
+                                            {ad.name || `广告组 ${index + 1}`}
+                                        </span>
+                                        <span className="magick-ad-type">
+                                            {ad.options?.ad_type === 'targeted'
+                                                ? '指定广告'
+                                                : '全局广告'}
+                                        </span>
                                     </span>
                                     {missingPositionIds.has(ad.id) && (
                                         <span className="magick-ad-sidebar__alert">
@@ -340,7 +347,8 @@ const AdsConfig = () => {
                                 <Button
                                     variant="tertiary"
                                     isDestructive
-                                    onClick={() => removeAdGroup(ad.id)}
+                                    className="magick-ad-delete-btn"
+                                    onClick={() => setDeleteTarget(ad)}
                                 >
                                     删除
                                 </Button>
@@ -1634,6 +1642,41 @@ const AdsConfig = () => {
                 onExport={handleExportTemplates}
                 onClose={() => setTemplateModalOpen(false)}
             />
+
+            {deleteTarget && (
+                <Modal
+                    title="确认删除广告组"
+                    onRequestClose={() => setDeleteTarget(null)}
+                    className="magick-ad-confirm-modal"
+                >
+                    <p>
+                        确认删除“{deleteTarget.name || '未命名广告组'}”吗？
+                        删除后无法恢复。
+                    </p>
+                    <div className="magick-ad-confirm-actions">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setDeleteTarget(null)}
+                        >
+                            取消
+                        </Button>
+                        <Button
+                            variant="primary"
+                            isDestructive
+                            onClick={() => {
+                                const targetId = deleteTarget.id;
+                                setDeleteTarget(null);
+                                removeAdGroup(targetId);
+                                if (selectedId === targetId) {
+                                    setSelectedId(null);
+                                }
+                            }}
+                        >
+                            确认删除
+                        </Button>
+                    </div>
+                </Modal>
+            )}
 
             <input
                 ref={fileInputRef}

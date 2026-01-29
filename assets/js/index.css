@@ -198,7 +198,7 @@
 .magick-ad-sidebar__list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
 }
 
 .magick-ad-sidebar__item {
@@ -206,34 +206,69 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    background: #f6f7f7;
+    padding: 14px 14px 14px 18px;
+    border-radius: 16px;
+    border: 1px solid #e2e6ee;
+    background: #ffffff;
     position: relative;
+    box-shadow: 0 2px 6px rgba(17, 24, 39, 0.06);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease,
+        background 0.2s ease, transform 0.2s ease;
 }
 
-.magick-ad-sidebar__label {
-    display: inline-flex;
-    align-items: center;
+.magick-ad-sidebar__item:hover {
+    border-color: #cfd6ee;
+    box-shadow: 0 6px 14px rgba(17, 24, 39, 0.1);
+}
+
+.magick-ad-sidebar__main {
+    flex: 1;
+    justify-content: flex-start;
+    gap: 10px;
+    background: transparent;
+    box-shadow: none;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+}
+
+.magick-ad-sidebar__main.components-button.is-pressed {
+    background: transparent;
+    box-shadow: none;
+}
+
+.magick-ad-sidebar__text {
+    display: flex;
+    flex-direction: column;
     gap: 6px;
+    min-width: 0;
+    text-align: left;
+}
+
+.magick-ad-sidebar__title {
+    display: block;
+    font-weight: 600;
+    color: #1d2327;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .magick-ad-type {
     display: inline-flex;
     align-items: center;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 999px;
-    background: #e7f1fb;
-    color: #1d2327;
-    font-size: 11px;
+    background: #eef2ff;
+    color: #364fc7;
+    font-size: 12px;
     line-height: 1;
     font-weight: 600;
 }
 
 .magick-ad-sidebar__item.has-error {
     border-color: #d63638;
-    background: #fbeaea;
+    background: #fff5f5;
 }
 
 .magick-ad-sidebar__item.has-error .magick-ad-sidebar__label {
@@ -262,20 +297,40 @@
 }
 
 .magick-ad-sidebar__item.is-active {
-    border-color: #2271b1;
-    background: #e7f1fb;
-    box-shadow: 0 0 0 1px rgba(34, 113, 177, 0.15);
+    border-color: #3858e9;
+    background: linear-gradient(90deg, rgba(56, 88, 233, 0.12), rgba(56, 88, 233, 0.02));
+    box-shadow: 0 10px 24px rgba(56, 88, 233, 0.18);
+    transform: translateY(-1px);
 }
 
 .magick-ad-sidebar__item.is-active::before {
     content: '';
     position: absolute;
     left: -1px;
-    top: 6px;
-    bottom: 6px;
+    top: 8px;
+    bottom: 8px;
     width: 4px;
     border-radius: 4px;
-    background: #2271b1;
+    background: #3858e9;
+}
+
+.magick-ad-delete-btn {
+    color: #b32d2e;
+    border: 1px solid #f3c6c6;
+    background: #ffffff;
+    border-radius: 10px;
+}
+
+.magick-ad-delete-btn:hover {
+    border-color: #e5a3a3;
+    background: #fff1f1;
+}
+
+.magick-ad-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
 }
 
 .magick-ad-detail .components-panel {
