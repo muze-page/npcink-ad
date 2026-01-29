@@ -458,6 +458,10 @@ final class Frontend {
         $options = isset($ad['options']) ? $ad['options'] : array();
         $ad_type = isset($options['ad_type']) ? $options['ad_type'] : 'global';
 
+        if (isset($ad['status']) && $ad['status'] !== 'publish') {
+            return false;
+        }
+
         if (isset($options['enabled']) && !$options['enabled']) {
             return false;
         }
@@ -495,6 +499,10 @@ final class Frontend {
         $reasons = array();
         $options = isset($ad['options']) ? $ad['options'] : array();
         $ad_type = isset($options['ad_type']) ? $options['ad_type'] : 'global';
+
+        if (isset($ad['status']) && $ad['status'] !== 'publish') {
+            $reasons[] = 'status';
+        }
 
         if (isset($options['enabled']) && !$options['enabled']) {
             $reasons[] = 'disabled';
@@ -561,6 +569,7 @@ final class Frontend {
         $map = array(
             'disabled' => '未启用',
             'expired' => '已过期',
+            'status' => '未发布/排期中',
             'display_mode=hide' => '展示模式=隐藏',
             'display_mode=random_hidden' => '随机模式未命中',
             'targeting' => '定向条件不匹配',

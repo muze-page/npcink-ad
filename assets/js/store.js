@@ -4,6 +4,8 @@ import apiFetch from '@wordpress/api-fetch';
 const createAdGroupTemplate = (type = 'global') => ({
     id: `ad_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     name: type === 'targeted' ? '指定广告' : '全局广告',
+    status: 'publish',
+    date: '',
     options: {
         enabled: true,
         ad_type: type,
@@ -132,6 +134,11 @@ const normalizeAd = (ad) => {
 
     return {
         ...safeAd,
+        status:
+            safeAd.status ||
+            safeAd.post_status ||
+            (options.enabled === false ? 'draft' : 'publish'),
+        date: safeAd.date || safeAd.post_date || '',
         options: {
             enabled: options.enabled ?? true,
             ad_type: options.ad_type || 'global',

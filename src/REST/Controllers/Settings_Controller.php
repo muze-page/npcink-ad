@@ -2,7 +2,7 @@
 
 namespace MagickAD\REST\Controllers;
 
-use MagickAD\Data\Settings;
+use MagickAD\Data\Ads;
 use WP_Error;
 use WP_REST_Request;
 
@@ -17,21 +17,18 @@ final class Settings_Controller {
             return new WP_Error('magick_ad_invalid_payload', 'Invalid payload', array('status' => 400));
         }
 
-        $sanitized = Settings::sanitize_settings($settings);
-        $validation = Settings::validate_settings($sanitized);
-        if (is_wp_error($validation)) {
-            return $validation;
+        $saved = Ads::save_settings($settings);
+        if (is_wp_error($saved)) {
+            return $saved;
         }
-
-        update_option(Settings::OPTION_KEY, $sanitized);
 
         return rest_ensure_response(array(
             'success' => true,
-            'saved' => $sanitized,
+            'saved' => $saved,
         ));
     }
 
     public static function get() {
-        return rest_ensure_response(Settings::get_settings());
+        return rest_ensure_response(Ads::get_settings());
     }
 }

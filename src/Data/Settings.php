@@ -12,15 +12,7 @@ final class Settings {
     public const OPTION_KEY = 'magick_ad_settings';
 
     public static function get_settings(): array {
-        $settings = get_option(self::OPTION_KEY, array('ads' => array()));
-        if (!is_array($settings)) {
-            $settings = array('ads' => array());
-        }
-        if (!isset($settings['ads']) || !is_array($settings['ads'])) {
-            $settings['ads'] = array();
-        }
-
-        return $settings;
+        return Ads::get_settings();
     }
 
     public static function sanitize_settings($settings): array {

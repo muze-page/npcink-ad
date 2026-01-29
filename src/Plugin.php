@@ -5,6 +5,8 @@ namespace MagickAD;
 use MagickAD\Admin\Admin;
 use MagickAD\Blocks\Blocks;
 use MagickAD\Blocks\Patterns;
+use MagickAD\Data\Ads;
+use MagickAD\Data\Ads_Migrator;
 use MagickAD\Data\Schema;
 use MagickAD\Data\Template_Migrator;
 use MagickAD\Frontend\Frontend;
@@ -43,6 +45,7 @@ final class Plugin {
         (new Routes())->register();
         (new Frontend())->register();
         (new Debug())->register();
+        Ads::register();
 
         if (is_admin()) {
             (new Admin())->register();
@@ -52,5 +55,6 @@ final class Plugin {
     public function maybe_upgrade(): void {
         Schema::maybe_upgrade();
         Template_Migrator::maybe_migrate();
+        Ads_Migrator::maybe_migrate();
     }
 }

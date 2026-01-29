@@ -71,6 +71,91 @@ const AdsConfig = () => {
         window.MagickAD &&
         window.MagickAD.canUnfilteredHtml;
 
+    const pad = (value) => String(value).padStart(2, '0');
+
+    const parseDateTime = (value) => {
+        if (!value) {
+            return null;
+        }
+        const normalized = value.includes('T')
+            ? value.replace('T', ' ')
+            : value;
+        const [datePart, timePart = ''] = normalized.split(' ');
+        const [year, month, day] = datePart.split('-').map(Number);
+        if (!year || !month || !day) {
+            return null;
+        }
+        const [hour = 0, minute = 0, second = 0] =
+            timePart.split(':').map(Number);
+        return new Date(year, month - 1, day, hour, minute, second);
+    };
+
+    const formatDateTimeLocalInput = (value) => {
+        const date = parseDateTime(value);
+        if (!date) {
+            return '';
+        }
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+            date.getDate()
+        )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    const formatDateTimeStorage = (value) => {
+        if (!value) {
+            return '';
+        }
+        if (value.includes('T')) {
+            const [datePart, timePart] = value.split('T');
+            const [hour = '00', minute = '00'] = timePart.split(':');
+            return `${datePart} ${pad(hour)}:${pad(minute)}:00`;
+        }
+        return value.length === 16 ? `${value}:00` : value;
+    };
+
+    const buildDefaultSchedule = () => {
+        const date = new Date();
+        date.setMinutes(date.getMinutes() + 10);
+        date.setSeconds(0);
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+            date.getDate()
+        )} ${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+    };
+
+    const formatDateFromDate = (date) =>
+        `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+            date.getDate()
+        )} ${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+
+    const isFutureDate = (value) => {
+        const date = parseDateTime(value);
+        if (!date) {
+            return false;
+        }
+        return date.getTime() > Date.now();
+    };
+
+    const resolveStatus = (ad) => {
+        if (!ad) {
+            return 'draft';
+        }
+        const enabled = ad?.options?.enabled !== false;
+        if (!enabled) {
+            return 'draft';
+        }
+        return ad.status || 'publish';
+    };
+
+    const statusMeta = (ad) => {
+        const status = resolveStatus(ad);
+        if (status === 'future') {
+            return { label: '已排期', className: 'is-scheduled' };
+        }
+        if (status === 'publish') {
+            return { label: '已发布', className: 'is-enabled' };
+        }
+        return { label: '已停用', className: 'is-disabled' };
+    };
+
     useEffect(() => {
         fetchFromDB();
     }, [fetchFromDB]);
@@ -283,6 +368,13 @@ const AdsConfig = () => {
                 ...updates,
             },
         });
+    };
+
+    const handleUpdateMeta = (updates) => {
+        if (!selectedAd) {
+            return;
+        }
+        updateAdGroup(selectedAd.id, updates);
     };
 
     const handleUpdateContent = (updates) => {
@@ -513,7 +605,13 @@ const AdsConfig = () => {
 
     const handleToggleEnabled = async (ad) => {
         const nextEnabled = !(ad?.options?.enabled ?? true);
+        const nextStatus = nextEnabled
+            ? isFutureDate(ad?.date) || ad?.status === 'future'
+                ? 'future'
+                : 'publish'
+            : 'draft';
         updateAdGroup(ad.id, {
+            status: nextStatus,
             options: {
                 ...(ad.options || {}),
                 enabled: nextEnabled,
@@ -660,18 +758,15 @@ const AdsConfig = () => {
                                                             </span>
                                                             <span
                                                                 className={`magick-ad-status-pill ${
-                                                                    ad?.options
-                                                                        ?.enabled ===
-                                                                    false
-                                                                        ? 'is-disabled'
-                                                                        : 'is-enabled'
+                                                                    statusMeta(ad)
+                                                                        .className
                                                                 }`}
                                                             >
-                                                                {ad?.options
-                                                                    ?.enabled ===
-                                                                false
-                                                                    ? '已停用'
-                                                                    : '已启用'}
+                                                                {
+                                                                    statusMeta(
+                                                                        ad
+                                                                    ).label
+                                                                }
                                                             </span>
                                                         </span>
                                                         {missingPositionIds.has(
@@ -1174,6 +1269,103 @@ const AdsConfig = () => {
 
     const rightSidebar = selectedAd ? (
         <div className="magick-ad-right-stack">
+            <Card>
+                <CardBody>
+                    <div className="magick-ad-schedule-header">
+                        <div className="magick-ad-schedule-title">
+                            发布与排期
+                        </div>
+                        <span
+                            className={`magick-ad-status-pill ${
+                                statusMeta(selectedAd).className
+                            }`}
+                        >
+                            {statusMeta(selectedAd).label}
+                        </span>
+                    </div>
+                    <SelectControl
+                        label="发布状态"
+                        value={resolveStatus(selectedAd)}
+                        options={[
+                            { label: '已发布', value: 'publish' },
+                            { label: '定时发布', value: 'future' },
+                            { label: '草稿/停用', value: 'draft' },
+                        ]}
+                        onChange={(value) => {
+                            if (!selectedAd) {
+                                return;
+                            }
+                            if (value === 'draft') {
+                                handleUpdateMeta({
+                                    status: 'draft',
+                                    options: {
+                                        ...selectedAd.options,
+                                        enabled: false,
+                                    },
+                                });
+                                return;
+                            }
+                            if (value === 'future') {
+                                handleUpdateMeta({
+                                    status: 'future',
+                                    date: selectedAd.date || buildDefaultSchedule(),
+                                    options: {
+                                        ...selectedAd.options,
+                                        enabled: true,
+                                    },
+                                });
+                                return;
+                            }
+                            const nextDate =
+                                selectedAd.date && isFutureDate(selectedAd.date)
+                                    ? formatDateFromDate(new Date())
+                                    : selectedAd.date || '';
+                            handleUpdateMeta({
+                                status: 'publish',
+                                date: nextDate,
+                                options: {
+                                    ...selectedAd.options,
+                                    enabled: true,
+                                },
+                            });
+                        }}
+                    />
+                    {resolveStatus(selectedAd) === 'future' && (
+                        <TextControl
+                            label="排期时间"
+                            type="datetime-local"
+                            value={formatDateTimeLocalInput(selectedAd.date)}
+                            onChange={(value) => {
+                                const nextDate =
+                                    formatDateTimeStorage(value);
+                                if (!nextDate) {
+                                    handleUpdateMeta({
+                                        date: '',
+                                        status: 'draft',
+                                        options: {
+                                            ...selectedAd.options,
+                                            enabled: false,
+                                        },
+                                    });
+                                    return;
+                                }
+                                const nextStatus = isFutureDate(nextDate)
+                                    ? 'future'
+                                    : 'publish';
+                                handleUpdateMeta({
+                                    date: nextDate,
+                                    status: nextStatus,
+                                    options: {
+                                        ...selectedAd.options,
+                                        enabled: true,
+                                    },
+                                });
+                            }}
+                            help="达到排期时间后，广告会自动发布。"
+                        />
+                    )}
+                </CardBody>
+            </Card>
             <Card>
                 <CardBody>
                     <div className="magick-ad-mode-switch">

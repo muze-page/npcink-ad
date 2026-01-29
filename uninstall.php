@@ -13,18 +13,20 @@ $wpdb->query("DROP TABLE IF EXISTS {$log_table}");
 
 delete_option('magick_ad_db_version');
 delete_option('magick_ad_settings');
+delete_option('magick_ad_ads_migrated');
 delete_option('magick_ad_debug');
 delete_option('magick_ad_debug_log_settings');
 delete_option('magick_ad_classic_editor');
 delete_option('magick_ad_stats_diagnostics');
+delete_option('magick_ad_template_categories');
 
-$templates = get_posts(array(
-    'post_type' => 'magick_template',
+$ads = get_posts(array(
+    'post_type' => 'magick_ad',
     'post_status' => 'any',
     'numberposts' => -1,
     'fields' => 'ids',
 ));
 
-foreach ($templates as $template_id) {
-    wp_delete_post($template_id, true);
+foreach ($ads as $ad_id) {
+    wp_delete_post($ad_id, true);
 }
