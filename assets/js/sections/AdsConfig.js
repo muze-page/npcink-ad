@@ -421,6 +421,7 @@ const AdsConfig = () => {
                                                                     {ad.name ||
                                                                         `广告组 ${index + 1}`}
                                                                 </span>
+                                                                </span>
                                                                 <span
                                                                     className={`magick-ad-status ${
                                                                         ad?.options
@@ -437,14 +438,7 @@ const AdsConfig = () => {
                                                                         ? '已停用'
                                                                         : '已启用'}
                                                                 </span>
-                                                            </span>
-                                                            <span className="magick-ad-type">
-                                                                {ad.options
-                                                                    ?.ad_type ===
-                                                                'targeted'
-                                                                    ? '指定广告'
-                                                                    : '全局广告'}
-                                                            </span>
+                                                            
                                                         </span>
                                                         {missingPositionIds.has(
                                                             ad.id

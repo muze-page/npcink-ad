@@ -418,8 +418,6 @@
 .magick-ad-status {
     display: inline-flex;
     align-items: center;
-    padding: 2px 8px;
-    border-radius: 999px;
     font-size: 11px;
     line-height: 1.2;
     font-weight: 700;
@@ -427,12 +425,10 @@
 }
 
 .magick-ad-status.is-enabled {
-    background: #e6f4ea;
     color: #1e7e34;
 }
 
 .magick-ad-status.is-disabled {
-    background: #f8d7da;
     color: #b32d2e;
 }
 
