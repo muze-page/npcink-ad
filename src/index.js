@@ -401,7 +401,7 @@ const TemplateLibraryModal = ({
                                     className="magick-ad-template-card"
                                 >
                                     <div className="magick-ad-template-card__body">
-                                        <h4>{template.name}</h4>
+                                        <h4>{template.name || template.title}</h4>
                                         <p>{template.description || ''}</p>
                                     </div>
                                     <div className="magick-ad-template-card__actions">
@@ -525,92 +525,108 @@ const ANIMATION_OPTIONS = [
 const HTML_TEMPLATES = [
     {
         id: 'adsense',
-        title: 'AdSense 响应式容器',
+        name: 'AdSense 响应式容器',
         description: '标准 AdSense 响应式代码骨架',
-        html:
-            '<div class="adsense-slot">请在此替换为 AdSense 代码</div>',
-        container_style: {
-            mode: 'boxed',
-            max_width: 100,
-            max_width_unit: '%',
-            padding_top: 0,
-            padding_right: 0,
-            padding_bottom: 0,
-            padding_left: 0,
-            background: 'transparent',
-            radius: 0,
-            shadow: 'none',
-            badge_enabled: false,
-            badge_text: '广告',
-            badge_color: '#1d2327',
-            layout: '',
+        type: 'html',
+        source: 'preset',
+        data: {
+            html:
+                '<div class="adsense-slot">请在此替换为 AdSense 代码</div>',
+            container_style: {
+                mode: 'boxed',
+                max_width: 100,
+                max_width_unit: '%',
+                padding_top: 0,
+                padding_right: 0,
+                padding_bottom: 0,
+                padding_left: 0,
+                background: 'transparent',
+                radius: 0,
+                shadow: 'none',
+                badge_enabled: false,
+                badge_text: '广告',
+                badge_color: '#1d2327',
+                layout: '',
+            },
         },
     },
     {
         id: 'centered',
-        title: '居中横幅',
+        name: '居中横幅',
         description: 'Flex 居中，背景透明',
-        html: '<div class="banner-slot">横幅广告内容</div>',
-        container_style: {
-            mode: 'boxed',
-            max_width: 728,
-            max_width_unit: 'px',
-            padding_top: 8,
-            padding_right: 8,
-            padding_bottom: 8,
-            padding_left: 8,
-            background: 'transparent',
-            radius: 0,
-            shadow: 'none',
-            badge_enabled: false,
-            badge_text: '广告',
-            badge_color: '#1d2327',
-            layout: 'centered',
+        type: 'html',
+        source: 'preset',
+        data: {
+            html: '<div class="banner-slot">横幅广告内容</div>',
+            container_style: {
+                mode: 'boxed',
+                max_width: 728,
+                max_width_unit: 'px',
+                padding_top: 8,
+                padding_right: 8,
+                padding_bottom: 8,
+                padding_left: 8,
+                background: 'transparent',
+                radius: 0,
+                shadow: 'none',
+                badge_enabled: false,
+                badge_text: '广告',
+                badge_color: '#1d2327',
+                layout: 'centered',
+            },
         },
     },
     {
         id: 'card',
-        title: '卡片式推广',
+        name: '卡片式推广',
         description: '白底、圆角、阴影适合文字广告',
-        html:
-            '<div class="promo-card"><h3>推广标题</h3><p>这里是推广文案内容。</p></div>',
-        container_style: {
-            mode: 'boxed',
-            max_width: 600,
-            max_width_unit: 'px',
-            padding_top: 16,
-            padding_right: 16,
-            padding_bottom: 16,
-            padding_left: 16,
-            background: '#ffffff',
-            radius: 8,
-            shadow: 'soft',
-            badge_enabled: true,
-            badge_text: '推广',
-            badge_color: '#2271b1',
-            layout: '',
+        type: 'html',
+        source: 'preset',
+        data: {
+            html:
+                '<div class="promo-card"><h3>推广标题</h3><p>这里是推广文案内容。</p></div>',
+            container_style: {
+                mode: 'boxed',
+                max_width: 600,
+                max_width_unit: 'px',
+                padding_top: 16,
+                padding_right: 16,
+                padding_bottom: 16,
+                padding_left: 16,
+                background: '#ffffff',
+                radius: 8,
+                shadow: 'soft',
+                badge_enabled: true,
+                badge_text: '推广',
+                badge_color: '#2271b1',
+                layout: '',
+            },
         },
     },
     {
         id: 'raw',
-        title: '原始代码 (Raw)',
+        name: '原始代码 (Raw)',
         description: '不包裹额外样式，保持原样输出',
-        html: '<div>粘贴你的原始 HTML 代码</div>',
-        container_style: {
-            mode: 'raw',
-            max_width: 100,
-            max_width_unit: '%',
-            padding_top: 0,
-            padding_right: 0,
-            padding_bottom: 0,
-            padding_left: 0,
-            background: 'transparent',
-            radius: 0,
-            shadow: 'none',
-            badge_enabled: false,
-            badge_text: '广告',
-            badge_color: '#1d2327',
-            layout: '',
+        type: 'html',
+        source: 'preset',
+        data: {
+            html: '<div>粘贴你的原始 HTML 代码</div>',
+            container_style: {
+                mode: 'raw',
+                max_width: 100,
+                max_width_unit: '%',
+                padding_top: 0,
+                padding_right: 0,
+                padding_bottom: 0,
+                padding_left: 0,
+                background: 'transparent',
+                radius: 0,
+                shadow: 'none',
+                badge_enabled: false,
+                badge_text: '广告',
+                badge_color: '#1d2327',
+                layout: '',
+            },
         },
     },
 ];
@@ -1140,6 +1156,7 @@ const AdsConfig = () => {
 
     const loadTemplates = async (type) => {
         const presets = [
+            ...HTML_TEMPLATES,
             ...IMAGE_TEMPLATES,
             ...VIDEO_TEMPLATES,
             ...BLOCK_TEMPLATES,
@@ -1712,6 +1729,24 @@ const AdsConfig = () => {
                                                 : 'is-hidden'
                                         }`}
                                     >
+                                        <div className="magick-ad-template-actions">
+                                            <Button
+                                                variant="secondary"
+                                                onClick={() =>
+                                                    openTemplateLibrary('html')
+                                                }
+                                            >
+                                                模板库
+                                            </Button>
+                                            <Button
+                                                variant="tertiary"
+                                                onClick={() =>
+                                                    handleSaveTemplate('html')
+                                                }
+                                            >
+                                                存为模板
+                                            </Button>
+                                        </div>
                                         <ClassicEditor
                                             value={
                                                 selectedAd.content?.html || ''
@@ -1743,7 +1778,7 @@ const AdsConfig = () => {
                                                 >
                                                     <div className="magick-ad-template-card__body">
                                                         <h4>
-                                                            {template.title}
+                                                            {template.name}
                                                         </h4>
                                                         <p>
                                                             {
@@ -1757,9 +1792,7 @@ const AdsConfig = () => {
                                                             onClick={() =>
                                                                 handleUpdateContent(
                                                                     {
-                                                                        html: template.html,
-                                                                        container_style:
-                                                                            template.container_style,
+                                                                        ...template.data,
                                                                     }
                                                                 )
                                                             }
