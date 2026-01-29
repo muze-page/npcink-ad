@@ -13,6 +13,7 @@ import {
     Button,
     Card,
     CardBody,
+    ColorPicker,
     DropdownMenu,
     FormTokenField,
     MenuGroup,
@@ -20,6 +21,7 @@ import {
     Notice,
     Panel,
     PanelBody,
+    RangeControl,
     SelectControl,
     Spinner,
     TabPanel,
@@ -354,6 +356,112 @@ const normalizeTargetItem = (type, item) => {
     return { id: Number(item.id), label };
 };
 
+const SHADOW_OPTIONS = [
+    { label: '无', value: 'none' },
+    { label: '轻微', value: 'soft' },
+    { label: '悬浮', value: 'float' },
+];
+
+const ANIMATION_OPTIONS = [
+    { label: '无', value: 'none' },
+    { label: '淡入 (FadeIn)', value: 'fade' },
+    { label: '上浮 (SlideUp)', value: 'slide-up' },
+    { label: '缩放 (ZoomIn)', value: 'zoom' },
+];
+
+const HTML_TEMPLATES = [
+    {
+        id: 'adsense',
+        title: 'AdSense 响应式容器',
+        description: '标准 AdSense 响应式代码骨架',
+        html:
+            '<div class="adsense-slot">请在此替换为 AdSense 代码</div>',
+        container_style: {
+            mode: 'boxed',
+            max_width: 100,
+            max_width_unit: '%',
+            padding_top: 0,
+            padding_right: 0,
+            padding_bottom: 0,
+            padding_left: 0,
+            background: 'transparent',
+            radius: 0,
+            shadow: 'none',
+            badge_enabled: false,
+            badge_text: '广告',
+            badge_color: '#1d2327',
+            layout: '',
+        },
+    },
+    {
+        id: 'centered',
+        title: '居中横幅',
+        description: 'Flex 居中，背景透明',
+        html: '<div class="banner-slot">横幅广告内容</div>',
+        container_style: {
+            mode: 'boxed',
+            max_width: 728,
+            max_width_unit: 'px',
+            padding_top: 8,
+            padding_right: 8,
+            padding_bottom: 8,
+            padding_left: 8,
+            background: 'transparent',
+            radius: 0,
+            shadow: 'none',
+            badge_enabled: false,
+            badge_text: '广告',
+            badge_color: '#1d2327',
+            layout: 'centered',
+        },
+    },
+    {
+        id: 'card',
+        title: '卡片式推广',
+        description: '白底、圆角、阴影适合文字广告',
+        html:
+            '<div class="promo-card"><h3>推广标题</h3><p>这里是推广文案内容。</p></div>',
+        container_style: {
+            mode: 'boxed',
+            max_width: 600,
+            max_width_unit: 'px',
+            padding_top: 16,
+            padding_right: 16,
+            padding_bottom: 16,
+            padding_left: 16,
+            background: '#ffffff',
+            radius: 8,
+            shadow: 'soft',
+            badge_enabled: true,
+            badge_text: '推广',
+            badge_color: '#2271b1',
+            layout: '',
+        },
+    },
+    {
+        id: 'raw',
+        title: '原始代码 (Raw)',
+        description: '不包裹额外样式，保持原样输出',
+        html: '<div>粘贴你的原始 HTML 代码</div>',
+        container_style: {
+            mode: 'raw',
+            max_width: 100,
+            max_width_unit: '%',
+            padding_top: 0,
+            padding_right: 0,
+            padding_bottom: 0,
+            padding_left: 0,
+            background: 'transparent',
+            radius: 0,
+            shadow: 'none',
+            badge_enabled: false,
+            badge_text: '广告',
+            badge_color: '#1d2327',
+            layout: '',
+        },
+    },
+];
+
 const AdsConfig = () => {
     const ads = useStore((state) => state.ads);
     const isLoading = useStore((state) => state.isLoading);
@@ -378,6 +486,7 @@ const AdsConfig = () => {
     const [targetSuggestions, setTargetSuggestions] = useState([]);
     const [targetLoading, setTargetLoading] = useState(false);
     const [devicePreview, setDevicePreview] = useState('desktop');
+    const [htmlTab, setHtmlTab] = useState('content');
     const noticeTimerRef = useRef(null);
     const targetSearchTimerRef = useRef(null);
     const targetRequestRef = useRef(0);
@@ -439,6 +548,10 @@ const AdsConfig = () => {
         () => ads.find((ad) => ad.id === selectedId),
         [ads, selectedId]
     );
+
+    useEffect(() => {
+        setHtmlTab('content');
+    }, [selectedAd?.id]);
 
     const positionOptions = useMemo(() => {
         const page = selectedAd?.options?.show_page || 'all';
@@ -698,6 +811,33 @@ const AdsConfig = () => {
         handleUpdateContent({
             image_settings: {
                 ...currentSettings,
+                ...updates,
+            },
+        });
+    };
+
+    const handleUpdateContainerStyle = (updates) => {
+        if (!selectedAd) {
+            return;
+        }
+        const currentStyle =
+            selectedAd.content?.container_style || {};
+        handleUpdateContent({
+            container_style: {
+                ...currentStyle,
+                ...updates,
+            },
+        });
+    };
+
+    const handleUpdateBehavior = (updates) => {
+        if (!selectedAd) {
+            return;
+        }
+        const currentBehavior = selectedAd.content?.behavior || {};
+        handleUpdateContent({
+            behavior: {
+                ...currentBehavior,
                 ...updates,
             },
         });
@@ -1102,17 +1242,493 @@ const AdsConfig = () => {
                         >
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                    <ClassicEditor
-                                        value={selectedAd.content?.html || ''}
-                                        active={
-                                            activeContentType === 'html'
+                                    <TabPanel
+                                        key={selectedAd.id}
+                                        className="magick-ad-html-tabs"
+                                        tabs={[
+                                            { name: 'content', title: '内容' },
+                                            {
+                                                name: 'container',
+                                                title: '容器外观',
+                                            },
+                                            {
+                                                name: 'templates',
+                                                title: '模板库',
+                                            },
+                                            {
+                                                name: 'behavior',
+                                                title: '交互',
+                                            },
+                                        ]}
+                                        initialTabName="content"
+                                        onSelect={(name) =>
+                                            setHtmlTab(name)
                                         }
-                                        onChange={(value) =>
-                                            handleUpdateContent({
-                                                html: value,
-                                            })
-                                        }
-                                    />
+                                    >
+                                        {() => null}
+                                    </TabPanel>
+
+                                    {(() => {
+                                        const containerStyle =
+                                            selectedAd.content
+                                                ?.container_style || {};
+                                        const behavior =
+                                            selectedAd.content?.behavior || {};
+
+                                        const formatColor = (color) => {
+                                            if (!color) {
+                                                return 'transparent';
+                                            }
+                                            if (typeof color === 'string') {
+                                                return color;
+                                            }
+                                            if (color.rgb) {
+                                                const { r, g, b, a } =
+                                                    color.rgb;
+                                                if (a === 1) {
+                                                    return color.hex;
+                                                }
+                                                return `rgba(${r}, ${g}, ${b}, ${a})`;
+                                            }
+                                            return color.hex || 'transparent';
+                                        };
+
+                                        return (
+                                            <>
+                                                <div
+                                                    className={`magick-ad-html-tab ${
+                                                        htmlTab === 'content'
+                                                            ? ''
+                                                            : 'is-hidden'
+                                                    }`}
+                                                >
+                                                    <ClassicEditor
+                                                        value={
+                                                            selectedAd.content
+                                                                ?.html || ''
+                                                        }
+                                                        active={
+                                                            activeContentType ===
+                                                                'html' &&
+                                                            htmlTab === 'content'
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateContent({
+                                                                html: value,
+                                                            })
+                                                        }
+                                                    />
+                                                </div>
+
+                                                <div
+                                                    className={`magick-ad-html-tab ${
+                                                        htmlTab ===
+                                                        'container'
+                                                            ? ''
+                                                            : 'is-hidden'
+                                                    }`}
+                                                >
+                                                    <div className="magick-ad-field">
+                                                        <RangeControl
+                                                            label="最大宽度"
+                                                            min={
+                                                                containerStyle.max_width_unit ===
+                                                                'px'
+                                                                    ? 320
+                                                                    : 50
+                                                            }
+                                                            max={
+                                                                containerStyle.max_width_unit ===
+                                                                'px'
+                                                                    ? 1200
+                                                                    : 100
+                                                            }
+                                                            value={
+                                                                containerStyle.max_width ??
+                                                                100
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateContainerStyle(
+                                                                    {
+                                                                        max_width:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                        <SelectControl
+                                                            label="宽度单位"
+                                                            value={
+                                                                containerStyle.max_width_unit ||
+                                                                '%'
+                                                            }
+                                                            options={[
+                                                                {
+                                                                    label: '百分比 (%)',
+                                                                    value: '%',
+                                                                },
+                                                                {
+                                                                    label: '像素 (px)',
+                                                                    value: 'px',
+                                                                },
+                                                            ]}
+                                                            onChange={(value) =>
+                                                                handleUpdateContainerStyle(
+                                                                    {
+                                                                        max_width_unit:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
+
+                                                    <div className="magick-ad-field">
+                                                        <p className="magick-ad-field__label">
+                                                            内边距
+                                                        </p>
+                                                        <div className="magick-ad-image-grid">
+                                                            <RangeControl
+                                                                label="上"
+                                                                min={0}
+                                                                max={80}
+                                                                value={
+                                                                    containerStyle.padding_top ??
+                                                                    0
+                                                                }
+                                                                onChange={(value) =>
+                                                                    handleUpdateContainerStyle(
+                                                                        {
+                                                                            padding_top:
+                                                                                Number(
+                                                                                    value
+                                                                                ),
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                            <RangeControl
+                                                                label="右"
+                                                                min={0}
+                                                                max={80}
+                                                                value={
+                                                                    containerStyle.padding_right ??
+                                                                    0
+                                                                }
+                                                                onChange={(value) =>
+                                                                    handleUpdateContainerStyle(
+                                                                        {
+                                                                            padding_right:
+                                                                                Number(
+                                                                                    value
+                                                                                ),
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                            <RangeControl
+                                                                label="下"
+                                                                min={0}
+                                                                max={80}
+                                                                value={
+                                                                    containerStyle.padding_bottom ??
+                                                                    0
+                                                                }
+                                                                onChange={(value) =>
+                                                                    handleUpdateContainerStyle(
+                                                                        {
+                                                                            padding_bottom:
+                                                                                Number(
+                                                                                    value
+                                                                                ),
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                            <RangeControl
+                                                                label="左"
+                                                                min={0}
+                                                                max={80}
+                                                                value={
+                                                                    containerStyle.padding_left ??
+                                                                    0
+                                                                }
+                                                                onChange={(value) =>
+                                                                    handleUpdateContainerStyle(
+                                                                        {
+                                                                            padding_left:
+                                                                                Number(
+                                                                                    value
+                                                                                ),
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="magick-ad-field">
+                                                        <p className="magick-ad-field__label">
+                                                            背景色
+                                                        </p>
+                                                        <ColorPicker
+                                                            color={
+                                                                containerStyle.background ||
+                                                                'transparent'
+                                                            }
+                                                            onChangeComplete={(
+                                                                value
+                                                            ) =>
+                                                                handleUpdateContainerStyle(
+                                                                    {
+                                                                        background:
+                                                                            formatColor(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                            enableAlpha
+                                                        />
+                                                        <Button
+                                                            variant="tertiary"
+                                                            onClick={() =>
+                                                                handleUpdateContainerStyle(
+                                                                    {
+                                                                        background:
+                                                                            'transparent',
+                                                                    }
+                                                                )
+                                                            }
+                                                        >
+                                                            清除背景
+                                                        </Button>
+                                                    </div>
+
+                                                    <RangeControl
+                                                        label="圆角"
+                                                        min={0}
+                                                        max={50}
+                                                        value={
+                                                            containerStyle.radius ??
+                                                            0
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateContainerStyle(
+                                                                {
+                                                                    radius:
+                                                                        Number(
+                                                                            value
+                                                                        ),
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+
+                                                    <SelectControl
+                                                        label="阴影"
+                                                        value={
+                                                            containerStyle.shadow ||
+                                                            'none'
+                                                        }
+                                                        options={SHADOW_OPTIONS}
+                                                        onChange={(value) =>
+                                                            handleUpdateContainerStyle(
+                                                                {
+                                                                    shadow:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+
+                                                    <div className="magick-ad-field">
+                                                        <ToggleControl
+                                                            label="角标 (Badge)"
+                                                            checked={Boolean(
+                                                                containerStyle.badge_enabled
+                                                            )}
+                                                            onChange={(value) =>
+                                                                handleUpdateContainerStyle(
+                                                                    {
+                                                                        badge_enabled:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                        {containerStyle.badge_enabled && (
+                                                            <>
+                                                                <SelectControl
+                                                                    label="角标文案"
+                                                                    value={
+                                                                        containerStyle.badge_text ||
+                                                                        '广告'
+                                                                    }
+                                                                    options={[
+                                                                        {
+                                                                            label: '广告',
+                                                                            value: '广告',
+                                                                        },
+                                                                        {
+                                                                            label: '推广',
+                                                                            value: '推广',
+                                                                        },
+                                                                    ]}
+                                                                    onChange={(
+                                                                        value
+                                                                    ) =>
+                                                                        handleUpdateContainerStyle(
+                                                                            {
+                                                                                badge_text:
+                                                                                    value,
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                />
+                                                                <p className="magick-ad-field__label">
+                                                                    角标颜色
+                                                                </p>
+                                                                <ColorPicker
+                                                                    color={
+                                                                        containerStyle.badge_color ||
+                                                                        '#1d2327'
+                                                                    }
+                                                                    onChangeComplete={(
+                                                                        value
+                                                                    ) =>
+                                                                        handleUpdateContainerStyle(
+                                                                            {
+                                                                                badge_color:
+                                                                                    formatColor(
+                                                                                        value
+                                                                                    ),
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                    enableAlpha
+                                                                />
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div
+                                                    className={`magick-ad-html-tab ${
+                                                        htmlTab ===
+                                                        'templates'
+                                                            ? ''
+                                                            : 'is-hidden'
+                                                    }`}
+                                                >
+                                                    <div className="magick-ad-template-grid">
+                                                        {HTML_TEMPLATES.map(
+                                                            (template) => (
+                                                                <div
+                                                                    key={
+                                                                        template.id
+                                                                    }
+                                                                    className="magick-ad-template-card"
+                                                                >
+                                                                    <div className="magick-ad-template-card__body">
+                                                                        <h4>
+                                                                            {
+                                                                                template.title
+                                                                            }
+                                                                        </h4>
+                                                                        <p>
+                                                                            {
+                                                                                template.description
+                                                                            }
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="magick-ad-template-card__actions">
+                                                                        <Button
+                                                                            variant="primary"
+                                                                            onClick={() =>
+                                                                                handleUpdateContent(
+                                                                                    {
+                                                                                        html: template.html,
+                                                                                        container_style:
+                                                                                            template.container_style,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            应用
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            )
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div
+                                                    className={`magick-ad-html-tab ${
+                                                        htmlTab ===
+                                                        'behavior'
+                                                            ? ''
+                                                            : 'is-hidden'
+                                                    }`}
+                                                >
+                                                    <SelectControl
+                                                        label="进场动画"
+                                                        value={
+                                                            behavior.animation ||
+                                                            'none'
+                                                        }
+                                                        options={
+                                                            ANIMATION_OPTIONS
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateBehavior(
+                                                                {
+                                                                    animation:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <ToggleControl
+                                                        label="显示关闭按钮"
+                                                        checked={Boolean(
+                                                            behavior.close_button
+                                                        )}
+                                                        onChange={(value) =>
+                                                            handleUpdateBehavior(
+                                                                {
+                                                                    close_button:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <RangeControl
+                                                        label="延迟显示（秒）"
+                                                        min={0}
+                                                        max={30}
+                                                        value={
+                                                            behavior.delay ??
+                                                            0
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateBehavior(
+                                                                {
+                                                                    delay:
+                                                                        Number(
+                                                                            value
+                                                                        ),
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </PanelBody>
                             </Panel>
                         </div>

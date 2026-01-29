@@ -27,6 +27,105 @@
     height: auto;
 }
 
+.magick-ad-html-container {
+    position: relative;
+    box-sizing: border-box;
+}
+
+.magick-ad-html-content {
+    width: 100%;
+}
+
+.magick-ad-layout--centered {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.magick-ad-shadow--soft {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.magick-ad-shadow--float {
+    box-shadow: 0 16px 28px rgba(0, 0, 0, 0.16);
+}
+
+.magick-ad-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #fff;
+    z-index: 2;
+}
+
+.magick-ad-close {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    z-index: 2;
+}
+
+.magick-ad-is-hidden {
+    display: none !important;
+}
+
+.magick-ad-anim--fade {
+    animation: magickAdFade 0.35s ease-out;
+}
+
+.magick-ad-anim--slide-up {
+    animation: magickAdSlideUp 0.4s ease-out;
+}
+
+.magick-ad-anim--zoom {
+    animation: magickAdZoom 0.35s ease-out;
+}
+
+@keyframes magickAdFade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes magickAdSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes magickAdZoom {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 .magick-ad-unit--bar {
     position: fixed;
     left: 0;

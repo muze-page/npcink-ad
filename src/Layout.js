@@ -68,11 +68,68 @@ const Layout = ({
     const previewBody = useMemo(() => {
         const content = adData?.content || {};
         if (adType === 'html' && content.html) {
+            const containerStyle = content.container_style || {};
+            const wrapperStyle = {};
+            if (containerStyle.max_width) {
+                wrapperStyle.maxWidth = `${containerStyle.max_width}${containerStyle.max_width_unit || '%'}`;
+                if (containerStyle.max_width_unit === 'px') {
+                    wrapperStyle.width = '100%';
+                }
+            }
+            if (
+                containerStyle.padding_top ||
+                containerStyle.padding_right ||
+                containerStyle.padding_bottom ||
+                containerStyle.padding_left
+            ) {
+                wrapperStyle.padding = `${containerStyle.padding_top || 0}px ${containerStyle.padding_right || 0}px ${containerStyle.padding_bottom || 0}px ${containerStyle.padding_left || 0}px`;
+            }
+            if (containerStyle.background && containerStyle.background !== 'transparent') {
+                wrapperStyle.background = containerStyle.background;
+            }
+            if (containerStyle.radius) {
+                wrapperStyle.borderRadius = `${containerStyle.radius}px`;
+            }
+            if (containerStyle.shadow === 'soft') {
+                wrapperStyle.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.08)';
+            } else if (containerStyle.shadow === 'float') {
+                wrapperStyle.boxShadow = '0 16px 28px rgba(0, 0, 0, 0.16)';
+            }
+            if (containerStyle.layout === 'centered') {
+                wrapperStyle.display = 'flex';
+                wrapperStyle.justifyContent = 'center';
+                wrapperStyle.marginLeft = 'auto';
+                wrapperStyle.marginRight = 'auto';
+            }
             return (
-                <div
-                    className="magick-ad-preview__html"
-                    dangerouslySetInnerHTML={{ __html: content.html }}
-                />
+                <div className="magick-ad-preview__html">
+                    <div
+                        className="magick-ad-html-container"
+                        style={wrapperStyle}
+                    >
+                        {containerStyle.badge_enabled && (
+                            <span
+                                className="magick-ad-badge"
+                                style={{
+                                    background:
+                                        containerStyle.badge_color ||
+                                        '#1d2327',
+                                }}
+                            >
+                                {containerStyle.badge_text || '广告'}
+                            </span>
+                        )}
+                        {content.behavior?.close_button && (
+                            <span className="magick-ad-close">×</span>
+                        )}
+                        <div
+                            className="magick-ad-html-content"
+                            dangerouslySetInnerHTML={{
+                                __html: content.html,
+                            }}
+                        />
+                    </div>
+                </div>
             );
         }
         if (adType === 'image' && content.image?.url) {

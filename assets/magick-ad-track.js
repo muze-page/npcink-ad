@@ -63,13 +63,45 @@
         { threshold: 0.5 }
     );
 
+    const applyBehavior = () => {
+        document.querySelectorAll('[data-ad-id]').forEach((element) => {
+            const delay = Number(element.getAttribute('data-ad-delay') || 0);
+            const animation = element.getAttribute('data-ad-anim');
+
+            const showAd = () => {
+                element.classList.remove('magick-ad-is-hidden');
+                if (animation) {
+                    element.classList.add(`magick-ad-anim--${animation}`);
+                }
+            };
+
+            if (delay > 0) {
+                element.classList.add('magick-ad-is-hidden');
+                window.setTimeout(showAd, delay * 1000);
+            } else if (animation) {
+                element.classList.add(`magick-ad-anim--${animation}`);
+            }
+        });
+    };
+
     const initObservers = () => {
         document
             .querySelectorAll('[data-ad-id]')
             .forEach((element) => observer.observe(element));
+        applyBehavior();
     };
 
     const handleClick = (event) => {
+        const closeButton = event.target.closest('.magick-ad-close');
+        if (closeButton) {
+            const ad = closeButton.closest('[data-ad-id]');
+            if (ad) {
+                ad.classList.add('magick-ad-is-hidden');
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
         const target = event.target.closest('[data-ad-id]');
         if (!target) {
             return;

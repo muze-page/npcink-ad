@@ -23,6 +23,27 @@ const createAdGroupTemplate = (type = 'global') => ({
         image: { id: 0, url: '', alt: '' },
         link: '',
         link_target: false,
+        container_style: {
+            mode: 'boxed',
+            max_width: 100,
+            max_width_unit: '%',
+            padding_top: 0,
+            padding_right: 0,
+            padding_bottom: 0,
+            padding_left: 0,
+            background: 'transparent',
+            radius: 0,
+            shadow: 'none',
+            badge_enabled: false,
+            badge_text: '广告',
+            badge_color: '#1d2327',
+            layout: '',
+        },
+        behavior: {
+            animation: 'none',
+            close_button: false,
+            delay: 0,
+        },
         image_settings: {
             watermark: false,
             radius: 0,
@@ -56,6 +77,14 @@ const normalizeAd = (ad) => {
             : {};
     const content = safeAd.content && typeof safeAd.content === 'object' ? safeAd.content : {};
     const image = content.image && typeof content.image === 'object' ? content.image : {};
+    const containerStyle =
+        content.container_style && typeof content.container_style === 'object'
+            ? content.container_style
+            : {};
+    const behavior =
+        content.behavior && typeof content.behavior === 'object'
+            ? content.behavior
+            : {};
     const imageSettings =
         content.image_settings && typeof content.image_settings === 'object'
             ? content.image_settings
@@ -87,6 +116,39 @@ const normalizeAd = (ad) => {
                 id: Number(image.id || 0),
                 url: image.url || '',
                 alt: image.alt || '',
+            },
+            container_style: {
+                mode: containerStyle.mode === 'raw' ? 'raw' : 'boxed',
+                max_width: Number(containerStyle.max_width || 100),
+                max_width_unit:
+                    containerStyle.max_width_unit === 'px' ? 'px' : '%',
+                padding_top: Number(containerStyle.padding_top || 0),
+                padding_right: Number(containerStyle.padding_right || 0),
+                padding_bottom: Number(containerStyle.padding_bottom || 0),
+                padding_left: Number(containerStyle.padding_left || 0),
+                background: containerStyle.background || 'transparent',
+                radius: Number(containerStyle.radius || 0),
+                shadow: ['none', 'soft', 'float'].includes(
+                    containerStyle.shadow
+                )
+                    ? containerStyle.shadow
+                    : 'none',
+                badge_enabled: Boolean(containerStyle.badge_enabled),
+                badge_text: containerStyle.badge_text || '广告',
+                badge_color: containerStyle.badge_color || '#1d2327',
+                layout:
+                    containerStyle.layout === 'centered'
+                        ? 'centered'
+                        : '',
+            },
+            behavior: {
+                animation: ['none', 'fade', 'slide-up', 'zoom'].includes(
+                    behavior.animation
+                )
+                    ? behavior.animation
+                    : 'none',
+                close_button: Boolean(behavior.close_button),
+                delay: Number(behavior.delay || 0),
             },
             image_settings: {
                 watermark: Boolean(imageSettings.watermark),
