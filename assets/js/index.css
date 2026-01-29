@@ -195,6 +195,12 @@
     margin-bottom: 12px;
 }
 
+.magick-ad-sidebar__header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .magick-ad-sidebar__list {
     display: flex;
     flex-direction: column;
@@ -203,7 +209,7 @@
 
 .magick-ad-sidebar__item {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
     padding: 14px 14px 14px 18px;
@@ -214,6 +220,19 @@
     box-shadow: 0 2px 6px rgba(17, 24, 39, 0.06);
     transition: box-shadow 0.2s ease, border-color 0.2s ease,
         background 0.2s ease, transform 0.2s ease;
+}
+
+.magick-ad-sidebar__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.magick-ad-sidebar__actions {
+    display: flex;
+    align-items: flex-start;
 }
 
 .magick-ad-sidebar__item:hover {
@@ -245,6 +264,13 @@
     text-align: left;
 }
 
+.magick-ad-sidebar__title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
 .magick-ad-sidebar__title {
     display: block;
     font-weight: 600;
@@ -252,6 +278,27 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.magick-ad-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.magick-ad-status.is-enabled {
+    background: #e6f4ea;
+    color: #1e7e34;
+}
+
+.magick-ad-status.is-disabled {
+    background: #f8d7da;
+    color: #b32d2e;
 }
 
 .magick-ad-type {
@@ -312,6 +359,29 @@
     width: 4px;
     border-radius: 4px;
     background: #3858e9;
+}
+
+.magick-ad-sidebar__item.is-disabled {
+    opacity: 0.6;
+}
+
+.magick-ad-sidebar__item.is-disabled .magick-ad-type {
+    background: #f1f3f5;
+    color: #6c757d;
+}
+
+.magick-ad-item-menu .components-button {
+    min-width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid #e2e6ee;
+    background: #ffffff;
+    color: #344054;
+}
+
+.magick-ad-item-menu .components-button:hover {
+    border-color: #cfd6ee;
+    background: #f8f9fb;
 }
 
 .magick-ad-delete-btn {

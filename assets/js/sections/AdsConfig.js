@@ -55,6 +55,8 @@ const AdsConfig = () => {
     const [devicePreview, setDevicePreview] = useState('desktop');
     const { notice, showNotice, clearNotice } = useNotice();
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [renameTarget, setRenameTarget] = useState(null);
+    const [renameValue, setRenameValue] = useState('');
 
     useEffect(() => {
         fetchFromDB();
@@ -270,39 +272,74 @@ const AdsConfig = () => {
         }
     };
 
+    const handleToggleEnabled = async (ad) => {
+        const nextEnabled = !(ad?.options?.enabled ?? true);
+        updateAdGroup(ad.id, {
+            options: {
+                ...(ad.options || {}),
+                enabled: nextEnabled,
+            },
+        });
+
+        try {
+            await saveToDB();
+            showNotice(
+                'success',
+                nextEnabled ? '已启用该广告' : '已停用该广告',
+                2000
+            );
+        } catch (err) {
+            const message =
+                err?.data?.message ||
+                err?.message ||
+                '保存失败，请检查网络或权限设置。';
+            showNotice('error', message, 4000);
+        }
+    };
+
     const leftSidebar = (
         <div className="magick-ad-left-stack">
             <Card>
                 <CardBody>
                     <div className="magick-ad-sidebar__header">
                         <h2>广告组</h2>
-                        <DropdownMenu
-                            className="magick-ad-add-menu"
-                            icon={null}
-                            text="新增广告组"
-                            toggleProps={{ variant: 'secondary' }}
-                        >
-                            {({ onClose }) => (
-                                <MenuGroup>
-                                    <MenuItem
-                                        onClick={() => {
-                                            addAdGroup('global');
-                                            onClose();
-                                        }}
-                                    >
-                                        全局广告
-                                    </MenuItem>
-                                    <MenuItem
-                                        onClick={() => {
-                                            addAdGroup('targeted');
-                                            onClose();
-                                        }}
-                                    >
-                                        指定广告
-                                    </MenuItem>
-                                </MenuGroup>
-                            )}
-                        </DropdownMenu>
+                        <div className="magick-ad-sidebar__header-actions">
+                            <DropdownMenu
+                                className="magick-ad-add-menu"
+                                icon={null}
+                                text="新增广告组"
+                                toggleProps={{ variant: 'secondary' }}
+                            >
+                                {({ onClose }) => (
+                                    <MenuGroup>
+                                        <MenuItem
+                                            onClick={() => {
+                                                addAdGroup('global');
+                                                onClose();
+                                            }}
+                                        >
+                                            全局广告
+                                        </MenuItem>
+                                        <MenuItem
+                                            onClick={() => {
+                                                addAdGroup('targeted');
+                                                onClose();
+                                            }}
+                                        >
+                                            指定广告
+                                        </MenuItem>
+                                    </MenuGroup>
+                                )}
+                            </DropdownMenu>
+                            <Button
+                                variant="primary"
+                                onClick={handleSave}
+                                isBusy={isSaving}
+                                disabled={isSaving || !selectedAd}
+                            >
+                                {isSaving ? '保存中...' : '保存'}
+                            </Button>
+                        </div>
                     </div>
                     {ads.length === 0 && (
                         <p className="description">暂无广告组。</p>
@@ -317,41 +354,102 @@ const AdsConfig = () => {
                                     missingPositionIds.has(ad.id)
                                         ? 'has-error'
                                         : ''
+                                } ${
+                                    ad?.options?.enabled === false
+                                        ? 'is-disabled'
+                                        : ''
                                 }`}
                             >
-                                <Button
-                                    variant="tertiary"
-                                    onClick={() => setSelectedId(ad.id)}
-                                    aria-current={
-                                        selectedId === ad.id ? 'true' : undefined
-                                    }
-                                    className="magick-ad-sidebar__main"
-                                >
-                                    <span className="magick-ad-sidebar__text">
-                                        <span className="magick-ad-sidebar__title">
-                                            {ad.name || `广告组 ${index + 1}`}
+                                <div className="magick-ad-sidebar__body">
+                                    <Button
+                                        variant="tertiary"
+                                        onClick={() => setSelectedId(ad.id)}
+                                        aria-current={
+                                            selectedId === ad.id
+                                                ? 'true'
+                                                : undefined
+                                        }
+                                        className="magick-ad-sidebar__main"
+                                    >
+                                        <span className="magick-ad-sidebar__text">
+                                            <span className="magick-ad-sidebar__title-row">
+                                                <span className="magick-ad-sidebar__title">
+                                                    {ad.name ||
+                                                        `广告组 ${index + 1}`}
+                                                </span>
+                                                <span
+                                                    className={`magick-ad-status ${
+                                                        ad?.options?.enabled ===
+                                                        false
+                                                            ? 'is-disabled'
+                                                            : 'is-enabled'
+                                                    }`}
+                                                >
+                                                    {ad?.options?.enabled ===
+                                                    false
+                                                        ? '已停用'
+                                                        : '已启用'}
+                                                </span>
+                                            </span>
+                                            <span className="magick-ad-type">
+                                                {ad.options?.ad_type ===
+                                                'targeted'
+                                                    ? '指定广告'
+                                                    : '全局广告'}
+                                            </span>
                                         </span>
-                                        <span className="magick-ad-type">
-                                            {ad.options?.ad_type === 'targeted'
-                                                ? '指定广告'
-                                                : '全局广告'}
-                                        </span>
-                                    </span>
-                                    {missingPositionIds.has(ad.id) && (
-                                        <span className="magick-ad-sidebar__alert">
-                                            <span className="magick-ad-sidebar__dot" />
-                                            需配置位置
-                                        </span>
-                                    )}
-                                </Button>
-                                <Button
-                                    variant="tertiary"
-                                    isDestructive
-                                    className="magick-ad-delete-btn"
-                                    onClick={() => setDeleteTarget(ad)}
-                                >
-                                    删除
-                                </Button>
+                                        {missingPositionIds.has(ad.id) && (
+                                            <span className="magick-ad-sidebar__alert">
+                                                <span className="magick-ad-sidebar__dot" />
+                                                需配置位置
+                                            </span>
+                                        )}
+                                    </Button>
+                                </div>
+                                <div className="magick-ad-sidebar__actions">
+                                    <DropdownMenu
+                                        icon="more"
+                                        label="更多操作"
+                                        className="magick-ad-item-menu"
+                                        toggleProps={{ variant: 'tertiary' }}
+                                    >
+                                        {({ onClose }) => (
+                                            <MenuGroup>
+                                                <MenuItem
+                                                    onClick={() => {
+                                                        setRenameTarget(ad);
+                                                        setRenameValue(
+                                                            ad.name || ''
+                                                        );
+                                                        onClose();
+                                                    }}
+                                                >
+                                                    修改名称
+                                                </MenuItem>
+                                                <MenuItem
+                                                    onClick={() => {
+                                                        handleToggleEnabled(ad);
+                                                        onClose();
+                                                    }}
+                                                >
+                                                    {ad?.options?.enabled ===
+                                                    false
+                                                        ? '设为启用'
+                                                        : '设为停用'}
+                                                </MenuItem>
+                                                <MenuItem
+                                                    isDestructive
+                                                    onClick={() => {
+                                                        setDeleteTarget(ad);
+                                                        onClose();
+                                                    }}
+                                                >
+                                                    删除
+                                                </MenuItem>
+                                            </MenuGroup>
+                                        )}
+                                    </DropdownMenu>
+                                </div>
                             </div>
                         ))}
                     </nav>
@@ -723,39 +821,6 @@ const AdsConfig = () => {
 
     const rightSidebar = selectedAd ? (
         <div className="magick-ad-right-stack">
-            <Card>
-                <CardBody>
-                    <Panel>
-                        <PanelBody title="基础信息" initialOpen>
-                            <TextControl
-                                label="广告名称"
-                                value={selectedAd.name || ''}
-                                onChange={(value) =>
-                                    updateAdGroup(selectedAd.id, {
-                                        name: value,
-                                    })
-                                }
-                            />
-                            <ToggleControl
-                                label="启用此广告"
-                                checked={selectedAd?.options?.enabled ?? true}
-                                onChange={(value) =>
-                                    handleUpdateOptions({ enabled: value })
-                                }
-                            />
-                            <Button
-                                variant="primary"
-                                onClick={handleSave}
-                                isBusy={isSaving}
-                                disabled={isSaving}
-                            >
-                                {isSaving ? '保存中...' : '保存'}
-                            </Button>
-                        </PanelBody>
-                    </Panel>
-                </CardBody>
-            </Card>
-
             <Card>
                 <CardBody>
                     <TabPanel
@@ -1673,6 +1738,52 @@ const AdsConfig = () => {
                             }}
                         >
                             确认删除
+                        </Button>
+                    </div>
+                </Modal>
+            )}
+
+            {renameTarget && (
+                <Modal
+                    title="修改广告名称"
+                    onRequestClose={() => setRenameTarget(null)}
+                    className="magick-ad-rename-modal"
+                >
+                    <TextControl
+                        label="广告名称"
+                        value={renameValue}
+                        onChange={setRenameValue}
+                        placeholder="请输入广告名称"
+                    />
+                    <div className="magick-ad-confirm-actions">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setRenameTarget(null)}
+                        >
+                            取消
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={() => {
+                                const targetId = renameTarget.id;
+                                updateAdGroup(targetId, {
+                                    name: renameValue.trim(),
+                                });
+                                setRenameTarget(null);
+                                saveToDB()
+                                    .then(() => {
+                                        showNotice('success', '名称已更新', 2000);
+                                    })
+                                    .catch((err) => {
+                                        const message =
+                                            err?.data?.message ||
+                                            err?.message ||
+                                            '保存失败，请检查网络或权限设置。';
+                                        showNotice('error', message, 4000);
+                                    });
+                            }}
+                        >
+                            保存
                         </Button>
                     </div>
                 </Modal>
