@@ -292,6 +292,10 @@
     border-bottom: 1px solid #dcdcde;
 }
 
+.magick-ad-tab-panel.is-hidden {
+    display: none;
+}
+
 .magick-ad-dashboard__content {
     display: flex;
     flex-direction: column;

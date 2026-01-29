@@ -837,7 +837,6 @@ const AdsConfig = () => {
 
     const contentPanels = selectedAd ? (
         <TabPanel
-            key={`${selectedAd.id}-${selectedAd.options?.content_type || ''}`}
             className="magick-ad-sub-tabs"
             tabs={[
                 { name: 'html', title: 'HTML广告' },
@@ -853,265 +852,286 @@ const AdsConfig = () => {
                 })
             }
         >
-            {(subTab) => {
-                if (subTab.name === 'image') {
-                    return (
-                        <Panel>
-                            <PanelBody title="内容配置" initialOpen>
-                                <TabPanel
-                                    className="magick-ad-image-tabs"
-                                    tabs={[
-                                        { name: 'content', title: '内容' },
-                                        { name: 'settings', title: '配置' },
-                                    ]}
-                                >
-                                    {(imageTab) =>
-                                        imageTab.name === 'content' ? (
-                                            <>
-                                                <LinkPicker
-                                                    value={
-                                                        selectedAd.content
-                                                            ?.link || ''
-                                                    }
-                                                    target={
-                                                        selectedAd.content
-                                                            ?.link_target
-                                                    }
-                                                    onChange={({
-                                                        url,
-                                                        target,
-                                                    }) =>
-                                                        handleUpdateContent({
-                                                            link: url,
-                                                            link_target:
-                                                                Boolean(
-                                                                    target
-                                                                ),
-                                                        })
-                                                    }
-                                                />
-                                                <div className="magick-ad-field">
-                                                    <p className="magick-ad-field__label">
-                                                        图片
-                                                    </p>
-                                                    <ImagePicker
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.image || null
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateContent(
-                                                                {
-                                                                    image: value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="magick-ad-field">
-                                                    <p className="magick-ad-field__label">
-                                                        水印
-                                                    </p>
-                                                    <p className="description">
-                                                        水印将显示在图片中的右下角，默认隐藏水印。
-                                                    </p>
-                                                    <ToggleControl
-                                                        label={
-                                                            selectedAd.content
-                                                                ?.image_settings
-                                                                ?.watermark
-                                                                ? '显示'
-                                                                : '隐藏'
-                                                        }
-                                                        checked={Boolean(
-                                                            selectedAd.content
-                                                                ?.image_settings
-                                                                ?.watermark
-                                                        )}
-                                                        onChange={(value) =>
-                                                            handleUpdateImageSettings(
-                                                                {
-                                                                    watermark:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                </div>
-                                                <div className="magick-ad-image-grid">
-                                                    <TextControl
-                                                        label="圆角效果"
-                                                        type="number"
-                                                        min={0}
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.image_settings
-                                                                ?.radius ?? 0
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateImageSettings(
-                                                                {
-                                                                    radius:
-                                                                        Number(
-                                                                            value
-                                                                        ),
-                                                                }
-                                                            )
-                                                        }
-                                                        help="像素"
-                                                    />
-                                                    <TextControl
-                                                        label="最大宽度"
-                                                        type="number"
-                                                        min={0}
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.image_settings
-                                                                ?.max_width ??
-                                                            1200
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateImageSettings(
-                                                                {
-                                                                    max_width:
-                                                                        Number(
-                                                                            value
-                                                                        ),
-                                                                }
-                                                            )
-                                                        }
-                                                        help="像素"
-                                                    />
-                                                    <TextControl
-                                                        label="距离顶部"
-                                                        type="number"
-                                                        min={0}
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.image_settings
-                                                                ?.margin_top ??
-                                                            0
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateImageSettings(
-                                                                {
-                                                                    margin_top:
-                                                                        Number(
-                                                                            value
-                                                                        ),
-                                                                }
-                                                            )
-                                                        }
-                                                        help="像素"
-                                                    />
-                                                    <TextControl
-                                                        label="距离底部"
-                                                        type="number"
-                                                        min={0}
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.image_settings
-                                                                ?.margin_bottom ??
-                                                            0
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateImageSettings(
-                                                                {
-                                                                    margin_bottom:
-                                                                        Number(
-                                                                            value
-                                                                        ),
-                                                                }
-                                                            )
-                                                        }
-                                                        help="像素"
-                                                    />
-                                                    <TextControl
-                                                        label="距离左边"
-                                                        type="number"
-                                                        min={0}
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.image_settings
-                                                                ?.margin_left ??
-                                                            0
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateImageSettings(
-                                                                {
-                                                                    margin_left:
-                                                                        Number(
-                                                                            value
-                                                                        ),
-                                                                }
-                                                            )
-                                                        }
-                                                        help="像素"
-                                                    />
-                                                    <TextControl
-                                                        label="距离右边"
-                                                        type="number"
-                                                        min={0}
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.image_settings
-                                                                ?.margin_right ??
-                                                            0
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateImageSettings(
-                                                                {
-                                                                    margin_right:
-                                                                        Number(
-                                                                            value
-                                                                        ),
-                                                                }
-                                                            )
-                                                        }
-                                                        help="像素"
-                                                    />
-                                                </div>
-                                            </>
-                                        )
-                                    }
-                                </TabPanel>
-                            </PanelBody>
-                        </Panel>
-                    );
-                }
-
-                if (subTab.name === 'html') {
-                    return (
-                        <Panel>
-                            <PanelBody title="内容配置" initialOpen>
-                                <ClassicEditor
-                                    value={selectedAd.content?.html || ''}
-                                    active={
-                                        selectedAd.options?.content_type ===
-                                        'html'
-                                    }
-                                    onChange={(value) =>
-                                        handleUpdateContent({
-                                            html: value,
-                                        })
-                                    }
-                                />
-                            </PanelBody>
-                        </Panel>
-                    );
-                }
+            {() => {
+                const activeContentType =
+                    selectedAd.options?.content_type || 'image';
 
                 return (
-                    <Panel>
-                        <PanelBody title="内容配置" initialOpen>
-                            <Notice status="info" isDismissible={false}>
-                                该类型的配置项稍后补充。
-                            </Notice>
-                        </PanelBody>
-                    </Panel>
+                    <>
+                        <div
+                            className={`magick-ad-tab-panel ${
+                                activeContentType === 'image'
+                                    ? ''
+                                    : 'is-hidden'
+                            }`}
+                        >
+                            <Panel>
+                                <PanelBody title="内容配置" initialOpen>
+                                    <TabPanel
+                                        className="magick-ad-image-tabs"
+                                        tabs={[
+                                            { name: 'content', title: '内容' },
+                                            { name: 'settings', title: '配置' },
+                                        ]}
+                                    >
+                                        {(imageTab) =>
+                                            imageTab.name === 'content' ? (
+                                                <>
+                                                    <LinkPicker
+                                                        value={
+                                                            selectedAd.content
+                                                                ?.link || ''
+                                                        }
+                                                        target={
+                                                            selectedAd.content
+                                                                ?.link_target
+                                                        }
+                                                        onChange={({
+                                                            url,
+                                                            target,
+                                                        }) =>
+                                                            handleUpdateContent({
+                                                                link: url,
+                                                                link_target:
+                                                                    Boolean(
+                                                                        target
+                                                                    ),
+                                                            })
+                                                        }
+                                                    />
+                                                    <div className="magick-ad-field">
+                                                        <p className="magick-ad-field__label">
+                                                            图片
+                                                        </p>
+                                                        <ImagePicker
+                                                            value={
+                                                                selectedAd.content
+                                                                    ?.image ||
+                                                                null
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateContent(
+                                                                    {
+                                                                        image: value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="magick-ad-field">
+                                                        <p className="magick-ad-field__label">
+                                                            水印
+                                                        </p>
+                                                        <p className="description">
+                                                            水印将显示在图片中的右下角，默认隐藏水印。
+                                                        </p>
+                                                        <ToggleControl
+                                                            label={
+                                                                selectedAd.content
+                                                                    ?.image_settings
+                                                                    ?.watermark
+                                                                    ? '显示'
+                                                                    : '隐藏'
+                                                            }
+                                                            checked={Boolean(
+                                                                selectedAd.content
+                                                                    ?.image_settings
+                                                                    ?.watermark
+                                                            )}
+                                                            onChange={(value) =>
+                                                                handleUpdateImageSettings(
+                                                                    {
+                                                                        watermark:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
+                                                    <div className="magick-ad-image-grid">
+                                                        <TextControl
+                                                            label="圆角效果"
+                                                            type="number"
+                                                            min={0}
+                                                            value={
+                                                                selectedAd.content
+                                                                    ?.image_settings
+                                                                    ?.radius ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateImageSettings(
+                                                                    {
+                                                                        radius:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                            help="像素"
+                                                        />
+                                                        <TextControl
+                                                            label="最大宽度"
+                                                            type="number"
+                                                            min={0}
+                                                            value={
+                                                                selectedAd.content
+                                                                    ?.image_settings
+                                                                    ?.max_width ??
+                                                                1200
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateImageSettings(
+                                                                    {
+                                                                        max_width:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                            help="像素"
+                                                        />
+                                                        <TextControl
+                                                            label="距离顶部"
+                                                            type="number"
+                                                            min={0}
+                                                            value={
+                                                                selectedAd.content
+                                                                    ?.image_settings
+                                                                    ?.margin_top ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateImageSettings(
+                                                                    {
+                                                                        margin_top:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                            help="像素"
+                                                        />
+                                                        <TextControl
+                                                            label="距离底部"
+                                                            type="number"
+                                                            min={0}
+                                                            value={
+                                                                selectedAd.content
+                                                                    ?.image_settings
+                                                                    ?.margin_bottom ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateImageSettings(
+                                                                    {
+                                                                        margin_bottom:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                            help="像素"
+                                                        />
+                                                        <TextControl
+                                                            label="距离左边"
+                                                            type="number"
+                                                            min={0}
+                                                            value={
+                                                                selectedAd.content
+                                                                    ?.image_settings
+                                                                    ?.margin_left ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateImageSettings(
+                                                                    {
+                                                                        margin_left:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                            help="像素"
+                                                        />
+                                                        <TextControl
+                                                            label="距离右边"
+                                                            type="number"
+                                                            min={0}
+                                                            value={
+                                                                selectedAd.content
+                                                                    ?.image_settings
+                                                                    ?.margin_right ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateImageSettings(
+                                                                    {
+                                                                        margin_right:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                            help="像素"
+                                                        />
+                                                    </div>
+                                                </>
+                                            )
+                                        }
+                                    </TabPanel>
+                                </PanelBody>
+                            </Panel>
+                        </div>
+
+                        <div
+                            className={`magick-ad-tab-panel ${
+                                activeContentType === 'html'
+                                    ? ''
+                                    : 'is-hidden'
+                            }`}
+                        >
+                            <Panel>
+                                <PanelBody title="内容配置" initialOpen>
+                                    <ClassicEditor
+                                        value={selectedAd.content?.html || ''}
+                                        active={
+                                            activeContentType === 'html'
+                                        }
+                                        onChange={(value) =>
+                                            handleUpdateContent({
+                                                html: value,
+                                            })
+                                        }
+                                    />
+                                </PanelBody>
+                            </Panel>
+                        </div>
+
+                        {['video', 'popup', 'bar'].includes(
+                            activeContentType
+                        ) && (
+                            <Panel>
+                                <PanelBody title="内容配置" initialOpen>
+                                    <Notice
+                                        status="info"
+                                        isDismissible={false}
+                                    >
+                                        该类型的配置项稍后补充。
+                                    </Notice>
+                                </PanelBody>
+                            </Panel>
+                        )}
+                    </>
                 );
             }}
         </TabPanel>
