@@ -89,6 +89,39 @@
             .querySelectorAll('[data-ad-id]')
             .forEach((element) => observer.observe(element));
         applyBehavior();
+        applyRandomStrategy();
+    };
+
+    const applyRandomStrategy = () => {
+        const bucket = Math.floor(Date.now() / 300000);
+        document
+            .querySelectorAll('[data-ad-random="session"]')
+            .forEach((element) => {
+                const adId = element.getAttribute('data-ad-id');
+                if (!adId) {
+                    return;
+                }
+                const key = `magick_ad_random_${adId}_${bucket}`;
+                let value = null;
+                try {
+                    value = sessionStorage.getItem(key);
+                } catch (err) {
+                    value = null;
+                }
+                if (!value) {
+                    value = Math.random() >= 0.5 ? '1' : '0';
+                    try {
+                        sessionStorage.setItem(key, value);
+                    } catch (err) {
+                        // ignore
+                    }
+                }
+                if (value === '1') {
+                    element.classList.remove('magick-ad-is-hidden');
+                } else {
+                    element.classList.add('magick-ad-is-hidden');
+                }
+            });
     };
 
     const handleClick = (event) => {

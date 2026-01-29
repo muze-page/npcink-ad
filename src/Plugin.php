@@ -3,6 +3,7 @@
 namespace MagickAD;
 
 use MagickAD\Admin\Admin;
+use MagickAD\Data\Schema;
 use MagickAD\Data\Template_CPT;
 use MagickAD\Frontend\Frontend;
 use MagickAD\REST\Routes;
@@ -27,6 +28,7 @@ final class Plugin {
     public function init(): void {
         add_action('plugins_loaded', array($this, 'load_textdomain'));
         add_action('init', array($this, 'register'));
+        add_action('admin_init', array($this, 'maybe_upgrade'));
     }
 
     public function load_textdomain(): void {
@@ -42,5 +44,9 @@ final class Plugin {
         if (is_admin()) {
             (new Admin())->register();
         }
+    }
+
+    public function maybe_upgrade(): void {
+        Schema::maybe_upgrade();
     }
 }

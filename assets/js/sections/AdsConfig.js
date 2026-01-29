@@ -58,6 +58,10 @@ const AdsConfig = () => {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [renameTarget, setRenameTarget] = useState(null);
     const [renameValue, setRenameValue] = useState('');
+    const canUnfilteredHtml =
+        typeof window !== 'undefined' &&
+        window.MagickAD &&
+        window.MagickAD.canUnfilteredHtml;
 
     useEffect(() => {
         fetchFromDB();
@@ -805,6 +809,67 @@ const AdsConfig = () => {
                                             handleSaveTemplate('html')
                                         }
                                     />
+                                    <SelectControl
+                                        label="HTML 模式"
+                                        value={
+                                            selectedAd.options?.html_mode ||
+                                            'safe'
+                                        }
+                                        options={[
+                                            {
+                                                label: '安全模式（过滤脚本）',
+                                                value: 'safe',
+                                            },
+                                            {
+                                                label: '完全模式（允许脚本）',
+                                                value: 'full',
+                                            },
+                                        ]}
+                                        onChange={(value) => {
+                                            if (
+                                                value === 'full' &&
+                                                !canUnfilteredHtml
+                                            ) {
+                                                showNotice(
+                                                    'error',
+                                                    '当前账号无 unfiltered_html 权限，无法启用完全模式。',
+                                                    3500
+                                                );
+                                                handleUpdateOptions({
+                                                    html_mode: 'safe',
+                                                });
+                                                return;
+                                            }
+                                            handleUpdateOptions({
+                                                html_mode: value,
+                                            });
+                                        }}
+                                        help="完全模式仅限高权限用户，可能存在安全风险。"
+                                    />
+                                    {selectedAd.options?.html_mode ===
+                                        'safe' &&
+                                        /<script[\s>]/i.test(
+                                            selectedAd.content?.html || ''
+                                        ) && (
+                                            <Notice
+                                                status="warning"
+                                                isDismissible={false}
+                                            >
+                                                检测到 <script> 标签。安全模式会移除脚本，
+                                                请切换到“完全模式”并确保账号具备权限。
+                                            </Notice>
+                                        )}
+                                    {selectedAd.options?.html_mode ===
+                                        'full' &&
+                                        !canUnfilteredHtml && (
+                                            <Notice
+                                                status="error"
+                                                isDismissible={false}
+                                            >
+                                                当前账号无 unfiltered_html 权限，
+                                                脚本会被过滤并自动回退到安全模式。
+                                            </Notice>
+                                        )}
                                     <ClassicEditor
                                         value={selectedAd.content?.html || ''}
                                         active={activeContentType === 'html'}
@@ -1485,6 +1550,16 @@ const AdsConfig = () => {
                                                 }
                                                 disabled={!isInlineContainer}
                                             />
+                                            {selectedAd.options
+                                                ?.show_position === 'head' && (
+                                                <Notice
+                                                    status="warning"
+                                                    isDismissible={false}
+                                                >
+                                                    Head 位置仅用于脚本/像素/验证标签，
+                                                    将直接输出原始内容，不包裹容器。
+                                                </Notice>
+                                            )}
                                         </PanelBody>
                                     )}
 
@@ -1569,6 +1644,16 @@ const AdsConfig = () => {
                                                     !isInlineContainer
                                                 }
                                             />
+                                            {selectedAd.options
+                                                ?.show_position === 'head' && (
+                                                <Notice
+                                                    status="warning"
+                                                    isDismissible={false}
+                                                >
+                                                    Head 位置仅用于脚本/像素/验证标签，
+                                                    将直接输出原始内容，不包裹容器。
+                                                </Notice>
+                                            )}
 
                                             <FormTokenField
                                                 label="展示页面"
@@ -1662,6 +1747,38 @@ const AdsConfig = () => {
                                             }
                                             help="随机：每次页面请求随机展示或隐藏"
                                         />
+                                        {selectedAd.options?.display_mode ===
+                                            'random' && (
+                                            <SelectControl
+                                                label="随机策略"
+                                                value={
+                                                    selectedAd.options
+                                                        ?.random_strategy ||
+                                                    'request'
+                                                }
+                                                options={[
+                                                    {
+                                                        label: '无 Cookie（每次请求随机）',
+                                                        value: 'request',
+                                                    },
+                                                    {
+                                                        label: '会话级（sessionStorage）',
+                                                        value: 'session',
+                                                    },
+                                                    {
+                                                        label: '持久级（Cookie，需要同意）',
+                                                        value: 'cookie',
+                                                    },
+                                                ]}
+                                                onChange={(value) =>
+                                                    handleUpdateOptions({
+                                                        random_strategy:
+                                                            value,
+                                                    })
+                                                }
+                                                help="持久级策略需要站点同意逻辑支持，否则会回退为无 Cookie 模式。"
+                                            />
+                                        )}
 
                                         <TextControl
                                             label="截止时间"

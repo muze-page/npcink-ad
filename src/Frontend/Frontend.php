@@ -144,11 +144,20 @@ final class Frontend {
             if ($position !== 'head') {
                 continue;
             }
-            $markup .= self::build_ad_markup($ad, $position);
+            $content = isset($ad['content']) ? $ad['content'] : array();
+            $creative_type = isset($options['creative_type']) ? $options['creative_type'] : 'image';
+            if ($creative_type !== 'html') {
+                continue;
+            }
+            $raw_html = isset($content['html']) ? $content['html'] : '';
+            if (!$raw_html) {
+                continue;
+            }
+            $markup .= $raw_html . "\n";
         }
 
         if ($markup) {
-            echo self::wrap_zone_markup($markup, 'head');
+            echo $markup;
         }
     }
 
@@ -451,17 +460,34 @@ final class Frontend {
         }
         if ($mode === 'random') {
             $ad_id = isset($ad['id']) ? $ad['id'] : '';
-            return self::random_display($ad_id);
+            $strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
+            if ($strategy === 'cookie' && !self::has_consent()) {
+                $strategy = 'request';
+            }
+            if ($strategy === 'session') {
+                return true;
+            }
+            return self::random_display($ad_id, $strategy);
         }
         return true;
     }
 
-    private static function random_display($ad_id) {
+    private static function has_consent(): bool {
+        return (bool) apply_filters('magick_ad_has_consent', false);
+    }
+
+    private static function random_display($ad_id, $strategy = 'request') {
         static $cache = array();
         $time_bucket = (int) floor(current_time('timestamp') / 300);
-        $key = ($ad_id ? $ad_id : uniqid('ad_', true)) . '|' . $time_bucket;
+        $key = ($ad_id ? $ad_id : uniqid('ad_', true)) . '|' . $strategy . '|' . $time_bucket;
         if (isset($cache[$key])) {
             return $cache[$key];
+        }
+
+        if ($strategy === 'request') {
+            $result = (wp_rand(0, 1) === 1);
+            $cache[$key] = $result;
+            return $result;
         }
 
         $seed = '';
@@ -469,12 +495,20 @@ final class Frontend {
         if ($user_id) {
             $seed = 'user:' . $user_id;
         } else {
-            if (!isset($_COOKIE['magick_ad_uid']) || !is_string($_COOKIE['magick_ad_uid'])) {
-                $uid = wp_generate_uuid4();
-                setcookie('magick_ad_uid', $uid, time() + MONTH_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
-                $_COOKIE['magick_ad_uid'] = $uid;
+            if ($strategy === 'cookie') {
+                if (!isset($_COOKIE['magick_ad_uid']) || !is_string($_COOKIE['magick_ad_uid'])) {
+                    $uid = wp_generate_uuid4();
+                    setcookie('magick_ad_uid', $uid, time() + MONTH_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                    $_COOKIE['magick_ad_uid'] = $uid;
+                }
+                if (isset($_COOKIE['magick_ad_uid']) && is_string($_COOKIE['magick_ad_uid'])) {
+                    $seed = 'cookie:' . sanitize_text_field(wp_unslash($_COOKIE['magick_ad_uid']));
+                }
             }
-            $seed = 'cookie:' . sanitize_text_field(wp_unslash($_COOKIE['magick_ad_uid']));
+        }
+
+        if ($seed === '') {
+            $seed = 'request:' . wp_rand(0, 1000000);
         }
 
         $hash = md5($seed . '|' . $key);
@@ -768,6 +802,8 @@ final class Frontend {
             $body = '<div class="' . esc_attr(implode(' ', $classes)) . '"' . $style_attr . '>' . $badge_markup . $close_markup . '<div class="magick-ad-html-content">' . $body . '</div></div>';
         }
 
+        $display_mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
+        $random_strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
         $data_attrs = ' data-ad-id="' . esc_attr(isset($ad['id']) ? $ad['id'] : '') . '" data-ad-position="' . esc_attr($position) . '"';
         $delay = isset($behavior['delay']) ? absint($behavior['delay']) : 0;
         $animation = isset($behavior['animation']) ? $behavior['animation'] : 'none';
@@ -777,12 +813,19 @@ final class Frontend {
         if ($animation && $animation !== 'none') {
             $data_attrs .= ' data-ad-anim="' . esc_attr($animation) . '"';
         }
+        if ($display_mode === 'random' && $random_strategy === 'session') {
+            $data_attrs .= ' data-ad-random="session"';
+        }
         $container_class = 'magick-ad-container--' . esc_attr($container_type);
         if (in_array($container_type, array('popup', 'interstitial'), true)) {
             $body = '<div class="magick-ad-overlay"></div><div class="magick-ad-popup">' . $body . '</div>';
         }
+        $unit_class = 'magick-ad-unit magick-ad-unit--' . esc_attr($position) . ' ' . $container_class;
+        if ($display_mode === 'random' && $random_strategy === 'session') {
+            $unit_class .= ' magick-ad-is-hidden';
+        }
 
-        return '<div class="magick-ad-unit magick-ad-unit--' . esc_attr($position) . ' ' . $container_class . '"' . $data_attrs . '><div class="magick-ad-unit__inner">' . $body . '</div></div>';
+        return '<div class="' . esc_attr($unit_class) . '"' . $data_attrs . '><div class="magick-ad-unit__inner">' . $body . '</div></div>';
     }
 
     private static function wrap_zone_markup($markup, $zone) {

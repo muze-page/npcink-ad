@@ -25,12 +25,12 @@ final class Reports_Controller {
 
         $start = date('Y-m-d', current_time('timestamp') - ($days - 1) * DAY_IN_SECONDS);
         $sql = $wpdb->prepare(
-            "SELECT DATE(created_at) AS date,
-                SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END) AS views,
-                SUM(CASE WHEN event_type = 'click' THEN 1 ELSE 0 END) AS clicks
+            "SELECT `date` AS date,
+                SUM(impressions) AS views,
+                SUM(clicks) AS clicks
              FROM {$table}
-             WHERE created_at >= %s
-             GROUP BY DATE(created_at)
+             WHERE `date` >= %s
+             GROUP BY `date`
              ORDER BY date ASC",
             $start
         );

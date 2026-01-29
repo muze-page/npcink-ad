@@ -10,6 +10,8 @@ const createAdGroupTemplate = (type = 'global') => ({
         creative_type: 'image',
         container_type: 'inline',
         display_mode: 'show',
+        random_strategy: 'request',
+        html_mode: 'safe',
         show_page: 'all',
         show_position: 'bottom',
         insert_after: 2,
@@ -132,6 +134,14 @@ const normalizeAd = (ad) => {
                 ? containerType
                 : 'inline',
             display_mode: options.display_mode || 'show',
+            random_strategy: ['request', 'session', 'cookie'].includes(
+                options.random_strategy
+            )
+                ? options.random_strategy
+                : 'request',
+            html_mode: ['safe', 'full'].includes(options.html_mode)
+                ? options.html_mode
+                : 'safe',
             show_page: options.show_page || 'all',
             show_position: normalizeShowPosition(options.show_position) || 'bottom',
             insert_after: Number(options.insert_after || 2),

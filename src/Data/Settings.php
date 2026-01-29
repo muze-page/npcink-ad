@@ -110,6 +110,16 @@ final class Settings {
                 array('show', 'random', 'hide'),
                 'show'
             ),
+            'random_strategy' => self::sanitize_choice(
+                isset($options['random_strategy']) ? $options['random_strategy'] : 'request',
+                array('request', 'session', 'cookie'),
+                'request'
+            ),
+            'html_mode' => self::sanitize_choice(
+                isset($options['html_mode']) ? $options['html_mode'] : 'safe',
+                array('safe', 'full'),
+                'safe'
+            ),
             'show_position' => self::sanitize_choice(
                 isset($options['show_position']) ? $options['show_position'] : '',
                 array(
@@ -158,8 +168,18 @@ final class Settings {
             $blocks_value = wp_kses_post($raw_blocks);
         }
 
+        $raw_html = isset($content['html']) && is_string($content['html']) ? $content['html'] : '';
+        $html_value = $raw_html;
+        $html_mode = isset($sanitized_options['html_mode']) ? $sanitized_options['html_mode'] : 'safe';
+        if ($html_mode !== 'full' || !current_user_can('unfiltered_html')) {
+            $html_value = wp_kses_post($raw_html);
+            if ($html_mode === 'full') {
+                $sanitized_options['html_mode'] = 'safe';
+            }
+        }
+
         $sanitized_content = array(
-            'html' => isset($content['html']) ? wp_kses_post($content['html']) : '',
+            'html' => $html_value,
             'blocks' => $blocks_value,
             'video_url' => isset($content['video_url']) ? esc_url_raw($content['video_url']) : '',
             'link' => isset($content['link']) ? esc_url_raw($content['link']) : '',

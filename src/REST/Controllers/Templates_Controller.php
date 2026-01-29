@@ -150,7 +150,10 @@ final class Templates_Controller {
             return array('blocks' => $blocks);
         }
         $html = isset($data['html']) && is_string($data['html']) ? $data['html'] : '';
-        return array('html' => wp_kses_post($html));
+        if (!current_user_can('unfiltered_html')) {
+            $html = wp_kses_post($html);
+        }
+        return array('html' => $html);
     }
 
     private static function maybe_sideload_image(array &$data): void {

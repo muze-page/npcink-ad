@@ -13,6 +13,7 @@ export const DISPLAY_PAGE_OPTIONS = [
 ];
 
 export const GENERIC_POSITION_OPTIONS = [
+    { label: 'Head (脚本/像素)', value: 'head' },
     { label: '顶部', value: 'top' },
     { label: '内容前', value: 'content_before' },
     { label: '内容后', value: 'content_after' },
@@ -20,6 +21,7 @@ export const GENERIC_POSITION_OPTIONS = [
 ];
 
 export const POST_POSITION_OPTIONS = [
+    { label: 'Head (脚本/像素)', value: 'head' },
     { label: '顶部', value: 'top' },
     { label: '内容前', value: 'content_before' },
     { label: '文章顶部', value: 'post_top' },
