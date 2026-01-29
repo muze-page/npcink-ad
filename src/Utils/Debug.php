@@ -1,48 +1,43 @@
 <?php
 
+namespace MagickAD\Utils;
+
+use MagickAD\Data\Settings;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!function_exists('magick_ad_debug_log')) {
-    function magick_ad_debug_log($message) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log($message);
-        }
-    }
-}
-
-class Magick_AD_Debug {
+final class Debug {
     private static $logged_settings = false;
     private static $logged_hooks = array();
 
-    public static function init() {
-        add_action('init', array(__CLASS__, 'log_settings'));
-        add_action('wp_head', array(__CLASS__, 'log_wp_head'), 1);
-        add_filter('the_content', array(__CLASS__, 'log_the_content'), 1);
-        add_action('wp_footer', array(__CLASS__, 'log_wp_footer'), 1);
+    public function register(): void {
+        if (!Logger::is_debug_enabled()) {
+            return;
+        }
+
+        add_action('init', array(self::class, 'log_settings'));
+        add_action('wp_head', array(self::class, 'log_wp_head'), 1);
+        add_filter('the_content', array(self::class, 'log_the_content'), 1);
+        add_action('wp_footer', array(self::class, 'log_wp_footer'), 1);
     }
 
-    public static function log_settings() {
+    public static function log_settings(): void {
         if (self::$logged_settings) {
             return;
         }
         self::$logged_settings = true;
 
-        if (!function_exists('magick_ad_debug_log_settings_enabled') || !magick_ad_debug_log_settings_enabled()) {
+        if (!Logger::is_settings_log_enabled()) {
             return;
         }
 
-        if (class_exists('Magick_AD_Engine') && method_exists('Magick_AD_Engine', 'get_settings')) {
-            $settings = Magick_AD_Engine::get_settings();
-        } else {
-            $settings = get_option('magick_ad_settings', array());
-        }
-
-        magick_ad_debug_log('Magick AD Debug: settings=' . print_r($settings, true));
+        $settings = Settings::get_settings();
+        Logger::log('Magick AD Debug: settings=' . print_r($settings, true));
     }
 
-    public static function log_wp_head() {
+    public static function log_wp_head(): void {
         self::log_once('wp_head', sprintf(
             'Magick AD Debug: wp_head fired. is_admin=%s is_singular=%s is_single=%s is_page=%s is_home=%s is_front_page=%s is_archive=%s is_user_logged_in=%s wp_is_mobile=%s',
             self::bool(is_admin()),
@@ -59,7 +54,7 @@ class Magick_AD_Debug {
         self::log_ad_filter_results();
     }
 
-    public static function log_the_content($content) {
+    public static function log_the_content(string $content): string {
         self::log_once('the_content', sprintf(
             'Magick AD Debug: the_content fired. in_the_loop=%s is_main_query=%s is_singular=%s',
             self::bool(in_the_loop()),
@@ -70,20 +65,16 @@ class Magick_AD_Debug {
         return $content;
     }
 
-    public static function log_wp_footer() {
+    public static function log_wp_footer(): void {
         self::log_once('wp_footer', 'Magick AD Debug: wp_footer fired.');
     }
 
-    private static function log_ad_filter_results() {
-        if (!class_exists('Magick_AD_Engine') || !method_exists('Magick_AD_Engine', 'get_settings')) {
-            return;
-        }
-
-        $settings = Magick_AD_Engine::get_settings();
+    private static function log_ad_filter_results(): void {
+        $settings = Settings::get_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
 
         if (empty($ads)) {
-            magick_ad_debug_log('Magick AD Debug: no ads found in settings.');
+            Logger::log('Magick AD Debug: no ads found in settings.');
             return;
         }
 
@@ -91,14 +82,14 @@ class Magick_AD_Debug {
             $result = self::evaluate_ad($ad);
             $id = isset($ad['id']) ? $ad['id'] : '(no-id)';
             if ($result['allowed']) {
-                magick_ad_debug_log('Magick AD Debug: ad ' . $id . ' allowed=true');
+                Logger::log('Magick AD Debug: ad ' . $id . ' allowed=true');
             } else {
-                magick_ad_debug_log('Magick AD Debug: ad ' . $id . ' allowed=false reasons=' . implode('|', $result['reasons']));
+                Logger::log('Magick AD Debug: ad ' . $id . ' allowed=false reasons=' . implode('|', $result['reasons']));
             }
         }
     }
 
-    private static function evaluate_ad($ad) {
+    private static function evaluate_ad(array $ad): array {
         $reasons = array();
         $options = isset($ad['options']) ? $ad['options'] : array();
 
@@ -143,15 +134,15 @@ class Magick_AD_Debug {
         );
     }
 
-    private static function log_once($key, $message) {
+    private static function log_once(string $key, string $message): void {
         if (isset(self::$logged_hooks[$key])) {
             return;
         }
         self::$logged_hooks[$key] = true;
-        magick_ad_debug_log($message);
+        Logger::log($message);
     }
 
-    private static function bool($value) {
+    private static function bool(bool $value): string {
         return $value ? 'true' : 'false';
     }
 }

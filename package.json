@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "wp-scripts start",
-    "build": "wp-scripts build"
+    "start": "wp-scripts start --webpack-src-dir=assets/js --webpack-output-dir=build",
+    "build": "wp-scripts build --webpack-src-dir=assets/js --webpack-output-dir=build"
   },
   "devDependencies": {
     "@wordpress/scripts": "^26.19.0"

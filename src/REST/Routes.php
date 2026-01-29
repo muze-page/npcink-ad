@@ -1,0 +1,68 @@
+<?php
+
+namespace MagickAD\REST;
+
+use MagickAD\REST\Controllers\Debug_Controller;
+use MagickAD\REST\Controllers\Reports_Controller;
+use MagickAD\REST\Controllers\Settings_Controller;
+use MagickAD\REST\Controllers\Templates_Controller;
+use MagickAD\REST\Controllers\Track_Controller;
+use MagickAD\Utils\Capabilities;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+final class Routes {
+    public function register(): void {
+        add_action('rest_api_init', array($this, 'register_routes'));
+    }
+
+    public function register_routes(): void {
+        register_rest_route('magick-ad/v1', '/save-settings', array(
+            'methods' => 'POST',
+            'callback' => array(Settings_Controller::class, 'save'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/save-settings', array(
+            'methods' => 'GET',
+            'callback' => array(Settings_Controller::class, 'get'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/report', array(
+            'methods' => 'GET',
+            'callback' => array(Reports_Controller::class, 'report'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/debug', array(
+            'methods' => 'GET',
+            'callback' => array(Debug_Controller::class, 'get'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/debug', array(
+            'methods' => 'POST',
+            'callback' => array(Debug_Controller::class, 'update'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/track', array(
+            'methods' => 'POST',
+            'callback' => array(Track_Controller::class, 'track'),
+            'permission_callback' => '__return_true',
+        ));
+        register_rest_route('magick-ad/v1', '/templates', array(
+            'methods' => 'GET',
+            'callback' => array(Templates_Controller::class, 'list'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/templates', array(
+            'methods' => 'POST',
+            'callback' => array(Templates_Controller::class, 'create'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/templates/import', array(
+            'methods' => 'POST',
+            'callback' => array(Templates_Controller::class, 'import'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+    }
+}
