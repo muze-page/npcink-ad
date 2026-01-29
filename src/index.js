@@ -14,10 +14,12 @@ import {
     Card,
     CardBody,
     ColorPicker,
+    CheckboxControl,
     DropdownMenu,
     FormTokenField,
     MenuGroup,
     MenuItem,
+    Modal,
     Notice,
     Panel,
     PanelBody,
@@ -333,6 +335,103 @@ const BlockEditor = ({ value, onChange }) => {
     );
 };
 
+const TemplateLibraryModal = ({
+    isOpen,
+    type,
+    templates,
+    selected,
+    onToggleSelect,
+    onApply,
+    onImport,
+    onExport,
+    onClose,
+}) => {
+    if (!isOpen) {
+        return null;
+    }
+
+    const systemTemplates = templates.filter(
+        (item) => item.source === 'preset'
+    );
+    const userTemplates = templates.filter(
+        (item) => item.source === 'user'
+    );
+
+    return (
+        <Modal title="模板库" onRequestClose={onClose} size="large">
+            <div className="magick-ad-template-toolbar">
+                <div className="magick-ad-template-toolbar__actions">
+                    <Button variant="secondary" onClick={onImport}>
+                        导入模板
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={onExport}
+                        disabled={selected.length === 0}
+                    >
+                        导出选中
+                    </Button>
+                </div>
+            </div>
+
+            <TabPanel
+                className="magick-ad-template-tabs"
+                tabs={[
+                    { name: 'preset', title: '系统预设' },
+                    { name: 'user', title: '我的模板' },
+                ]}
+            >
+                {(tab) => {
+                    const list =
+                        tab.name === 'preset'
+                            ? systemTemplates
+                            : userTemplates;
+                    if (list.length === 0) {
+                        return (
+                            <Notice status="info" isDismissible={false}>
+                                暂无模板。
+                            </Notice>
+                        );
+                    }
+                    return (
+                        <div className="magick-ad-template-grid">
+                            {list.map((template) => (
+                                <div
+                                    key={template.id}
+                                    className="magick-ad-template-card"
+                                >
+                                    <div className="magick-ad-template-card__body">
+                                        <h4>{template.name}</h4>
+                                        <p>{template.description || ''}</p>
+                                    </div>
+                                    <div className="magick-ad-template-card__actions">
+                                        <Button
+                                            variant="primary"
+                                            onClick={() =>
+                                                onApply(template)
+                                            }
+                                        >
+                                            应用
+                                        </Button>
+                                    </div>
+                                    <CheckboxControl
+                                        className="magick-ad-template-card__check"
+                                        label="导出"
+                                        checked={selected.includes(template.id)}
+                                        onChange={() =>
+                                            onToggleSelect(template.id)
+                                        }
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    );
+                }}
+            </TabPanel>
+        </Modal>
+    );
+};
+
 const DISPLAY_PAGE_OPTIONS = [
     { label: '全站', value: 'all' },
     { label: '仅首页', value: 'home' },
@@ -516,6 +615,95 @@ const HTML_TEMPLATES = [
     },
 ];
 
+const IMAGE_TEMPLATES = [
+    {
+        id: 'img-banner',
+        name: '横幅占位图',
+        description: '适合文章内或横幅广告位',
+        type: 'image',
+        source: 'preset',
+        data: {
+            image: {
+                id: 0,
+                url: 'https://via.placeholder.com/728x90?text=Banner',
+                alt: 'Banner',
+            },
+            link: '',
+            link_target: false,
+            image_settings: {
+                radius: 0,
+                max_width: 728,
+                margin_top: 0,
+                margin_bottom: 0,
+                margin_left: 0,
+                margin_right: 0,
+            },
+        },
+    },
+    {
+        id: 'img-poster',
+        name: '竖版海报',
+        description: '适合侧边栏或弹窗容器',
+        type: 'image',
+        source: 'preset',
+        data: {
+            image: {
+                id: 0,
+                url: 'https://via.placeholder.com/600x900?text=Poster',
+                alt: 'Poster',
+            },
+            link: '',
+            link_target: false,
+            image_settings: {
+                radius: 8,
+                max_width: 600,
+                margin_top: 0,
+                margin_bottom: 0,
+                margin_left: 0,
+                margin_right: 0,
+            },
+        },
+    },
+];
+
+const VIDEO_TEMPLATES = [
+    {
+        id: 'video-demo',
+        name: '标准视频模板',
+        description: 'MP4 示例视频',
+        type: 'video',
+        source: 'preset',
+        data: {
+            video_url: 'https://www.w3schools.com/html/mov_bbb.mp4',
+        },
+    },
+];
+
+const BLOCK_TEMPLATES = [
+    {
+        id: 'block-price',
+        name: '价格卡片',
+        description: '标题 + 文案 + 按钮',
+        type: 'block',
+        source: 'preset',
+        data: {
+            blocks:
+                '<!-- wp:heading {"level":3} --><h3>限时特惠</h3><!-- /wp:heading --><!-- wp:paragraph --><p>今天下单享受 8 折优惠。</p><!-- /wp:paragraph --><!-- wp:buttons --><div class="wp-block-buttons"><div class="wp-block-button"><a class="wp-block-button__link">立即查看</a></div></div><!-- /wp:buttons -->',
+        },
+    },
+    {
+        id: 'block-feature',
+        name: '图文卖点',
+        description: '左右分栏图文排版',
+        type: 'block',
+        source: 'preset',
+        data: {
+            blocks:
+                '<!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p>高转化广告位推荐</p><!-- /wp:paragraph --><!-- wp:list --><ul><li>快速配置</li><li>多端适配</li><li>自动统计</li></ul><!-- /wp:list --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:image {"sizeSlug":"large"} --><figure class="wp-block-image size-large"><img src="https://via.placeholder.com/400x240?text=Image" alt=""/></figure><!-- /wp:image --></div><!-- /wp:column --></div><!-- /wp:columns -->',
+        },
+    },
+];
+
 const AdsConfig = () => {
     const ads = useStore((state) => state.ads);
     const isLoading = useStore((state) => state.isLoading);
@@ -541,6 +729,11 @@ const AdsConfig = () => {
     const [targetLoading, setTargetLoading] = useState(false);
     const [devicePreview, setDevicePreview] = useState('desktop');
     const [htmlTab, setHtmlTab] = useState('content');
+    const [templateModalOpen, setTemplateModalOpen] = useState(false);
+    const [templateType, setTemplateType] = useState('image');
+    const [templateLibrary, setTemplateLibrary] = useState([]);
+    const [templateSelection, setTemplateSelection] = useState([]);
+    const fileInputRef = useRef(null);
     const noticeTimerRef = useRef(null);
     const targetSearchTimerRef = useRef(null);
     const targetRequestRef = useRef(0);
@@ -920,6 +1113,164 @@ const AdsConfig = () => {
         return color.hex || 'transparent';
     };
 
+    const getCreativeTemplateData = (type, ad) => {
+        const content = ad?.content || {};
+        if (type === 'image') {
+            return {
+                image: content.image || { id: 0, url: '', alt: '' },
+                link: content.link || '',
+                link_target: Boolean(content.link_target),
+                image_settings: content.image_settings || {},
+            };
+        }
+        if (type === 'video') {
+            return {
+                video_url: content.video_url || '',
+            };
+        }
+        if (type === 'block') {
+            return {
+                blocks: content.blocks || '',
+            };
+        }
+        return {
+            html: content.html || '',
+        };
+    };
+
+    const loadTemplates = async (type) => {
+        const presets = [
+            ...IMAGE_TEMPLATES,
+            ...VIDEO_TEMPLATES,
+            ...BLOCK_TEMPLATES,
+        ].filter((item) => item.type === type);
+
+        try {
+            const response = await apiFetch({
+                path: `/magick-ad/v1/templates?type=${type}`,
+                method: 'GET',
+            });
+            const userTemplates = Array.isArray(response) ? response : [];
+            setTemplateLibrary([
+                ...presets,
+                ...userTemplates.map((item) => ({
+                    ...item,
+                    source: 'user',
+                })),
+            ]);
+        } catch (err) {
+            setTemplateLibrary(presets);
+        }
+    };
+
+    const openTemplateLibrary = async (type) => {
+        setTemplateType(type);
+        setTemplateSelection([]);
+        setTemplateModalOpen(true);
+        await loadTemplates(type);
+    };
+
+    const handleSaveTemplate = async (type) => {
+        if (!selectedAd) {
+            return;
+        }
+        const name = window.prompt('请输入模板名称');
+        if (!name) {
+            return;
+        }
+        const data = getCreativeTemplateData(type, selectedAd);
+        try {
+            await apiFetch({
+                path: '/magick-ad/v1/templates',
+                method: 'POST',
+                data: { name, type, data },
+            });
+            await loadTemplates(type);
+            setNotice({
+                status: 'success',
+                message: '模板已保存',
+            });
+        } catch (err) {
+            setNotice({
+                status: 'error',
+                message: err?.message || '模板保存失败',
+            });
+        }
+    };
+
+    const handleApplyTemplate = (template) => {
+        handleUpdateOptions({ creative_type: template.type });
+        handleUpdateContent(template.data || {});
+        setTemplateModalOpen(false);
+    };
+
+    const handleToggleTemplateSelect = (id) => {
+        setTemplateSelection((prev) =>
+            prev.includes(id)
+                ? prev.filter((item) => item !== id)
+                : [...prev, id]
+        );
+    };
+
+    const handleExportTemplates = () => {
+        const selected = templateLibrary.filter((item) =>
+            templateSelection.includes(item.id)
+        );
+        if (selected.length === 0) {
+            return;
+        }
+        const payload = selected.map((item) => ({
+            name: item.name,
+            type: item.type,
+            data: item.data,
+        }));
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+            type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `magick-templates-${templateType}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleImportTemplates = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileChange = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+        try {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            const templates = Array.isArray(json) ? json : [];
+            await apiFetch({
+                path: '/magick-ad/v1/templates/import',
+                method: 'POST',
+                data: { templates },
+            });
+            await loadTemplates(templateType);
+            setNotice({
+                status: 'success',
+                message: '模板导入完成',
+            });
+        } catch (err) {
+            setNotice({
+                status: 'error',
+                message: err?.message || '模板导入失败',
+            });
+        }
+    };
+
     const handleSave = async () => {
         if (noticeTimerRef.current) {
             window.clearTimeout(noticeTimerRef.current);
@@ -1083,6 +1434,24 @@ const AdsConfig = () => {
                         >
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
+                                    <div className="magick-ad-template-actions">
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() =>
+                                                openTemplateLibrary('image')
+                                            }
+                                        >
+                                            模板库
+                                        </Button>
+                                        <Button
+                                            variant="tertiary"
+                                            onClick={() =>
+                                                handleSaveTemplate('image')
+                                            }
+                                        >
+                                            存为模板
+                                        </Button>
+                                    </div>
                                     <TabPanel
                                         className="magick-ad-image-tabs"
                                         tabs={[
@@ -1409,6 +1778,24 @@ const AdsConfig = () => {
                         {activeContentType === 'video' && (
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
+                                    <div className="magick-ad-template-actions">
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() =>
+                                                openTemplateLibrary('video')
+                                            }
+                                        >
+                                            模板库
+                                        </Button>
+                                        <Button
+                                            variant="tertiary"
+                                            onClick={() =>
+                                                handleSaveTemplate('video')
+                                            }
+                                        >
+                                            存为模板
+                                        </Button>
+                                    </div>
                                     <TextControl
                                         label="视频地址"
                                         value={
@@ -1428,6 +1815,24 @@ const AdsConfig = () => {
                         {activeContentType === 'block' && (
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
+                                    <div className="magick-ad-template-actions">
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() =>
+                                                openTemplateLibrary('block')
+                                            }
+                                        >
+                                            模板库
+                                        </Button>
+                                        <Button
+                                            variant="tertiary"
+                                            onClick={() =>
+                                                handleSaveTemplate('block')
+                                            }
+                                        >
+                                            存为模板
+                                        </Button>
+                                    </div>
                                     <BlockEditor
                                         value={
                                             selectedAd.content?.blocks || ''
@@ -2362,6 +2767,26 @@ const AdsConfig = () => {
                 leftSidebar={leftSidebar}
                 rightSidebar={rightSidebar}
                 contentPanels={contentPanels}
+            />
+
+            <TemplateLibraryModal
+                isOpen={templateModalOpen}
+                type={templateType}
+                templates={templateLibrary}
+                selected={templateSelection}
+                onToggleSelect={handleToggleTemplateSelect}
+                onApply={handleApplyTemplate}
+                onImport={handleImportTemplates}
+                onExport={handleExportTemplates}
+                onClose={() => setTemplateModalOpen(false)}
+            />
+
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
             />
 
             <Card>

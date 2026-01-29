@@ -401,6 +401,29 @@
     transition: opacity 0.2s ease;
 }
 
+.magick-ad-template-card__check {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+}
+
+.magick-ad-template-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+
+.magick-ad-template-toolbar__actions {
+    display: flex;
+    gap: 8px;
+}
+
+.magick-ad-template-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
 .magick-ad-template-card:hover {
     border-color: #2271b1;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
