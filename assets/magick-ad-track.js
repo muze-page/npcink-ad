@@ -83,6 +83,22 @@
         element: null,
         lastFocused: null,
     };
+    const voidElements = new Set([
+        'AREA',
+        'BASE',
+        'BR',
+        'COL',
+        'EMBED',
+        'HR',
+        'IMG',
+        'INPUT',
+        'LINK',
+        'META',
+        'PARAM',
+        'SOURCE',
+        'TRACK',
+        'WBR',
+    ]);
     const prefersReducedMotion =
         window.matchMedia &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -324,7 +340,144 @@
         });
     };
 
+    const ensureFooterZone = () => {
+        let zone = document.querySelector('.magick-ad-zone--footer');
+        if (zone) {
+            return zone;
+        }
+        zone = document.createElement('div');
+        zone.className = 'magick-ad-zone magick-ad-zone--footer';
+        document.body.appendChild(zone);
+        return zone;
+    };
+
+    const normalizeInsertMode = (target, insertMode) => {
+        if (!target) {
+            return insertMode;
+        }
+        const tag = target.tagName || '';
+        if (insertMode === 'append' || insertMode === 'prepend') {
+            if (tag === 'P' || voidElements.has(tag)) {
+                return insertMode === 'append' ? 'after' : 'before';
+            }
+        }
+        return insertMode;
+    };
+
+    const insertElement = (target, element, insertMode) => {
+        if (!target || !element) {
+            return false;
+        }
+        const mode = normalizeInsertMode(target, insertMode);
+        try {
+            switch (mode) {
+                case 'prepend':
+                    target.insertAdjacentElement('afterbegin', element);
+                    break;
+                case 'before':
+                    target.insertAdjacentElement('beforebegin', element);
+                    break;
+                case 'after':
+                    target.insertAdjacentElement('afterend', element);
+                    break;
+                case 'append':
+                default:
+                    target.insertAdjacentElement('beforeend', element);
+                    break;
+            }
+            return true;
+        } catch (err) {
+            return false;
+        }
+    };
+
+    const placeNodeAds = () => {
+        const stash = document.getElementById('magick-ad-stash');
+        if (!stash) {
+            return;
+        }
+        const units = Array.from(
+            stash.querySelectorAll('[data-ad-node-type][data-ad-node-value]')
+        );
+        if (!units.length) {
+            return;
+        }
+        units.forEach((unit) => {
+            if (unit.dataset.nodeInserted === '1') {
+                return;
+            }
+            const type = unit.getAttribute('data-ad-node-type') || 'id';
+            const value = unit.getAttribute('data-ad-node-value') || '';
+            const insertMode =
+                unit.getAttribute('data-ad-node-insert') || 'append';
+            const matchMode =
+                unit.getAttribute('data-ad-node-match') || 'first';
+            const fallback =
+                unit.getAttribute('data-ad-node-fallback') || 'hide';
+            const index = Number(
+                unit.getAttribute('data-ad-node-index') || 1
+            );
+            const compact =
+                unit.getAttribute('data-ad-node-compact') === '1';
+            if (compact) {
+                unit.classList.add('magick-ad-placement--node-compact');
+            }
+
+            if (!value) {
+                unit.remove();
+                return;
+            }
+
+            let targets = [];
+            if (type === 'id') {
+                const target = document.getElementById(value);
+                if (target) {
+                    targets = [target];
+                }
+            } else if (type === 'class') {
+                targets = Array.from(
+                    document.getElementsByClassName(value)
+                );
+            }
+
+            if (matchMode === 'nth') {
+                const target = targets[index - 1];
+                targets = target ? [target] : [];
+            } else if (matchMode === 'first') {
+                targets = targets.slice(0, 1);
+            }
+
+            if (!targets.length) {
+                if (fallback === 'footer') {
+                    const zone = ensureFooterZone();
+                    insertElement(zone, unit, 'append');
+                    unit.dataset.nodeInserted = '1';
+                    return;
+                }
+                unit.remove();
+                return;
+            }
+
+            if (matchMode === 'all' && targets.length > 1) {
+                targets.forEach((target, idx) => {
+                    const node = idx === 0 ? unit : unit.cloneNode(true);
+                    node.dataset.nodeInserted = '1';
+                    insertElement(target, node, insertMode);
+                });
+            } else {
+                const target = targets[0];
+                insertElement(target, unit, insertMode);
+                unit.dataset.nodeInserted = '1';
+            }
+        });
+
+        if (!stash.children.length) {
+            stash.remove();
+        }
+    };
+
     const initObservers = () => {
+        placeNodeAds();
         document
             .querySelectorAll('[data-ad-id]')
             .forEach((element) => observer.observe(element));

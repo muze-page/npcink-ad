@@ -57,6 +57,58 @@ final class Settings {
                     }
                 }
             }
+            if ($options['placement_hook'] === 'node') {
+                $target_type = isset($options['node_target_type']) ? $options['node_target_type'] : '';
+                $target_value = isset($options['node_target_value']) ? $options['node_target_value'] : '';
+                $insert_mode = isset($options['node_insert']) ? $options['node_insert'] : '';
+                $match_mode = isset($options['node_match']) ? $options['node_match'] : '';
+                $fallback = isset($options['node_fallback']) ? $options['node_fallback'] : '';
+                if (!in_array($target_type, array('id', 'class'), true)) {
+                    return new WP_Error(
+                        'magick_ad_invalid_node_type',
+                        'node_target_type must be id or class.',
+                        array('status' => 400)
+                    );
+                }
+                if (!$target_value || !preg_match('/^[A-Za-z_][A-Za-z0-9_-]*$/', $target_value)) {
+                    return new WP_Error(
+                        'magick_ad_invalid_node_value',
+                        'node_target_value is invalid.',
+                        array('status' => 400)
+                    );
+                }
+                if (!in_array($insert_mode, array('append', 'prepend', 'before', 'after'), true)) {
+                    return new WP_Error(
+                        'magick_ad_invalid_node_insert',
+                        'node_insert is invalid.',
+                        array('status' => 400)
+                    );
+                }
+                if (!in_array($match_mode, array('first', 'nth', 'all'), true)) {
+                    return new WP_Error(
+                        'magick_ad_invalid_node_match',
+                        'node_match is invalid.',
+                        array('status' => 400)
+                    );
+                }
+                if ($match_mode === 'nth') {
+                    $index = isset($options['node_index']) ? absint($options['node_index']) : 0;
+                    if ($index < 1) {
+                        return new WP_Error(
+                            'magick_ad_invalid_node_index',
+                            'node_index must be >= 1.',
+                            array('status' => 400)
+                        );
+                    }
+                }
+                if (!in_array($fallback, array('hide', 'footer'), true)) {
+                    return new WP_Error(
+                        'magick_ad_invalid_node_fallback',
+                        'node_fallback is invalid.',
+                        array('status' => 400)
+                    );
+                }
+            }
         }
 
         return true;
@@ -65,6 +117,17 @@ final class Settings {
     public static function sanitize_choice($value, array $allowed, string $default): string {
         $value = is_string($value) ? $value : '';
         return in_array($value, $allowed, true) ? $value : $default;
+    }
+
+    private static function sanitize_node_target_value($value): string {
+        $value = is_string($value) ? trim($value) : '';
+        if ($value === '') {
+            return '';
+        }
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_-]*$/', $value)) {
+            return '';
+        }
+        return $value;
     }
 
     private static function normalize_placement(array $options): array {
@@ -86,6 +149,7 @@ final class Settings {
                 'comments_bottom',
                 'comment_form_before',
                 'comment_form_after',
+                'node',
             ),
             ''
         );
@@ -192,6 +256,31 @@ final class Settings {
                 ''
             ),
             'target_ids' => self::sanitize_ids(isset($options['target_ids']) ? $options['target_ids'] : array()),
+            'node_target_type' => self::sanitize_choice(
+                isset($options['node_target_type']) ? $options['node_target_type'] : 'id',
+                array('id', 'class'),
+                'id'
+            ),
+            'node_target_value' => self::sanitize_node_target_value(
+                isset($options['node_target_value']) ? $options['node_target_value'] : ''
+            ),
+            'node_insert' => self::sanitize_choice(
+                isset($options['node_insert']) ? $options['node_insert'] : 'append',
+                array('append', 'prepend', 'before', 'after'),
+                'append'
+            ),
+            'node_match' => self::sanitize_choice(
+                isset($options['node_match']) ? $options['node_match'] : 'first',
+                array('first', 'nth', 'all'),
+                'first'
+            ),
+            'node_index' => isset($options['node_index']) ? max(1, absint($options['node_index'])) : 1,
+            'node_fallback' => self::sanitize_choice(
+                isset($options['node_fallback']) ? $options['node_fallback'] : 'hide',
+                array('hide', 'footer'),
+                'hide'
+            ),
+            'node_compact' => isset($options['node_compact']) ? (bool) $options['node_compact'] : true,
         );
 
         $placement = self::normalize_placement($options);

@@ -339,6 +339,12 @@ final class Ads {
                     $label = 'paragraph_' . ($paragraph ?: 2);
                 }
             }
+            if ($hook === 'node') {
+                $node_type = isset($options['node_target_type']) ? $options['node_target_type'] : 'id';
+                $node_value = isset($options['node_target_value']) ? $options['node_target_value'] : '';
+                $prefix = $node_type === 'class' ? '.' : '#';
+                $label = 'node ' . $prefix . $node_value;
+            }
             echo esc_html($label ?: '-');
         }
     }

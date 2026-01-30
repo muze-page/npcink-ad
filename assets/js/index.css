@@ -57,7 +57,6 @@
     grid-template-columns: minmax(0, 1fr) minmax(240px, 40%);
     gap: 16px;
     position: relative;
-    padding-top: 52px;
 }
 
 .magick-ad-editor-left {
@@ -718,6 +717,12 @@
     font-weight: 600;
 }
 
+.magick-ad-node-placement {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #eef1f5;
+}
+
 .magick-ad-inline-loading {
     display: inline-flex;
     align-items: center;
@@ -1200,10 +1205,25 @@
     }
 }
 
-.magick-ad-template-actions {
+.magick-ad-editor-header {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 4px 8px;
+    border-bottom: 1px solid #eef1f5;
+}
+
+.magick-ad-editor-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.magick-ad-template-actions {
+    display: inline-flex;
     gap: 8px;
-    margin-bottom: 12px;
+    margin: 0;
 }
 
 

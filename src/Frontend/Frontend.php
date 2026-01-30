@@ -36,6 +36,7 @@ final class Frontend {
     private static function init() {
         add_filter('the_content', array(__CLASS__, 'inject_content_ads'));
         add_action('wp_head', array(__CLASS__, 'render_head_ads'));
+        add_action('wp_footer', array(__CLASS__, 'render_node_ads'), 5);
         add_action('wp_footer', array(__CLASS__, 'render_footer_ads'));
         add_action('wp_footer', array(__CLASS__, 'render_diagnose_panel'), 99);
         add_action('wp_body_open', array(__CLASS__, 'render_body_top_ads'));
@@ -76,7 +77,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads_for('content');
+        $ads = self::get_matching_ads_for('all');
         if (empty($ads)) {
             return;
         }
@@ -255,6 +256,31 @@ final class Frontend {
 
         if ($markup) {
             echo self::wrap_zone_markup($markup, 'footer');
+        }
+    }
+
+    public static function render_node_ads() {
+        if (is_admin()) {
+            return;
+        }
+
+        $ads = self::get_matching_ads_for('node');
+        if (empty($ads)) {
+            return;
+        }
+
+        $markup = '';
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $placement = self::get_placement($options);
+            if ($placement['hook'] !== 'node') {
+                continue;
+            }
+            $markup .= self::build_ad_markup($ad, 'node');
+        }
+
+        if ($markup) {
+            echo '<div id="magick-ad-stash" class="magick-ad-stash" style="display:none">' . $markup . '</div>';
         }
     }
 
@@ -513,6 +539,7 @@ final class Frontend {
             'comments_bottom' => array(),
             'comment_form_before' => array(),
             'comment_form_after' => array(),
+            'node' => array(),
         );
 
         foreach ($ads as $ad) {
@@ -564,6 +591,10 @@ final class Frontend {
             if ($hook === 'comment_form_after') {
                 $zones['comments'][] = $ad;
                 $zones['comment_form_after'][] = $ad;
+                continue;
+            }
+            if ($hook === 'node') {
+                $zones['node'][] = $ad;
                 continue;
             }
             if ($hook === 'content') {
@@ -1354,6 +1385,25 @@ final class Frontend {
         $random_strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
         $data_attrs = ' data-ad-id="' . esc_attr(isset($ad['id']) ? $ad['id'] : '') . '" data-ad-position="' . esc_attr($position) . '"';
         $data_attrs .= ' data-ad-container="' . esc_attr($container_type) . '"';
+        $placement_hook = isset($options['placement_hook']) ? $options['placement_hook'] : '';
+        if ($placement_hook === 'node') {
+            $node_type = isset($options['node_target_type']) ? $options['node_target_type'] : 'id';
+            $node_value = isset($options['node_target_value']) ? $options['node_target_value'] : '';
+            $node_insert = isset($options['node_insert']) ? $options['node_insert'] : 'append';
+            $node_match = isset($options['node_match']) ? $options['node_match'] : 'first';
+            $node_index = isset($options['node_index']) ? absint($options['node_index']) : 1;
+            $node_fallback = isset($options['node_fallback']) ? $options['node_fallback'] : 'hide';
+            $node_compact = !isset($options['node_compact']) ? true : (bool) $options['node_compact'];
+            $data_attrs .= ' data-ad-node-type="' . esc_attr($node_type) . '"';
+            $data_attrs .= ' data-ad-node-value="' . esc_attr($node_value) . '"';
+            $data_attrs .= ' data-ad-node-insert="' . esc_attr($node_insert) . '"';
+            $data_attrs .= ' data-ad-node-match="' . esc_attr($node_match) . '"';
+            if ($node_index > 0) {
+                $data_attrs .= ' data-ad-node-index="' . esc_attr($node_index) . '"';
+            }
+            $data_attrs .= ' data-ad-node-fallback="' . esc_attr($node_fallback) . '"';
+            $data_attrs .= ' data-ad-node-compact="' . ($node_compact ? '1' : '0') . '"';
+        }
         $delay = isset($behavior['delay']) ? absint($behavior['delay']) : 0;
         $animation = isset($behavior['animation']) ? $behavior['animation'] : 'none';
         $close_on_esc = array_key_exists('close_on_esc', $behavior) ? (bool) $behavior['close_on_esc'] : true;
@@ -1388,6 +1438,9 @@ final class Frontend {
             $body = '<div class="magick-ad-overlay"></div><div class="magick-ad-popup" role="dialog" aria-modal="true" tabindex="-1">' . $body . '</div>';
         }
         $unit_class = 'magick-ad-unit magick-ad-unit--' . esc_attr($position) . ' ' . $container_class;
+        if ($placement_hook === 'node' && (!isset($options['node_compact']) || $options['node_compact'])) {
+            $unit_class .= ' magick-ad-placement--node-compact';
+        }
         if ($display_mode === 'random' && $random_strategy === 'session') {
             $unit_class .= ' magick-ad-is-hidden';
         }

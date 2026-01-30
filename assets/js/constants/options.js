@@ -18,6 +18,7 @@ export const GENERIC_POSITION_OPTIONS = [
     { label: '内容前', value: 'content_before' },
     { label: '内容后', value: 'content_after' },
     { label: '底部', value: 'bottom' },
+    { label: '指定节点（ID / class）', value: 'node' },
 ];
 
 export const POST_POSITION_OPTIONS = [
@@ -33,6 +34,7 @@ export const POST_POSITION_OPTIONS = [
     { label: '评论列表底部', value: 'comments_bottom' },
     { label: '内容后', value: 'content_after' },
     { label: '底部', value: 'bottom' },
+    { label: '指定节点（ID / class）', value: 'node' },
 ];
 
 export const TARGET_TYPE_OPTIONS = [

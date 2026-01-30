@@ -336,6 +336,7 @@ const Layout = ({
             placement.paragraph = 0;
         }
         const placementLabel = (() => {
+            if (placement.hook === 'node') return 'node';
             if (placement.hook === 'head') return 'head';
             if (placement.hook === 'body_top') return 'body_top';
             if (placement.hook === 'footer') return 'footer';

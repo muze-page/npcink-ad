@@ -16,6 +16,14 @@
     padding: 0;
 }
 
+.magick-ad-placement--node-compact {
+    margin: 0 !important;
+}
+
+.magick-ad-stash {
+    display: none;
+}
+
 .magick-ad-unit__inner {
     display: block;
     max-width: 100%;

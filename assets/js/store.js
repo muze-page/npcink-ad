@@ -24,6 +24,13 @@ const createAdGroupTemplate = (type = 'global') => ({
         end_date: '',
         target_type: '',
         target_ids: [],
+        node_target_type: 'id',
+        node_target_value: '',
+        node_insert: 'append',
+        node_match: 'first',
+        node_index: 1,
+        node_fallback: 'hide',
+        node_compact: true,
     },
     content: {
         html: '',
@@ -184,6 +191,27 @@ const normalizeAd = (ad) => {
             target_ids: Array.isArray(options.target_ids)
                 ? options.target_ids.map((id) => Number(id)).filter(Boolean)
                 : [],
+            node_target_type: ['id', 'class'].includes(options.node_target_type)
+                ? options.node_target_type
+                : 'id',
+            node_target_value:
+                typeof options.node_target_value === 'string'
+                    ? options.node_target_value
+                    : '',
+            node_insert: ['append', 'prepend', 'before', 'after'].includes(
+                options.node_insert
+            )
+                ? options.node_insert
+                : 'append',
+            node_match: ['first', 'nth', 'all'].includes(options.node_match)
+                ? options.node_match
+                : 'first',
+            node_index: Number(options.node_index || 1) || 1,
+            node_fallback: ['hide', 'footer'].includes(options.node_fallback)
+                ? options.node_fallback
+                : 'hide',
+            node_compact:
+                options.node_compact === false ? false : true,
         },
         content: {
             html: content.html || '',
