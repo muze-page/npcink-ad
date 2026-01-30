@@ -14,10 +14,12 @@ final class Admin {
     }
 
     public function register_menu(): void {
+        $capability = \MagickAD\Utils\Capabilities::manage_capability();
+        $brand_name = get_option('magick_ad_brand_name', 'Magick AD');
         add_menu_page(
-            'Magick AD',
-            'Magick AD',
-            'manage_options',
+            $brand_name,
+            $brand_name,
+            $capability,
             'magick-ad',
             array($this, 'render_app'),
             'dashicons-megaphone',
@@ -28,7 +30,7 @@ final class Admin {
             'magick-ad',
             __('广告配置', 'magick-ad'),
             __('广告配置', 'magick-ad'),
-            'manage_options',
+            $capability,
             'magick-ad',
             array($this, 'render_app')
         );
@@ -37,7 +39,7 @@ final class Admin {
             'magick-ad',
             __('广告列表', 'magick-ad'),
             __('广告列表', 'magick-ad'),
-            'manage_options',
+            $capability,
             'edit.php?post_type=magick_ad'
         );
     }
@@ -146,6 +148,20 @@ final class Admin {
                 'canUnfilteredHtml' => current_user_can('unfiltered_html'),
                 'previewUrl' => esc_url_raw(home_url('/')),
                 'previewNonce' => wp_create_nonce('magick_ad_preview'),
+                'diagnoseUrl' => esc_url_raw(
+                    add_query_arg(
+                        array(
+                            'magick_ad_diagnose' => '1',
+                            'magick_ad_diagnose_nonce' => wp_create_nonce('magick_ad_diagnose'),
+                        ),
+                        home_url('/')
+                    )
+                ),
+                'branding' => array(
+                    'name' => get_option('magick_ad_brand_name', 'Magick AD'),
+                    'tagline' => get_option('magick_ad_brand_tagline', '广告配置与投放规则管理'),
+                ),
+                'manageCapability' => \MagickAD\Utils\Capabilities::manage_capability(),
             )
         );
     }

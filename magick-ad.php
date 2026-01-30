@@ -34,3 +34,4 @@ spl_autoload_register(function ($class) {
 \MagickAD\Plugin::instance()->init();
 
 register_activation_hook(MAGICK_AD_FILE, array('MagickAD\\Data\\Schema', 'install'));
+register_activation_hook(MAGICK_AD_FILE, array('MagickAD\\Data\\Roles', 'install'));

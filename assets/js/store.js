@@ -39,6 +39,7 @@ const createAdGroupTemplate = (type = 'global') => ({
             mode: 'boxed',
             max_width: 100,
             max_width_unit: '%',
+            reserve_height: 0,
             padding_top: 0,
             padding_right: 0,
             padding_bottom: 0,
@@ -203,6 +204,7 @@ const normalizeAd = (ad) => {
                 max_width: Number(containerStyle.max_width || 100),
                 max_width_unit:
                     containerStyle.max_width_unit === 'px' ? 'px' : '%',
+                reserve_height: Number(containerStyle.reserve_height || 0),
                 padding_top: Number(containerStyle.padding_top || 0),
                 padding_right: Number(containerStyle.padding_right || 0),
                 padding_bottom: Number(containerStyle.padding_bottom || 0),

@@ -199,6 +199,7 @@
         const paddingRight = Number(containerStyle.padding_right || 0);
         const paddingBottom = Number(containerStyle.padding_bottom || 0);
         const paddingLeft = Number(containerStyle.padding_left || 0);
+        const reserveHeight = Number(containerStyle.reserve_height || 0);
         const background = containerStyle.background || 'transparent';
         const radius = Number(containerStyle.radius || 0);
         const shadow = containerStyle.shadow || 'none';
@@ -217,6 +218,9 @@
             styles.push(
                 `padding:${paddingTop}px ${paddingRight}px ${paddingBottom}px ${paddingLeft}px`
             );
+        }
+        if (reserveHeight) {
+            styles.push(`min-height:${reserveHeight}px`);
         }
         if (background && background !== 'transparent') {
             styles.push(`background:${background}`);

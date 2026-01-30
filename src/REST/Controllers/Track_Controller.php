@@ -10,6 +10,24 @@ if (!defined('ABSPATH')) {
 }
 
 final class Track_Controller {
+    private static function has_consent(): bool {
+        return (bool) apply_filters('magick_ad_has_consent', false);
+    }
+
+    private static function tracking_strategy(): string {
+        $strategy = get_option('magick_ad_tracking_strategy', 'session');
+        $strategy = is_string($strategy) ? $strategy : 'session';
+        $strategy = in_array($strategy, array('request', 'session', 'cookie', 'user'), true)
+            ? $strategy
+            : 'session';
+        return (string) apply_filters('magick_ad_tracking_strategy', $strategy);
+    }
+
+    private static function tracking_requires_consent(): bool {
+        $requires = (get_option('magick_ad_tracking_require_consent', '0') === '1');
+        return (bool) apply_filters('magick_ad_tracking_require_consent', $requires);
+    }
+
     public static function track(WP_REST_Request $request) {
         $payload = $request->get_json_params();
         if (!is_array($payload) || empty($payload['ad_id']) || empty($payload['event'])) {
@@ -31,25 +49,60 @@ final class Track_Controller {
         $ad_id = sanitize_text_field($payload['ad_id']);
         $date = current_time('Y-m-d');
         $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
-        $page_url = isset($payload['page_url']) ? esc_url_raw($payload['page_url']) : esc_url_raw(home_url($request_uri));
-        $page_hash = md5($page_url);
+        $page_url = isset($payload['page_url']) ? esc_url_raw($payload['page_url']) : '';
+        $page_hash_source = $page_url ? $page_url : esc_url_raw(home_url($request_uri));
+        $page_hash = '';
+        if (isset($payload['page_hash']) && is_string($payload['page_hash'])) {
+            $page_hash = sanitize_text_field($payload['page_hash']);
+        }
+        if ($page_hash === '') {
+            $page_hash = md5($page_hash_source);
+        }
+
+        $user_id = get_current_user_id();
+        $has_consent = self::has_consent();
+        if (self::tracking_requires_consent() && !$has_consent) {
+            return rest_ensure_response(array('success' => true, 'blocked' => true));
+        }
+
+        $strategy = self::tracking_strategy();
+        if ($strategy === 'cookie' && !$has_consent) {
+            $strategy = 'session';
+        }
 
         $viewer_key = '';
-        $user_id = get_current_user_id();
-        if ($user_id) {
+        $session_id = '';
+        if (isset($payload['session_id']) && is_string($payload['session_id'])) {
+            $session_id = sanitize_text_field($payload['session_id']);
+        }
+
+        if ($strategy === 'session' && $session_id) {
+            $viewer_key = 's:' . $session_id;
+        } elseif ($strategy === 'user' && $user_id) {
             $viewer_key = 'u:' . $user_id;
-        } else {
+        } elseif ($strategy === 'cookie') {
             if (!isset($_COOKIE['magick_ad_uid']) || !is_string($_COOKIE['magick_ad_uid'])) {
                 $uid = wp_generate_uuid4();
                 setcookie('magick_ad_uid', $uid, time() + MONTH_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
                 $_COOKIE['magick_ad_uid'] = $uid;
             }
-            $viewer_key = 'c:' . sanitize_text_field(wp_unslash($_COOKIE['magick_ad_uid']));
+            if (isset($_COOKIE['magick_ad_uid']) && is_string($_COOKIE['magick_ad_uid'])) {
+                $viewer_key = 'c:' . sanitize_text_field(wp_unslash($_COOKIE['magick_ad_uid']));
+            }
+        }
+
+        if ($strategy === 'request' || $viewer_key === '') {
+            $viewer_key = 'r:' . wp_generate_uuid4();
         }
 
         $dedupe_key = 'magick_ad_track_' . md5($ad_id . '|' . $event . '|' . $date . '|' . $page_hash . '|' . $viewer_key);
         $dedupe_ttl = (int) apply_filters('magick_ad_track_dedupe_ttl', DAY_IN_SECONDS, $event);
         $should_dedupe = (bool) apply_filters('magick_ad_track_dedupe', $event === 'impression', $event);
+        if ($strategy === 'request') {
+            $should_dedupe = false;
+        } elseif ($strategy === 'session' && !$session_id) {
+            $should_dedupe = false;
+        }
         if ($should_dedupe && get_transient($dedupe_key)) {
             return rest_ensure_response(array('success' => true, 'deduped' => true));
         }
@@ -90,7 +143,7 @@ final class Track_Controller {
                     array(
                         'ad_id' => $ad_id,
                         'event_type' => $event,
-                        'page_url' => $page_url,
+                        'page_url' => $page_url ? $page_url : $page_hash_source,
                         'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])) : '',
                         'user_id' => $user_id,
                         'created_at' => current_time('mysql'),

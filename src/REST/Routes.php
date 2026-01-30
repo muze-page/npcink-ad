@@ -5,6 +5,7 @@ namespace MagickAD\REST;
 use MagickAD\REST\Controllers\Debug_Controller;
 use MagickAD\REST\Controllers\Reports_Controller;
 use MagickAD\REST\Controllers\Settings_Controller;
+use MagickAD\REST\Controllers\System_Settings_Controller;
 use MagickAD\REST\Controllers\Template_Categories_Controller;
 use MagickAD\REST\Controllers\Template_Preferences_Controller;
 use MagickAD\REST\Controllers\Track_Controller;
@@ -43,6 +44,16 @@ final class Routes {
         register_rest_route('magick-ad/v1', '/debug', array(
             'methods' => 'POST',
             'callback' => array(Debug_Controller::class, 'update'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/system-settings', array(
+            'methods' => 'GET',
+            'callback' => array(System_Settings_Controller::class, 'get'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/system-settings', array(
+            'methods' => 'POST',
+            'callback' => array(System_Settings_Controller::class, 'update'),
             'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
         ));
         register_rest_route('magick-ad/v1', '/track', array(

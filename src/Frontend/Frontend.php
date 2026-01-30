@@ -20,6 +20,8 @@ final class Frontend {
         'allowed' => false,
         'reasons' => array(),
     );
+    private static $matching_cache = null;
+    private static $container_index = null;
 
     public function register(): void {
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_assets'));
@@ -35,6 +37,7 @@ final class Frontend {
         add_filter('the_content', array(__CLASS__, 'inject_content_ads'));
         add_action('wp_head', array(__CLASS__, 'render_head_ads'));
         add_action('wp_footer', array(__CLASS__, 'render_footer_ads'));
+        add_action('wp_footer', array(__CLASS__, 'render_diagnose_panel'), 99);
         add_action('wp_body_open', array(__CLASS__, 'render_body_top_ads'));
         add_action('loop_start', array(__CLASS__, 'render_loop_before_ads'));
         add_action('loop_end', array(__CLASS__, 'render_loop_after_ads'));
@@ -69,6 +72,15 @@ final class Frontend {
             return;
         }
 
+        if (self::is_preview_request()) {
+            return;
+        }
+
+        $ads = self::get_matching_ads_for('content');
+        if (empty($ads)) {
+            return;
+        }
+
         wp_enqueue_style(
             'magick-ad-frontend',
             MAGICK_AD_URL . 'assets/magick-ad-frontend.css',
@@ -76,26 +88,58 @@ final class Frontend {
             MAGICK_AD_VERSION
         );
 
-        if (self::is_preview_request()) {
-            return;
+        $track_handle = 'magick-ad-track';
+        $container_index = self::get_container_index();
+        $defer = self::has_deferred_ads($ads, $container_index);
+        $diagnostics_enabled = (get_option('magick_ad_stats_diagnostics', '0') === '1');
+        $diagnostics_enabled = (bool) apply_filters('magick_ad_stats_diagnostics_enabled', $diagnostics_enabled);
+        $track_config = array(
+            'restUrl' => esc_url_raw(rest_url('magick-ad/v1/track')),
+            'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
+            'defer' => $defer,
+            'scriptUrl' => esc_url_raw(MAGICK_AD_URL . 'assets/magick-ad-track.js'),
+            'containerIndex' => $container_index,
+            'collectPageUrl' => $diagnostics_enabled,
+        );
+
+        if ($defer) {
+            wp_register_script($track_handle, '', array(), MAGICK_AD_VERSION, true);
+            wp_enqueue_script($track_handle);
+            wp_localize_script($track_handle, 'MagickADTrack', $track_config);
+            wp_add_inline_script(
+                $track_handle,
+                '(function(){var cfg=window.MagickADTrack||{};var loaded=false;var load=function(){if(loaded){return;}loaded=true;window.MagickADTrackLoaded=true;var s=document.createElement("script");s.src=cfg.scriptUrl;s.defer=true;document.head.appendChild(s);cleanup();};var events=["scroll","mousemove","touchstart","keydown","pointerdown"];var onEvent=function(){load();};var cleanup=function(){events.forEach(function(ev){window.removeEventListener(ev,onEvent,{passive:true});});};events.forEach(function(ev){window.addEventListener(ev,onEvent,{passive:true});});if("requestIdleCallback" in window){requestIdleCallback(load,{timeout:1500});}else{setTimeout(load,800);} })();'
+            );
+        } else {
+            wp_enqueue_script(
+                $track_handle,
+                MAGICK_AD_URL . 'assets/magick-ad-track.js',
+                array(),
+                MAGICK_AD_VERSION,
+                true
+            );
+            wp_localize_script($track_handle, 'MagickADTrack', $track_config);
+        }
+    }
+
+    private static function has_deferred_ads(array $ads, array $index = array()): bool {
+        if (!empty($index['has_popup']) || !empty($index['has_delay'])) {
+            return true;
         }
 
-        wp_enqueue_script(
-            'magick-ad-track',
-            MAGICK_AD_URL . 'assets/magick-ad-track.js',
-            array(),
-            MAGICK_AD_VERSION,
-            true
-        );
-
-        wp_localize_script(
-            'magick-ad-track',
-            'MagickADTrack',
-            array(
-                'restUrl' => esc_url_raw(rest_url('magick-ad/v1/track')),
-                'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
-            )
-        );
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $container = isset($options['container_type']) ? $options['container_type'] : 'inline';
+            $behavior = isset($ad['content']['behavior']) ? $ad['content']['behavior'] : array();
+            $delay = isset($behavior['delay']) ? absint($behavior['delay']) : 0;
+            if (in_array($container, array('popup', 'interstitial'), true)) {
+                return true;
+            }
+            if ($delay > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -104,7 +148,7 @@ final class Frontend {
             return $content;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('head');
         if (empty($ads)) {
             return $content;
         }
@@ -160,7 +204,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('footer');
         if (empty($ads)) {
             return;
         }
@@ -194,7 +238,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('body_top');
         if (empty($ads)) {
             return;
         }
@@ -219,7 +263,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('loop_before');
         if (empty($ads)) {
             return;
         }
@@ -247,7 +291,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('loop_after');
         if (empty($ads)) {
             return;
         }
@@ -279,7 +323,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('comments');
         if (empty($ads)) {
             return;
         }
@@ -308,7 +352,7 @@ final class Frontend {
             return $template;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('comments_top');
         if (empty($ads)) {
             return $template;
         }
@@ -340,7 +384,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('comments_bottom');
         if (empty($ads)) {
             return;
         }
@@ -365,7 +409,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('comment_form_before');
         if (empty($ads)) {
             return;
         }
@@ -390,7 +434,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('comment_form_after');
         if (empty($ads)) {
             return;
         }
@@ -435,23 +479,129 @@ final class Frontend {
         }
     }
 
-    private static function get_matching_ads() {
-        if (self::is_preview()) {
+    private static function get_matching_ads_for(string $zone): array {
+        if (self::$matching_cache === null) {
+            self::$matching_cache = self::build_matching_cache();
+        }
+
+        $zone = $zone ?: 'all';
+        if (!isset(self::$matching_cache[$zone])) {
             return array();
+        }
+
+        return self::$matching_cache[$zone];
+    }
+
+    private static function build_matching_cache(): array {
+        if (self::is_preview()) {
+            return array('all' => array());
         }
 
         $settings = Settings::get_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
 
-        $matched = array();
+        $zones = array(
+            'all' => array(),
+            'head' => array(),
+            'footer' => array(),
+            'body_top' => array(),
+            'content' => array(),
+            'loop_before' => array(),
+            'loop_after' => array(),
+            'comments' => array(),
+            'comments_top' => array(),
+            'comments_bottom' => array(),
+            'comment_form_before' => array(),
+            'comment_form_after' => array(),
+        );
+
         foreach ($ads as $ad) {
             if (!self::should_display_ad($ad)) {
                 continue;
             }
-            $matched[] = $ad;
+
+            $zones['all'][] = $ad;
+            self::track_container_index($ad);
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $placement = self::get_placement($options);
+            $hook = $placement['hook'];
+
+            if ($hook === 'head') {
+                $zones['head'][] = $ad;
+                continue;
+            }
+            if ($hook === 'footer') {
+                $zones['footer'][] = $ad;
+                continue;
+            }
+            if ($hook === 'body_top') {
+                $zones['body_top'][] = $ad;
+                continue;
+            }
+            if ($hook === 'loop_before') {
+                $zones['loop_before'][] = $ad;
+                continue;
+            }
+            if ($hook === 'loop_after') {
+                $zones['loop_after'][] = $ad;
+                continue;
+            }
+            if ($hook === 'comments_top') {
+                $zones['comments'][] = $ad;
+                $zones['comments_top'][] = $ad;
+                continue;
+            }
+            if ($hook === 'comments_bottom') {
+                $zones['comments'][] = $ad;
+                $zones['comments_bottom'][] = $ad;
+                continue;
+            }
+            if ($hook === 'comment_form_before') {
+                $zones['comments'][] = $ad;
+                $zones['comment_form_before'][] = $ad;
+                continue;
+            }
+            if ($hook === 'comment_form_after') {
+                $zones['comments'][] = $ad;
+                $zones['comment_form_after'][] = $ad;
+                continue;
+            }
+            if ($hook === 'content') {
+                $zones['content'][] = $ad;
+            }
         }
 
-        return $matched;
+        return $zones;
+    }
+
+    private static function get_container_index(): array {
+        if (self::$matching_cache === null) {
+            self::$matching_cache = self::build_matching_cache();
+        }
+
+        if (self::$container_index === null) {
+            self::$container_index = array();
+        }
+
+        return self::$container_index;
+    }
+
+    private static function track_container_index(array $ad): void {
+        if (self::$container_index === null) {
+            self::$container_index = array();
+        }
+        $options = isset($ad['options']) ? $ad['options'] : array();
+        $container = isset($options['container_type']) ? $options['container_type'] : 'inline';
+        if (!isset(self::$container_index[$container])) {
+            self::$container_index[$container] = 0;
+        }
+        self::$container_index[$container] += 1;
+        if (in_array($container, array('popup', 'interstitial'), true)) {
+            self::$container_index['has_popup'] = 1;
+        }
+        if (!empty($ad['content']['behavior']['delay'])) {
+            self::$container_index['has_delay'] = 1;
+        }
     }
 
     private static function should_display_ad($ad) {
@@ -582,6 +732,85 @@ final class Frontend {
             $labels[] = $map[$reason] ?? $reason;
         }
         return implode(' · ', $labels);
+    }
+
+    private static function is_diagnose_request(): bool {
+        return isset($_GET['magick_ad_diagnose']);
+    }
+
+    private static function can_view_diagnose(): bool {
+        if (!Capabilities::current_user_can_manage()) {
+            return false;
+        }
+        $nonce = isset($_GET['magick_ad_diagnose_nonce']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_diagnose_nonce'])) : '';
+        if (!$nonce) {
+            return false;
+        }
+        return wp_verify_nonce($nonce, 'magick_ad_diagnose');
+    }
+
+    public static function render_diagnose_panel(): void {
+        if (!self::is_diagnose_request()) {
+            return;
+        }
+        if (!self::can_view_diagnose()) {
+            return;
+        }
+
+        $settings = Settings::get_settings();
+        $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        $report = array(
+            'generated_at' => current_time('mysql'),
+            'page' => array(
+                'url' => esc_url_raw(home_url(add_query_arg(array()))),
+                'is_home' => is_home(),
+                'is_front_page' => is_front_page(),
+                'is_single' => is_single(),
+                'is_page' => is_page(),
+                'is_archive' => is_archive(),
+                'is_search' => is_search(),
+                'is_404' => is_404(),
+                'is_author' => is_author(),
+                'is_category' => is_category(),
+                'is_tag' => is_tag(),
+            ),
+            'ads' => array(),
+        );
+
+        foreach ($ads as $ad) {
+            $evaluation = self::evaluate_ad($ad);
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $placement = self::get_placement($options);
+            $report['ads'][] = array(
+                'id' => isset($ad['id']) ? $ad['id'] : '',
+                'name' => isset($ad['name']) ? $ad['name'] : '',
+                'enabled' => !empty($options['enabled']),
+                'status' => isset($ad['status']) ? $ad['status'] : '',
+                'placement' => $placement,
+                'allowed' => $evaluation['allowed'],
+                'reasons' => $evaluation['reasons'],
+                'reason_text' => self::format_preview_reasons($evaluation['reasons']),
+            );
+        }
+
+        $json = wp_json_encode($report, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (!$json) {
+            return;
+        }
+
+        echo '<div class="magick-ad-diagnose" id="magick-ad-diagnose">';
+        echo '<div class="magick-ad-diagnose__header">';
+        echo '<strong>Magick AD 投放诊断报告</strong>';
+        echo '<div class="magick-ad-diagnose__actions">';
+        echo '<button type="button" class="magick-ad-diagnose__btn" data-action="copy">复制报告</button>';
+        echo '<button type="button" class="magick-ad-diagnose__btn" data-action="close">关闭</button>';
+        echo '</div>';
+        echo '</div>';
+        echo '<div class="magick-ad-diagnose__body">';
+        echo '<pre class="magick-ad-diagnose__content" id="magick-ad-diagnose-content">' . esc_html($json) . '</pre>';
+        echo '</div>';
+        echo '</div>';
+        echo '<script>(function(){var panel=document.getElementById("magick-ad-diagnose");if(!panel){return;}var btnCopy=panel.querySelector("[data-action=\"copy\"]");var btnClose=panel.querySelector("[data-action=\"close\"]");var content=document.getElementById("magick-ad-diagnose-content");var copyText=function(){if(!content){return;}var text=content.textContent||\"\";if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text);}else{var ta=document.createElement(\"textarea\");ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand(\"copy\");}catch(e){}document.body.removeChild(ta);}};if(btnCopy){btnCopy.addEventListener(\"click\",copyText);}if(btnClose){btnClose.addEventListener(\"click\",function(){panel.remove();});}})();</script>';
     }
 
     public static function handle_preview_request(): void {
@@ -915,6 +1144,27 @@ final class Frontend {
     }
 
     private static function insert_after_paragraphs($content, $insert_map) {
+        if (function_exists('parse_blocks') && function_exists('render_block')) {
+            $blocks = parse_blocks($content);
+            if (!empty($blocks)) {
+                $output = '';
+                $paragraph_index = 0;
+                foreach ($blocks as $block) {
+                    $output .= render_block($block);
+                    if (isset($block['blockName']) && $block['blockName'] === 'core/paragraph') {
+                        $paragraph_index += 1;
+                        if (isset($insert_map[$paragraph_index])) {
+                            $output .= implode('', $insert_map[$paragraph_index]);
+                        }
+                    }
+                }
+                if (!empty($insert_map['fallback'])) {
+                    $output .= implode('', $insert_map['fallback']);
+                }
+                return $output;
+            }
+        }
+
         if (strpos($content, '</p>') === false) {
             $extra = '';
             foreach ($insert_map as $items) {
@@ -965,6 +1215,7 @@ final class Frontend {
         $image_settings = isset($content['image_settings']) && is_array($content['image_settings'])
             ? $content['image_settings']
             : array();
+        $reserve_height = isset($container_style['reserve_height']) ? absint($container_style['reserve_height']) : 0;
 
         $body = '';
         if ($content_type === 'block') {
@@ -1006,7 +1257,7 @@ final class Frontend {
                 }
 
                 $style_attr = $styles ? ' style="' . esc_attr(implode(';', $styles)) . '"' : '';
-                $img_tag = '<img src="' . esc_url($image['url']) . '" alt="' . esc_attr(isset($image['alt']) ? $image['alt'] : '') . '"' . $style_attr . ' />';
+                $img_tag = '<img loading="lazy" decoding="async" src="' . esc_url($image['url']) . '" alt="' . esc_attr(isset($image['alt']) ? $image['alt'] : '') . '"' . $style_attr . ' />';
                 if ($link) {
                     $target = $link_target ? ' target="_blank" rel="noopener noreferrer"' : '';
                     $img_tag = '<a href="' . esc_url($link) . '"' . $target . '>' . $img_tag . '</a>';
@@ -1140,8 +1391,12 @@ final class Frontend {
         if ($display_mode === 'random' && $random_strategy === 'session') {
             $unit_class .= ' magick-ad-is-hidden';
         }
+        $inner_style = '';
+        if ($reserve_height > 0) {
+            $inner_style = ' style="min-height:' . esc_attr($reserve_height) . 'px"';
+        }
 
-        return '<div class="' . esc_attr($unit_class) . '"' . $data_attrs . '><div class="magick-ad-unit__inner">' . $body . '</div></div>';
+        return '<div class="' . esc_attr($unit_class) . '"' . $data_attrs . '><div class="magick-ad-unit__inner"' . $inner_style . '>' . $body . '</div></div>';
     }
 
     private static function wrap_zone_markup($markup, $zone) {

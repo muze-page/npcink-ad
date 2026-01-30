@@ -252,6 +252,7 @@ final class Settings {
                     array('%', 'px'),
                     '%'
                 ),
+                'reserve_height' => isset($container_style['reserve_height']) ? absint($container_style['reserve_height']) : 0,
                 'padding_top' => isset($container_style['padding_top']) ? absint($container_style['padding_top']) : 0,
                 'padding_right' => isset($container_style['padding_right']) ? absint($container_style['padding_right']) : 0,
                 'padding_bottom' => isset($container_style['padding_bottom']) ? absint($container_style['padding_bottom']) : 0,

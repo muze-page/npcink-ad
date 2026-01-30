@@ -546,6 +546,16 @@
     border-color: #cdd7ff;
 }
 
+.magick-ad-status-pill.is-pending {
+    color: #7c2d12;
+    background: #fff7ed;
+    border-color: #fed7aa;
+}
+
+.magick-ad-debug-actions {
+    margin-top: 12px;
+}
+
 .magick-ad-schedule-header {
     display: flex;
     align-items: center;

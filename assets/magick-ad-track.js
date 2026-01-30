@@ -5,12 +5,61 @@
         return;
     }
 
+    const readStorageValue = (storage, key) => {
+        try {
+            return storage.getItem(key);
+        } catch (err) {
+            return null;
+        }
+    };
+
+    const writeStorageValue = (storage, key, value) => {
+        try {
+            storage.setItem(key, value);
+            return true;
+        } catch (err) {
+            return false;
+        }
+    };
+
+    const getSessionId = () => {
+        const key = 'magick_ad_session_id';
+        const existing = readStorageValue(sessionStorage, key);
+        if (existing) {
+            return existing;
+        }
+        let id = '';
+        if (window.crypto && window.crypto.randomUUID) {
+            id = window.crypto.randomUUID();
+        } else {
+            id = `sess_${Math.random().toString(36).slice(2)}${Date.now()}`;
+        }
+        writeStorageValue(sessionStorage, key, id);
+        return id;
+    };
+
+    const sessionId = getSessionId();
+    const hashString = (value) => {
+        let hash = 0;
+        for (let i = 0; i < value.length; i += 1) {
+            hash = (hash << 5) - hash + value.charCodeAt(i);
+            hash |= 0;
+        }
+        return Math.abs(hash).toString(16);
+    };
+    const pageHash = hashString(window.location.href);
+
     const sendTrack = (payload, useBeacon = false) => {
-        const body = JSON.stringify({
+        const bodyData = {
             ad_id: payload.adId,
             event: payload.event,
-            page_url: window.location.href,
-        });
+            session_id: sessionId,
+            page_hash: pageHash,
+        };
+        if (config.collectPageUrl) {
+            bodyData.page_url = window.location.href;
+        }
+        const body = JSON.stringify(bodyData);
 
         if (useBeacon && navigator.sendBeacon) {
             const blob = new Blob([body], { type: 'application/json' });
@@ -69,23 +118,6 @@
         },
         { threshold: 0.5 }
     );
-
-    const readStorageValue = (storage, key) => {
-        try {
-            return storage.getItem(key);
-        } catch (err) {
-            return null;
-        }
-    };
-
-    const writeStorageValue = (storage, key, value) => {
-        try {
-            storage.setItem(key, value);
-            return true;
-        } catch (err) {
-            return false;
-        }
-    };
 
     const shouldShowByFrequency = (element) => {
         const mode = element.getAttribute('data-ad-freq-mode') || 'none';

@@ -31,6 +31,7 @@ import BlockEditor from '../components/BlockEditor';
 import TemplateLibraryModal from '../components/TemplateLibraryModal';
 import TemplateActions from '../components/TemplateActions';
 import DebugPanel from '../panels/DebugPanel';
+import SystemSettingsPanel from '../panels/SystemSettingsPanel';
 import useNotice from '../hooks/useNotice';
 import useTemplateLibrary from '../hooks/useTemplateLibrary';
 import useTargeting from '../hooks/useTargeting';
@@ -66,6 +67,11 @@ const AdsConfig = () => {
     const [saveTemplateCategory, setSaveTemplateCategory] = useState('');
     const [saveTemplateCategoryName, setSaveTemplateCategoryName] =
         useState('');
+    const branding =
+        (typeof window !== 'undefined' && window.MagickAD?.branding) || {
+            name: 'Magick AD',
+            tagline: '广告配置与投放规则管理',
+        };
     const canUnfilteredHtml =
         typeof window !== 'undefined' &&
         window.MagickAD &&
@@ -149,6 +155,9 @@ const AdsConfig = () => {
         const status = resolveStatus(ad);
         if (status === 'future') {
             return { label: '已排期', className: 'is-scheduled' };
+        }
+        if (status === 'pending') {
+            return { label: '待审核', className: 'is-pending' };
         }
         if (status === 'publish') {
             return { label: '已发布', className: 'is-enabled' };
@@ -847,6 +856,7 @@ const AdsConfig = () => {
                     )}
                 </CardBody>
             </Card>
+            <SystemSettingsPanel onNotice={showNotice} />
             <DebugPanel onNotice={showNotice} />
         </div>
     );
@@ -1289,6 +1299,7 @@ const AdsConfig = () => {
                         options={[
                             { label: '已发布', value: 'publish' },
                             { label: '定时发布', value: 'future' },
+                            { label: '待审核', value: 'pending' },
                             { label: '草稿/停用', value: 'draft' },
                         ]}
                         onChange={(value) => {
@@ -1301,6 +1312,16 @@ const AdsConfig = () => {
                                     options: {
                                         ...selectedAd.options,
                                         enabled: false,
+                                    },
+                                });
+                                return;
+                            }
+                            if (value === 'pending') {
+                                handleUpdateMeta({
+                                    status: 'pending',
+                                    options: {
+                                        ...selectedAd.options,
+                                        enabled: true,
                                     },
                                 });
                                 return;
@@ -1940,6 +1961,26 @@ const AdsConfig = () => {
                                                                             }
                                                                         )
                                                                     }
+                                                                />
+                                                                <RangeControl
+                                                                    label="占位高度（减少 CLS）"
+                                                                    min={0}
+                                                                    max={800}
+                                                                    value={
+                                                                        containerStyle.reserve_height ??
+                                                                        0
+                                                                    }
+                                                                    onChange={(value) =>
+                                                                        handleUpdateContainerStyle(
+                                                                            {
+                                                                                reserve_height:
+                                                                                    Number(
+                                                                                        value
+                                                                                    ),
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                    help="设置后会为广告预留高度，降低布局抖动。"
                                                                 />
                                                             </div>
                                                         );
@@ -2825,8 +2866,8 @@ const AdsConfig = () => {
         <div className="magick-ad-config">
             <div className="magick-ad-header">
                 <div>
-                    <h1>Magick AD</h1>
-                    <p className="description">广告配置与投放规则管理</p>
+                    <h1>{branding.name}</h1>
+                    <p className="description">{branding.tagline}</p>
                 </div>
             </div>
 

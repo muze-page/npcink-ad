@@ -11,7 +11,11 @@ if (!defined('ABSPATH')) {
 
 final class Capabilities {
     public static function manage_capability(): string {
-        return (string) apply_filters('magick_ad_manage_capability', 'manage_options');
+        $capability = get_option('magick_ad_manage_capability', 'manage_options');
+        $capability = is_string($capability) && $capability !== ''
+            ? $capability
+            : 'manage_options';
+        return (string) apply_filters('magick_ad_manage_capability', $capability);
     }
 
     public static function current_user_can_manage(): bool {

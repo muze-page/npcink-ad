@@ -1,5 +1,5 @@
 import { useEffect, useState } from '@wordpress/element';
-import { Card, CardBody, Notice, Panel, PanelBody, ToggleControl } from '@wordpress/components';
+import { Button, Card, CardBody, Notice, Panel, PanelBody, ToggleControl } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 
 const DebugPanel = ({ onNotice }) => {
@@ -112,6 +112,25 @@ const DebugPanel = ({ onNotice }) => {
                             }}
                             help="控制 settings=Array 是否写入 debug.log"
                         />
+                        <div className="magick-ad-debug-actions">
+                            <Button
+                                variant="secondary"
+                                onClick={() => {
+                                    const url =
+                                        window.MagickAD?.diagnoseUrl || '';
+                                    if (!url) {
+                                        onNotice?.(
+                                            'error',
+                                            '诊断链接未配置'
+                                        );
+                                        return;
+                                    }
+                                    window.open(url, '_blank');
+                                }}
+                            >
+                                打开投放诊断
+                            </Button>
+                        </div>
                     </PanelBody>
                 </Panel>
             </CardBody>

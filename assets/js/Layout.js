@@ -126,6 +126,9 @@ const Layout = ({
         if (containerStyle.background && containerStyle.background !== 'transparent') {
             wrapperStyle.background = containerStyle.background;
         }
+        if (containerStyle.reserve_height) {
+            wrapperStyle.minHeight = `${containerStyle.reserve_height}px`;
+        }
         if (containerStyle.radius) {
             wrapperStyle.borderRadius = `${containerStyle.radius}px`;
         }
@@ -143,6 +146,18 @@ const Layout = ({
 
         const wrapContent = (inner) => {
             if (containerStyle.mode === 'raw') {
+                if (containerStyle.reserve_height) {
+                    return (
+                        <div
+                            className="magick-ad-preview__html"
+                            style={{
+                                minHeight: `${containerStyle.reserve_height}px`,
+                            }}
+                        >
+                            {inner}
+                        </div>
+                    );
+                }
                 return inner;
             }
             return (
