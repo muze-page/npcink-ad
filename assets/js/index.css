@@ -3,6 +3,15 @@
     padding: 16px 0 24px;
 }
 
+@keyframes magick-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
 .magick-ad-header {
     display: flex;
     align-items: center;
