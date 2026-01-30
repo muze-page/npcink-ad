@@ -386,6 +386,31 @@ const AdsConfig = () => {
         });
     };
 
+    useEffect(() => {
+        const handleMessage = (event) => {
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+            const data = event.data || {};
+            if (data.type !== 'magick-ad-node-picked') {
+                return;
+            }
+            if (!selectedAd) {
+                return;
+            }
+            handleUpdateOptions({
+                node_target_type: data.targetType || 'id',
+                node_target_value: data.value || '',
+            });
+            showNotice('success', '已选择节点', 2000);
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
+    }, [selectedAd, showNotice]);
+
     const handleUpdateMeta = (updates) => {
         if (!selectedAd) {
             return;
@@ -1697,6 +1722,39 @@ const AdsConfig = () => {
                                             <h4 className="magick-ad-field__label">
                                                 节点投放
                                             </h4>
+                                            <Button
+                                                variant="secondary"
+                                                onClick={() => {
+                                                    const base =
+                                                        window.MagickAD
+                                                            ?.previewUrl ||
+                                                        window.location.origin;
+                                                    let url = base;
+                                                    try {
+                                                        const next = new URL(
+                                                            base
+                                                        );
+                                                        next.searchParams.set(
+                                                            'magick_ad_picker',
+                                                            '1'
+                                                        );
+                                                        next.searchParams.set(
+                                                            'magick_ad_picker_origin',
+                                                            window.location
+                                                                .origin
+                                                        );
+                                                        url = next.toString();
+                                                    } catch (err) {
+                                                        url = base;
+                                                    }
+                                                    window.open(
+                                                        url,
+                                                        'magick-ad-picker'
+                                                    );
+                                                }}
+                                            >
+                                                可视化选择
+                                            </Button>
                                             <SelectControl
                                                 label="定位方式"
                                                 value={

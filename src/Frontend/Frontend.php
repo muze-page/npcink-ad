@@ -77,6 +77,17 @@ final class Frontend {
             return;
         }
 
+        if (self::is_picker_request()) {
+            wp_enqueue_script(
+                'magick-ad-picker',
+                MAGICK_AD_URL . 'assets/magick-ad-picker.js',
+                array(),
+                MAGICK_AD_VERSION,
+                true
+            );
+            return;
+        }
+
         $ads = self::get_matching_ads_for('all');
         if (empty($ads)) {
             return;
@@ -726,6 +737,10 @@ final class Frontend {
 
     private static function is_preview_request(): bool {
         return isset($_GET['magick_ad_preview']);
+    }
+
+    private static function is_picker_request(): bool {
+        return isset($_GET['magick_ad_picker']) && $_GET['magick_ad_picker'] === '1';
     }
 
     private static function is_preview(): bool {
