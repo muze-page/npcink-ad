@@ -149,6 +149,21 @@ final class Settings {
         $hook = isset($options['placement_hook']) ? (string) $options['placement_hook'] : '';
         $position = isset($options['placement_position']) ? (string) $options['placement_position'] : '';
         $paragraph = isset($options['placement_paragraph']) ? absint($options['placement_paragraph']) : 0;
+        $legacy = '';
+
+        if (in_array($hook, array('popup', 'bar', 'banner', 'floating', 'interstitial'), true)) {
+            $legacy = $hook;
+            $hook = '';
+        }
+        if ($hook === '') {
+            if (isset($options['show_position']) && is_string($options['show_position'])) {
+                $legacy = $options['show_position'];
+            } elseif (isset($options['placement']) && is_string($options['placement'])) {
+                $legacy = $options['placement'];
+            } elseif (isset($options['position']) && is_string($options['position'])) {
+                $legacy = $options['position'];
+            }
+        }
 
         $hook = self::sanitize_choice(
             $hook,
@@ -168,6 +183,36 @@ final class Settings {
             ),
             ''
         );
+
+        if ($hook === '' && $legacy !== '') {
+            $legacy = (string) $legacy;
+            $legacy_map = array(
+                'head' => array('hook' => 'head'),
+                'footer' => array('hook' => 'footer'),
+                'body_top' => array('hook' => 'body_top'),
+                'top' => array('hook' => 'body_top'),
+                'content_before' => array('hook' => 'content', 'position' => 'before'),
+                'before' => array('hook' => 'content', 'position' => 'before'),
+                'content_after' => array('hook' => 'content', 'position' => 'after'),
+                'after' => array('hook' => 'content', 'position' => 'after'),
+                'paragraph' => array('hook' => 'content', 'position' => 'paragraph'),
+                'after_paragraph' => array('hook' => 'content', 'position' => 'paragraph'),
+                'comments_top' => array('hook' => 'comments_top'),
+                'comments_bottom' => array('hook' => 'comments_bottom'),
+                'comment_form_before' => array('hook' => 'comment_form_before'),
+                'comment_form_after' => array('hook' => 'comment_form_after'),
+                'node' => array('hook' => 'node'),
+                'popup' => array('hook' => 'footer'),
+                'bar' => array('hook' => 'footer'),
+                'banner' => array('hook' => 'footer'),
+                'floating' => array('hook' => 'footer'),
+                'interstitial' => array('hook' => 'footer'),
+            );
+            if (isset($legacy_map[$legacy])) {
+                $hook = $legacy_map[$legacy]['hook'];
+                $position = $legacy_map[$legacy]['position'] ?? '';
+            }
+        }
 
         $position = $hook === 'content'
             ? self::sanitize_choice($position, array('before', 'after', 'paragraph'), 'before')
@@ -200,6 +245,23 @@ final class Settings {
             ? $content['behavior']
             : array();
 
+        $legacy_container = '';
+        if (isset($options['placement_hook']) && is_string($options['placement_hook'])) {
+            $legacy_container = $options['placement_hook'];
+        }
+        if ($legacy_container === '' && isset($options['show_position']) && is_string($options['show_position'])) {
+            $legacy_container = $options['show_position'];
+        }
+        if ($legacy_container === '' && isset($options['placement']) && is_string($options['placement'])) {
+            $legacy_container = $options['placement'];
+        }
+        $legacy_container = in_array($legacy_container, array('popup', 'bar', 'banner', 'floating', 'interstitial'), true)
+            ? $legacy_container
+            : '';
+        if ($legacy_container === 'bar') {
+            $legacy_container = 'banner';
+        }
+
         $sanitized_options = array(
             'enabled' => isset($options['enabled']) ? (bool) $options['enabled'] : true,
             'ad_type' => self::sanitize_choice(
@@ -221,11 +283,13 @@ final class Settings {
             'container_type' => self::sanitize_choice(
                 isset($options['container_type'])
                     ? $options['container_type']
-                    : (isset($options['content_type']) && $options['content_type'] === 'popup'
-                        ? 'popup'
-                        : (isset($options['content_type']) && $options['content_type'] === 'bar'
-                            ? 'banner'
-                            : 'inline')),
+                    : ($legacy_container !== ''
+                        ? $legacy_container
+                        : (isset($options['content_type']) && $options['content_type'] === 'popup'
+                            ? 'popup'
+                            : (isset($options['content_type']) && $options['content_type'] === 'bar'
+                                ? 'banner'
+                                : 'inline'))),
                 array('inline', 'popup', 'banner', 'floating', 'interstitial'),
                 'inline'
             ),

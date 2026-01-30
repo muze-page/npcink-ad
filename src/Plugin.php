@@ -9,6 +9,7 @@ use MagickAD\Blocks\Patterns;
 use MagickAD\CLI\Smoke_Command;
 use MagickAD\Data\Ads;
 use MagickAD\Data\Ads_Migrator;
+use MagickAD\Data\Placement_Migrator;
 use MagickAD\Data\Schema;
 use MagickAD\Data\Slot_Migrator;
 use MagickAD\Data\Template_Migrator;
@@ -67,5 +68,6 @@ final class Plugin {
         Template_Migrator::maybe_migrate();
         Ads_Migrator::maybe_migrate();
         Slot_Migrator::maybe_migrate();
+        Placement_Migrator::maybe_migrate();
     }
 }

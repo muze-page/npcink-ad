@@ -60,6 +60,15 @@ final class Admin {
             'magick-ad-insert',
             array($this, 'render_insert_help')
         );
+
+        add_submenu_page(
+            'magick-ad',
+            __('调试面板', 'magick-ad'),
+            __('调试面板', 'magick-ad'),
+            $capability,
+            'magick-ad-debug',
+            array($this, 'render_debug_panel')
+        );
     }
 
     public function register_debug_settings(): void {
@@ -163,6 +172,70 @@ final class Admin {
         echo '<li>' . esc_html__('保持唯一性，便于在区块/短代码/模板函数中稳定引用。', 'magick-ad') . '</li>';
         echo '</ul>';
 
+        echo '</div>';
+    }
+
+    public function render_debug_panel(): void {
+        $base_url = home_url('/');
+        $input_url = isset($_GET['debug_url']) ? esc_url_raw(wp_unslash($_GET['debug_url'])) : $base_url;
+        if ($input_url === '') {
+            $input_url = $base_url;
+        }
+        $device = isset($_GET['debug_device']) ? sanitize_text_field(wp_unslash($_GET['debug_device'])) : 'auto';
+        if (!in_array($device, array('auto', 'mobile', 'tablet', 'desktop'), true)) {
+            $device = 'auto';
+        }
+        $login_state = isset($_GET['debug_login']) ? sanitize_text_field(wp_unslash($_GET['debug_login'])) : 'auto';
+        if (!in_array($login_state, array('auto', 'logged-in', 'logged-out'), true)) {
+            $login_state = 'auto';
+        }
+
+        $debug_url = add_query_arg(
+            array(
+                'magick_ad_diagnose' => '1',
+                'magick_ad_diagnose_nonce' => wp_create_nonce('magick_ad_diagnose'),
+                'magick_ad_debug_device' => $device,
+                'magick_ad_debug_login' => $login_state,
+            ),
+            $input_url
+        );
+
+        echo '<div class="wrap">';
+        echo '<h1>' . esc_html__('调试面板', 'magick-ad') . '</h1>';
+        echo '<p>' . esc_html__('输入页面 URL 并选择设备类型，生成投放诊断报告。页面类型将由 URL 自身决定。', 'magick-ad') . '</p>';
+
+        echo '<form method="get" style="margin:16px 0 24px;">';
+        echo '<input type="hidden" name="page" value="magick-ad-debug" />';
+        echo '<table class="form-table">';
+        echo '<tr><th scope="row"><label for="magick-ad-debug-url">' . esc_html__('页面 URL', 'magick-ad') . '</label></th>';
+        echo '<td><input name="debug_url" id="magick-ad-debug-url" type="text" class="regular-text" value="' . esc_attr($input_url) . '" />';
+        echo '<p class="description">' . esc_html__('可填写站内完整 URL。', 'magick-ad') . '</p></td></tr>';
+        echo '<tr><th scope="row"><label for="magick-ad-debug-device">' . esc_html__('设备类型', 'magick-ad') . '</label></th>';
+        echo '<td><select name="debug_device" id="magick-ad-debug-device">';
+        echo '<option value="auto"' . selected($device, 'auto', false) . '>' . esc_html__('自动识别', 'magick-ad') . '</option>';
+        echo '<option value="mobile"' . selected($device, 'mobile', false) . '>' . esc_html__('移动端', 'magick-ad') . '</option>';
+        echo '<option value="tablet"' . selected($device, 'tablet', false) . '>' . esc_html__('平板端', 'magick-ad') . '</option>';
+        echo '<option value="desktop"' . selected($device, 'desktop', false) . '>' . esc_html__('桌面端', 'magick-ad') . '</option>';
+        echo '</select>';
+        echo '<p class="description">' . esc_html__('仅影响设备判断，不改变 URL 页面类型。', 'magick-ad') . '</p></td></tr>';
+        echo '<tr><th scope="row"><label for="magick-ad-debug-login">' . esc_html__('登录状态', 'magick-ad') . '</label></th>';
+        echo '<td><select name="debug_login" id="magick-ad-debug-login">';
+        echo '<option value="auto"' . selected($login_state, 'auto', false) . '>' . esc_html__('自动识别', 'magick-ad') . '</option>';
+        echo '<option value="logged-in"' . selected($login_state, 'logged-in', false) . '>' . esc_html__('已登录', 'magick-ad') . '</option>';
+        echo '<option value="logged-out"' . selected($login_state, 'logged-out', false) . '>' . esc_html__('未登录', 'magick-ad') . '</option>';
+        echo '</select>';
+        echo '<p class="description">' . esc_html__('仅影响登录状态判断。', 'magick-ad') . '</p></td></tr>';
+        echo '</table>';
+        submit_button(__('生成诊断链接', 'magick-ad'));
+        echo '</form>';
+
+        echo '<h2>' . esc_html__('诊断链接', 'magick-ad') . '</h2>';
+        echo '<p><a href="' . esc_url($debug_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html($debug_url) . '</a></p>';
+
+        echo '<h2>' . esc_html__('嵌入预览', 'magick-ad') . '</h2>';
+        echo '<div style="border:1px solid #dcdcde;border-radius:8px;overflow:hidden;background:#fff;">';
+        echo '<iframe title="Magick AD Diagnose" src="' . esc_url($debug_url) . '" style="width:100%;height:720px;border:0;"></iframe>';
+        echo '</div>';
         echo '</div>';
     }
 

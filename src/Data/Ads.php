@@ -133,7 +133,10 @@ final class Ads {
                 update_post_meta($post->ID, self::META_ID, $ad_id);
             }
 
-            $ad = $data;
+            $sanitized = Settings::sanitize_settings(array('ads' => array($data)));
+            $ad = isset($sanitized['ads'][0]) && is_array($sanitized['ads'][0])
+                ? $sanitized['ads'][0]
+                : array();
             $ad['id'] = $ad_id;
             $ad['name'] = $post->post_title;
             $ad['status'] = $post->post_status;

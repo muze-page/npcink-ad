@@ -925,6 +925,32 @@ final class Frontend {
         return wp_verify_nonce($nonce, 'magick_ad_diagnose');
     }
 
+    private static function get_debug_device_override(): string {
+        if (!self::is_diagnose_request() || !self::can_view_diagnose()) {
+            return '';
+        }
+        $device = isset($_GET['magick_ad_debug_device'])
+            ? sanitize_text_field(wp_unslash($_GET['magick_ad_debug_device']))
+            : '';
+        if (!in_array($device, array('mobile', 'tablet', 'desktop'), true)) {
+            return '';
+        }
+        return $device;
+    }
+
+    private static function get_debug_login_override(): string {
+        if (!self::is_diagnose_request() || !self::can_view_diagnose()) {
+            return '';
+        }
+        $login = isset($_GET['magick_ad_debug_login'])
+            ? sanitize_text_field(wp_unslash($_GET['magick_ad_debug_login']))
+            : '';
+        if (!in_array($login, array('logged-in', 'logged-out'), true)) {
+            return '';
+        }
+        return $login;
+    }
+
     public static function render_diagnose_panel(): void {
         if (!self::is_diagnose_request()) {
             return;
@@ -1333,6 +1359,13 @@ final class Frontend {
 
     private static function matches_device($options) {
         $device = isset($options['device']) ? $options['device'] : 'all';
+        $override = self::get_debug_device_override();
+        if ($override) {
+            if ($device === 'all') {
+                return true;
+            }
+            return $device === $override;
+        }
         if ($device === 'mobile') {
             return wp_is_mobile() && !self::is_tablet_device();
         }
@@ -1359,6 +1392,13 @@ final class Frontend {
 
     private static function matches_login($options) {
         $login = isset($options['login']) ? $options['login'] : 'all';
+        $override = self::get_debug_login_override();
+        if ($override) {
+            if ($login === 'all') {
+                return true;
+            }
+            return $login === $override;
+        }
         if ($login === 'logged-in') {
             return is_user_logged_in();
         }
