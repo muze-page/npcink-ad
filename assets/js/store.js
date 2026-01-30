@@ -45,6 +45,8 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
         target_ids: [],
         slot_mode: 'auto',
         slot: '',
+        priority: 10,
+        weight: 1,
         node_target_type: 'id',
         node_target_value: '',
         node_insert: 'append',

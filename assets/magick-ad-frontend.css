@@ -230,6 +230,10 @@ body.magick-ad-lock-scroll {
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.2);
 }
 
+.magick-ad-slot-reserve {
+    width: 100%;
+}
+
 .magick-ad-diagnose {
     position: fixed;
     right: 24px;

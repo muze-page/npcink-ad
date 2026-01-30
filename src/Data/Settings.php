@@ -341,6 +341,8 @@ final class Settings {
                 'auto'
             ),
             'slot' => isset($options['slot']) ? sanitize_title((string) $options['slot']) : '',
+            'priority' => isset($options['priority']) ? max(1, absint($options['priority'])) : 10,
+            'weight' => isset($options['weight']) ? max(1, absint($options['weight'])) : 1,
             'node_target_type' => self::sanitize_choice(
                 isset($options['node_target_type']) ? $options['node_target_type'] : 'id',
                 array('id', 'class'),

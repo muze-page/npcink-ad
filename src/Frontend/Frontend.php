@@ -163,6 +163,7 @@ final class Frontend {
 
         $settings = Settings::get_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        $slot_candidates = array();
         foreach ($ads as $ad) {
             $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
             $ad_slot = isset($ad['options']['slot']) ? (string) $ad['options']['slot'] : '';
@@ -170,10 +171,68 @@ final class Frontend {
                 return $ad;
             }
             if ($slot && $ad_slot && $slot === $ad_slot) {
-                return $ad;
+                $slot_candidates[] = $ad;
             }
         }
-        return null;
+
+        if (empty($slot_candidates)) {
+            return null;
+        }
+
+        $eligible = array();
+        foreach ($slot_candidates as $candidate) {
+            if (self::should_display_ad($candidate)) {
+                $eligible[] = $candidate;
+            }
+        }
+        if (empty($eligible)) {
+            return null;
+        }
+
+        $max_priority = null;
+        foreach ($eligible as $candidate) {
+            $priority = isset($candidate['options']['priority']) ? absint($candidate['options']['priority']) : 10;
+            if ($priority < 1) {
+                $priority = 1;
+            }
+            if ($max_priority === null || $priority > $max_priority) {
+                $max_priority = $priority;
+            }
+        }
+        $top = array();
+        foreach ($eligible as $candidate) {
+            $priority = isset($candidate['options']['priority']) ? absint($candidate['options']['priority']) : 10;
+            if ($priority < 1) {
+                $priority = 1;
+            }
+            if ($priority === $max_priority) {
+                $top[] = $candidate;
+            }
+        }
+
+        if (count($top) === 1) {
+            return $top[0];
+        }
+
+        $weights = array();
+        $sum = 0;
+        foreach ($top as $candidate) {
+            $weight = isset($candidate['options']['weight']) ? absint($candidate['options']['weight']) : 1;
+            if ($weight < 1) {
+                $weight = 1;
+            }
+            $weights[] = $weight;
+            $sum += $weight;
+        }
+        $roll = wp_rand(1, max(1, $sum));
+        $acc = 0;
+        foreach ($top as $index => $candidate) {
+            $acc += $weights[$index];
+            if ($roll <= $acc) {
+                return $candidate;
+            }
+        }
+        return $top[0];
     }
 
     public static function enqueue_assets(): void {

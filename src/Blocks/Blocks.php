@@ -49,7 +49,12 @@ final class Blocks {
             } elseif ($ad_id) {
                 $args['id'] = $ad_id;
             }
-            return Frontend::render_slot($slot ?: $ad_id, $args);
+            $output = Frontend::render_slot($slot ?: $ad_id, $args);
+            $reserve = isset($attrs['reserveHeight']) ? absint($attrs['reserveHeight']) : 0;
+            if ($reserve > 0 && $output) {
+                $output = '<div class="magick-ad-slot-reserve" style="min-height:' . esc_attr($reserve) . 'px">' . $output . '</div>';
+            }
+            return $output;
         }
 
         $creative = isset($attrs['creativeType']) ? (string) $attrs['creativeType'] : 'html';

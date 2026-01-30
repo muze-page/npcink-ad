@@ -2,14 +2,19 @@
     "$schema": "https://schemas.wp.org/trunk/block.json",
     "apiVersion": 2,
     "name": "magick-ad/ad",
-    "title": "Magick AD",
+    "title": "Magick AD（广告位）",
     "category": "widgets",
     "icon": "megaphone",
-    "description": "Render a Magick AD creative block.",
+    "description": "在文章或模板中插入一个 Magick AD 广告位入口。",
     "textdomain": "magick-ad",
     "editorScript": "magick-ad-block-editor",
     "supports": {
-        "html": false
+        "html": false,
+        "anchor": true,
+        "align": [
+            "wide",
+            "full"
+        ]
     },
     "attributes": {
         "creativeType": {
@@ -63,6 +68,18 @@
         "adId": {
             "type": "string",
             "default": ""
+        },
+        "label": {
+            "type": "string",
+            "default": ""
+        },
+        "reserveHeight": {
+            "type": "number",
+            "default": 0
+        },
+        "preview": {
+            "type": "boolean",
+            "default": false
         }
     }
 }

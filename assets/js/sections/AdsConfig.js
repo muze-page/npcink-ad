@@ -1910,6 +1910,30 @@ const AdsConfig = () => {
                         className={slotConflict ? 'magick-ad-field-error' : ''}
                         disabled={(selectedAd.options?.slot_mode || 'auto') === 'auto'}
                     />
+                    <TextControl
+                        label="优先级（越大越先展示）"
+                        type="number"
+                        min={1}
+                        value={selectedAd.options?.priority ?? 10}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                priority: Math.max(1, Number(value) || 1),
+                            })
+                        }
+                        help="同一 Slot 内优先级最高的广告优先出场。"
+                    />
+                    <TextControl
+                        label="权重（同优先级下随机）"
+                        type="number"
+                        min={1}
+                        value={selectedAd.options?.weight ?? 1}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                weight: Math.max(1, Number(value) || 1),
+                            })
+                        }
+                        help="仅对同优先级广告生效，权重越大越容易被选中。"
+                    />
                     <ToggleControl
                         label="自动生成 Slot"
                         checked={(selectedAd.options?.slot_mode || 'auto') === 'auto'}
@@ -2855,6 +2879,7 @@ const AdsConfig = () => {
                                                         close_button: value,
                                                     })
                                                 }
+                                                help="默认关闭。开启后在广告右上角显示关闭按钮。"
                                             />
                                             <ToggleControl
                                                 label="ESC 关闭"
@@ -2867,7 +2892,7 @@ const AdsConfig = () => {
                                                         close_on_esc: value,
                                                     })
                                                 }
-                                                help="弹窗/横栏可用"
+                                                help="默认开启。弹窗/横栏可用，按 ESC 关闭。"
                                             />
                                             <ToggleControl
                                                 label="点击遮罩关闭"
@@ -2880,7 +2905,7 @@ const AdsConfig = () => {
                                                         close_on_overlay: value,
                                                     })
                                                 }
-                                                help="仅弹窗/插屏有效"
+                                                help="默认开启。仅弹窗/插屏有效，点击遮罩关闭。"
                                             />
                                             <ToggleControl
                                                 label="打开时锁定滚动"
@@ -2892,7 +2917,7 @@ const AdsConfig = () => {
                                                         lock_scroll: value,
                                                     })
                                                 }
-                                                help="弹窗/插屏可用"
+                                                help="默认关闭。仅弹窗/插屏可用，打开时锁定页面滚动。"
                                             />
                                             <RangeControl
                                                 label="延迟显示（秒）"
@@ -2904,6 +2929,7 @@ const AdsConfig = () => {
                                                         delay: Number(value),
                                                     })
                                                 }
+                                                help="默认 0 秒。仅对弹窗/横栏/插屏生效。"
                                             />
                                             <SelectControl
                                                 label="频控策略"
@@ -2934,7 +2960,7 @@ const AdsConfig = () => {
                                                         frequency_mode: value,
                                                     })
                                                 }
-                                                help="频控仅在前台生效"
+                                                help="默认不限制。频控仅在前台生效。"
                                             />
                                             {behavior.frequency_mode ===
                                                 'count' && (
