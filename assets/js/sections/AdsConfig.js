@@ -305,7 +305,7 @@ const AdsConfig = () => {
         return placement;
     };
 
-    const buildUniqueSlot = (name, adId) => {
+    function buildUniqueSlot(name, adId) {
         const base =
             cleanForSlug(name || '') ||
             (adId ? `ad-${adId.slice(-6)}` : 'ad-slot');
@@ -322,9 +322,9 @@ const AdsConfig = () => {
             index += 1;
         }
         return candidate;
-    };
+    }
 
-    const ensureUniqueSlot = (slot, adId) => {
+    function ensureUniqueSlot(slot, adId) {
         const base = cleanForSlug(slot || '');
         if (!base) {
             return '';
@@ -342,9 +342,9 @@ const AdsConfig = () => {
             index += 1;
         }
         return candidate;
-    };
+    }
 
-    const fixDuplicateSlots = () => {
+    function fixDuplicateSlots() {
         const used = new Set();
         let fixed = 0;
         ads.forEach((ad) => {
@@ -373,7 +373,7 @@ const AdsConfig = () => {
             fixed += 1;
         });
         return fixed;
-    };
+    }
 
     const placementToSlotValue = (placement) => {
         if (!placement?.hook) {

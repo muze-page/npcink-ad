@@ -603,7 +603,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads();
+        $ads = self::get_matching_ads_for('comment_form_after');
         if (empty($ads)) {
             return;
         }
