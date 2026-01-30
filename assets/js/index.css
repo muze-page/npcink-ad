@@ -165,6 +165,40 @@
     text-decoration: none;
 }
 
+.magick-ad-slots-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.magick-ad-slots-modal {
+    max-width: 960px;
+}
+
+.magick-ad-slots-modal__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.magick-ad-slots-modal__list {
+    display: grid;
+    gap: 12px;
+    max-height: 60vh;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.magick-ad-slot-card__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
 .magick-ad-preview__stage {
     position: relative;
     width: 100%;

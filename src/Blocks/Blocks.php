@@ -3,6 +3,7 @@
 namespace MagickAD\Blocks;
 
 use MagickAD\Frontend\Frontend;
+use MagickAD\Data\Slots;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -30,6 +31,23 @@ final class Blocks {
             array('wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-data', 'wp-core-data', 'wp-server-side-render'),
             MAGICK_AD_VERSION,
             true
+        );
+        $slots = Slots::get_slots();
+        $slot_payload = array();
+        foreach ($slots as $slot) {
+            if (!is_array($slot) || empty($slot['id'])) {
+                continue;
+            }
+            $slot_payload[] = array(
+                'id' => (string) $slot['id'],
+                'label' => isset($slot['label']) ? (string) $slot['label'] : '',
+                'ad_ids' => isset($slot['ad_ids']) && is_array($slot['ad_ids']) ? $slot['ad_ids'] : array(),
+            );
+        }
+        wp_localize_script(
+            $editor_handle,
+            'MagickADSlots',
+            array('slots' => $slot_payload)
         );
 
         register_block_type($block_dir, array(

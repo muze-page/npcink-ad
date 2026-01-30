@@ -163,6 +163,8 @@ final class Frontend {
 
         $settings = Settings::get_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        $slots = isset($settings['slots']) && is_array($settings['slots']) ? $settings['slots'] : array();
+
         $slot_candidates = array();
         foreach ($ads as $ad) {
             $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
@@ -172,6 +174,105 @@ final class Frontend {
             }
             if ($slot && $ad_slot && $slot === $ad_slot) {
                 $slot_candidates[] = $ad;
+            }
+        }
+
+        if ($slot) {
+            $slot = sanitize_title($slot);
+            $slot_config = null;
+            foreach ($slots as $slot_item) {
+                $slot_id = isset($slot_item['id']) ? (string) $slot_item['id'] : '';
+                if ($slot_id === $slot) {
+                    $slot_config = $slot_item;
+                    break;
+                }
+            }
+            if ($slot_config && !empty($slot_config['ad_ids']) && is_array($slot_config['ad_ids'])) {
+                $ads_by_id = array();
+                foreach ($ads as $ad) {
+                    if (isset($ad['id'])) {
+                        $ads_by_id[(string) $ad['id']] = $ad;
+                    }
+                }
+                $slot_candidates = array();
+                $weight_map = array();
+                $weights = isset($slot_config['weights']) && is_array($slot_config['weights'])
+                    ? $slot_config['weights']
+                    : array();
+                foreach ($slot_config['ad_ids'] as $index => $ad_id) {
+                    $ad_id = is_string($ad_id) ? $ad_id : '';
+                    if ($ad_id === '' || !isset($ads_by_id[$ad_id])) {
+                        continue;
+                    }
+                    $slot_candidates[] = $ads_by_id[$ad_id];
+                    if (isset($weights[$index])) {
+                        $weight_map[$ad_id] = max(1, absint($weights[$index]));
+                    }
+                }
+
+                if (!empty($slot_candidates)) {
+                    $eligible = array();
+                    foreach ($slot_candidates as $candidate) {
+                        if (self::should_display_ad($candidate)) {
+                            $eligible[] = $candidate;
+                        }
+                    }
+                    if (empty($eligible)) {
+                        return null;
+                    }
+
+                    $max_priority = null;
+                    foreach ($eligible as $candidate) {
+                        $priority = isset($candidate['options']['priority'])
+                            ? absint($candidate['options']['priority'])
+                            : 10;
+                        if ($priority < 1) {
+                            $priority = 1;
+                        }
+                        if ($max_priority === null || $priority > $max_priority) {
+                            $max_priority = $priority;
+                        }
+                    }
+                    $top = array();
+                    foreach ($eligible as $candidate) {
+                        $priority = isset($candidate['options']['priority'])
+                            ? absint($candidate['options']['priority'])
+                            : 10;
+                        if ($priority < 1) {
+                            $priority = 1;
+                        }
+                        if ($priority === $max_priority) {
+                            $top[] = $candidate;
+                        }
+                    }
+
+                    if (count($top) === 1) {
+                        return $top[0];
+                    }
+
+                    $weights = array();
+                    $sum = 0;
+                    foreach ($top as $candidate) {
+                        $candidate_id = isset($candidate['id']) ? (string) $candidate['id'] : '';
+                        $weight = isset($weight_map[$candidate_id])
+                            ? absint($weight_map[$candidate_id])
+                            : (isset($candidate['options']['weight']) ? absint($candidate['options']['weight']) : 1);
+                        if ($weight < 1) {
+                            $weight = 1;
+                        }
+                        $weights[] = $weight;
+                        $sum += $weight;
+                    }
+                    $roll = wp_rand(1, max(1, $sum));
+                    $acc = 0;
+                    foreach ($top as $index => $candidate) {
+                        $acc += $weights[$index];
+                        if ($roll <= $acc) {
+                            return $candidate;
+                        }
+                    }
+                    return $top[0];
+                }
             }
         }
 

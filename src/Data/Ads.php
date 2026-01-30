@@ -4,6 +4,7 @@ namespace MagickAD\Data;
 
 use WP_Error;
 use MagickAD\Utils\Capabilities;
+use MagickAD\Data\Slots;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -105,7 +106,10 @@ final class Ads {
     }
 
     public static function get_settings(): array {
-        return array('ads' => self::get_ads());
+        return array(
+            'ads' => self::get_ads(),
+            'slots' => Slots::get_slots(),
+        );
     }
 
     public static function get_ads(): array {
@@ -182,7 +186,15 @@ final class Ads {
             return $result;
         }
 
-        return array('ads' => $result);
+        $include_slots = array_key_exists('slots', $settings);
+        $saved_slots = $include_slots
+            ? Slots::save_slots(isset($sanitized['slots']) ? $sanitized['slots'] : array())
+            : Slots::get_slots();
+
+        return array(
+            'ads' => $result,
+            'slots' => $saved_slots,
+        );
     }
 
     public static function store_ads(array $ads) {

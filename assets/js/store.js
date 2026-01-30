@@ -104,6 +104,25 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
     },
 });
 
+const createSlotTemplate = (slots = []) => {
+    const existing = new Set(
+        (slots || []).map((slot) => cleanForSlug(slot?.id || ''))
+    );
+    let candidate = 'slot';
+    let index = 2;
+    while (candidate && existing.has(candidate)) {
+        candidate = `slot-${index}`;
+        index += 1;
+    }
+    return {
+        id: candidate || 'slot',
+        label: '新广告位',
+        ad_ids: [],
+        weights: [],
+        limit: 1,
+    };
+};
+
 const normalizePlacement = (options) => {
     const placement = {
         hook: options.placement_hook || 'footer',
@@ -312,8 +331,24 @@ const normalizeAd = (ad) => {
     };
 };
 
+const normalizeSlot = (slot) => {
+    const safeSlot = slot && typeof slot === 'object' ? slot : {};
+    return {
+        id: typeof safeSlot.id === 'string' ? safeSlot.id : '',
+        label: typeof safeSlot.label === 'string' ? safeSlot.label : '',
+        ad_ids: Array.isArray(safeSlot.ad_ids)
+            ? safeSlot.ad_ids.filter(Boolean)
+            : [],
+        weights: Array.isArray(safeSlot.weights)
+            ? safeSlot.weights.map((value) => Number(value) || 1)
+            : [],
+        limit: Number(safeSlot.limit || 1),
+    };
+};
+
 export const useStore = create((set, get) => ({
     ads: [],
+    slots: [],
     isLoading: false,
     isSaving: false,
     error: null,
@@ -339,14 +374,37 @@ export const useStore = create((set, get) => ({
             ),
         }));
     },
+    setSlots: (slots) => {
+        set({ slots: Array.isArray(slots) ? slots : [] });
+    },
+    addSlot: () => {
+        set((state) => ({
+            slots: [...state.slots, createSlotTemplate(state.slots)],
+        }));
+    },
+    updateSlot: (index, updates) => {
+        set((state) => {
+            const next = [...state.slots];
+            if (!next[index]) {
+                return {};
+            }
+            next[index] = { ...next[index], ...updates };
+            return { slots: next };
+        });
+    },
+    removeSlot: (index) => {
+        set((state) => ({
+            slots: state.slots.filter((_, idx) => idx !== index),
+        }));
+    },
     saveToDB: async () => {
         set({ isSaving: true, error: null });
         try {
-            const { ads } = get();
+            const { ads, slots } = get();
             const response = await apiFetch({
                 path: '/magick-ad/v1/save-settings',
                 method: 'POST',
-                data: { ads },
+                data: { ads, slots },
             });
             set({ isSaving: false });
             return response;
@@ -364,16 +422,24 @@ export const useStore = create((set, get) => ({
             });
 
             let ads = [];
+            let slots = [];
             if (Array.isArray(response)) {
                 ads = response;
             } else if (Array.isArray(response?.ads)) {
                 ads = response.ads;
+                if (Array.isArray(response?.slots)) {
+                    slots = response.slots;
+                }
             } else if (Array.isArray(response?.saved?.ads)) {
                 ads = response.saved.ads;
+                if (Array.isArray(response?.saved?.slots)) {
+                    slots = response.saved.slots;
+                }
             }
 
             set({
                 ads: ads.map((ad) => normalizeAd(ad)),
+                slots: slots.map((slot) => normalizeSlot(slot)),
                 isLoading: false,
             });
             return ads;

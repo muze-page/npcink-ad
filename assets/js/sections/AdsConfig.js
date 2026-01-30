@@ -33,6 +33,7 @@ import TemplateActions from '../components/TemplateActions';
 import BuildProbe from '../components/BuildProbe';
 import DebugPanel from '../panels/DebugPanel';
 import SystemSettingsPanel from '../panels/SystemSettingsPanel';
+import SlotsPanel from '../panels/SlotsPanel';
 import useNotice from '../hooks/useNotice';
 import useTemplateLibrary from '../hooks/useTemplateLibrary';
 import useTargeting from '../hooks/useTargeting';
@@ -51,9 +52,13 @@ const AdsConfig = () => {
     const isLoading = useStore((state) => state.isLoading);
     const isSaving = useStore((state) => state.isSaving);
     const error = useStore((state) => state.error);
+    const slots = useStore((state) => state.slots);
     const addAdGroup = useStore((state) => state.addAdGroup);
     const removeAdGroup = useStore((state) => state.removeAdGroup);
     const updateAdGroup = useStore((state) => state.updateAdGroup);
+    const addSlot = useStore((state) => state.addSlot);
+    const updateSlot = useStore((state) => state.updateSlot);
+    const removeSlot = useStore((state) => state.removeSlot);
     const saveToDB = useStore((state) => state.saveToDB);
     const fetchFromDB = useStore((state) => state.fetchFromDB);
 
@@ -443,6 +448,34 @@ const AdsConfig = () => {
                     slot_mode: 'manual',
                 },
             });
+            fixed += 1;
+        });
+        return fixed;
+    }
+
+    function fixDuplicateSlotIds() {
+        const used = new Set();
+        let fixed = 0;
+        slots.forEach((slot, index) => {
+            const raw = cleanForSlug(slot?.id || '');
+            if (!raw) {
+                return;
+            }
+            if (!used.has(raw)) {
+                used.add(raw);
+                if (slot.id !== raw) {
+                    updateSlot(index, { id: raw });
+                }
+                return;
+            }
+            let candidate = raw;
+            let suffix = 2;
+            while (used.has(candidate)) {
+                candidate = `${raw}-${suffix}`;
+                suffix += 1;
+            }
+            used.add(candidate);
+            updateSlot(index, { id: candidate });
             fixed += 1;
         });
         return fixed;
@@ -1039,10 +1072,11 @@ const AdsConfig = () => {
         setShowValidation(false);
 
         const fixed = fixDuplicateSlots();
-        if (fixed > 0) {
+        const slotFixed = fixDuplicateSlotIds();
+        if (fixed > 0 || slotFixed > 0) {
             showNotice(
                 'warning',
-                `已自动修复 ${fixed} 个重复 Slot，正在继续保存...`,
+                `已自动修复 ${fixed + slotFixed} 个重复 Slot，正在继续保存...`,
                 2500
             );
         }
@@ -1061,10 +1095,11 @@ const AdsConfig = () => {
 
     const handleSaveWithSlotCheck = async () => {
         const fixed = fixDuplicateSlots();
-        if (fixed > 0) {
+        const slotFixed = fixDuplicateSlotIds();
+        if (fixed > 0 || slotFixed > 0) {
             showNotice(
                 'warning',
-                `已自动修复 ${fixed} 个重复 Slot，正在继续保存...`,
+                `已自动修复 ${fixed + slotFixed} 个重复 Slot，正在继续保存...`,
                 2500
             );
         }
@@ -1354,6 +1389,14 @@ const AdsConfig = () => {
                     )}
                 </CardBody>
             </Card>
+            <SlotsPanel
+                slots={slots}
+                ads={ads}
+                onAddSlot={addSlot}
+                onUpdateSlot={updateSlot}
+                onRemoveSlot={removeSlot}
+                onNotice={showNotice}
+            />
             <SystemSettingsPanel onNotice={showNotice} />
             <DebugPanel onNotice={showNotice} />
         </div>

@@ -23,7 +23,15 @@ final class Settings {
             }
         }
 
-        return array('ads' => $ads);
+        $slots = array();
+        if (isset($settings['slots']) && is_array($settings['slots'])) {
+            $slots = self::sanitize_slots($settings['slots']);
+        }
+
+        return array(
+            'ads' => $ads,
+            'slots' => $slots,
+        );
     }
 
     public static function validate_settings(array $settings) {
@@ -132,6 +140,44 @@ final class Settings {
     public static function sanitize_choice($value, array $allowed, string $default): string {
         $value = is_string($value) ? $value : '';
         return in_array($value, $allowed, true) ? $value : $default;
+    }
+
+    public static function sanitize_slots($slots): array {
+        if (!is_array($slots)) {
+            return array();
+        }
+        $sanitized = array();
+        $used = array();
+        foreach ($slots as $slot) {
+            if (!is_array($slot)) {
+                continue;
+            }
+            $raw_id = isset($slot['id']) ? (string) $slot['id'] : '';
+            $id = sanitize_title($raw_id);
+            if ($id === '') {
+                continue;
+            }
+            $id = self::unique_slot($id, $used);
+            $used[$id] = true;
+            $label = isset($slot['label']) ? sanitize_text_field($slot['label']) : '';
+            if ($label === '') {
+                $label = $id;
+            }
+            $ad_ids = self::sanitize_ad_ids(isset($slot['ad_ids']) ? $slot['ad_ids'] : array());
+            $weights = self::sanitize_weights(
+                isset($slot['weights']) ? $slot['weights'] : array(),
+                count($ad_ids)
+            );
+            $limit = isset($slot['limit']) ? max(1, absint($slot['limit'])) : 1;
+            $sanitized[] = array(
+                'id' => $id,
+                'label' => $label,
+                'ad_ids' => $ad_ids,
+                'weights' => $weights,
+                'limit' => $limit,
+            );
+        }
+        return $sanitized;
     }
 
     private static function sanitize_node_target_value($value): string {
@@ -534,5 +580,50 @@ final class Settings {
             }
         }
         return array_values(array_unique($ids));
+    }
+
+    private static function sanitize_ad_ids($value): array {
+        if (!is_array($value)) {
+            return array();
+        }
+        $ids = array();
+        foreach ($value as $id) {
+            if (!is_string($id)) {
+                continue;
+            }
+            $id = sanitize_text_field($id);
+            if ($id === '' || in_array($id, $ids, true)) {
+                continue;
+            }
+            $ids[] = $id;
+        }
+        return $ids;
+    }
+
+    private static function sanitize_weights($value, int $count): array {
+        if (!is_array($value)) {
+            return array_fill(0, $count, 1);
+        }
+        $weights = array();
+        foreach ($value as $weight) {
+            $weights[] = max(1, absint($weight));
+        }
+        if (count($weights) < $count) {
+            $weights = array_pad($weights, $count, 1);
+        }
+        if (count($weights) > $count) {
+            $weights = array_slice($weights, 0, $count);
+        }
+        return $weights;
+    }
+
+    private static function unique_slot(string $slot, array $used): string {
+        $base = $slot;
+        $suffix = 2;
+        while (isset($used[$slot])) {
+            $slot = $base . '-' . $suffix;
+            $suffix++;
+        }
+        return $slot;
     }
 }

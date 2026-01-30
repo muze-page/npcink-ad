@@ -27,9 +27,26 @@
                 });
             }, []);
 
+            var slotsData =
+                (window.MagickADSlots && window.MagickADSlots.slots) || [];
             var slotOptions = [{ label: '请选择广告位', value: '' }];
             var slotMap = {};
-            if (ads && ads.length) {
+
+            if (slotsData && slotsData.length) {
+                slotsData.forEach(function (slotItem) {
+                    var slotId = slotItem.id || '';
+                    if (!slotId || slotMap[slotId]) {
+                        return;
+                    }
+                    var label = slotItem.label || slotId;
+                    slotMap[slotId] =
+                        slotItem.ad_ids && slotItem.ad_ids.length > 0;
+                    slotOptions.push({
+                        label: label + ' · ' + slotId,
+                        value: slotId,
+                    });
+                });
+            } else if (ads && ads.length) {
                 ads.forEach(function (post) {
                     var title =
                         (post.title &&
