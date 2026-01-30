@@ -543,12 +543,15 @@ const Layout = ({
                         </Toolbar>
 
                         <div className="magick-ad-editor">
-                            {contentHeader && (
-                                <div className="magick-ad-editor-floating">
-                                    {contentHeader}
-                                </div>
-                            )}
                             <div className="magick-ad-editor-left">
+                                {contentHeader && (
+                                    <div className="magick-ad-editor-header">
+                                        <div className="magick-ad-editor-title">
+                                            内容配置
+                                        </div>
+                                        {contentHeader}
+                                    </div>
+                                )}
                                 {contentPanels || (
                                     <Panel>
                                         <PanelBody title="内容配置" initialOpen>

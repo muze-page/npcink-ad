@@ -866,7 +866,7 @@ const AdsConfig = () => {
         selectedAd?.options?.creative_type || 'image';
 
     const contentHeader = selectedAd ? (
-        <div className="magick-ad-template-actions-bar">
+        <div>
             <TemplateActions
                 onOpen={() => openTemplateLibrary(activeCreativeType)}
                 onSave={() => openSaveTemplate(activeCreativeType)}
