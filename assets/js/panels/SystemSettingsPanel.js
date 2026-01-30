@@ -15,8 +15,10 @@ const DEFAULT_SETTINGS = {
     tracking_strategy: 'session',
     tracking_require_consent: false,
     tracking_dedupe_ttl: 86400,
+    tracking_require_signature: true,
     stats_diagnostics: false,
     stats_diagnostics_retention_days: 7,
+    stats_diagnostics_auto_off_days: 7,
     stats_diagnostics_expires_at: 0,
     brand_name: 'Magick AD',
     brand_tagline: '广告配置与投放规则管理',
@@ -96,6 +98,10 @@ const SystemSettingsPanel = ({ onNotice }) => {
             <CardBody>
                 <Panel>
                     <PanelBody title="隐私与系统设置" initialOpen={false}>
+                        <div className="magick-ad-settings-expiry">
+                            <strong>诊断到期时间：</strong>
+                            {diagnosticsExpiryLabel ? diagnosticsExpiryLabel : '未启用'}
+                        </div>
                         {error && (
                             <Notice status="error" isDismissible>
                                 {error.message || '系统设置加载失败'}
@@ -140,6 +146,17 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             help="用于去重/防刷；在窗口内同一广告只计一次。默认 86400 秒。"
                         />
                         <ToggleControl
+                            label="强制签名校验"
+                            checked={Boolean(settings.tracking_require_signature)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    tracking_require_signature: value,
+                                })
+                            }
+                            help="关闭后可接受无签名的 /track 请求（风险更高）。"
+                        />
+                        <ToggleControl
                             label="启用统计诊断日志"
                             checked={Boolean(settings.stats_diagnostics)}
                             disabled={loading || saving}
@@ -159,7 +176,20 @@ const SystemSettingsPanel = ({ onNotice }) => {
                                         Number(value) || 7,
                                 })
                             }
-                            help="超过天数会自动清理，且诊断模式会自动关闭。"
+                            help="超过天数会自动清理诊断日志。"
+                        />
+                        <TextControl
+                            label="诊断自动关闭天数"
+                            type="number"
+                            value={settings.stats_diagnostics_auto_off_days}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    stats_diagnostics_auto_off_days:
+                                        Number(value) || 7,
+                                })
+                            }
+                            help="开启诊断后，超过天数将自动关闭诊断模式。"
                         />
                         {settings.stats_diagnostics &&
                             diagnosticsExpiryLabel && (

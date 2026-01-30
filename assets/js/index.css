@@ -1681,6 +1681,15 @@
     box-shadow: 0 0 0 1px rgba(229, 62, 62, 0.25);
 }
 
+.magick-ad-settings-expiry {
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #f0f6fc;
+    color: #0a4b78;
+    font-size: 12px;
+}
+
 .magick-ad-node-debug-actions {
     display: flex;
     gap: 8px;

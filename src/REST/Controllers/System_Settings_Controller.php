@@ -43,14 +43,18 @@ final class System_Settings_Controller {
         $dedupe_ttl = self::sanitize_positive_int($dedupe_ttl, DAY_IN_SECONDS, 60, WEEK_IN_SECONDS);
         $retention_days = (int) get_option('magick_ad_stats_diagnostics_retention_days', 7);
         $retention_days = self::sanitize_positive_int($retention_days, 7, 1, 90);
+        $auto_off_days = (int) get_option('magick_ad_stats_diagnostics_auto_off_days', 7);
+        $auto_off_days = self::sanitize_positive_int($auto_off_days, 7, 1, 90);
         $diagnostics_expires_at = (int) get_option('magick_ad_stats_diagnostics_expires_at', 0);
 
         $settings = array(
             'tracking_strategy' => get_option('magick_ad_tracking_strategy', 'session'),
             'tracking_require_consent' => (get_option('magick_ad_tracking_require_consent', '0') === '1'),
             'tracking_dedupe_ttl' => $dedupe_ttl,
+            'tracking_require_signature' => (get_option('magick_ad_track_require_signature', '1') === '1'),
             'stats_diagnostics' => (get_option('magick_ad_stats_diagnostics', '0') === '1'),
             'stats_diagnostics_retention_days' => $retention_days,
+            'stats_diagnostics_auto_off_days' => $auto_off_days,
             'stats_diagnostics_expires_at' => $diagnostics_expires_at,
             'brand_name' => get_option('magick_ad_brand_name', 'Magick AD'),
             'brand_tagline' => get_option('magick_ad_brand_tagline', '广告配置与投放规则管理'),
@@ -74,9 +78,18 @@ final class System_Settings_Controller {
             60,
             WEEK_IN_SECONDS
         );
+        $tracking_require_signature = !array_key_exists('tracking_require_signature', $params)
+            ? (get_option('magick_ad_track_require_signature', '1') === '1')
+            : !empty($params['tracking_require_signature']);
         $stats_diagnostics = !empty($params['stats_diagnostics']);
         $stats_diagnostics_retention_days = self::sanitize_positive_int(
             $params['stats_diagnostics_retention_days'] ?? get_option('magick_ad_stats_diagnostics_retention_days', 7),
+            7,
+            1,
+            90
+        );
+        $stats_diagnostics_auto_off_days = self::sanitize_positive_int(
+            $params['stats_diagnostics_auto_off_days'] ?? get_option('magick_ad_stats_diagnostics_auto_off_days', 7),
             7,
             1,
             90
@@ -94,14 +107,16 @@ final class System_Settings_Controller {
         update_option('magick_ad_tracking_strategy', $tracking_strategy);
         update_option('magick_ad_tracking_require_consent', $tracking_require_consent ? '1' : '0');
         update_option('magick_ad_track_dedupe_ttl', $tracking_dedupe_ttl);
+        update_option('magick_ad_track_require_signature', $tracking_require_signature ? '1' : '0');
         update_option('magick_ad_stats_diagnostics', $stats_diagnostics ? '1' : '0');
         update_option('magick_ad_stats_diagnostics_retention_days', $stats_diagnostics_retention_days);
+        update_option('magick_ad_stats_diagnostics_auto_off_days', $stats_diagnostics_auto_off_days);
         update_option('magick_ad_brand_name', $brand_name);
         update_option('magick_ad_brand_tagline', $brand_tagline);
         update_option('magick_ad_manage_capability', $manage_capability);
 
         $expires_at = $stats_diagnostics
-            ? current_time('timestamp') + $stats_diagnostics_retention_days * DAY_IN_SECONDS
+            ? current_time('timestamp') + $stats_diagnostics_auto_off_days * DAY_IN_SECONDS
             : 0;
         update_option('magick_ad_stats_diagnostics_expires_at', $expires_at);
 
@@ -109,8 +124,10 @@ final class System_Settings_Controller {
             'tracking_strategy' => $tracking_strategy,
             'tracking_require_consent' => $tracking_require_consent,
             'tracking_dedupe_ttl' => $tracking_dedupe_ttl,
+            'tracking_require_signature' => $tracking_require_signature,
             'stats_diagnostics' => $stats_diagnostics,
             'stats_diagnostics_retention_days' => $stats_diagnostics_retention_days,
+            'stats_diagnostics_auto_off_days' => $stats_diagnostics_auto_off_days,
             'stats_diagnostics_expires_at' => $expires_at,
             'brand_name' => $brand_name,
             'brand_tagline' => $brand_tagline,

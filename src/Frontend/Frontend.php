@@ -1334,13 +1334,13 @@ final class Frontend {
     private static function matches_device($options) {
         $device = isset($options['device']) ? $options['device'] : 'all';
         if ($device === 'mobile') {
-            return wp_is_mobile();
+            return wp_is_mobile() && !self::is_tablet_device();
         }
         if ($device === 'tablet') {
             return self::is_tablet_device();
         }
         if ($device === 'desktop') {
-            return !wp_is_mobile() && !self::is_tablet_device();
+            return !wp_is_mobile();
         }
 
         return true;
@@ -1578,8 +1578,15 @@ final class Frontend {
 
         $display_mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
         $random_strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
-        $data_attrs = ' data-ad-id="' . esc_attr(isset($ad['id']) ? $ad['id'] : '') . '" data-ad-position="' . esc_attr($position) . '"';
+        $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
+        $data_attrs = ' data-ad-id="' . esc_attr($ad_id) . '" data-ad-position="' . esc_attr($position) . '"';
         $data_attrs .= ' data-ad-container="' . esc_attr($container_type) . '"';
+        if ($ad_id !== '') {
+            $sig_ts = gmdate('Ymd', current_time('timestamp'));
+            $sig = hash_hmac('sha256', $ad_id . '|' . $sig_ts, self::get_track_secret());
+            $data_attrs .= ' data-ad-sig="' . esc_attr($sig) . '"';
+            $data_attrs .= ' data-ad-sig-ts="' . esc_attr($sig_ts) . '"';
+        }
         if (!empty($ad['_slot']) && is_string($ad['_slot'])) {
             $data_attrs .= ' data-ad-slot="' . esc_attr($ad['_slot']) . '"';
         }
@@ -1662,5 +1669,14 @@ final class Frontend {
             return '';
         }
         return '<div class="magick-ad-zone magick-ad-zone--' . esc_attr($zone) . '">' . $markup . '</div>';
+    }
+
+    private static function get_track_secret(): string {
+        $secret = get_option('magick_ad_track_secret', '');
+        if (!is_string($secret) || $secret === '') {
+            $secret = wp_generate_password(32, true, true);
+            update_option('magick_ad_track_secret', $secret, false);
+        }
+        return (string) $secret;
     }
 }

@@ -167,30 +167,6 @@ body.magick-ad-lock-scroll {
     }
 }
 
-.magick-ad-unit--bar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 9999;
-    margin: 0;
-    background: #fff;
-    box-shadow: 0 -8px 16px rgba(0, 0, 0, 0.12);
-}
-
-.magick-ad-unit--popup {
-    position: fixed;
-    right: 24px;
-    bottom: 24px;
-    z-index: 9999;
-    margin: 0;
-    background: #fff;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
-    border-radius: 12px;
-    overflow: hidden;
-    max-width: min(360px, 90vw);
-}
-
 .magick-ad-container--banner {
     position: fixed;
     left: 0;

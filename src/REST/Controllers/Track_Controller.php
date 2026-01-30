@@ -4,12 +4,15 @@ namespace MagickAD\REST\Controllers;
 
 use WP_Error;
 use WP_REST_Request;
+use MagickAD\Data\Ads;
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
 final class Track_Controller {
+    private static $known_ads = null;
+
     private static function has_consent(): bool {
         return (bool) apply_filters('magick_ad_has_consent', false);
     }
@@ -26,6 +29,68 @@ final class Track_Controller {
     private static function tracking_requires_consent(): bool {
         $requires = (get_option('magick_ad_tracking_require_consent', '0') === '1');
         return (bool) apply_filters('magick_ad_tracking_require_consent', $requires);
+    }
+
+    private static function get_track_secret(): string {
+        $secret = get_option('magick_ad_track_secret', '');
+        if (!is_string($secret) || $secret === '') {
+            $secret = wp_generate_password(32, true, true);
+            update_option('magick_ad_track_secret', $secret, false);
+        }
+        return (string) $secret;
+    }
+
+    private static function is_valid_signature(string $ad_id, string $sig, string $sig_ts): bool {
+        if ($ad_id === '' || $sig === '' || $sig_ts === '') {
+            return false;
+        }
+        if (!preg_match('/^\d{8}$/', $sig_ts)) {
+            return false;
+        }
+        $secret = self::get_track_secret();
+        $expected = hash_hmac('sha256', $ad_id . '|' . $sig_ts, $secret);
+        if (!hash_equals($expected, $sig)) {
+            return false;
+        }
+        $today = gmdate('Ymd', current_time('timestamp'));
+        $yesterday = gmdate('Ymd', current_time('timestamp') - DAY_IN_SECONDS);
+        return ($sig_ts === $today || $sig_ts === $yesterday);
+    }
+
+    private static function get_known_ad_ids(): array {
+        if (self::$known_ads !== null) {
+            return self::$known_ads;
+        }
+        $ads = Ads::get_ads();
+        $map = array();
+        foreach ($ads as $ad) {
+            if (!empty($ad['id']) && is_string($ad['id'])) {
+                $map[$ad['id']] = true;
+            }
+        }
+        self::$known_ads = $map;
+        return $map;
+    }
+
+    private static function is_known_ad_id(string $ad_id): bool {
+        if ($ad_id === '') {
+            return false;
+        }
+        $map = self::get_known_ad_ids();
+        return isset($map[$ad_id]);
+    }
+
+    private static function get_request_ip(): string {
+        $ip = '';
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $parts = explode(',', sanitize_text_field(wp_unslash($_SERVER['HTTP_X_FORWARDED_FOR'])));
+            $ip = trim($parts[0]);
+        }
+        if ($ip === '' && !empty($_SERVER['REMOTE_ADDR'])) {
+            $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR']));
+        }
+        $ip = apply_filters('magick_ad_track_client_ip', $ip);
+        return is_string($ip) ? $ip : '';
     }
 
     public static function track(WP_REST_Request $request) {
@@ -47,6 +112,34 @@ final class Track_Controller {
         }
 
         $ad_id = sanitize_text_field($payload['ad_id']);
+        $sig = isset($payload['sig']) ? sanitize_text_field($payload['sig']) : '';
+        $sig_ts = isset($payload['sig_ts']) ? sanitize_text_field($payload['sig_ts']) : '';
+        $sig_valid = self::is_valid_signature($ad_id, $sig, $sig_ts);
+        $allow_unsigned = (bool) apply_filters('magick_ad_track_allow_unsigned', false);
+        $require_signature = (get_option('magick_ad_track_require_signature', '1') === '1');
+        $require_signature = (bool) apply_filters('magick_ad_track_require_signature', $require_signature, $ad_id, $event);
+        $known_ad = self::is_known_ad_id($ad_id);
+        if (!$sig_valid) {
+            if ($require_signature) {
+                return new WP_Error('magick_ad_invalid_signature', 'Invalid signature', array('status' => 403));
+            }
+            if (!$allow_unsigned || !$known_ad) {
+                return new WP_Error('magick_ad_invalid_signature', 'Invalid signature', array('status' => 403));
+            }
+        }
+
+        $limit = (int) apply_filters('magick_ad_track_rate_limit', 60, $ad_id, $event);
+        if ($limit > 0) {
+            $ip = self::get_request_ip();
+            $bucket = gmdate('YmdHi', current_time('timestamp'));
+            $rate_key = 'magick_ad_rl_' . md5($ip . '|' . $ad_id . '|' . $event . '|' . $bucket);
+            $count = (int) get_transient($rate_key);
+            if ($count >= $limit) {
+                return rest_ensure_response(array('success' => true, 'rate_limited' => true));
+            }
+            set_transient($rate_key, $count + 1, MINUTE_IN_SECONDS + 5);
+        }
+
         $date = current_time('Y-m-d');
         $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
         $page_url = isset($payload['page_url']) ? esc_url_raw($payload['page_url']) : '';

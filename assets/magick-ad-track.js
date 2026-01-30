@@ -56,6 +56,12 @@
             session_id: sessionId,
             page_hash: pageHash,
         };
+        if (payload.sig) {
+            bodyData.sig = payload.sig;
+        }
+        if (payload.sigTs) {
+            bodyData.sig_ts = payload.sigTs;
+        }
         if (config.collectPageUrl) {
             bodyData.page_url = window.location.href;
         }
@@ -118,7 +124,12 @@
                 if (entry.isIntersecting) {
                     if (!state.seen && !state.timer) {
                         state.timer = window.setTimeout(() => {
-                            sendTrack({ adId, event: 'impression' });
+                            sendTrack({
+                                adId,
+                                event: 'impression',
+                                sig: entry.target.getAttribute('data-ad-sig'),
+                                sigTs: entry.target.getAttribute('data-ad-sig-ts'),
+                            });
                             state.seen = true;
                             state.timer = null;
                             observed.set(adId, state);
@@ -572,7 +583,15 @@
         if (!adId) {
             return;
         }
-        sendTrack({ adId, event: 'click' }, true);
+        sendTrack(
+            {
+                adId,
+                event: 'click',
+                sig: target.getAttribute('data-ad-sig'),
+                sigTs: target.getAttribute('data-ad-sig-ts'),
+            },
+            true
+        );
     };
 
     if (document.readyState === 'loading') {
