@@ -27,6 +27,19 @@
     ]);
 
     let lastTarget = null;
+    let lastLabel = '';
+    const getLabel = (el) => {
+        if (!el || !el.tagName) {
+            return '';
+        }
+        const id = el.id ? `#${el.id}` : '';
+        const className =
+            el.classList && el.classList.length > 0
+                ? `.${el.classList[0]}`
+                : '';
+        return `${el.tagName.toLowerCase()}${id || className || ''}`;
+    };
+
     const highlight = (el) => {
         if (lastTarget && lastTarget !== el) {
             lastTarget.style.outline = '';
@@ -43,6 +56,10 @@
         if (lastTarget) {
             lastTarget.style.outline = '';
             lastTarget.style.outlineOffset = '';
+        }
+        const tooltip = document.getElementById('magick-ad-picker-tooltip');
+        if (tooltip) {
+            tooltip.remove();
         }
         document.body.style.cursor = '';
         document.removeEventListener('mousemove', handleMove, true);
@@ -69,20 +86,37 @@
             return null;
         }
         if (el.id) {
-            return { targetType: 'id', value: el.id };
+            return {
+                targetType: 'id',
+                value: el.id,
+                id: el.id,
+                classes: Array.from(el.classList || []),
+            };
         }
         if (el.classList && el.classList.length > 0) {
-            return { targetType: 'class', value: el.classList[0] };
+            return {
+                targetType: 'class',
+                value: el.classList[0],
+                id: el.id || '',
+                classes: Array.from(el.classList || []),
+            };
         }
         return null;
     };
 
     const handleMove = (event) => {
         const ui = document.getElementById('magick-ad-picker-ui');
+        const tooltip = document.getElementById('magick-ad-picker-tooltip');
         if (ui && ui.contains(event.target)) {
             return;
         }
         highlight(event.target);
+        if (tooltip) {
+            lastLabel = getLabel(event.target);
+            tooltip.textContent = lastLabel || '无 ID/Class';
+            tooltip.style.left = `${event.clientX + 12}px`;
+            tooltip.style.top = `${event.clientY + 12}px`;
+        }
     };
 
     const handleClick = (event) => {
@@ -102,6 +136,9 @@
             type: 'magick-ad-node-picked',
             targetType: selection.targetType,
             value: selection.value,
+            id: selection.id || '',
+            classes: selection.classes || [],
+            label: getLabel(event.target),
         });
         cleanup();
     };
@@ -174,6 +211,21 @@
         ui.appendChild(button);
 
         document.body.appendChild(ui);
+
+        const tooltip = document.createElement('div');
+        tooltip.id = 'magick-ad-picker-tooltip';
+        tooltip.style.position = 'fixed';
+        tooltip.style.zIndex = '2147483647';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.background = 'rgba(15, 23, 42, 0.92)';
+        tooltip.style.color = '#fff';
+        tooltip.style.fontSize = '11px';
+        tooltip.style.padding = '4px 8px';
+        tooltip.style.borderRadius = '999px';
+        tooltip.style.boxShadow = '0 8px 18px rgba(15, 23, 42, 0.2)';
+        tooltip.style.transform = 'translateZ(0)';
+        tooltip.textContent = '';
+        document.body.appendChild(tooltip);
     };
 
     document.body.style.cursor = 'crosshair';

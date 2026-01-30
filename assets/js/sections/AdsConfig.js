@@ -68,6 +68,12 @@ const AdsConfig = () => {
     const [saveTemplateCategory, setSaveTemplateCategory] = useState('');
     const [saveTemplateCategoryName, setSaveTemplateCategoryName] =
         useState('');
+    const [pickerConfirmOpen, setPickerConfirmOpen] = useState(false);
+    const [pickerType, setPickerType] = useState('id');
+    const [pickerValue, setPickerValue] = useState('');
+    const [pickerId, setPickerId] = useState('');
+    const [pickerClasses, setPickerClasses] = useState([]);
+    const [pickerLabel, setPickerLabel] = useState('');
     const branding =
         (typeof window !== 'undefined' && window.MagickAD?.branding) || {
             name: 'Magick AD',
@@ -398,11 +404,15 @@ const AdsConfig = () => {
             if (!selectedAd) {
                 return;
             }
-            handleUpdateOptions({
-                node_target_type: data.targetType || 'id',
-                node_target_value: data.value || '',
-            });
-            showNotice('success', '已选择节点', 2000);
+            const nextType = data.targetType || 'id';
+            setPickerType(nextType);
+            setPickerValue(data.value || '');
+            setPickerId(data.id || '');
+            setPickerClasses(
+                Array.isArray(data.classes) ? data.classes : []
+            );
+            setPickerLabel(data.label || '');
+            setPickerConfirmOpen(true);
         };
 
         window.addEventListener('message', handleMessage);
@@ -3202,6 +3212,70 @@ const AdsConfig = () => {
                             onClick={handleConfirmSaveTemplate}
                         >
                             保存模板
+                        </Button>
+                    </div>
+                </Modal>
+            )}
+
+            {pickerConfirmOpen && (
+                <Modal
+                    title="确认节点"
+                    onRequestClose={() => setPickerConfirmOpen(false)}
+                    className="magick-ad-rename-modal"
+                >
+                    <SelectControl
+                        label="定位方式"
+                        value={pickerType}
+                        options={[
+                            { label: 'ID', value: 'id' },
+                            { label: 'Class', value: 'class' },
+                        ]}
+                        onChange={(value) => setPickerType(value)}
+                    />
+                    <TextControl
+                        label="节点值"
+                        value={pickerValue}
+                        onChange={(value) => setPickerValue(value.trim())}
+                        help={
+                            pickerType === 'id'
+                                ? pickerId
+                                    ? `可用 ID: #${pickerId}`
+                                    : 'ID 不带 #'
+                                : pickerClasses.length
+                                  ? `可用 Class: ${pickerClasses
+                                        .map((item) => `.${item}`)
+                                        .join(' ')}`
+                                  : 'Class 不带 .'
+                        }
+                    />
+                    {pickerLabel && (
+                        <Notice status="info" isDismissible={false}>
+                            已选元素：{pickerLabel}
+                        </Notice>
+                    )}
+                    <div className="magick-ad-confirm-actions">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setPickerConfirmOpen(false)}
+                        >
+                            取消
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={() => {
+                                if (!pickerValue) {
+                                    showNotice('error', '请输入节点值', 2000);
+                                    return;
+                                }
+                                handleUpdateOptions({
+                                    node_target_type: pickerType,
+                                    node_target_value: pickerValue,
+                                });
+                                setPickerConfirmOpen(false);
+                                showNotice('success', '已更新节点', 2000);
+                            }}
+                        >
+                            确认
                         </Button>
                     </div>
                 </Modal>
