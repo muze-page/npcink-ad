@@ -51,6 +51,15 @@ final class Admin {
             'magick-ad-report',
             array($this, 'render_app')
         );
+
+        add_submenu_page(
+            'magick-ad',
+            __('插入入口', 'magick-ad'),
+            __('插入入口', 'magick-ad'),
+            $capability,
+            'magick-ad-insert',
+            array($this, 'render_insert_help')
+        );
     }
 
     public function register_debug_settings(): void {
@@ -108,6 +117,52 @@ final class Admin {
             )
         );
         echo '</div>';
+        echo '</div>';
+    }
+
+    public function render_insert_help(): void {
+        $block_title = esc_html__('区块（Block）', 'magick-ad');
+        $shortcode_title = esc_html__('短代码（Shortcode）', 'magick-ad');
+        $template_title = esc_html__('主题模板函数（Template Tag / PHP API）', 'magick-ad');
+
+        $shortcode_example_1 = esc_html('[magick_ad slot="sidebar-top"]');
+        $shortcode_example_2 = esc_html('[magick_ad id="ad_123456"]');
+        $shortcode_example_3 = esc_html('[magick_ad slot="post-inline-1" class="my-ad"]');
+
+        $template_example = esc_html(
+            "<?php if (function_exists('magick_ad_the')) : ?>\n" .
+            "  <?php magick_ad_the('sidebar-top'); ?>\n" .
+            "<?php endif; ?>"
+        );
+
+        echo '<div class="wrap">';
+        echo '<h1>' . esc_html__('插入入口', 'magick-ad') . '</h1>';
+        echo '<p>' . esc_html__('以下是推荐的三种插入方式，适配不同编辑环境与主题需求。', 'magick-ad') . '</p>';
+
+        echo '<hr />';
+
+        echo '<h2>' . $block_title . '</h2>';
+        echo '<p>' . esc_html__('现代 WP 首选（Gutenberg / FSE），可在编辑器中直接插入 “Magick AD” 区块。', 'magick-ad') . '</p>';
+        echo '<ol>';
+        echo '<li>' . esc_html__('在区块编辑器中添加 “Magick AD” 区块。', 'magick-ad') . '</li>';
+        echo '<li>' . esc_html__('在区块设置中选择广告位 Slot 或广告 ID。', 'magick-ad') . '</li>';
+        echo '<li>' . esc_html__('预览可实时渲染，前台根据投放规则显示。', 'magick-ad') . '</li>';
+        echo '</ol>';
+
+        echo '<h2>' . $shortcode_title . '</h2>';
+        echo '<p>' . esc_html__('兼容经典编辑器/复制粘贴场景，适合内容中快速插入。', 'magick-ad') . '</p>';
+        echo '<pre><code>' . $shortcode_example_1 . "\n" . $shortcode_example_2 . "\n" . $shortcode_example_3 . '</code></pre>';
+
+        echo '<h2>' . $template_title . '</h2>';
+        echo '<p>' . esc_html__('给主题开发者或模板文件使用，适合放在任意位置。', 'magick-ad') . '</p>';
+        echo '<pre><code>' . $template_example . '</code></pre>';
+
+        echo '<h3>' . esc_html__('Slot 命名建议', 'magick-ad') . '</h3>';
+        echo '<ul>';
+        echo '<li>' . esc_html__('推荐使用小写字母、数字与短横线。', 'magick-ad') . '</li>';
+        echo '<li>' . esc_html__('保持唯一性，便于在区块/短代码/模板函数中稳定引用。', 'magick-ad') . '</li>';
+        echo '</ul>';
+
         echo '</div>';
     }
 

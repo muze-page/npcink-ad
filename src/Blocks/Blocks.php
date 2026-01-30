@@ -10,6 +10,10 @@ if (!defined('ABSPATH')) {
 
 final class Blocks {
     public function register(): void {
+        if (did_action('init')) {
+            $this->register_blocks();
+            return;
+        }
         add_action('init', array($this, 'register_blocks'));
     }
 

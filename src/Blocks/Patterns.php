@@ -8,6 +8,10 @@ if (!defined('ABSPATH')) {
 
 final class Patterns {
     public function register(): void {
+        if (did_action('init')) {
+            $this->register_patterns();
+            return;
+        }
         add_action('init', array($this, 'register_patterns'));
     }
 
