@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { parse, serialize, createBlock } from '@wordpress/blocks';
+import { parse, serialize, createBlock, getBlockVariations } from '@wordpress/blocks';
 import { select } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 
@@ -272,6 +272,35 @@ const useTemplateLibrary = ({
             corePatterns = window.MagickAD.patterns;
         }
 
+        const variationTemplates = [];
+        try {
+            const variations = getBlockVariations(MAGICK_BLOCK) || [];
+            variations.forEach((variation) => {
+                if (!variation || !variation.attributes) {
+                    return;
+                }
+                const content = serialize([
+                    createBlock(MAGICK_BLOCK, variation.attributes),
+                ]);
+                const extracted =
+                    extractTemplateFromContent(content) ||
+                    extractTemplateFromContentLoose(content);
+                if (!extracted) {
+                    return;
+                }
+                variationTemplates.push({
+                    id: `variation-${variation.name || variation.title}`,
+                    name: variation.title || '模板变体',
+                    description: variation.description || '',
+                    source: 'core',
+                    content,
+                    ...extracted,
+                });
+            });
+        } catch (err) {
+            // ignore variations
+        }
+
         const systemTemplates = (corePatterns || [])
             .filter((pattern) =>
                 Array.isArray(pattern.categories)
@@ -326,7 +355,7 @@ const useTemplateLibrary = ({
             userTemplates = [];
         }
 
-        const merged = [...systemTemplates, ...userTemplates];
+        const merged = [...variationTemplates, ...systemTemplates, ...userTemplates];
         setTemplateLibrary(merged);
     }, []);
 

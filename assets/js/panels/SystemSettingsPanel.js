@@ -14,7 +14,10 @@ import apiFetch from '@wordpress/api-fetch';
 const DEFAULT_SETTINGS = {
     tracking_strategy: 'session',
     tracking_require_consent: false,
+    tracking_dedupe_ttl: 86400,
     stats_diagnostics: false,
+    stats_diagnostics_retention_days: 7,
+    stats_diagnostics_expires_at: 0,
     brand_name: 'Magick AD',
     brand_tagline: '广告配置与投放规则管理',
     manage_capability: 'manage_options',
@@ -25,6 +28,17 @@ const SystemSettingsPanel = ({ onNotice }) => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
+
+    const diagnosticsExpiryLabel = (() => {
+        if (!settings.stats_diagnostics_expires_at) {
+            return '';
+        }
+        const date = new Date(settings.stats_diagnostics_expires_at * 1000);
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+        return date.toLocaleString();
+    })();
 
     useEffect(() => {
         let mounted = true;
@@ -113,6 +127,18 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             }
                             help="可通过 magick_ad_has_consent 接入站点同意逻辑。"
                         />
+                        <TextControl
+                            label="统计去重窗口（秒）"
+                            type="number"
+                            value={settings.tracking_dedupe_ttl}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    tracking_dedupe_ttl: Number(value) || 60,
+                                })
+                            }
+                            help="用于去重/防刷；在窗口内同一广告只计一次。默认 86400 秒。"
+                        />
                         <ToggleControl
                             label="启用统计诊断日志"
                             checked={Boolean(settings.stats_diagnostics)}
@@ -122,6 +148,25 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             }
                             help="仅诊断时记录 page_url / user_agent / user_id。"
                         />
+                        <TextControl
+                            label="诊断日志保留天数"
+                            type="number"
+                            value={settings.stats_diagnostics_retention_days}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    stats_diagnostics_retention_days:
+                                        Number(value) || 7,
+                                })
+                            }
+                            help="超过天数会自动清理，且诊断模式会自动关闭。"
+                        />
+                        {settings.stats_diagnostics &&
+                            diagnosticsExpiryLabel && (
+                                <Notice status="info" isDismissible={false}>
+                                    诊断模式将在 {diagnosticsExpiryLabel} 自动关闭。
+                                </Notice>
+                            )}
                         <TextControl
                             label="后台名称（白标）"
                             value={settings.brand_name}

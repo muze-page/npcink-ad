@@ -418,6 +418,10 @@ final class Settings {
             ),
         );
 
+        if (($sanitized_options['placement_hook'] ?? '') === 'head') {
+            $sanitized_content['container_style']['mode'] = 'raw';
+        }
+
         return array(
             'id' => isset($ad['id']) ? sanitize_text_field($ad['id']) : '',
             'name' => isset($ad['name']) ? sanitize_text_field($ad['name']) : '',

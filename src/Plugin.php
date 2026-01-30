@@ -6,9 +6,11 @@ use MagickAD\Admin\Admin;
 use MagickAD\Blocks\Bindings;
 use MagickAD\Blocks\Blocks;
 use MagickAD\Blocks\Patterns;
+use MagickAD\CLI\Smoke_Command;
 use MagickAD\Data\Ads;
 use MagickAD\Data\Ads_Migrator;
 use MagickAD\Data\Schema;
+use MagickAD\Data\Slot_Migrator;
 use MagickAD\Data\Template_Migrator;
 use MagickAD\Frontend\Frontend;
 use MagickAD\Frontend\Template_Tags;
@@ -54,11 +56,16 @@ final class Plugin {
         if (is_admin()) {
             (new Admin())->register();
         }
+
+        if (defined('WP_CLI') && WP_CLI) {
+            (new Smoke_Command())->register();
+        }
     }
 
     public function maybe_upgrade(): void {
         Schema::maybe_upgrade();
         Template_Migrator::maybe_migrate();
         Ads_Migrator::maybe_migrate();
+        Slot_Migrator::maybe_migrate();
     }
 }

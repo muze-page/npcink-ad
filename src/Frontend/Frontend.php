@@ -27,6 +27,7 @@ final class Frontend {
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_assets'));
         add_action('template_redirect', array(__CLASS__, 'handle_preview_request'));
         self::init();
+        self::maybe_init_random_cookie();
         add_shortcode('magick_ad', array(__CLASS__, 'shortcode'));
     }
 
@@ -192,6 +193,24 @@ final class Frontend {
                 MAGICK_AD_VERSION,
                 true
             );
+            return;
+        }
+
+        if (self::is_node_debug_request()) {
+            wp_enqueue_script(
+                'magick-ad-node-debug',
+                MAGICK_AD_URL . 'assets/magick-ad-node-debug.js',
+                array(),
+                MAGICK_AD_VERSION,
+                true
+            );
+            $config = array(
+                'type' => isset($_GET['magick_ad_node_type']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_type'])) : 'id',
+                'value' => isset($_GET['magick_ad_node_value']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_value'])) : '',
+                'match' => isset($_GET['magick_ad_node_match']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_match'])) : 'first',
+                'index' => isset($_GET['magick_ad_node_index']) ? absint($_GET['magick_ad_node_index']) : 1,
+            );
+            wp_localize_script('magick-ad-node-debug', 'MagickADNodeDebug', $config);
             return;
         }
 
@@ -850,6 +869,10 @@ final class Frontend {
         return isset($_GET['magick_ad_picker']) && $_GET['magick_ad_picker'] === '1';
     }
 
+    private static function is_node_debug_request(): bool {
+        return isset($_GET['magick_ad_node_debug']) && $_GET['magick_ad_node_debug'] === '1';
+    }
+
     private static function is_preview(): bool {
         return !empty(self::$preview_ad_id);
     }
@@ -1141,6 +1164,59 @@ final class Frontend {
         return (bool) apply_filters('magick_ad_has_consent', false);
     }
 
+    private static function maybe_init_random_cookie(): void {
+        if (is_admin() || is_user_logged_in()) {
+            return;
+        }
+        if (!self::has_consent()) {
+            return;
+        }
+        if (isset($_COOKIE['magick_ad_uid']) && is_string($_COOKIE['magick_ad_uid'])) {
+            return;
+        }
+        if (headers_sent()) {
+            return;
+        }
+
+        $settings = Settings::get_settings();
+        $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        $needs_cookie = false;
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            if (($options['display_mode'] ?? '') !== 'random') {
+                continue;
+            }
+            if (($options['random_strategy'] ?? '') === 'cookie') {
+                $needs_cookie = true;
+                break;
+            }
+        }
+        if (!$needs_cookie) {
+            return;
+        }
+
+        $uid = wp_generate_uuid4();
+        $expires = time() + MONTH_IN_SECONDS;
+        $secure = is_ssl();
+        if (PHP_VERSION_ID >= 70300) {
+            setcookie(
+                'magick_ad_uid',
+                $uid,
+                array(
+                    'expires' => $expires,
+                    'path' => COOKIEPATH ?: '/',
+                    'domain' => COOKIE_DOMAIN ?: '',
+                    'secure' => $secure,
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                )
+            );
+        } else {
+            setcookie('magick_ad_uid', $uid, $expires, COOKIEPATH, COOKIE_DOMAIN, $secure, true);
+        }
+        $_COOKIE['magick_ad_uid'] = $uid;
+    }
+
     private static function random_display($ad_id, $strategy = 'request') {
         static $cache = array();
         $time_bucket = (int) floor(current_time('timestamp') / 300);
@@ -1161,13 +1237,10 @@ final class Frontend {
             $seed = 'user:' . $user_id;
         } else {
             if ($strategy === 'cookie') {
-                if (!isset($_COOKIE['magick_ad_uid']) || !is_string($_COOKIE['magick_ad_uid'])) {
-                    $uid = wp_generate_uuid4();
-                    setcookie('magick_ad_uid', $uid, time() + MONTH_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
-                    $_COOKIE['magick_ad_uid'] = $uid;
-                }
                 if (isset($_COOKIE['magick_ad_uid']) && is_string($_COOKIE['magick_ad_uid'])) {
                     $seed = 'cookie:' . sanitize_text_field(wp_unslash($_COOKIE['magick_ad_uid']));
+                } else {
+                    $strategy = 'request';
                 }
             }
         }

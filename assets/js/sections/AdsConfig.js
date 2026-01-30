@@ -44,6 +44,7 @@ import {
     getPositionOptions,
 } from '../constants/options';
 import { cleanForSlug } from '@wordpress/url';
+import apiFetch from '@wordpress/api-fetch';
 
 const AdsConfig = () => {
     const ads = useStore((state) => state.ads);
@@ -75,6 +76,7 @@ const AdsConfig = () => {
     const [pickerId, setPickerId] = useState('');
     const [pickerClasses, setPickerClasses] = useState([]);
     const [pickerLabel, setPickerLabel] = useState('');
+    const [debugEnabled, setDebugEnabled] = useState(false);
     const branding =
         (typeof window !== 'undefined' && window.MagickAD?.branding) || {
             name: 'Magick AD',
@@ -246,6 +248,42 @@ const AdsConfig = () => {
         }
     }, [autoSlot, selectedAd?.options?.slot_mode, selectedAd?.id]);
 
+    useEffect(() => {
+        if (!selectedAd) {
+            return;
+        }
+        const placement = resolvePlacement(selectedAd.options || {});
+        const mode = selectedAd.content?.container_style?.mode || 'boxed';
+        if (placement.hook === 'head' && mode !== 'raw') {
+            updateAdGroup(selectedAd.id, {
+                content: {
+                    ...selectedAd.content,
+                    container_style: {
+                        ...(selectedAd.content?.container_style || {}),
+                        mode: 'raw',
+                    },
+                },
+            });
+            return;
+        }
+        if (placement.hook !== 'head' && mode === 'raw') {
+            updateAdGroup(selectedAd.id, {
+                content: {
+                    ...selectedAd.content,
+                    container_style: {
+                        ...(selectedAd.content?.container_style || {}),
+                        mode: 'boxed',
+                    },
+                },
+            });
+        }
+    }, [
+        selectedAd?.id,
+        selectedAd?.options?.placement_hook,
+        selectedAd?.options?.placement_position,
+        selectedAd?.options?.placement_paragraph,
+    ]);
+
     const slotConflict = useMemo(() => {
         if (!normalizedSlot) {
             return null;
@@ -256,6 +294,34 @@ const AdsConfig = () => {
                 cleanForSlug(ad.options?.slot || '') === normalizedSlot
         );
     }, [ads, normalizedSlot, selectedAd?.id]);
+
+    useEffect(() => {
+        let isMounted = true;
+        apiFetch({ path: '/magick-ad/v1/debug' })
+            .then((response) => {
+                if (!isMounted) {
+                    return;
+                }
+                const forced = Boolean(response?.forced);
+                setDebugEnabled(forced ? true : Boolean(response?.enabled));
+            })
+            .catch(() => {});
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        const handler = (event) => {
+            const detail = event?.detail || {};
+            if (detail.enabled === undefined && detail.forced === undefined) {
+                return;
+            }
+            setDebugEnabled(Boolean(detail.forced || detail.enabled));
+        };
+        window.addEventListener('magick-ad-debug-updated', handler);
+        return () => window.removeEventListener('magick-ad-debug-updated', handler);
+    }, []);
 
     const editorModeRaw =
         selectedAd?.options?.editor_mode || 'design';
@@ -304,6 +370,13 @@ const AdsConfig = () => {
 
         return placement;
     };
+
+    const isHeadPlacement = useMemo(() => {
+        if (!selectedAd) {
+            return false;
+        }
+        return resolvePlacement(selectedAd.options || {}).hook === 'head';
+    }, [selectedAd?.options?.placement_hook, selectedAd?.options?.placement_position, selectedAd?.options?.placement_paragraph]);
 
     function buildUniqueSlot(name, adId) {
         const base =
@@ -374,6 +447,34 @@ const AdsConfig = () => {
         });
         return fixed;
     }
+
+    const applyPlacementSelection = (positionValue, extraOptions = {}) => {
+        if (!selectedAd) {
+            return;
+        }
+        const placementUpdates = slotToPlacementUpdates(positionValue);
+        const nextOptions = {
+            ...selectedAd.options,
+            ...extraOptions,
+            ...placementUpdates,
+        };
+        if (placementUpdates.placement_hook === 'head') {
+            updateAdGroup(selectedAd.id, {
+                options: nextOptions,
+                content: {
+                    ...selectedAd.content,
+                    container_style: {
+                        ...(selectedAd.content?.container_style || {}),
+                        mode: 'raw',
+                    },
+                },
+            });
+            return;
+        }
+        updateAdGroup(selectedAd.id, {
+            options: nextOptions,
+        });
+    };
 
     const placementToSlotValue = (placement) => {
         if (!placement?.hook) {
@@ -524,6 +625,41 @@ const AdsConfig = () => {
         window.open(url, 'magick-ad-picker');
     };
 
+    const buildNodeDebugUrl = () => {
+        if (!selectedAd) {
+            return '';
+        }
+        const base =
+            window.MagickAD?.previewUrl || window.location.origin;
+        let url = base;
+        try {
+            const next = new URL(base, window.location.origin);
+            next.searchParams.set('magick_ad_node_debug', '1');
+            next.searchParams.set(
+                'magick_ad_node_type',
+                selectedAd.options?.node_target_type || 'id'
+            );
+            next.searchParams.set(
+                'magick_ad_node_value',
+                selectedAd.options?.node_target_value || ''
+            );
+            next.searchParams.set(
+                'magick_ad_node_match',
+                selectedAd.options?.node_match || 'first'
+            );
+            if (selectedAd.options?.node_match === 'nth') {
+                next.searchParams.set(
+                    'magick_ad_node_index',
+                    String(Number(selectedAd.options?.node_index || 1) || 1)
+                );
+            }
+            url = next.toString();
+        } catch (err) {
+            url = base;
+        }
+        return url;
+    };
+
     const renderNodePlacement = () => {
         if (!selectedAd) {
             return null;
@@ -537,6 +673,67 @@ const AdsConfig = () => {
                 <Button variant="secondary" onClick={openNodePicker}>
                     可视化选择
                 </Button>
+                {debugEnabled &&
+                    selectedAd.options?.node_target_value && (
+                        <div className="magick-ad-node-debug-actions">
+                            <Button
+                                variant="secondary"
+                                onClick={() => {
+                                    const url = buildNodeDebugUrl();
+                                    if (!url) {
+                                        return;
+                                    }
+                                    if (
+                                        navigator.clipboard &&
+                                        navigator.clipboard.writeText
+                                    ) {
+                                        navigator.clipboard
+                                            .writeText(url)
+                                            .then(() => {
+                                                showNotice(
+                                                    'success',
+                                                    '测试链接已复制',
+                                                    2000
+                                                );
+                                            })
+                                            .catch(() => {});
+                                        return;
+                                    }
+                                    const textarea =
+                                        document.createElement('textarea');
+                                    textarea.value = url;
+                                    document.body.appendChild(textarea);
+                                    textarea.select();
+                                    try {
+                                        document.execCommand('copy');
+                                        showNotice(
+                                            'success',
+                                            '测试链接已复制',
+                                            2000
+                                        );
+                                    } catch (err) {}
+                                    document.body.removeChild(textarea);
+                                }}
+                            >
+                                复制测试链接
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={() => {
+                                    const url = buildNodeDebugUrl();
+                                    if (!url) {
+                                        return;
+                                    }
+                                    window.open(url, 'magick-ad-node-debug');
+                                }}
+                            >
+                                一键高亮
+                            </Button>
+                            <p className="magick-ad-node-debug-help">
+                                仅在调试模式显示，默认打开站点首页高亮目标节点。
+                            </p>
+                        </div>
+                    )}
                 <SelectControl
                     label="定位方式"
                     value={selectedAd.options?.node_target_type || 'id'}
@@ -1796,39 +1993,48 @@ const AdsConfig = () => {
                     {effectiveEditorMode === 'quick' && (
                         <Panel>
                             <PanelBody title="快速设置" initialOpen>
+                                {isHeadPlacement && (
+                                    <Notice status="warning" isDismissible={false}>
+                                        Head 位置仅允许原始输出，容器样式将被忽略。
+                                    </Notice>
+                                )}
                                 <div className="magick-ad-field">
                                     <p className="magick-ad-field__label">
                                         主色
                                     </p>
-                                    <ColorPicker
-                                        color={
+                                    {!isHeadPlacement && (
+                                        <ColorPicker
+                                            color={
+                                                selectedAd.content?.container_style
+                                                    ?.background || 'transparent'
+                                            }
+                                            onChangeComplete={(value) =>
+                                                handleUpdateContainerStyle({
+                                                    background: formatColorValue(
+                                                        value
+                                                    ),
+                                                })
+                                            }
+                                            enableAlpha
+                                        />
+                                    )}
+                                </div>
+                                {!isHeadPlacement && (
+                                    <RangeControl
+                                        label="圆角"
+                                        min={0}
+                                        max={50}
+                                        value={
                                             selectedAd.content?.container_style
-                                                ?.background || 'transparent'
+                                                ?.radius ?? 0
                                         }
-                                        onChangeComplete={(value) =>
+                                        onChange={(value) =>
                                             handleUpdateContainerStyle({
-                                                background: formatColorValue(
-                                                    value
-                                                ),
+                                                radius: Number(value),
                                             })
                                         }
-                                        enableAlpha
                                     />
-                                </div>
-                                <RangeControl
-                                    label="圆角"
-                                    min={0}
-                                    max={50}
-                                    value={
-                                        selectedAd.content?.container_style
-                                            ?.radius ?? 0
-                                    }
-                                    onChange={(value) =>
-                                        handleUpdateContainerStyle({
-                                            radius: Number(value),
-                                        })
-                                    }
-                                />
+                                )}
                                 {selectedAd.options?.creative_type ===
                                     'image' && (
                                     <TextControl
@@ -1890,12 +2096,12 @@ const AdsConfig = () => {
                                                         )
                                                             ? currentValue
                                                             : '';
-                                                    handleUpdateOptions({
-                                                        show_page: value,
-                                                        ...slotToPlacementUpdates(
-                                                            nextPosition
-                                                        ),
-                                                    });
+                                                    applyPlacementSelection(
+                                                        nextPosition,
+                                                        {
+                                                            show_page: value,
+                                                        }
+                                                    );
                                                 }}
                                             />
                                             <SelectControl
@@ -1907,11 +2113,9 @@ const AdsConfig = () => {
                                                 )}
                                                 options={positionOptions}
                                                 onChange={(value) =>
-                                                    handleUpdateOptions({
-                                                        ...slotToPlacementUpdates(
-                                                            value
-                                                        ),
-                                                    })
+                                                    applyPlacementSelection(
+                                                        value
+                                                    )
                                                 }
                                             />
                                         </>
@@ -1960,13 +2164,13 @@ const AdsConfig = () => {
                                                                   )
                                                               )
                                                             : '';
-                                                    handleUpdateOptions({
-                                                        target_type: value,
-                                                        target_ids: [],
-                                                        ...slotToPlacementUpdates(
-                                                            nextPosition
-                                                        ),
-                                                    });
+                                                    applyPlacementSelection(
+                                                        nextPosition,
+                                                        {
+                                                            target_type: value,
+                                                            target_ids: [],
+                                                        }
+                                                    );
                                                 }}
                                             />
                                             <SelectControl
@@ -1978,11 +2182,9 @@ const AdsConfig = () => {
                                                 )}
                                                 options={targetPositionOptions}
                                                 onChange={(value) =>
-                                                    handleUpdateOptions({
-                                                        ...slotToPlacementUpdates(
-                                                            value
-                                                        ),
-                                                    })
+                                                    applyPlacementSelection(
+                                                        value
+                                                    )
                                                 }
                                                 disabled={
                                                     !selectedAd.options
@@ -2130,10 +2332,36 @@ const AdsConfig = () => {
                                 return (
                                     <Panel>
                                         <PanelBody title="容器外观" initialOpen>
+                                            {isHeadPlacement && (
+                                                <>
+                                                    <Notice
+                                                        status="warning"
+                                                        isDismissible={false}
+                                                    >
+                                                        Head 位置仅允许输出
+                                                        &lt;script&gt;、&lt;style&gt;、&lt;meta&gt;、
+                                                        &lt;link&gt; 等标签，已强制切换为“原始输出”模式。
+                                                    </Notice>
+                                                    <SelectControl
+                                                        label="容器模式"
+                                                        value="raw"
+                                                        options={[
+                                                            {
+                                                                label: '原始输出',
+                                                                value: 'raw',
+                                                            },
+                                                        ]}
+                                                        disabled
+                                                    />
+                                                </>
+                                            )}
+                                            {!isHeadPlacement && (
                                             <Notice status="info" isDismissible={false}>
                                                 容器外观仅作用于包裹层（div），不影响图片本体。图片尺寸、
                                                 圆角与外边距请在“图片配置”里调整。
                                             </Notice>
+                                            )}
+                                            {!isHeadPlacement && (
                                             <TabPanel
                                                 className="magick-ad-sub-tabs"
                                                 tabs={[
@@ -2592,6 +2820,7 @@ const AdsConfig = () => {
                                                     );
                                                 }}
                                             </TabPanel>
+                                            )}
                                         </PanelBody>
                                     </Panel>
                                 );

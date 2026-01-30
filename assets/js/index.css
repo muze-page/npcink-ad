@@ -1680,3 +1680,17 @@
     border-color: #e53e3e;
     box-shadow: 0 0 0 1px rgba(229, 62, 62, 0.25);
 }
+
+.magick-ad-node-debug-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 12px 0 16px;
+}
+
+.magick-ad-node-debug-help {
+    width: 100%;
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 12px;
+}

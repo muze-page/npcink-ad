@@ -96,7 +96,9 @@ final class Track_Controller {
         }
 
         $dedupe_key = 'magick_ad_track_' . md5($ad_id . '|' . $event . '|' . $date . '|' . $page_hash . '|' . $viewer_key);
-        $dedupe_ttl = (int) apply_filters('magick_ad_track_dedupe_ttl', DAY_IN_SECONDS, $event);
+        $dedupe_ttl = (int) get_option('magick_ad_track_dedupe_ttl', DAY_IN_SECONDS);
+        $dedupe_ttl = max(60, min($dedupe_ttl, WEEK_IN_SECONDS));
+        $dedupe_ttl = (int) apply_filters('magick_ad_track_dedupe_ttl', $dedupe_ttl, $event);
         $should_dedupe = (bool) apply_filters('magick_ad_track_dedupe', $event === 'impression', $event);
         if ($strategy === 'request') {
             $should_dedupe = false;
@@ -132,6 +134,12 @@ final class Track_Controller {
         }
 
         $diagnostics_enabled = (get_option('magick_ad_stats_diagnostics', '0') === '1');
+        $diagnostics_expires_at = (int) get_option('magick_ad_stats_diagnostics_expires_at', 0);
+        if ($diagnostics_enabled && $diagnostics_expires_at > 0 && current_time('timestamp') >= $diagnostics_expires_at) {
+            update_option('magick_ad_stats_diagnostics', '0');
+            update_option('magick_ad_stats_diagnostics_expires_at', 0);
+            $diagnostics_enabled = false;
+        }
         $diagnostics_enabled = (bool) apply_filters('magick_ad_stats_diagnostics_enabled', $diagnostics_enabled);
 
         if ($diagnostics_enabled) {
@@ -153,7 +161,9 @@ final class Track_Controller {
 
                 $cleanup_key = 'magick_ad_stats_log_cleanup';
                 if (!get_transient($cleanup_key)) {
-                    $retention_days = (int) apply_filters('magick_ad_stats_diagnostics_retention_days', 7);
+                    $retention_days = (int) get_option('magick_ad_stats_diagnostics_retention_days', 7);
+                    $retention_days = max(1, min($retention_days, 90));
+                    $retention_days = (int) apply_filters('magick_ad_stats_diagnostics_retention_days', $retention_days);
                     $cutoff = date('Y-m-d H:i:s', current_time('timestamp') - $retention_days * DAY_IN_SECONDS);
                     $wpdb->query(
                         $wpdb->prepare(
