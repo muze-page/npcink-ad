@@ -38,6 +38,7 @@ const Layout = ({
     onUpdateRule,
     leftSidebar,
     rightSidebar,
+    contentHeader,
     contentPanels,
     preview,
 }) => {
@@ -542,6 +543,11 @@ const Layout = ({
                         </Toolbar>
 
                         <div className="magick-ad-editor">
+                            {contentHeader && (
+                                <div className="magick-ad-editor-floating">
+                                    {contentHeader}
+                                </div>
+                            )}
                             <div className="magick-ad-editor-left">
                                 {contentPanels || (
                                     <Panel>

@@ -10,12 +10,10 @@
     "@wordpress/scripts": "^26.19.0"
   },
   "dependencies": {
-    "@emotion/react": "^11.11.4",
-    "@emotion/styled": "^11.11.5",
-    "@wordpress/blocks": "^12.24.0",
-    "@wordpress/block-library": "^12.26.0",
-    "@wordpress/editor": "^15.24.0",
-    "@wordpress/icons": "^11.5.0",
+    "@wordpress/blocks": "wp-6.9",
+    "@wordpress/block-library": "wp-6.9",
+    "@wordpress/editor": "wp-6.9",
+    "@wordpress/icons": "wp-6.9",
     "recharts": "^2.15.4",
     "zustand": "^5.0.10"
   }

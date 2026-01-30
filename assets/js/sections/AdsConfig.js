@@ -30,6 +30,7 @@ import ClassicEditor from '../components/ClassicEditor';
 import BlockEditor from '../components/BlockEditor';
 import TemplateLibraryModal from '../components/TemplateLibraryModal';
 import TemplateActions from '../components/TemplateActions';
+import BuildProbe from '../components/BuildProbe';
 import DebugPanel from '../panels/DebugPanel';
 import SystemSettingsPanel from '../panels/SystemSettingsPanel';
 import useNotice from '../hooks/useNotice';
@@ -861,6 +862,18 @@ const AdsConfig = () => {
         </div>
     );
 
+    const activeCreativeType =
+        selectedAd?.options?.creative_type || 'image';
+
+    const contentHeader = selectedAd ? (
+        <div className="magick-ad-template-actions-bar">
+            <TemplateActions
+                onOpen={() => openTemplateLibrary(activeCreativeType)}
+                onSave={() => openSaveTemplate(activeCreativeType)}
+            />
+        </div>
+    ) : null;
+
     const contentPanels = selectedAd ? (
         <TabPanel
             className="magick-ad-sub-tabs"
@@ -892,12 +905,6 @@ const AdsConfig = () => {
                         >
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                    <TemplateActions
-                                        onOpen={() =>
-                                            openTemplateLibrary('image')
-                                        }
-                                        onSave={() => openSaveTemplate('image')}
-                                    />
                                     <TabPanel
                                         className="magick-ad-image-tabs"
                                         tabs={[
@@ -1137,12 +1144,6 @@ const AdsConfig = () => {
                         >
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                    <TemplateActions
-                                        onOpen={() =>
-                                            openTemplateLibrary('html')
-                                        }
-                                        onSave={() => openSaveTemplate('html')}
-                                    />
                                     <SelectControl
                                         label="HTML 模式"
                                         value={
@@ -1221,14 +1222,6 @@ const AdsConfig = () => {
                         {activeContentType === 'video' && (
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                        <TemplateActions
-                                            onOpen={() =>
-                                                openTemplateLibrary('video')
-                                            }
-                                            onSave={() =>
-                                                openSaveTemplate('video')
-                                            }
-                                        />
                                     <TextControl
                                         label="视频地址"
                                         value={
@@ -1248,12 +1241,6 @@ const AdsConfig = () => {
                         {activeContentType === 'block' && (
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                    <TemplateActions
-                                        onOpen={() =>
-                                            openTemplateLibrary('block')
-                                        }
-                                        onSave={() => openSaveTemplate('block')}
-                                    />
                                     <BlockEditor
                                         value={
                                             selectedAd.content?.blocks || ''
@@ -1446,20 +1433,6 @@ const AdsConfig = () => {
                     {effectiveEditorMode === 'quick' && (
                         <Panel>
                             <PanelBody title="快速设置" initialOpen>
-                                <TemplateActions
-                                    onOpen={() =>
-                                        openTemplateLibrary(
-                                            selectedAd.options?.creative_type ||
-                                                'image'
-                                        )
-                                    }
-                                    onSave={() =>
-                                        openSaveTemplate(
-                                            selectedAd.options?.creative_type ||
-                                                'image'
-                                        )
-                                    }
-                                />
                                 <div className="magick-ad-field">
                                     <p className="magick-ad-field__label">
                                         主色
@@ -2914,12 +2887,13 @@ const AdsConfig = () => {
                     });
                 }}
                 onDevicePreviewChange={setDevicePreview}
-                onUpdateRule={(key, value) =>
-                    selectedAd && handleUpdateOptions({ [key]: value })
-                }
-                leftSidebar={leftSidebar}
-                rightSidebar={rightSidebar}
-                contentPanels={contentPanels}
+            onUpdateRule={(key, value) =>
+                selectedAd && handleUpdateOptions({ [key]: value })
+            }
+            contentHeader={contentHeader}
+            leftSidebar={leftSidebar}
+            rightSidebar={rightSidebar}
+            contentPanels={contentPanels}
             />
 
             <TemplateLibraryModal
@@ -2946,6 +2920,8 @@ const AdsConfig = () => {
                 onExport={handleExportTemplates}
                 onClose={() => setTemplateModalOpen(false)}
             />
+
+            <BuildProbe />
 
             {saveTemplateOpen && (
                 <Modal

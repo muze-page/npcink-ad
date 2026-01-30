@@ -9,6 +9,7 @@ const DebugPanel = ({ onNotice }) => {
     const [debugError, setDebugError] = useState(null);
     const [debugLocked, setDebugLocked] = useState(false);
     const [debugLogSettings, setDebugLogSettings] = useState(true);
+    const [buildProbeEnabled, setBuildProbeEnabled] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -28,6 +29,7 @@ const DebugPanel = ({ onNotice }) => {
                         ? Boolean(response?.log_settings)
                         : true
                 );
+                setBuildProbeEnabled(Boolean(response?.build_probe));
                 setDebugLoading(false);
             })
             .catch((err) => {
@@ -43,7 +45,7 @@ const DebugPanel = ({ onNotice }) => {
         };
     }, []);
 
-    const updateDebug = (nextEnabled, nextLogSettings, rollback) => {
+    const updateDebug = (nextEnabled, nextLogSettings, nextBuildProbe, rollback) => {
         setDebugSaving(true);
         apiFetch({
             path: '/magick-ad/v1/debug',
@@ -51,10 +53,18 @@ const DebugPanel = ({ onNotice }) => {
             data: {
                 enabled: nextEnabled,
                 log_settings: nextLogSettings,
+                build_probe: nextBuildProbe,
             },
         })
-            .then(() => {
+            .then((response) => {
                 setDebugSaving(false);
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(
+                        new CustomEvent('magick-ad-debug-updated', {
+                            detail: response || {},
+                        })
+                    );
+                }
                 onNotice?.('success', '调试设置已更新');
             })
             .catch((err) => {
@@ -87,7 +97,7 @@ const DebugPanel = ({ onNotice }) => {
                             onChange={(value) => {
                                 const previous = debugEnabled;
                                 setDebugEnabled(value);
-                                updateDebug(value, debugLogSettings, () =>
+                                updateDebug(value, debugLogSettings, buildProbeEnabled, () =>
                                     setDebugEnabled(previous)
                                 );
                             }}
@@ -106,11 +116,24 @@ const DebugPanel = ({ onNotice }) => {
                             onChange={(value) => {
                                 const previous = debugLogSettings;
                                 setDebugLogSettings(value);
-                                updateDebug(debugEnabled, value, () =>
+                                updateDebug(debugEnabled, value, buildProbeEnabled, () =>
                                     setDebugLogSettings(previous)
                                 );
                             }}
                             help="控制 settings=Array 是否写入 debug.log"
+                        />
+                        <ToggleControl
+                            label="显示构建版本探针"
+                            checked={buildProbeEnabled}
+                            disabled={debugLoading || debugSaving}
+                            onChange={(value) => {
+                                const previous = buildProbeEnabled;
+                                setBuildProbeEnabled(value);
+                                updateDebug(debugEnabled, debugLogSettings, value, () =>
+                                    setBuildProbeEnabled(previous)
+                                );
+                            }}
+                            help="右下角显示当前 build 时间与版本号"
                         />
                         <div className="magick-ad-debug-actions">
                             <Button

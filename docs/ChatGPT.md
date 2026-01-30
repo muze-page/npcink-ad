@@ -1,259 +1,431 @@
-下面这份建议是基于你当前代码实现（Magick AD 0.1.0）做的“现代化升级清单”：既包含“马上能改、收益立竿见影”的点，也包含“为后续新增更多广告类型铺路”的架构升级方向。
+## 自定义广告入口
+可以，而且我建议你同时提供 3 条“插入入口”（面向不同用户/场景），并且它们底层都调用同一个渲染函数，这样功能一致、维护成本最低：
+	1.	区块（Block）：现代 WP 首选（Gutenberg / FSE）
+	2.	短代码（Shortcode）：兼容经典编辑器/复制粘贴场景
+	3.	主题模板函数（Template Tag / PHP API）：给主题开发者、放在模板任意位置
+
+下面按“怎么做更现代化 + 怎么避免踩坑”给你一份可直接落地的建议。
 
 ⸻
 
-你现在的实现现状（我从代码里看到的关键点）
-	•	后台：一个独立的 React 管理页（/wp-admin/admin.php?page=magick-ad），用 WP Components + zustand 管理状态；广告组存储在一个 option（magick_ad_settings）里。素材类型 creative_type：html / image / video / block；容器类型 container_type：inline / popup / banner / floating / interstitial；有模板库（CPT magick_template + 预置常量模板）。
-	•	前台投放：通过 wp_head / wp_body_open / the_content / wp_footer / comment_form_* / comments_template 等 hook 注入广告（Frontend.php）。
-	•	统计：前台 JS 通过 IntersectionObserver 上报曝光、click 上报点击（/magick-ad/v1/track）；报告接口按天汇总（/magick-ad/v1/report），但当前项目里没看到创建 stats 表的激活脚本（这属于必须补齐的稳定性问题）。
-	•	随机展示：display_mode=random 依赖 magick_ad_uid cookie 来做稳定随机桶（Front-end PHP 里 setcookie）。
+1) 文章里插入：优先做区块，其次短代码
+
+A. 建议主入口：一个“广告位/Ad Slot”区块（动态渲染）
+
+为什么区块优先
+	•	用户在编辑器里所见即所得
+	•	FSE（全站编辑）时代，很多人更愿意用区块放在模板/模板部件里
+	•	能很自然地做“模板库 / Pattern / Variation”扩展
+
+实现建议：做成“动态区块（Dynamic Block）”
+动态区块在前端渲染时调用 render_callback，更适合广告这种“需要按规则/随机/频控实时决定输出”的内容。 ￼
+
+推荐结构：
+	•	区块：magick-ad/slot
+	•	主要属性：
+	•	adId 或 slot（推荐 slot slug，后面讲）
+	•	variant（可选：比如 inline/popup/bar 的容器选择）
+	•	align / className（走 block supports）
+	•	预览：编辑器里用 @wordpress/server-side-render 预览动态输出（可选，但体验好）。 ￼
+
+区块注册建议用 block.json，这是现代 WordPress 推荐方式，能把注册/脚本/样式定义集中管理。 ￼
 
 ⸻
 
-P0：必须先做的“现代化基础修复”（稳定性 + 合规 + 安全）
+B. 兼容入口：短代码（Shortcode）
 
-1) wp_head 里输出 <div> 是无效 HTML（需要立即改）
+短代码仍然非常有价值：经典编辑器、导入导出内容、用户从文档复制粘贴等场景都需要。
 
-你现在的 render_head_ads() 会 echo wrap_zone_markup()，而 wrap_zone_markup() 一定会包一层 <div class="magick-ad-zone">。
-但 <head> 内不允许出现 <div>，浏览器可能会重排 DOM，引发不可控问题。
+推荐短代码命名
+	•	主短代码：[magick_ad]（或更短更不易冲突的 [mad_ad]）
+	•	注意：同一个 shortcode tag 只能绑定一个回调，如果别的插件用了同名 tag 会互相覆盖，所以名字尽量“带前缀、独特”。 ￼
 
-改法建议：
-	•	head 位置只允许输出：<script> / <style> / <meta> / <link> 等 head 合法标签。
-	•	对 head 位置：禁止 wrap_zone，直接输出 raw（并且后台 UI 上明确提示“仅用于脚本/像素/验证标签”）。
+推荐最小参数集合（MVP）
 
-这会显著提升“专业度”和兼容性，是现代广告插件的基本功。
+[magick_ad id="123"]
+[magick_ad slot="post-inline-1"]
+[magick_ad slot="sidebar-top" class="my-ad" align="wide"]
 
-⸻
+短代码 API 基础与参数解析方式可以按 WordPress Shortcode API 标准做（attributes、默认值、回调签名等）。 ￼
 
-2) 统计表必须有“安装/升级/卸载”的生命周期
-
-你有 Track_Controller、Reports_Controller，但缺少：
-	•	register_activation_hook() 创建表
-	•	schema version 变更后的迁移
-	•	uninstall.php / register_uninstall_hook() 清理（可选）
-
-现代化建议：
-	•	增加 MAGICK_AD_DB_VERSION，将表结构写成 dbDelta()，并在 init 或 admin_init 检查版本自动迁移。
-	•	给 stats 表加索引（(ad_id, created_at)、(created_at)），否则量一大就慢。
+提示用户一个重要事实：如果插件被停用，内容里的短代码可能会直接显示为文本（这是 WP 的常见现象），所以在文档里说明“短代码属于可移植性较差的写法”，并建议重要位置用区块/模板函数。 ￼
 
 ⸻
 
-3) 统计写入方式从“事件明细表”升级为“聚合计数”
+2) 主题里插入：提供模板函数（Template Tag），并教用户“安全调用”
 
-你目前 track 是每次曝光/点击 insert 一条记录，而且记录 page_url / user_agent / user_id。这会带来：
-	•	数据量快速膨胀（写入压力大）
-	•	隐私风险增大（user_agent + page_url 都可能成为个人数据的一部分；user_id 更明显）
-	•	/track 是公开接口，容易被刷数据、被打爆表
+给主题/开发者用时，最现代也最稳定的是提供 PHP API：
 
-更现代的做法（强烈建议默认采用）：
-	•	只存 按天聚合：date, ad_id, impressions, clicks
-	•	track 接口改成 INSERT ... ON DUPLICATE KEY UPDATE impressions=impressions+1
-	•	默认不存 user_agent / page_url / user_id，提供一个“高级诊断模式（可选开启、短期保留）”
-	•	加“限流/去重”：
-	•	同一页面同一广告：同一会话只算一次曝光（你 JS 已经做了 2 秒可见阈值；再加会话去重更稳）
-	•	服务器端可以用 transient 做轻量去重（例如 md5(ad_id+day+session_id)）
+A. 设计成 “get_xxx / the_xxx” 两套函数（更符合 WP 风格）
 
-这会让你在“性能、合规、抗刷”上立刻现代化，并且后续扩展报表也更轻松。
+类似 WordPress 其它模板标签（返回 vs 直接输出）的习惯：
+
+// 返回 HTML（可用于拼接）
+$html = magick_ad_get( 'sidebar-top', [
+  'container' => 'inline',
+  'class'     => 'my-ad',
+] );
+
+// 直接 echo（更方便）
+magick_ad_the( 'sidebar-top', [
+  'container' => 'inline',
+] );
+
+为什么要两套？
+主题开发者经常需要对 HTML 进行二次包裹或条件判断；返回式函数更灵活。
+
+B. 主题里调用要考虑“插件可能没启用”
+
+官方文档和主题开发中很常见的做法是用 function_exists() 判断再调用（避免主题报 fatal）。 ￼
+
+示例：
+
+<?php if ( function_exists( 'magick_ad_the' ) ) : ?>
+  <?php magick_ad_the( 'header-bar' ); ?>
+<?php endif; ?>
+
 
 ⸻
 
-已完成
+3) 强烈建议引入“Slot（广告位）”概念：让插入更简单、更可维护
 
-4) 随机展示不要默认种 cookie（至少要可关闭/可同意门控）
+你现在用户可能用 “广告组ID/广告ID” 来插入，但长期会遇到一个问题：
+内容/主题里写死 ID，后续换组、复制站点、迁移环境就会很痛。
 
-你现在 random 模式会 set magick_ad_uid cookie（1 个月）。在很多站点里，任何非必要 cookie 都会触发合规/同意成本。
+建议你给用户一个更稳定的选择：Slot（广告位）= 一个固定名字的投放入口
+	•	slot = "post-inline-1"
+	•	slot = "sidebar-top"
+	•	slot = "header-bar"
 
-改法建议：
-	•	提供 3 种随机策略，让用户选择：
-	1.	无 cookie：每次请求随机（缺点：同一用户刷新会变）
-	2.	会话级：sessionStorage（前端实现，不落 cookie）
-	3.	持久级：cookie（默认关闭或需要“已同意”才启用）
-	•	给开发者一个 hook：apply_filters('magick_ad_has_consent', false)，让站长能接入自己的同意插件/逻辑。
+Slot 后台配置里再去绑定：
+	•	用哪个广告组/哪些素材
+	•	容器类型（inline/popup/bar）
+	•	规则（设备/页面/频控）
+	•	模板/token
 
-并且如果你计划上 WordPress.org 插件目录，涉及追踪/外部通信/可识别数据的功能通常需要明确的 opt-in 与说明。 ￼
-
-⸻
-已完成
-
-5) HTML 广告的“安全模式/完全模式”要明确
-
-现在 Settings::sanitize_ad() 对 content.html 强制 wp_kses_post()，这意味着很多广告联盟需要的 <script> 会被过滤掉，用户会觉得“插件不支持广告代码”。
-
-现代化做法：
-	•	提供两档：
-	•	安全模式（默认）：只允许安全标签（wp_kses_post），适合内容团队/低风险
-	•	完全模式（仅 unfiltered_html 或管理员）：允许脚本（风险提示 + 仅高权限可编辑）
-	•	同时在预览/保存时做更明确的提示：检测到 <script> 被过滤，就提示“你在安全模式下，脚本会被移除”。
-
-⸻
-已完成
-P1：体验层现代化（让“强大但简单”）
-
-6) 统一概念：Creative / Container / Placement / Behavior
-
-你现在 UI 与后端里有些概念混杂：
-	•	container_type 决定“展示形态”（inline/popup/banner…）
-	•	show_position 同时承担“插入点”（content_before / footer / head）以及历史遗留的 popup/bar 值
-	•	footer/bottom、head/top 这种同义值也在并存（store 里还做了 normalize）
-
-建议把模型收敛成：
-	•	Creative：html/image/video/block
-	•	Container：inline/popup/banner/floating/interstitial
-	•	Placement：hook=wp_footer|the_content|wp_head|... + content_inject=after_paragraph(n) + selector（未来）
-	•	Behavior：触发、动画、频控、关闭方式
-
-这会让你后续新增类型（比如“侧边贴边”、“信息流卡片”、“文章目录插入”）时不至于爆炸。
-
-⸻
-已完成
-
-7) 弹窗/横栏的现代交互：可访问性与频控是卖点
-
-你现在前端只做了 close 隐藏和 delay，但现代弹窗至少要：
-	•	ESC 关闭
-	•	点击遮罩关闭（可配置）
-	•	focus trap（Tab 不跑出弹窗）
-	•	打开时锁滚动（可配置）
-	•	尊重 prefers-reduced-motion
-	•	频控：每会话一次 / 每天一次 / N 次（这是广告类插件的基础能力）
-
-这些做完，你的 popup/bar 才算“现代”，不只是一个 fixed 的 div。
-
-⸻
-完成
-
-8) “快速模式 / 设计模式 / 专家模式”三档 UI
-
-你现在已经做了很多控件（容器外观、间距、角标、动画、延迟…），但继续加下去 UI 一定会爆。
-
-现代化做法：渐进式披露
-	•	快速模式：模板 + 2~5 个关键控件（主色、圆角、按钮文案、位置、频控）
-	•	设计模式：开放容器 tokens（背景/内边距/阴影/最大宽）
-	•	专家模式：自定义 CSS/HTML（仅高权限）
-
-这样你既能“个性化很强”，又能“简单好用”。
-
-⸻
-完成
-
-9) 模板系统现代化：从“数据模板”升级到 WordPress 原生模式
-
-你现在的模板是：预置常量 + magick_template CPT 存 JSON + 导入导出。能用，但更现代的方向是：
-	•	Block-first：让广告内容更像搭积木（你已经有 BlockEditor）
-	•	引入 Patterns / Synced Patterns / Variations / Block Styles 的理念，让模板既可视化又能继承主题风格
-
-如果你愿意走更原生路线：
-	•	用 block.json 注册你的广告块（官方推荐用 block.json + register_block_type）。 ￼
-	•	用 Interactivity API 处理 popup 的打开/关闭/状态（比自写全局 JS 更“WP 现代化”）。 ￼
-
-⸻
-完成
-
-
-10) 增强预览：用 iframe 渲染“真实页面环境”
-
-你现在的预览是一个灰色 stage + dangerouslySetInnerHTML，这对“样式融合主题”不够真实。
-
-现代化做法：
-	•	预览区用 iframe 加载站点的一个预览 URL（带 query 参数），在 iframe 内真实渲染广告
-	•	设备切换变成真实的 viewport frame（desktop/tablet/mobile）
-	•	同时做一个“规则调试条”：显示当前广告在该页面是否命中（命中/不命中原因）
-
-这会直接成为卖点：所见即所得 + 可解释投放。
-
-⸻
-完成
-
-P2：架构级现代化（为“更多广告类型 + 更大规模”铺路）
-
-11) 从 option 大 JSON 迁移到 CPT（或自定义表）
-
-现在所有广告都塞进 magick_ad_settings option：
-小站够用，但一旦广告组多、协作多、需要排期/版本管理，就会卡住。
-
-现代化建议（两条路线二选一）：
-
-路线 A：CPT（更贴近 WordPress）
-	•	magick_ad 作为广告组（支持 revision、定时、作者、状态）
-	•	meta 存 placement/behavior/tokens
-	•	模板用 pattern / synced pattern 或单独 magick_template
-
-路线 B：自定义表（更高性能）
-	•	ad 表 + placement 表 + stats 表
-	•	自己做版本与迁移
-
-如果你想做“媒体/代理”级功能（排期、审批、回滚），CPT 路线通常更省心。
-
-⸻
-完成
-
-12) 用 Block Bindings 做“动态素材/轮播/随机”
-
-你未来想做更多“随机/轮播/个性化展示”，Block Bindings 是一个很现代的方向：把动态数据绑定到 block 属性上。 ￼
-比如：
-	•	图片 block 的 url 绑定到“从素材池随机取一张”
-	•	文案绑定到“按 UTM/来源切换”
-
-这能让你的“模板”变成真正可扩展的“组件系统”。
+这样用户只管在文章/主题里插 slot，以后怎么换广告策略都不需要改内容或模板文件。
 
 ⸻
 
-性能现代化（广告插件的口碑关键）
+4) 给弹窗类广告一个“触发器入口”（很实用，强烈推荐）
 
-13) 前台资源按需加载
+弹窗广告（popup/interstitial）通常不希望“页面加载就弹”，而是点击按钮或链接触发。
 
-你当前 Frontend::enqueue_assets() 在所有前台页面都加载 CSS + track.js。
+你可以提供一个 触发器短代码/区块：
 
-现代化做法：
-	•	先评估本页是否会展示任何广告（你已有 get_matching_ads()），如果没有就不 enqueue
-	•	对 popup/interstitial 这种“可能延迟触发”的，也可以延迟加载 JS（或者只加载一个小的 loader）
+A. 包裹式短代码（enclosing shortcode）
 
-⸻
-完成
-14) get_matching_ads() 做请求级缓存
+[magick_ad_trigger slot="signup-popup"]点击领取优惠[/magick_ad_trigger]
 
-你在多个 hook 里重复调用 get_matching_ads()，每次都会：
-	•	读 option
-	•	遍历全部广告
-	•	匹配规则
+包裹式短代码的写法是 Shortcode API 支持的典型形式。 ￼
 
-现代化做法：
-	•	static $cache = null 缓存一次匹配结果
-	•	或者把“匹配结果按位置分组”也缓存起来（head/body/footer/content）
-
-⸻
-完成
-15) 内容插入别再 split </p>（兼容 Gutenberg 更稳）
-
-现在 insert_after_paragraphs() 用字符串分割插广告，这在复杂内容、块主题、短代码混排时容易翻车（漏插、错位）。
-
-现代化方向：
-	•	解析 blocks（parse_blocks()），在段落 block 后插入你的广告 block，再 render_block() 回输出
-	•	或者鼓励用“广告位块/短代码”做精确插入（自动插入作为辅助）
+B. 触发器区块
+	•	magick-ad/trigger
+	•	属性：slot、label、style（按钮/链接）
+	•	前端：触发 JS 事件 magickad:open(slot)，与你的 popup 行为系统对接
 
 ⸻
 
-你可以直接拿来当“卖点”的现代化方向（可商业化）
-	1.	Privacy-first：统计默认不采集个人信息 + cookie 可关闭 + 同意门控（WP.org 上更友好） ￼
-	2.	性能护栏：CLS 占位、延迟加载、按需脚本、频控（核心指标友好）
-	3.	可解释投放调试器：为什么展示/为什么不展示，一键生成诊断报告
-	4.	Block-first 模板库：与主题风格一致、可复用、可同步（synced patterns 思路）
-	5.	面向代理/团队：白标、权限角色、审批流/排期（走 CPT 更容易）
+5) 和你“节点广告（找 ID/class 插入）”的关系：两者都要，但定位不同
+	•	短代码/区块/模板函数：适合“我能控制内容或主题模板”，直接插入最稳定
+	•	节点广告（ID/class 定位）：适合“我不想改主题模板/内容，但我知道主题里某个节点稳定存在”
 
-⸻
-完成
-如果你只想先做“最快最值”的 8 个改进
-
-按投入产出比排序，我建议你先做：
-	1.	修复 head 输出 <div> 的问题（head 位置 raw 输出）
-	2.	加 stats 表创建 + schema version
-	3.	统计改“按天聚合”+ 默认不存 UA/page_url/user_id
-	4.	/track 增加限流/去重（最少做会话去重）
-	5.	random 模式提供无 cookie 方案 + 同意门控 hook
-	6.	popup 增加 ESC/遮罩关闭 + 频控
-	7.	前台资源按需加载 + get_matching_ads() 缓存
-	8.	UI 三档模式（快速/设计/专家）把复杂度藏起来
+所以最佳组合是：
+	•	普通用户：用区块/短代码插入（最简单、最可控）
+	•	高级用户：用节点广告“贴到主题指定位置”
+	•	你还可以额外提供一个 “锚点/Marker 区块（或短代码）”：
+	•	[magick_ad_anchor id="sidebar-top-anchor"]
+	•	这样用户不用懂主题结构，也能“自己造一个稳定节点”给节点广告去挂载（非常减少工单）
 
 ⸻
 
-如果你希望我更贴合你的产品路线，我也可以按你“未来要新增的广告类型”（比如：信息流、侧边贴边、段落内多位置、CSS selector 注入、A/B test）给你一份升级后的数据模型（JSON Schema）+ 迁移策略（option → CPT）+ 兼容旧配置的版本演进方案，这样后面扩展会很顺。
+6) 现代化实现的关键：所有入口共用一个渲染器（避免逻辑分裂）
+
+无论是：
+	•	动态区块 render_callback
+	•	shortcode callback
+	•	magick_ad_get() 模板函数
+
+都应该只做一件事：把参数归一化 → 调用同一个渲染函数：
+
+function magick_ad_render( $slot_or_id, array $args = [] ) : string {
+  // 1) 查找广告（slot → group → creatives）
+  // 2) 规则命中/频控/同意门控（如有）
+  // 3) 输出容器 + creative + data-*（用于前端行为&统计）
+}
+
+这样你以后新增“节点投放、selector 投放、信息流投放”，只是增加 Placement 逻辑，不会同时改 3 套入口。
+
+⸻
+
+7) 缓存与随机/轮播：提前在文档里说清楚（否则差评）
+
+用户把短代码/区块放进文章后，经常还会有缓存插件/CDN：
+	•	如果你做“服务端随机”，页面被缓存后随机就会被固定
+	•	解决方案通常是：
+	1.	“稳定随机”（基于会话/用户桶），或者
+	2.	“前端轮播/随机”（JS 在客户端决定）
+
+建议你在 slot 或 短代码参数里提供一个开关，例如：
+	•	rotation="server"（更可控、可统计更准，但受缓存影响）
+	•	rotation="client"（更抗缓存，但统计与一致性需要设计）
+
+⸻
+
+推荐你先落地的最小版本（投入最小、覆盖最大）
+	1.	✅ magick-ad/slot 动态区块（可选 adId 或 slot） ￼
+	2.	✅ [magick_ad] 短代码（支持 id/slot + 少量参数） ￼
+	3.	✅ magick_ad_get() / magick_ad_the() 模板函数（slot 优先）
+	4.	✅ [magick_ad_trigger]（给弹窗用） ￼
+
+⸻
+
+如果你愿意，我可以按你现有的数据结构（ad group / container / placement / behavior）给你一份具体的参数规范（短代码参数表 + 区块属性 schema + PHP API 参数表），并附上“如何做向后兼容（旧 show_position 仍可用）”的迁移建议。
+
+
+## 节点插入
+下面给你一套“节点广告（按 ID / class 找 DOM 节点并插入）”的产品设计 + 技术落地建议，并且会尽量贴合你现在 Magick AD 的实现方式（show_position 控制投放位置、PHP 先输出广告 markup、前端 JS 做行为/统计）。
+
+⸻
+
+1) 把它定义成“投放方式（Placement）”，不是新的广告类型
+
+你新增的“节点广告”本质是：**在哪儿放（Placement）**改变了，而不是“内容是什么（Creative）”改变了。
+	•	Creative 仍然复用你现有的：html / image / video / block
+	•	Container 仍然复用你现有的：inline / popup / banner / floating / interstitial
+	•	新增的是 Placement：node（节点投放）
+
+这样后续你再加其它投放方式（CSS selector、更复杂定位、多个节点）不会推翻架构。
+
+⸻
+
+2) 配置项建议（一定要做“简单版 + 高级版”）
+
+2.1 MVP（先做简单但好用）
+
+当 show_position === 'node' 时，新增一组 options（建议放在 options 里）：
+	1.	定位方式（只做 ID / class，先别开放完整 CSS selector）
+
+	•	node_target_type: 'id' | 'class'
+	•	node_target_value: string（用户输入不带 #/.）
+
+	2.	插入方式
+
+	•	node_insert: 'append' | 'prepend' | 'before' | 'after'
+	•	append：插到节点内部末尾
+	•	prepend：插到节点内部开头
+	•	before：插到节点外部前面（兄弟节点）
+	•	after：插到节点外部后面（兄弟节点）
+
+	3.	匹配策略（class 多匹配时必须有）
+
+	•	node_match: 'first' | 'nth' | 'all'
+	•	node_index: number（nth 时才需要，1 开始）
+
+	4.	节点找不到怎么办
+
+	•	node_fallback: 'hide' | 'footer'
+	•	hide：不展示（最安全）
+	•	footer：回退到底部（对用户“至少能看到”）
+
+	5.	样式适配（强烈建议）
+
+	•	node_compact: boolean（默认 true）
+	•	compact = 自动移除 .magick-ad-unit 默认上下 margin（避免塞进 header/sidebar 把布局顶乱）
+
+为什么 MVP 不建议一上来做“任意 CSS selector”？
+因为你现在的用户大概率只会填 #id 或 .class，开放全选择器会带来大量“填错→匹配不到→差评”与安全/兼容边界（比如 >、:nth-child()、[]）。等你有“元素选择器/可视化拾取”再开放高级 selector 会更稳。
+
+⸻
+
+2.2 v2（再增强，但仍可控）
+
+如果你希望更强，可以在 v2 加：
+	•	node_wait_mode: 'domready' | 'load' | 'observe'
+	•	node_timeout_ms: number（默认 5000）
+	•	node_max_inserts: number（默认 1，防止重复注入）
+	•	node_replace: 'none' | 'replace-content' | 'replace-node'（谨慎开放）
+
+⸻
+
+3) 后台 UI 设计建议（避免把用户“表单淹死”）
+
+在你现在的「展示位置」SelectControl 里新增一项：
+	•	指定节点（ID / class） → value: 'node'
+
+当用户选了 'node'，在「展示位置」面板下方出现一个新的 PanelBody：「节点投放」。
+
+节点投放面板（建议字段顺序）
+	1.	定位方式：ID / Class（单选）
+	2.	节点值：TextControl（提示：ID 不带 #，Class 不带 .）
+	3.	插入方式：SelectControl（append/prepend/before/after）
+	4.	匹配多个节点：SelectControl（first / nth / all）
+	5.	第 N 个：RangeControl（仅 nth 时显示）
+	6.	找不到节点时：SelectControl（hide / footer）
+	7.	✅ 紧凑模式：ToggleControl（默认开启）
+
+帮助文案要写清楚（这能减少 80% 工单）
+	•	推荐用户尽量用 ID（更稳定）
+	•	class 往往会匹配多个，默认只取第一个
+	•	如果你选的是 <p> 这类元素，不要用 append/prepend（会出现 HTML 结构自动修正导致布局错乱），推荐 before/after
+
+⸻
+
+4) 前端实现路线：用“stash（暂存区）+ JS 搬运”最稳
+
+你现在的广告渲染是 PHP build_ad_markup() 生成 HTML，再由前端脚本负责动画/关闭/统计。
+
+“节点投放”的最佳落地方式是：
+
+4.1 服务器端（PHP）
+	1.	在页面底部输出一个隐藏容器（只输出一次）：
+
+<div id="magick-ad-stash" class="magick-ad-stash" style="display:none"></div>
+
+	2.	所有 show_position === 'node' 的广告先输出到 stash 里（不要直接输出在页面可见位置），并把节点投放参数写成 data-attributes，例如：
+
+	•	data-ad-node-type="id|class"
+	•	data-ad-node-value="header-ad"
+	•	data-ad-node-insert="append|before|after|prepend"
+	•	data-ad-node-match="first|nth|all"
+	•	data-ad-node-index="2"
+	•	data-ad-node-fallback="hide|footer"
+	•	data-ad-node-compact="1|0"
+
+这样你可以继续复用 build_ad_markup()，不用在 JS 里重新拼广告 HTML，减少一堆 XSS/escape 风险。
+
+4.2 客户端（JS）
+
+在你现有的 magick-ad-track.js（或拆新文件）里，在初始化 observer/行为前执行：
+
+核心流程
+	1.	找到 stash
+	2.	遍历 stash 内所有节点广告单元
+	3.	计算 selector：
+	•	type=id → #${value}
+	•	type=class → .${value}
+	4.	查找目标节点：
+	•	first → document.querySelector(selector)
+	•	all → document.querySelectorAll(selector)
+	•	nth → document.querySelectorAll(selector)[index-1]
+	5.	执行插入（推荐用 insertAdjacentElement）：
+	•	append → beforeend
+	•	prepend → afterbegin
+	•	before → beforebegin
+	•	after → afterend
+	6.	compact 模式：给广告单元加一个 class，例如 .magick-ad-placement--node-compact，CSS 里把 margin 变为 0
+	7.	插入成功后：从 stash 移除原节点（或保留但标记已处理）
+
+关键点：避免重复插入
+	•	给广告单元加 data-node-inserted="1" 标记
+	•	如果 match=all 需要克隆：用 cloneNode(true)，并给 clone 也加标记，避免再次处理
+
+动态节点（可选）
+	•	如果 node_wait_mode=observe：用 MutationObserver 监听 document.body，在 timeout 内重试查找，一旦找到就插入并停止观察。
+
+⸻
+
+5) 你必须提前防的坑（节点投放最常见翻车点）
+
+坑 1：用户选中了不适合“插内部”的节点
+
+比如 <p>、<img>、<input> 等——把 <div> append 进去浏览器会自动改 DOM，可能导致广告跑到奇怪位置。
+
+建议：
+	•	运行时检测 target.tagName
+	•	如果是 P 且用户选了 append/prepend：自动降级成 after 并在 debug 里提示
+	•	如果是 void elements（IMG/INPUT 等）：禁止 append/prepend，只允许 before/after/replace
+
+坑 2：class 匹配多个，用户不知情
+
+建议：
+	•	默认 first
+	•	UI 上明确显示“class 可能匹配多个，建议用 nth 或 all”
+	•	在调试模式输出：匹配到多少个节点、最终用了哪个
+
+坑 3：主题改版导致 ID/class 变了，广告“消失”
+
+建议：
+	•	提供 fallback（hide/footer）
+	•	提供 Debug 工具：在前台用 outline 高亮匹配节点（只在调试模式启用）
+
+坑 4：把节点广告塞进 header 导航导致样式爆炸
+
+你目前 .magick-ad-unit { margin:16px 0; } 对 header/sidebar 会很不友好。
+
+建议：
+	•	compact 默认开启（节点广告通常都要紧凑）
+	•	或提供“节点广告专用样式开关”：移除默认 margin、让容器宽度继承父级
+
+⸻
+
+6) Debug/预览建议（把它做成“现代化卖点”）
+
+你已经有 magick_ad_debug 了，很适合顺手增强：
+
+前台调试能力（建议）
+	•	当 debug 开启时：
+	•	console.info 输出：每个 node 广告的 selector、匹配数、插入方式、是否 fallback
+	•	对成功插入的目标节点加临时 outline（2 秒后移除）
+	•	对失败的广告给出原因：未找到 / index 超出 / 目标不允许插入内部 等
+
+后台“测试选择器”（v2 很推荐）
+
+做一个「测试」按钮：
+	•	输入一个 URL（同域）
+	•	打开新窗口（或 iframe）加载该页面，并携带 ?magick_ad_debug=1&magick_ad_test=...
+	•	页面里只加载一段轻量脚本：点击元素 → 自动生成 ID/class → 回传到后台（postMessage）
+
+这是把“节点投放”从“开发者功能”变成“普通用户可用”的关键升级点。
+
+⸻
+
+7) 最小开发改动清单（按你当前项目结构）
+
+你要实现 MVP，大致需要改这些地方：
+	1.	PHP：Settings.php
+
+	•	show_position allowed list 增加 'node'
+	•	sanitize_ad() 增加 node_* 字段的 sanitize（id/class 值建议用严格正则，只允许 [A-Za-z_][A-Za-z0-9_-]*）
+	•	validate_settings()：当 show_position === 'node' 时校验必填（type/value/insert/match）
+
+	2.	Admin：assets/js/constants/options.js
+
+	•	在 GENERIC_POSITION_OPTIONS 与 POST_POSITION_OPTIONS 增加 { label:'指定节点（ID / class）', value:'node' }
+
+	3.	Admin：AdsConfig.js
+
+	•	当 show_position === ‘node’ 时显示「节点投放」PanelBody
+	•	保存到 options
+
+	4.	Frontend：Frontend.php
+
+	•	在 render_footer_ads() 或单独新增一个输出 stash 的方法：
+	•	把 node 类广告输出到 #magick-ad-stash（隐藏）
+	•	广告单元带上 data-ad-node-* 属性
+
+	5.	JS：magick-ad-track.js
+
+	•	在 initObservers 前加 placeNodeAds()
+	•	如果支持动态 observe：插入后要对新节点调用 observer.observe（或 refresh）
+
+⸻
+
+8) 我建议你先这样做 MVP（最稳、最少坑）
+
+MVP 只支持：
+	•	目标类型：ID / Class
+	•	插入方式：before / after / append / prepend
+	•	匹配：first（默认）+ nth（可选）
+	•	找不到：hide / footer
+	•	compact：默认开启
+	•	不做 MutationObserver（先不处理动态加载）
+
+等 MVP 跑起来再加：
+	•	all（多匹配克隆）
+	•	observe（动态渲染）
+	•	可视化拾取元素
+
+⸻
+
+如果你愿意，我可以直接按你当前代码把“节点投放”的**字段命名、sanitize 正则、data-attributes 设计、以及 JS 插入函数伪代码（贴合你现有 track.js 结构）**写得更具体，方便你直接开工改代码。

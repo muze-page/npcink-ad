@@ -153,6 +153,8 @@ final class Admin {
             $initial_tab = 'report';
         }
 
+        $build_js = MAGICK_AD_PATH . 'build/index.js';
+        $build_time = file_exists($build_js) ? filemtime($build_js) : time();
         wp_localize_script(
             'magick-ad-app',
             'MagickAD',
@@ -178,6 +180,8 @@ final class Admin {
                 'manageCapability' => \MagickAD\Utils\Capabilities::manage_capability(),
                 'patterns' => \MagickAD\Blocks\Patterns::export_patterns(),
                 'initialTab' => $initial_tab,
+                'buildTime' => $build_time,
+                'buildVersion' => $asset['version'],
             )
         );
     }

@@ -13,10 +13,12 @@ final class Debug_Controller {
         $forced = (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) ? true : false;
         $enabled = (get_option('magick_ad_debug', '0') === '1');
         $log_settings = (get_option('magick_ad_debug_log_settings', '1') === '1');
+        $build_probe = (get_option('magick_ad_debug_build_probe', '0') === '1');
         return rest_ensure_response(array(
             'enabled' => $enabled,
             'forced' => $forced,
             'log_settings' => $log_settings,
+            'build_probe' => $build_probe,
         ));
     }
 
@@ -25,6 +27,7 @@ final class Debug_Controller {
         $params = $request->get_json_params();
         $enabled = false;
         $log_settings = null;
+        $build_probe = null;
 
         if (is_array($params) && array_key_exists('enabled', $params)) {
             $enabled = (bool) $params['enabled'];
@@ -36,6 +39,12 @@ final class Debug_Controller {
             $log_settings = (bool) $params['log_settings'];
         } elseif ($request->has_param('log_settings')) {
             $log_settings = (bool) $request->get_param('log_settings');
+        }
+
+        if (is_array($params) && array_key_exists('build_probe', $params)) {
+            $build_probe = (bool) $params['build_probe'];
+        } elseif ($request->has_param('build_probe')) {
+            $build_probe = (bool) $request->get_param('build_probe');
         }
 
         if (!$forced) {
@@ -50,10 +59,17 @@ final class Debug_Controller {
             $log_settings = (get_option('magick_ad_debug_log_settings', '1') === '1');
         }
 
+        if ($build_probe !== null) {
+            update_option('magick_ad_debug_build_probe', $build_probe ? '1' : '0');
+        } else {
+            $build_probe = (get_option('magick_ad_debug_build_probe', '0') === '1');
+        }
+
         return rest_ensure_response(array(
             'enabled' => $enabled,
             'forced' => $forced,
             'log_settings' => $log_settings,
+            'build_probe' => $build_probe,
         ));
     }
 }

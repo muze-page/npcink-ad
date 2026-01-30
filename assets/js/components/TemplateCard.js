@@ -1,141 +1,95 @@
-import { useState } from '@wordpress/element';
-import { Button } from '@wordpress/components';
-import { Icon, check } from '@wordpress/icons';
-import styled from '@emotion/styled';
+import { useMemo, useState } from '@wordpress/element';
+import { Button, CheckboxControl } from '@wordpress/components';
 
-const Card = styled.div`
-    position: relative;
-    border: 1px solid ${props => (props.$selected ? '#3b82f6' : '#e5e7eb')};
-    border-radius: 16px;
-    background: #ffffff;
-    overflow: hidden;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-    box-shadow: ${props =>
-        props.$selected
-            ? '0 16px 28px rgba(59, 130, 246, 0.2)'
-            : '0 8px 20px rgba(15, 23, 42, 0.06)'};
-`;
+const getLabel = (template) => {
+    if (template.type === 'image') return '图片';
+    if (template.type === 'video') return '视频';
+    if (template.type === 'block') return '可视化';
+    return '代码/HTML';
+};
 
-const CardMedia = styled.div`
-    height: 140px;
-    background: ${props =>
-        props.$image
-            ? `url(${props.$image}) center/cover no-repeat`
-            : 'linear-gradient(135deg, #e5e7eb 0%, #f8fafc 100%)'};
-    position: relative;
-`;
+const getContainerLabel = (template) => {
+    const type = template.containerType || 'inline';
+    if (type === 'popup') return '弹窗';
+    if (type === 'banner') return '横栏';
+    if (type === 'floating') return '悬浮';
+    if (type === 'interstitial') return '插屏';
+    return '默认嵌入';
+};
 
-const MediaSkeleton = styled.div`
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        110deg,
-        rgba(255, 255, 255, 0.3) 0%,
-        rgba(255, 255, 255, 0.6) 45%,
-        rgba(255, 255, 255, 0.3) 80%
-    );
-    background-size: 200% 100%;
-    animation: magick-shimmer 1.8s ease-in-out infinite;
-    opacity: ${props => (props.$show ? 1 : 0)};
-`;
-
-const CardContent = styled.div`
-    padding: 14px 16px 16px;
-`;
-
-const Title = styled.div`
-    font-size: 15px;
-    font-weight: 600;
-    color: #111827;
-    margin-bottom: 6px;
-`;
-
-const MetaRow = styled.div`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-`;
-
-const Tag = styled.span`
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    background: ${props => props.$bg || '#f3f4f6'};
-    color: ${props => props.$color || '#1f2937'};
-`;
-
-const HoverActions = styled.div`
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    padding: 12px;
-    opacity: ${props => (props.$visible ? 1 : 0)};
-    pointer-events: ${props => (props.$visible ? 'auto' : 'none')};
-    transition: opacity 0.2s ease;
-`;
-
-const ApplyButton = styled(Button)`
-    &&& {
-        background: #2563eb;
-        color: #fff;
-        border-radius: 999px;
-        padding: 0 16px;
-        height: 32px;
-        box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+const TemplateThumbnail = ({ template }) => {
+    const thumb = template.thumbnail || template.thumbnailUrl;
+    if (thumb) {
+        return (
+            <img
+                src={thumb}
+                alt={template.name || template.title || ''}
+                className="magick-ad-template-thumb"
+            />
+        );
     }
-`;
 
-const SelectionBox = styled.label`
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    border: 1px solid ${props => (props.$checked ? '#2563eb' : '#d1d5db')};
-    background: ${props => (props.$checked ? '#2563eb' : '#fff')};
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-`;
+    const container = template.containerType || 'inline';
+    const creative = template.type || 'html';
+    const showPlay = creative === 'video';
 
-const HiddenCheckbox = styled.input`
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-`;
-
-const CornerActions = styled.div`
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    display: flex;
-    gap: 6px;
-`;
-
-const IconButton = styled.button`
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    border: none;
-    background: rgba(255, 255, 255, 0.9);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.12);
-`;
-
-const SelectCorner = styled.div`
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    opacity: ${props => (props.$visible ? 1 : 0)};
-    transition: opacity 0.2s ease;
-`;
+    return (
+        <svg
+            viewBox="0 0 100 60"
+            className="magick-ad-template-thumb"
+            aria-hidden="true"
+        >
+            <rect x="0" y="0" width="100" height="60" fill="#F8FAFC" />
+            {container === 'popup' && (
+                <>
+                    <rect x="0" y="0" width="100" height="60" fill="#0F172A" opacity="0.08" />
+                    <rect x="28" y="14" width="44" height="32" rx="3" fill="#FFFFFF" stroke="#CBD5E1" />
+                    <rect x="34" y="20" width="26" height="4" rx="2" fill="#E2E8F0" />
+                    <rect x="34" y="28" width="18" height="4" rx="2" fill="#E2E8F0" />
+                </>
+            )}
+            {container === 'banner' && (
+                <>
+                    <rect x="8" y="10" width="70" height="3" rx="1.5" fill="#E2E8F0" />
+                    <rect x="8" y="16" width="56" height="3" rx="1.5" fill="#E2E8F0" />
+                    <rect x="0" y="46" width="100" height="14" fill="#FFFFFF" stroke="#CBD5E1" />
+                    <rect x="8" y="50" width="40" height="6" rx="3" fill="#2563EB" opacity="0.6" />
+                </>
+            )}
+            {container === 'floating' && (
+                <>
+                    <rect x="10" y="12" width="60" height="4" rx="2" fill="#E2E8F0" />
+                    <rect x="10" y="20" width="48" height="4" rx="2" fill="#E2E8F0" />
+                    <rect x="64" y="34" width="28" height="18" rx="3" fill="#FFFFFF" stroke="#CBD5E1" />
+                    <rect x="68" y="40" width="16" height="4" rx="2" fill="#E2E8F0" />
+                </>
+            )}
+            {container === 'interstitial' && (
+                <>
+                    <rect x="8" y="8" width="84" height="44" rx="4" fill="#FFFFFF" stroke="#CBD5E1" />
+                    <rect x="16" y="16" width="40" height="4" rx="2" fill="#E2E8F0" />
+                    <rect x="16" y="24" width="28" height="4" rx="2" fill="#E2E8F0" />
+                    <rect x="16" y="34" width="24" height="6" rx="3" fill="#2563EB" opacity="0.6" />
+                </>
+            )}
+            {container === 'inline' && (
+                <>
+                    <rect x="10" y="12" width="70" height="4" rx="2" fill="#E2E8F0" />
+                    <rect x="10" y="20" width="62" height="4" rx="2" fill="#E2E8F0" />
+                    <rect x="10" y="30" width="50" height="10" rx="3" fill="#FFFFFF" stroke="#CBD5E1" />
+                </>
+            )}
+            {showPlay && (
+                <polygon points="48,24 62,30 48,36" fill="#2563EB" opacity="0.8" />
+            )}
+            {creative === 'html' && (
+                <text x="10" y="56" fontSize="8" fill="#94A3B8">
+                    &lt;/&gt;
+                </text>
+            )}
+        </svg>
+    );
+};
 
 const TemplateCard = ({
     template,
@@ -149,132 +103,112 @@ const TemplateCard = ({
     isPinned,
 }) => {
     const [hovered, setHovered] = useState(false);
-    const showActions = hovered || isSelected;
-    const tags = [
-        {
-            label:
-                template.type === 'image'
-                    ? '图片'
-                    : template.type === 'video'
-                      ? '视频'
-                      : template.type === 'block'
-                        ? '可视化'
-                        : '代码/HTML',
-            bg: template.type === 'image'
-                ? '#e0f2fe'
-                : template.type === 'video'
-                  ? '#ede9fe'
-                  : template.type === 'block'
-                    ? '#dcfce7'
-                    : '#f3f4f6',
-            color: template.type === 'image'
-                ? '#075985'
-                : template.type === 'video'
-                  ? '#5b21b6'
-                  : template.type === 'block'
-                    ? '#166534'
-                    : '#1f2937',
-        },
-        template.category
-            ? {
-                  label: template.category,
-                  bg: template.categoryColor || '#f3f4f6',
-                  color: '#1f2937',
-              }
-            : null,
-        {
-            label:
-                (template.containerType || 'inline') === 'popup'
-                    ? '弹窗'
-                    : (template.containerType || 'inline') === 'banner'
-                      ? '横栏'
-                      : (template.containerType || 'inline') === 'floating'
-                        ? '悬浮'
-                        : (template.containerType || 'inline') === 'interstitial'
-                          ? '插屏'
-                          : '默认嵌入',
-            bg: '#f8fafc',
-            color: '#475569',
-        },
-    ].filter(Boolean);
+
+    const tags = useMemo(() => {
+        const list = [
+            {
+                label: getLabel(template),
+                className: `magick-ad-template-tag magick-ad-template-tag--type-${
+                    template.type || 'html'
+                }`,
+            },
+            {
+                label: getContainerLabel(template),
+                className: 'magick-ad-template-tag magick-ad-template-tag--soft',
+            },
+        ];
+        if (template.category) {
+            list.push({
+                label: template.category,
+                className: 'magick-ad-template-tag magick-ad-template-tag--category',
+                style: {
+                    background: template.categoryColor || '#F3F4F6',
+                },
+            });
+        }
+        return list;
+    }, [template]);
 
     return (
-        <Card
-            $selected={isSelected}
+        <div
+            className={`magick-ad-template-card-new ${
+                isSelected ? 'is-selected' : ''
+            }`}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
-            <CardMedia $image={template.thumbnail || ''}>
-                <MediaSkeleton $show={!template.thumbnail} />
-                <HoverActions $visible={showActions}>
-                    <ApplyButton
-                        onClick={() =>
-                            selectionMode ? onToggleSelect?.(template.id) : onApply?.(template)
-                        }
-                    >
-                        {selectionMode ? '选择' : '应用'}
-                    </ApplyButton>
-                </HoverActions>
+            <div className="magick-ad-template-media">
+                <TemplateThumbnail template={template} />
+                {(hovered || isSelected) && (
+                    <div className="magick-ad-template-actions">
+                        <Button
+                            variant="primary"
+                            size="small"
+                            onClick={() =>
+                                selectionMode
+                                    ? onToggleSelect?.(template.id)
+                                    : onApply?.(template)
+                            }
+                        >
+                            {selectionMode ? '选择' : '应用'}
+                        </Button>
+                    </div>
+                )}
                 {(selectionMode || isSelected) && (
-                    <SelectCorner $visible={showActions || isSelected}>
-                        <SelectionBox $checked={isSelected}>
-                            <HiddenCheckbox
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => onToggleSelect?.(template.id)}
-                            />
-                            {isSelected && <Icon icon={check} size={16} />}
-                        </SelectionBox>
-                    </SelectCorner>
+                    <div
+                        className={`magick-ad-template-select ${
+                            hovered || isSelected ? 'is-visible' : ''
+                        }`}
+                    >
+                        <CheckboxControl
+                            checked={isSelected}
+                            onChange={() => onToggleSelect?.(template.id)}
+                            label=""
+                        />
+                    </div>
                 )}
-                {hovered && (
-                    <CornerActions>
-                        <IconButton
+                {(hovered || isPinned || isFavorite) && (
+                    <div className="magick-ad-template-corner-actions">
+                        <button
                             type="button"
-                            onClick={() => onTogglePinned?.(template.id)}
+                            className={`magick-ad-template-icon-btn ${
+                                isPinned ? 'is-active' : ''
+                            }`}
                             aria-label="置顶"
+                            onClick={() => onTogglePinned?.(template.id)}
                         >
-                            <span
-                                style={{
-                                    color: isPinned ? '#2563eb' : '#94a3b8',
-                                    fontWeight: 700,
-                                }}
-                            >
-                                ⌘
-                            </span>
-                        </IconButton>
-                        <IconButton
+                            ⌘
+                        </button>
+                        <button
                             type="button"
-                            onClick={() => onToggleFavorite?.(template.id)}
+                            className={`magick-ad-template-icon-btn ${
+                                isFavorite ? 'is-active' : ''
+                            }`}
                             aria-label="收藏"
+                            onClick={() => onToggleFavorite?.(template.id)}
                         >
-                            <span
-                                style={{
-                                    color: isFavorite ? '#f59e0b' : '#94a3b8',
-                                    fontWeight: 700,
-                                }}
-                            >
-                                ★
-                            </span>
-                        </IconButton>
-                    </CornerActions>
+                            ★
+                        </button>
+                    </div>
                 )}
-            </CardMedia>
-            <CardContent>
-                <Title>{template.name || template.title}</Title>
-                <MetaRow>
+            </div>
+            <div className="magick-ad-template-body">
+                <div className="magick-ad-template-title">
+                    {template.name || template.title}
+                </div>
+                <div className="magick-ad-template-tags">
                     {tags.map((tag) => (
-                        <Tag
+                        <span
                             key={`${template.id}-${tag.label}`}
-                            $bg={tag.bg}
-                            $color={tag.color}
+                            className={tag.className}
+                            style={tag.style}
                         >
                             {tag.label}
-                        </Tag>
+                        </span>
                     ))}
-                </MetaRow>
-            </CardContent>
-        </Card>
+                </div>
+            </div>
+        </div>
     );
 };
 

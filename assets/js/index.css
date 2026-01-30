@@ -56,6 +56,19 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(240px, 40%);
     gap: 16px;
+    position: relative;
+    padding-top: 52px;
+}
+
+.magick-ad-editor-left {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+    padding-right: 6px;
+    padding-top: 0;
 }
 
 .magick-ad-editor-preview {
@@ -1193,6 +1206,27 @@
     margin-bottom: 12px;
 }
 
+.magick-ad-template-actions-bar {
+    display: flex;
+    justify-content: flex-end;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+    padding: 6px 8px;
+    border-radius: 999px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    border-bottom: 1px solid #eef1f5;
+}
+
+.magick-ad-editor-floating {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    pointer-events: auto;
+}
+
 .magick-ad-template-card:hover {
     border-color: #c7d2fe;
     box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
@@ -1270,4 +1304,374 @@
     .magick-ad-template-category-list {
         max-width: 100%;
     }
+}
+
+/* Template library (gallery mode) */
+.magick-ad-template-library {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.magick-ad-template-actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+}
+
+.magick-ad-template-actions-left,
+.magick-ad-template-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.magick-ad-template-filter-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.magick-ad-template-search {
+    position: relative;
+    width: 240px;
+    max-width: 100%;
+}
+
+.magick-ad-template-search input {
+    width: 100%;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    padding: 0 12px 0 34px;
+    background: #ffffff;
+}
+
+.magick-ad-template-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+}
+
+.magick-ad-template-filter-group {
+    display: flex;
+    align-items: center;
+}
+
+.magick-ad-template-segment {
+    display: inline-flex;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 999px;
+    gap: 4px;
+}
+
+.magick-ad-template-segment-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    color: #475569;
+    cursor: pointer;
+}
+
+.magick-ad-template-segment-btn.is-active {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.magick-ad-template-filter-select {
+    min-width: 160px;
+}
+
+.magick-ad-template-filter-toggle {
+    display: flex;
+    align-items: center;
+    padding-left: 4px;
+}
+
+.magick-ad-template-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.magick-ad-template-card-new {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.magick-ad-template-card-new:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+    border-color: #c7d2fe;
+}
+
+.magick-ad-template-card-new.is-selected {
+    border-color: #2563eb;
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.2);
+}
+
+.magick-ad-template-media {
+    position: relative;
+    height: 140px;
+    background: #f1f5f9;
+}
+
+.magick-ad-template-thumb {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    display: block;
+}
+
+.magick-ad-template-actions {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    display: flex;
+    gap: 6px;
+}
+
+.magick-ad-template-select {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.magick-ad-template-select.is-visible {
+    opacity: 1;
+}
+
+.magick-ad-template-select .components-base-control__label {
+    display: none;
+}
+
+.magick-ad-template-select .components-checkbox-control__input-container {
+    margin-right: 0;
+}
+
+.magick-ad-template-corner-actions {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 6px;
+}
+
+.magick-ad-template-icon-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    color: #94a3b8;
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.12);
+    font-weight: 700;
+}
+
+.magick-ad-template-icon-btn.is-active {
+    color: #2563eb;
+}
+
+.magick-ad-template-body {
+    padding: 14px 16px 16px;
+}
+
+.magick-ad-template-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 6px;
+}
+
+.magick-ad-template-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.magick-ad-template-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+.magick-ad-template-tag--soft {
+    background: #f8fafc;
+    color: #475569;
+}
+
+.magick-ad-template-tag--type-html {
+    background: #f3f4f6;
+}
+
+.magick-ad-template-tag--type-image {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.magick-ad-template-tag--type-video {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.magick-ad-template-tag--type-block {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.magick-ad-template-floating {
+    position: sticky;
+    bottom: 0;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 12px 16px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.3);
+}
+
+.magick-ad-template-floating-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.magick-ad-template-drawer-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.35);
+    z-index: 5;
+}
+
+.magick-ad-template-drawer-new {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: min(360px, 92vw);
+    height: 100%;
+    background: #ffffff;
+    border-left: 1px solid #e5e7eb;
+    box-shadow: -12px 0 24px rgba(15, 23, 42, 0.12);
+    padding: 16px;
+    transform: translateX(110%);
+    transition: transform 0.25s ease;
+    z-index: 6;
+    overflow: auto;
+}
+
+.magick-ad-template-drawer-new.is-open {
+    transform: translateX(0);
+}
+
+.magick-ad-template-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.magick-ad-template-category-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.magick-ad-template-category-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    font-size: 12px;
+}
+
+.magick-ad-template-category-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+}
+
+@media (max-width: 960px) {
+    .magick-ad-template-filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .magick-ad-template-search {
+        width: 100%;
+    }
+
+    .magick-ad-template-filter-select {
+        min-width: 0;
+        width: 100%;
+    }
+}
+
+@media (max-width: 960px) {
+    .magick-ad-editor-left {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+}
+
+.magick-ad-build-probe {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 9999;
+    background: rgba(15, 23, 42, 0.9);
+    color: #fff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.3);
+    font-size: 12px;
+    line-height: 1.4;
+    min-width: 140px;
+}
+
+.magick-ad-build-probe__title {
+    font-weight: 600;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.magick-ad-build-probe__meta {
+    font-weight: 600;
+}
+
+.magick-ad-build-probe__time {
+    opacity: 0.75;
+    font-size: 11px;
 }

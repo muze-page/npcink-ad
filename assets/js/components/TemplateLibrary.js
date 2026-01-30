@@ -1,140 +1,12 @@
 import { useMemo, useState } from '@wordpress/element';
-import { Button, FormTokenField } from '@wordpress/components';
+import {
+    Button,
+    FormTokenField,
+    SelectControl,
+    ToggleControl,
+} from '@wordpress/components';
 import { Icon, search } from '@wordpress/icons';
-import styled from '@emotion/styled';
 import TemplateCard from './TemplateCard';
-
-const Toolbar = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 16px;
-`;
-
-const ActionRow = styled.div`
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: center;
-`;
-
-const FilterBar = styled.div`
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
-    padding-bottom: 6px;
-`;
-
-const FilterGroup = styled.div`
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    white-space: nowrap;
-`;
-
-const FilterLabel = styled.span`
-    font-size: 12px;
-    color: #6b7280;
-`;
-
-const Chip = styled.button`
-    border: 1px solid ${props => (props.$active ? '#2563eb' : '#e5e7eb')};
-    background: ${props => (props.$active ? '#eff6ff' : '#ffffff')};
-    color: ${props => (props.$active ? '#1d4ed8' : '#374151')};
-    border-radius: 999px;
-    padding: 4px 12px;
-    font-size: 12px;
-    cursor: pointer;
-`;
-
-const SearchWrap = styled.div`
-    position: relative;
-    flex: 1;
-    min-width: 220px;
-`;
-
-const SearchIcon = styled.span`
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #94a3b8;
-`;
-
-const SearchInput = styled.input`
-    width: 100%;
-    height: 36px;
-    padding: 0 12px 0 34px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-`;
-
-const Gallery = styled.div`
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 18px;
-`;
-
-const FloatingBar = styled.div`
-    position: sticky;
-    bottom: 0;
-    margin-top: 16px;
-    background: #0f172a;
-    color: #fff;
-    padding: 12px 16px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.3);
-`;
-
-const DrawerOverlay = styled.div`
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.35);
-    z-index: 5;
-`;
-
-const Drawer = styled.aside`
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: min(360px, 92vw);
-    height: 100%;
-    background: #ffffff;
-    border-left: 1px solid #e5e7eb;
-    box-shadow: -12px 0 24px rgba(15, 23, 42, 0.12);
-    padding: 16px;
-    transform: translateX(${props => (props.$open ? '0' : '110%')});
-    transition: transform 0.25s ease;
-    z-index: 6;
-    overflow: auto;
-`;
-
-const DrawerHeader = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-`;
-
-const CategoryList = styled.div`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-`;
-
-const CategoryChip = styled.span`
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: #f3f4f6;
-    font-size: 12px;
-`;
 
 const TemplateLibrary = ({
     templates,
@@ -186,11 +58,11 @@ const TemplateLibrary = ({
     };
 
     return (
-        <div style={{ position: 'relative' }}>
-            <Toolbar>
-                <ActionRow>
+        <div className="magick-ad-template-library">
+            <div className="magick-ad-template-actions-row">
+                <div className="magick-ad-template-actions-left">
                     <Button variant="secondary" onClick={onImport}>
-                        导入
+                        导入模板
                     </Button>
                     <Button
                         variant="secondary"
@@ -201,81 +73,87 @@ const TemplateLibrary = ({
                     >
                         分类设置
                     </Button>
+                </div>
+                <div className="magick-ad-template-actions-right">
                     <Button
                         variant={selectionMode ? 'primary' : 'secondary'}
                         onClick={onToggleSelectionMode}
                     >
                         {selectionMode ? '退出选择' : '选择模式'}
                     </Button>
-                    <SearchWrap>
-                        <SearchIcon>
-                            <Icon icon={search} size={16} />
-                        </SearchIcon>
-                        <SearchInput
-                            value={query}
-                            onChange={(event) =>
-                                onQueryChange?.(event.target.value)
-                            }
-                            placeholder="搜索模板名称或描述"
-                        />
-                    </SearchWrap>
-                </ActionRow>
-                <FilterBar>
-                    <FilterGroup>
-                        <FilterLabel>创意类型</FilterLabel>
+                </div>
+            </div>
+
+            <div className="magick-ad-template-filter-row">
+                <div className="magick-ad-template-search">
+                    <span className="magick-ad-template-search-icon">
+                        <Icon icon={search} size={16} />
+                    </span>
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={(event) =>
+                            onQueryChange?.(event.target.value)
+                        }
+                        placeholder="搜索模板..."
+                    />
+                </div>
+
+                <div className="magick-ad-template-filter-group">
+                    <div className="magick-ad-template-segment">
                         {creativeOptions.map((option) => (
-                            <Chip
+                            <button
                                 key={option.value}
-                                $active={creativeFilter === option.value}
+                                type="button"
+                                className={`magick-ad-template-segment-btn ${
+                                    creativeFilter === option.value
+                                        ? 'is-active'
+                                        : ''
+                                }`}
                                 onClick={() =>
                                     onFilterChange?.('creative', option.value)
                                 }
                             >
                                 {option.label}
-                            </Chip>
+                            </button>
                         ))}
-                    </FilterGroup>
-                    <FilterGroup>
-                        <FilterLabel>容器</FilterLabel>
-                        {containerOptions.map((option) => (
-                            <Chip
-                                key={option.value}
-                                $active={containerFilter === option.value}
-                                onClick={() =>
-                                    onFilterChange?.('container', option.value)
-                                }
-                            >
-                                {option.label}
-                            </Chip>
-                        ))}
-                    </FilterGroup>
-                    <FilterGroup>
-                        <FilterLabel>分类</FilterLabel>
-                        {categoryOptions.map((option) => (
-                            <Chip
-                                key={option.value}
-                                $active={categoryFilter === option.value}
-                                onClick={() =>
-                                    onFilterChange?.('category', option.value)
-                                }
-                            >
-                                {option.label}
-                            </Chip>
-                        ))}
-                    </FilterGroup>
-                    <FilterGroup>
-                        <FilterLabel>收藏</FilterLabel>
-                        <Chip
-                            $active={onlyFavorites}
-                            onClick={() => onToggleFavoritesOnly?.(!onlyFavorites)}
-                        >
-                            仅收藏
-                        </Chip>
-                    </FilterGroup>
-                </FilterBar>
-            </Toolbar>
+                    </div>
+                </div>
 
-            <Gallery>
+                <div className="magick-ad-template-filter-select">
+                    <SelectControl
+                        label="容器"
+                        hideLabelFromVision
+                        value={containerFilter}
+                        options={containerOptions}
+                        onChange={(value) =>
+                            onFilterChange?.('container', value)
+                        }
+                    />
+                </div>
+
+                <div className="magick-ad-template-filter-select">
+                    <SelectControl
+                        label="分类"
+                        hideLabelFromVision
+                        value={categoryFilter}
+                        options={categoryOptions}
+                        onChange={(value) =>
+                            onFilterChange?.('category', value)
+                        }
+                    />
+                </div>
+
+                <div className="magick-ad-template-filter-toggle">
+                    <ToggleControl
+                        label="仅收藏"
+                        checked={onlyFavorites}
+                        onChange={onToggleFavoritesOnly}
+                    />
+                </div>
+            </div>
+
+            <div className="magick-ad-template-gallery">
                 {templates.map((template) => (
                     <TemplateCard
                         key={template.id}
@@ -290,12 +168,12 @@ const TemplateLibrary = ({
                         isPinned={pinnedIds.includes(template.id)}
                     />
                 ))}
-            </Gallery>
+            </div>
 
             {selectedIds.length > 0 && (
-                <FloatingBar>
+                <div className="magick-ad-template-floating">
                     <span>已选择 {selectedIds.length} 个模板</span>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="magick-ad-template-floating-actions">
                         <Button variant="secondary" onClick={onClearSelection}>
                             取消选择
                         </Button>
@@ -303,41 +181,52 @@ const TemplateLibrary = ({
                             导出选中
                         </Button>
                     </div>
-                </FloatingBar>
+                </div>
             )}
 
             {drawerOpen && (
-                <DrawerOverlay onClick={() => setDrawerOpen(false)} />
+                <div
+                    className="magick-ad-template-drawer-overlay"
+                    onClick={() => setDrawerOpen(false)}
+                />
             )}
-            <Drawer $open={drawerOpen}>
-                <DrawerHeader>
+            <aside
+                className={`magick-ad-template-drawer-new ${
+                    drawerOpen ? 'is-open' : ''
+                }`}
+            >
+                <div className="magick-ad-template-drawer-header">
                     <strong>分类管理</strong>
-                    <Button variant="tertiary" onClick={() => setDrawerOpen(false)}>
+                    <Button
+                        variant="tertiary"
+                        onClick={() => setDrawerOpen(false)}
+                    >
                         关闭
                     </Button>
-                </DrawerHeader>
+                </div>
                 <FormTokenField
                     label="分类标签"
                     value={categoryTokens}
                     onChange={updateCategoryTokens}
                     help="输入回车添加分类"
                 />
-                <CategoryList style={{ marginTop: 12 }}>
+                <div className="magick-ad-template-category-preview">
                     {(categories || []).map((category) => (
-                        <CategoryChip key={category.name}>
+                        <span
+                            key={category.name}
+                            className="magick-ad-template-category-pill"
+                        >
                             <span
+                                className="magick-ad-template-category-dot"
                                 style={{
-                                    width: 10,
-                                    height: 10,
-                                    borderRadius: 999,
                                     background: category.color || '#E7E9EE',
                                 }}
                             />
                             {category.name}
-                        </CategoryChip>
+                        </span>
                     ))}
-                </CategoryList>
-            </Drawer>
+                </div>
+            </aside>
         </div>
     );
 };
