@@ -36,7 +36,6 @@ final class Settings {
 
     public static function validate_settings(array $settings) {
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
-        $slots = array();
         foreach ($ads as $ad) {
             $options = isset($ad['options']) ? $ad['options'] : array();
             if (empty($options['placement_hook'])) {
@@ -116,20 +115,6 @@ final class Settings {
                         'node_fallback is invalid.',
                         array('status' => 400)
                     );
-                }
-            }
-            $slot = isset($options['slot']) ? (string) $options['slot'] : '';
-            if ($slot !== '') {
-                $slot = sanitize_title($slot);
-                if ($slot !== '') {
-                    if (isset($slots[$slot])) {
-                        return new WP_Error(
-                            'magick_ad_duplicate_slot',
-                            sprintf('slot "%s" is duplicated.', $slot),
-                            array('status' => 400, 'slot' => $slot)
-                        );
-                    }
-                    $slots[$slot] = true;
                 }
             }
         }
@@ -381,12 +366,6 @@ final class Settings {
                 ''
             ),
             'target_ids' => self::sanitize_ids(isset($options['target_ids']) ? $options['target_ids'] : array()),
-            'slot_mode' => self::sanitize_choice(
-                isset($options['slot_mode']) ? $options['slot_mode'] : 'auto',
-                array('auto', 'manual'),
-                'auto'
-            ),
-            'slot' => isset($options['slot']) ? sanitize_title((string) $options['slot']) : '',
             'priority' => isset($options['priority']) ? max(1, absint($options['priority'])) : 10,
             'weight' => isset($options['weight']) ? max(1, absint($options['weight'])) : 1,
             'node_target_type' => self::sanitize_choice(

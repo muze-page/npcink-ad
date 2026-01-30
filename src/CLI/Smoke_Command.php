@@ -5,6 +5,7 @@ namespace MagickAD\CLI;
 use MagickAD\Blocks\Blocks;
 use MagickAD\Data\Ads;
 use MagickAD\Data\Settings;
+use MagickAD\Data\Slots;
 use WP_CLI;
 
 if (!defined('ABSPATH')) {
@@ -28,8 +29,6 @@ final class Smoke_Command {
             'name' => 'Smoke Ad',
             'options' => array(
                 'enabled' => true,
-                'slot' => 'smoke-slot',
-                'slot_mode' => 'manual',
                 'placement_hook' => 'footer',
             ),
             'content' => array(
@@ -50,8 +49,6 @@ final class Smoke_Command {
             array(
                 'post_type' => Ads::POST_TYPE,
                 'post_status' => array('publish', 'draft', 'future', 'private'),
-                'meta_key' => Ads::META_SLOT,
-                'meta_value' => 'smoke-slot',
                 'numberposts' => 1,
             )
         );
@@ -59,32 +56,32 @@ final class Smoke_Command {
             $saved_post_id = $posts[0]->ID;
         }
 
-        $dup_check = Settings::validate_settings(array(
-            'ads' => array(
+        if (!is_wp_error($stored) && $stored && isset($stored[0]['id'])) {
+            Slots::save_slots(array(
                 array(
-                    'id' => 'dup-1',
-                    'name' => 'Dup 1',
-                    'options' => array(
-                        'slot' => 'dup-slot',
-                        'placement_hook' => 'footer',
-                    ),
-                    'content' => array(),
+                    'id' => 'smoke-slot',
+                    'label' => 'Smoke Slot',
+                    'ad_ids' => array($stored[0]['id']),
+                    'weights' => array(1),
+                    'limit' => 1,
                 ),
-                array(
-                    'id' => 'dup-2',
-                    'name' => 'Dup 2',
-                    'options' => array(
-                        'slot' => 'dup-slot',
-                        'placement_hook' => 'footer',
-                    ),
-                    'content' => array(),
-                ),
+            ));
+        }
+
+        $dup_check = Settings::sanitize_slots(array(
+            array(
+                'id' => 'dup-slot',
+                'label' => 'Dup 1',
+            ),
+            array(
+                'id' => 'dup-slot',
+                'label' => 'Dup 2',
             ),
         ));
-        if (is_wp_error($dup_check)) {
+        if (count($dup_check) === 2 && $dup_check[0]['id'] !== $dup_check[1]['id']) {
             WP_CLI::success('Slot uniqueness: ok');
         } else {
-            $errors[] = 'Slot uniqueness: expected duplicate error but got success.';
+            $errors[] = 'Slot uniqueness: expected auto-fix for duplicate slot ids.';
         }
 
         $rendered = Blocks::render_ad_block(array(

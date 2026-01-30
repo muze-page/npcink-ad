@@ -12,21 +12,12 @@
     var Button = components.Button;
     var ToggleControl = components.ToggleControl;
     var RangeControl = components.RangeControl;
-    var useSelect = data.useSelect;
     var ServerSideRender = serverSideRender;
 
     registerBlockType('magick-ad/ad', {
         edit: function (props) {
             var attributes = props.attributes;
             var setAttributes = props.setAttributes;
-            var ads = useSelect(function (select) {
-                return select('core').getEntityRecords('postType', 'magick_ad', {
-                    per_page: 100,
-                    status: ['publish', 'draft', 'future', 'private'],
-                    _fields: 'id,title,meta',
-                });
-            }, []);
-
             var slotsData =
                 (window.MagickADSlots && window.MagickADSlots.slots) || [];
             var slotOptions = [{ label: '请选择广告位', value: '' }];
@@ -45,24 +36,6 @@
                         label: label + ' · ' + slotId,
                         value: slotId,
                     });
-                });
-            } else if (ads && ads.length) {
-                ads.forEach(function (post) {
-                    var title =
-                        (post.title &&
-                            (post.title.raw || post.title.rendered)) ||
-                        '未命名广告';
-                    var meta = post.meta || {};
-                    var dataMeta = meta._magick_ad_data || {};
-                    var options = dataMeta.options || {};
-                    var slot = options.slot || '';
-                    if (slot && !slotMap[slot]) {
-                        slotMap[slot] = true;
-                        slotOptions.push({
-                            label: title + ' · ' + slot,
-                            value: slot,
-                        });
-                    }
                 });
             }
 

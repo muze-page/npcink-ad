@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 }
 
 final class Slot_Migrator {
-    private const OPTION_FLAG = 'magick_ad_slot_meta_migrated';
+    private const OPTION_FLAG = 'magick_ad_slots_migrated';
 
     public static function maybe_migrate(): void {
         if (get_option(self::OPTION_FLAG, '') === '1') {
@@ -31,56 +31,53 @@ final class Slot_Migrator {
             return;
         }
 
-        $existing_slots = array();
-        foreach ($posts as $post) {
-            $slot = get_post_meta($post->ID, Ads::META_SLOT, true);
-            if (is_string($slot) && $slot !== '') {
-                $normalized = sanitize_title($slot);
-                if ($normalized !== $slot) {
-                    update_post_meta($post->ID, Ads::META_SLOT, $normalized);
-                    $slot = $normalized;
-                }
-                if ($slot !== '') {
-                    $existing_slots[$slot] = true;
-                }
+        $slots = Slots::get_slots();
+        $slot_map = array();
+        foreach ($slots as $slot) {
+            if (!is_array($slot) || empty($slot['id'])) {
+                continue;
             }
+            $slot_id = (string) $slot['id'];
+            $slot_map[$slot_id] = array(
+                'id' => $slot_id,
+                'label' => isset($slot['label']) ? (string) $slot['label'] : $slot_id,
+                'ad_ids' => isset($slot['ad_ids']) && is_array($slot['ad_ids']) ? $slot['ad_ids'] : array(),
+                'weights' => isset($slot['weights']) && is_array($slot['weights']) ? $slot['weights'] : array(),
+                'limit' => isset($slot['limit']) ? absint($slot['limit']) : 1,
+            );
         }
 
         foreach ($posts as $post) {
-            $slot = get_post_meta($post->ID, Ads::META_SLOT, true);
-            if (is_string($slot) && $slot !== '') {
-                continue;
+            $ad_id = get_post_meta($post->ID, Ads::META_ID, true);
+            if (!$ad_id) {
+                $ad_id = 'ad_' . $post->ID;
             }
 
-            $slot = '';
             $data = get_post_meta($post->ID, Ads::META_DATA, true);
+            $slot = '';
             if (is_array($data) && isset($data['options']['slot'])) {
                 $slot = sanitize_title((string) $data['options']['slot']);
             }
-
-            if ($slot === '') {
-                $slot = sanitize_title($post->post_name ? $post->post_name : $post->post_title);
-            }
-
             if ($slot === '') {
                 continue;
             }
+            if (!isset($slot_map[$slot])) {
+                $slot_map[$slot] = array(
+                    'id' => $slot,
+                    'label' => $slot,
+                    'ad_ids' => array(),
+                    'weights' => array(),
+                    'limit' => 1,
+                );
+            }
+            if (!in_array($ad_id, $slot_map[$slot]['ad_ids'], true)) {
+                $slot_map[$slot]['ad_ids'][] = $ad_id;
+            }
 
-            $unique = self::unique_slot($slot, $existing_slots);
-            update_post_meta($post->ID, Ads::META_SLOT, $unique);
-            $existing_slots[$unique] = true;
+            delete_post_meta($post->ID, '_magick_ad_slot');
         }
 
+        Slots::save_slots(array_values($slot_map));
         update_option(self::OPTION_FLAG, '1');
-    }
-
-    private static function unique_slot(string $slot, array $existing): string {
-        $base = $slot;
-        $suffix = 2;
-        while (isset($existing[$slot])) {
-            $slot = $base . '-' . $suffix;
-            $suffix++;
-        }
-        return $slot;
     }
 }

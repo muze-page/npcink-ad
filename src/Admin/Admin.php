@@ -154,7 +154,7 @@ final class Admin {
         echo '<p>' . esc_html__('现代 WP 首选（Gutenberg / FSE），可在编辑器中直接插入 “Magick AD” 区块。', 'magick-ad') . '</p>';
         echo '<ol>';
         echo '<li>' . esc_html__('在区块编辑器中添加 “Magick AD” 区块。', 'magick-ad') . '</li>';
-        echo '<li>' . esc_html__('在区块设置中选择广告位 Slot 或广告 ID。', 'magick-ad') . '</li>';
+        echo '<li>' . esc_html__('在区块设置中选择广告位 Slot。', 'magick-ad') . '</li>';
         echo '<li>' . esc_html__('预览可实时渲染，前台根据投放规则显示。', 'magick-ad') . '</li>';
         echo '</ol>';
 

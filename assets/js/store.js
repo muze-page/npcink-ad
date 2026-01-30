@@ -2,24 +2,6 @@ import { create } from 'zustand';
 import apiFetch from '@wordpress/api-fetch';
 import { cleanForSlug } from '@wordpress/url';
 
-const buildUniqueSlot = (name, adId, ads) => {
-    const seed =
-        cleanForSlug(name || '') ||
-        (adId ? `ad-${adId.slice(-6)}` : 'ad-slot');
-    let candidate = seed || 'ad-slot';
-    let index = 2;
-    const existing = new Set(
-        (ads || []).map((ad) =>
-            cleanForSlug(ad?.options?.slot || '')
-        )
-    );
-    while (candidate && existing.has(candidate)) {
-        candidate = `${seed}-${index}`;
-        index += 1;
-    }
-    return candidate;
-};
-
 const createAdGroupTemplate = (type = 'global', ads = []) => ({
     id: `ad_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     name: type === 'targeted' ? '指定广告' : '全局广告',
@@ -43,8 +25,6 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
         end_date: '',
         target_type: '',
         target_ids: [],
-        slot_mode: 'auto',
-        slot: '',
         priority: 10,
         weight: 1,
         node_target_type: 'id',
@@ -233,10 +213,6 @@ const normalizeAd = (ad) => {
             target_ids: Array.isArray(options.target_ids)
                 ? options.target_ids.map((id) => Number(id)).filter(Boolean)
                 : [],
-            slot_mode: ['auto', 'manual'].includes(options.slot_mode)
-                ? options.slot_mode
-                : 'auto',
-            slot: typeof options.slot === 'string' ? options.slot : '',
             node_target_type: ['id', 'class'].includes(options.node_target_type)
                 ? options.node_target_type
                 : 'id',
@@ -355,8 +331,6 @@ export const useStore = create((set, get) => ({
     addAdGroup: (type) => {
         set((state) => {
             const draft = createAdGroupTemplate(type, state.ads);
-            const slot = buildUniqueSlot(draft.name, draft.id, state.ads);
-            draft.options.slot = slot;
             return {
                 ads: [...state.ads, draft],
             };

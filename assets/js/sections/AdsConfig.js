@@ -221,38 +221,6 @@ const AdsConfig = () => {
         [ads, selectedId]
     );
 
-    const normalizedSlot = useMemo(
-        () => cleanForSlug(selectedAd?.options?.slot || ''),
-        [selectedAd?.options?.slot]
-    );
-
-    const autoSlot = useMemo(() => {
-        if (!selectedAd) {
-            return '';
-        }
-        return buildUniqueSlot(selectedAd.name || '', selectedAd.id);
-    }, [selectedAd?.name, selectedAd?.id, ads]);
-
-    useEffect(() => {
-        if (!selectedAd) {
-            return;
-        }
-        const mode = selectedAd.options?.slot_mode || 'auto';
-        if (mode !== 'auto') {
-            return;
-        }
-        const current = cleanForSlug(selectedAd.options?.slot || '');
-        if (autoSlot && current !== autoSlot) {
-            updateAdGroup(selectedAd.id, {
-                options: {
-                    ...selectedAd.options,
-                    slot: autoSlot,
-                    slot_mode: 'auto',
-                },
-            });
-        }
-    }, [autoSlot, selectedAd?.options?.slot_mode, selectedAd?.id]);
-
     useEffect(() => {
         if (!selectedAd) {
             return;
@@ -288,17 +256,6 @@ const AdsConfig = () => {
         selectedAd?.options?.placement_position,
         selectedAd?.options?.placement_paragraph,
     ]);
-
-    const slotConflict = useMemo(() => {
-        if (!normalizedSlot) {
-            return null;
-        }
-        return ads.find(
-            (ad) =>
-                ad.id !== selectedAd?.id &&
-                cleanForSlug(ad.options?.slot || '') === normalizedSlot
-        );
-    }, [ads, normalizedSlot, selectedAd?.id]);
 
     useEffect(() => {
         let isMounted = true;
@@ -382,76 +339,6 @@ const AdsConfig = () => {
         }
         return resolvePlacement(selectedAd.options || {}).hook === 'head';
     }, [selectedAd?.options?.placement_hook, selectedAd?.options?.placement_position, selectedAd?.options?.placement_paragraph]);
-
-    function buildUniqueSlot(name, adId) {
-        const base =
-            cleanForSlug(name || '') ||
-            (adId ? `ad-${adId.slice(-6)}` : 'ad-slot');
-        let candidate = base || 'ad-slot';
-        let index = 2;
-        while (
-            ads.some(
-                (ad) =>
-                    ad.id !== adId &&
-                    cleanForSlug(ad.options?.slot || '') === candidate
-            )
-        ) {
-            candidate = `${base}-${index}`;
-            index += 1;
-        }
-        return candidate;
-    }
-
-    function ensureUniqueSlot(slot, adId) {
-        const base = cleanForSlug(slot || '');
-        if (!base) {
-            return '';
-        }
-        let candidate = base;
-        let index = 2;
-        while (
-            ads.some(
-                (ad) =>
-                    ad.id !== adId &&
-                    cleanForSlug(ad.options?.slot || '') === candidate
-            )
-        ) {
-            candidate = `${base}-${index}`;
-            index += 1;
-        }
-        return candidate;
-    }
-
-    function fixDuplicateSlots() {
-        const used = new Set();
-        let fixed = 0;
-        ads.forEach((ad) => {
-            const raw = cleanForSlug(ad.options?.slot || '');
-            if (!raw) {
-                return;
-            }
-            if (!used.has(raw)) {
-                used.add(raw);
-                return;
-            }
-            let candidate = raw;
-            let index = 2;
-            while (used.has(candidate)) {
-                candidate = `${raw}-${index}`;
-                index += 1;
-            }
-            used.add(candidate);
-            updateAdGroup(ad.id, {
-                options: {
-                    ...ad.options,
-                    slot: candidate,
-                    slot_mode: 'manual',
-                },
-            });
-            fixed += 1;
-        });
-        return fixed;
-    }
 
     function fixDuplicateSlotIds() {
         const used = new Set();
@@ -1071,12 +958,11 @@ const AdsConfig = () => {
         }
         setShowValidation(false);
 
-        const fixed = fixDuplicateSlots();
         const slotFixed = fixDuplicateSlotIds();
-        if (fixed > 0 || slotFixed > 0) {
+        if (slotFixed > 0) {
             showNotice(
                 'warning',
-                `已自动修复 ${fixed + slotFixed} 个重复 Slot，正在继续保存...`,
+                `已自动修复 ${slotFixed} 个重复 Slot，正在继续保存...`,
                 2500
             );
         }
@@ -1094,12 +980,11 @@ const AdsConfig = () => {
     };
 
     const handleSaveWithSlotCheck = async () => {
-        const fixed = fixDuplicateSlots();
         const slotFixed = fixDuplicateSlotIds();
-        if (fixed > 0 || slotFixed > 0) {
+        if (slotFixed > 0) {
             showNotice(
                 'warning',
-                `已自动修复 ${fixed + slotFixed} 个重复 Slot，正在继续保存...`,
+                `已自动修复 ${slotFixed} 个重复 Slot，正在继续保存...`,
                 2500
             );
         }
@@ -1913,47 +1798,6 @@ const AdsConfig = () => {
                         />
                     )}
                     <TextControl
-                        label="Slot（广告位）"
-                        value={selectedAd.options?.slot || ''}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                slot: value,
-                                slot_mode: 'manual',
-                            })
-                        }
-                        onBlur={() => {
-                            if (!selectedAd) {
-                                return;
-                            }
-                            const slot = selectedAd.options?.slot || '';
-                            const unique = ensureUniqueSlot(
-                                slot,
-                                selectedAd.id
-                            );
-                            if (unique && unique !== cleanForSlug(slot)) {
-                                updateAdGroup(selectedAd.id, {
-                                    options: {
-                                        ...selectedAd.options,
-                                        slot: unique,
-                                        slot_mode: 'manual',
-                                    },
-                                });
-                                showNotice(
-                                    'info',
-                                    `Slot 已自动修复为 "${unique}"`,
-                                    2500
-                                );
-                            }
-                        }}
-                        help={
-                            slotConflict
-                                ? `已被“${slotConflict.name || '未命名广告'}”占用，请改为唯一值。`
-                                : '用于区块/短代码/模板标签调用。建议使用小写字母、数字和短横线。'
-                        }
-                        className={slotConflict ? 'magick-ad-field-error' : ''}
-                        disabled={(selectedAd.options?.slot_mode || 'auto') === 'auto'}
-                    />
-                    <TextControl
                         label="优先级（越大越先展示）"
                         type="number"
                         min={1}
@@ -1977,28 +1821,6 @@ const AdsConfig = () => {
                         }
                         help="仅对同优先级广告生效，权重越大越容易被选中。"
                     />
-                    <ToggleControl
-                        label="自动生成 Slot"
-                        checked={(selectedAd.options?.slot_mode || 'auto') === 'auto'}
-                        onChange={(checked) => {
-                            if (checked) {
-                                handleUpdateOptions({
-                                    slot_mode: 'auto',
-                                    slot: autoSlot,
-                                });
-                                return;
-                            }
-                            handleUpdateOptions({
-                                slot_mode: 'manual',
-                            });
-                        }}
-                        help="自动模式会根据广告名称生成唯一 Slot。"
-                    />
-                    {slotConflict && (
-                        <Notice status="error" isDismissible={false}>
-                            Slot 重复会导致区块/短代码匹配冲突，请修改后再保存。
-                        </Notice>
-                    )}
                 </CardBody>
             </Card>
             <Card>
