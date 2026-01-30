@@ -90,6 +90,77 @@ const extractTemplateFromContent = (content) => {
     };
 };
 
+const extractTemplateFromContentLoose = (content) => {
+    if (!content || typeof content !== 'string') {
+        return null;
+    }
+    const match = content.match(
+        /<!--\s*wp:magick-ad\/ad\s+({[\s\S]*?})\s*\/-->/i
+    );
+    if (!match || !match[1]) {
+        return null;
+    }
+    try {
+        const attrs = JSON.parse(match[1]);
+        const type = attrs.creativeType || 'html';
+        const containerType = attrs.containerType || 'inline';
+        const category =
+            typeof attrs.templateCategory === 'string'
+                ? attrs.templateCategory
+                : '';
+
+        if (type === 'image') {
+            return {
+                type,
+                containerType,
+                category,
+                data: {
+                    image: {
+                        id: Number(attrs.imageId || 0),
+                        url: attrs.imageUrl || '',
+                        alt: attrs.imageAlt || '',
+                    },
+                    link: attrs.link || '',
+                    link_target: Boolean(attrs.linkTarget),
+                },
+            };
+        }
+
+        if (type === 'video') {
+            return {
+                type,
+                containerType,
+                category,
+                data: {
+                    video_url: attrs.videoUrl || '',
+                },
+            };
+        }
+
+        if (type === 'block') {
+            return {
+                type,
+                containerType,
+                category,
+                data: {
+                    blocks: attrs.blocks || '',
+                },
+            };
+        }
+
+        return {
+            type: 'html',
+            containerType,
+            category,
+            data: {
+                html: attrs.html || '',
+            },
+        };
+    } catch (err) {
+        return null;
+    }
+};
+
 const buildPatternContent = (
     type,
     data,
@@ -193,14 +264,24 @@ const useTemplateLibrary = ({
             corePatterns = [];
         }
 
-    const systemTemplates = (corePatterns || [])
+        if (
+            (!Array.isArray(corePatterns) || corePatterns.length === 0) &&
+            typeof window !== 'undefined' &&
+            Array.isArray(window.MagickAD?.patterns)
+        ) {
+            corePatterns = window.MagickAD.patterns;
+        }
+
+        const systemTemplates = (corePatterns || [])
             .filter((pattern) =>
                 Array.isArray(pattern.categories)
                     ? pattern.categories.includes('magick-ad')
                     : false
             )
             .map((pattern) => {
-                const extracted = extractTemplateFromContent(pattern.content);
+                const extracted =
+                    extractTemplateFromContent(pattern.content) ||
+                    extractTemplateFromContentLoose(pattern.content);
                 if (!extracted) {
                     return null;
                 }
@@ -225,7 +306,9 @@ const useTemplateLibrary = ({
             userTemplates = posts
                 .map((post) => {
                     const content = post?.content?.raw || post?.content?.rendered || '';
-                    const extracted = extractTemplateFromContent(content);
+                    const extracted =
+                        extractTemplateFromContent(content) ||
+                        extractTemplateFromContentLoose(content);
                     if (!extracted) {
                         return null;
                     }

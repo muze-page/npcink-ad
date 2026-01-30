@@ -176,6 +176,7 @@ final class Admin {
                     'tagline' => get_option('magick_ad_brand_tagline', '广告配置与投放规则管理'),
                 ),
                 'manageCapability' => \MagickAD\Utils\Capabilities::manage_capability(),
+                'patterns' => \MagickAD\Blocks\Patterns::export_patterns(),
                 'initialTab' => $initial_tab,
             )
         );

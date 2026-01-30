@@ -11,6 +11,27 @@ final class Patterns {
         add_action('init', array($this, 'register_patterns'));
     }
 
+    public static function export_patterns(): array {
+        $instance = new self();
+        $patterns = $instance->get_patterns();
+        $payload = array();
+
+        foreach ($patterns as $pattern) {
+            $args = isset($pattern['args']) && is_array($pattern['args'])
+                ? $pattern['args']
+                : array();
+            $payload[] = array(
+                'name' => $pattern['name'],
+                'title' => $args['title'] ?? '',
+                'description' => $args['description'] ?? '',
+                'categories' => $args['categories'] ?? array(),
+                'content' => $args['content'] ?? '',
+            );
+        }
+
+        return $payload;
+    }
+
     public function register_patterns(): void {
         if (!function_exists('register_block_pattern')) {
             return;

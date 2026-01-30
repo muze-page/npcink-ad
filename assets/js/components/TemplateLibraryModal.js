@@ -1,6 +1,9 @@
 import {
     Button,
     CheckboxControl,
+    DropdownMenu,
+    MenuGroup,
+    MenuItem,
     ToggleControl,
     Modal,
     Notice,
@@ -10,7 +13,7 @@ import {
     Tooltip,
 } from '@wordpress/components';
 import { useEffect, useState } from '@wordpress/element';
-import { Icon, pinSmall, starFilled } from '@wordpress/icons';
+import { Icon, moreVertical, pinSmall, starFilled } from '@wordpress/icons';
 
 const TemplateLibraryModal = ({
     isOpen,
@@ -51,6 +54,7 @@ const TemplateLibraryModal = ({
     const [insertSide, setInsertSide] = useState('left');
     const [confirmAction, setConfirmAction] = useState(null);
     const [undoSnapshot, setUndoSnapshot] = useState(null);
+    const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
 
     useEffect(() => {
         if (type) {
@@ -192,6 +196,7 @@ const TemplateLibraryModal = ({
     return (
         <>
         <Modal title="模板库" onRequestClose={onClose} size="large">
+            <div className="magick-ad-template-shell">
             <div className="magick-ad-template-toolbar">
                 <div className="magick-ad-template-toolbar__actions">
                     <Button variant="secondary" onClick={onImport}>
@@ -204,49 +209,69 @@ const TemplateLibraryModal = ({
                     >
                         导出选中
                     </Button>
+                    <DropdownMenu
+                        icon={moreVertical}
+                        label="批量操作"
+                        toggleProps={{ variant: 'secondary' }}
+                    >
+                        {() => (
+                            <MenuGroup>
+                                <MenuItem
+                                    disabled={selected.length === 0}
+                                    onClick={() =>
+                                        requestBulkAction('favorite', selected)
+                                    }
+                                >
+                                    批量收藏
+                                </MenuItem>
+                                <MenuItem
+                                    disabled={selected.length === 0}
+                                    onClick={() =>
+                                        requestBulkAction('unfavorite', selected)
+                                    }
+                                >
+                                    取消收藏
+                                </MenuItem>
+                                <MenuItem
+                                    disabled={selected.length === 0}
+                                    onClick={() =>
+                                        requestBulkAction('pin', selected)
+                                    }
+                                >
+                                    批量置顶
+                                </MenuItem>
+                                <MenuItem
+                                    disabled={selected.length === 0}
+                                    onClick={() =>
+                                        requestBulkAction('unpin', selected)
+                                    }
+                                >
+                                    取消置顶
+                                </MenuItem>
+                                <MenuItem
+                                    disabled={!favoriteIds?.length}
+                                    onClick={() =>
+                                        requestBulkAction('clearFavorites', ['_all'])
+                                    }
+                                >
+                                    清空收藏
+                                </MenuItem>
+                                <MenuItem
+                                    disabled={!pinnedIds?.length}
+                                    onClick={() =>
+                                        requestBulkAction('clearPins', ['_all'])
+                                    }
+                                >
+                                    清空置顶
+                                </MenuItem>
+                            </MenuGroup>
+                        )}
+                    </DropdownMenu>
                     <Button
                         variant="secondary"
-                        onClick={() => requestBulkAction('favorite', selected)}
-                        disabled={selected.length === 0}
+                        onClick={() => setCategoryDrawerOpen(true)}
                     >
-                        批量收藏
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() =>
-                            requestBulkAction('unfavorite', selected)
-                        }
-                        disabled={selected.length === 0}
-                    >
-                        取消收藏
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() => requestBulkAction('pin', selected)}
-                        disabled={selected.length === 0}
-                    >
-                        批量置顶
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() => requestBulkAction('unpin', selected)}
-                        disabled={selected.length === 0}
-                    >
-                        取消置顶
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() => requestBulkAction('clearFavorites', ['_all'])}
-                        disabled={!favoriteIds?.length}
-                    >
-                        清空收藏
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() => requestBulkAction('clearPins', ['_all'])}
-                        disabled={!pinnedIds?.length}
-                    >
-                        清空置顶
+                        分类管理
                     </Button>
                 </div>
                 <div className="magick-ad-template-toolbar__filters">
@@ -320,133 +345,6 @@ const TemplateLibraryModal = ({
                     </Button>
                 </Notice>
             )}
-
-            <div className="magick-ad-template-category-manager">
-                <div className="magick-ad-template-category-list">
-                    {(availableCategories || []).map((item, index) => (
-                        <span
-                            key={item.name}
-                            className={`magick-ad-template-chip ${
-                                dragIndex === index ? 'is-dragging' : ''
-                            } ${dropIndex === index ? 'is-drop' : ''} ${
-                                dropIndex === index && dragIndex !== null
-                                    ? 'is-over'
-                                    : ''
-                            } ${
-                                dropIndex === index && dragIndex !== null
-                                    ? `is-insert-${insertSide}`
-                                    : ''
-                            }`}
-                            draggable
-                            onDragStart={(event) => {
-                                event.dataTransfer.setData(
-                                    'text/plain',
-                                    String(index)
-                                );
-                                setDragIndex(index);
-                            }}
-                            onDragEnd={() => {
-                                setDragIndex(null);
-                                setDropIndex(null);
-                                setInsertSide('left');
-                            }}
-                            onDragEnter={() => setDropIndex(index)}
-                            onDragOver={(event) => {
-                                event.preventDefault();
-                                const rect =
-                                    event.currentTarget.getBoundingClientRect();
-                                const mid = rect.left + rect.width / 2;
-                                const side =
-                                    event.clientX >= mid ? 'right' : 'left';
-                                setDropIndex(index);
-                                setInsertSide(side);
-                            }}
-                            onDrop={(event) => {
-                                event.preventDefault();
-                                const from = Number(
-                                    event.dataTransfer.getData('text/plain')
-                                );
-                                if (Number.isNaN(from) || from === index) {
-                                    return;
-                                }
-                                const next = [...availableCategories];
-                                const moved = next.splice(from, 1)[0];
-                                let target =
-                                    insertSide === 'right' ? index + 1 : index;
-                                if (from < target) {
-                                    target -= 1;
-                                }
-                                next.splice(target, 0, moved);
-                                onUpdateCategories?.(next);
-                                setDropIndex(index);
-                                window.setTimeout(() => {
-                                    setDropIndex(null);
-                                }, 250);
-                            }}
-                        >
-                            <span className="magick-ad-template-chip__handle">
-                                ⋮⋮
-                            </span>
-                            <span
-                                className="magick-ad-template-chip__dot"
-                                style={{
-                                    background: item.color || '#E7E9EE',
-                                }}
-                            />
-                            {item.name}
-                            <input
-                                type="color"
-                                className="magick-ad-template-chip__color"
-                                value={item.color || '#E7E9EE'}
-                                onChange={(event) => {
-                                    const next = availableCategories.map(
-                                        (cat) =>
-                                            cat.name === item.name
-                                                ? {
-                                                      ...cat,
-                                                      color: event.target.value,
-                                                  }
-                                                : cat
-                                    );
-                                    onUpdateCategories?.(next);
-                                }}
-                                aria-label={`设置分类 ${item.name} 的颜色`}
-                            />
-                            <button
-                                type="button"
-                                className="magick-ad-template-chip__remove"
-                                onClick={() => onRemoveCategory?.(item.name)}
-                                aria-label={`移除分类 ${item.name}`}
-                            >
-                                ×
-                            </button>
-                        </span>
-                    ))}
-                </div>
-                <div className="magick-ad-template-category-hint">
-                    拖拽分类可排序，颜色用于模板标签。
-                </div>
-                <div className="magick-ad-template-category-add">
-                    <TextControl
-                        label="新增分类"
-                        value={newCategory}
-                        onChange={setNewCategory}
-                        placeholder="输入分类名称"
-                    />
-                    <Button
-                        variant="secondary"
-                        onClick={() => {
-                            if (!newCategory.trim()) {
-                                return;
-                            }
-                            onAddCategory?.(newCategory);
-                            setNewCategory('');
-                        }}
-                    >
-                        添加
-                    </Button>
-                </div>
-            </div>
 
             <TabPanel
                 className="magick-ad-template-tabs"
@@ -601,6 +499,154 @@ const TemplateLibraryModal = ({
                     );
                 }}
             </TabPanel>
+            {categoryDrawerOpen && (
+                <div
+                    className="magick-ad-template-drawer__overlay"
+                    onClick={() => setCategoryDrawerOpen(false)}
+                />
+            )}
+            <aside
+                className={`magick-ad-template-drawer ${
+                    categoryDrawerOpen ? 'is-open' : ''
+                }`}
+            >
+                <div className="magick-ad-template-drawer__header">
+                    <strong>分类管理</strong>
+                    <Button
+                        variant="tertiary"
+                        onClick={() => setCategoryDrawerOpen(false)}
+                    >
+                        关闭
+                    </Button>
+                </div>
+                <div className="magick-ad-template-category-manager">
+                    <div className="magick-ad-template-category-list">
+                        {(availableCategories || []).map((item, index) => (
+                            <span
+                                key={item.name}
+                                className={`magick-ad-template-chip ${
+                                    dragIndex === index ? 'is-dragging' : ''
+                                } ${dropIndex === index ? 'is-drop' : ''} ${
+                                    dropIndex === index && dragIndex !== null
+                                        ? 'is-over'
+                                        : ''
+                                } ${
+                                    dropIndex === index && dragIndex !== null
+                                        ? `is-insert-${insertSide}`
+                                        : ''
+                                }`}
+                                draggable
+                                onDragStart={(event) => {
+                                    event.dataTransfer.setData(
+                                        'text/plain',
+                                        String(index)
+                                    );
+                                    setDragIndex(index);
+                                }}
+                                onDragEnd={() => {
+                                    setDragIndex(null);
+                                    setDropIndex(null);
+                                    setInsertSide('left');
+                                }}
+                                onDragEnter={() => setDropIndex(index)}
+                                onDragOver={(event) => {
+                                    event.preventDefault();
+                                    const rect =
+                                        event.currentTarget.getBoundingClientRect();
+                                    const mid = rect.left + rect.width / 2;
+                                    const side =
+                                        event.clientX >= mid ? 'right' : 'left';
+                                    setDropIndex(index);
+                                    setInsertSide(side);
+                                }}
+                                onDrop={(event) => {
+                                    event.preventDefault();
+                                    const from = Number(
+                                        event.dataTransfer.getData('text/plain')
+                                    );
+                                    if (Number.isNaN(from) || from === index) {
+                                        return;
+                                    }
+                                    const next = [...availableCategories];
+                                    const moved = next.splice(from, 1)[0];
+                                    let target =
+                                        insertSide === 'right' ? index + 1 : index;
+                                    if (from < target) {
+                                        target -= 1;
+                                    }
+                                    next.splice(target, 0, moved);
+                                    onUpdateCategories?.(next);
+                                    setDropIndex(index);
+                                    window.setTimeout(() => {
+                                        setDropIndex(null);
+                                    }, 250);
+                                }}
+                            >
+                                <span className="magick-ad-template-chip__handle">
+                                    ⋮⋮
+                                </span>
+                                <span
+                                    className="magick-ad-template-chip__dot"
+                                    style={{
+                                        background: item.color || '#E7E9EE',
+                                    }}
+                                />
+                                {item.name}
+                                <input
+                                    type="color"
+                                    className="magick-ad-template-chip__color"
+                                    value={item.color || '#E7E9EE'}
+                                    onChange={(event) => {
+                                        const next = availableCategories.map(
+                                            (cat) =>
+                                                cat.name === item.name
+                                                    ? {
+                                                          ...cat,
+                                                          color: event.target.value,
+                                                      }
+                                                    : cat
+                                        );
+                                        onUpdateCategories?.(next);
+                                    }}
+                                    aria-label={`设置分类 ${item.name} 的颜色`}
+                                />
+                                <button
+                                    type="button"
+                                    className="magick-ad-template-chip__remove"
+                                    onClick={() => onRemoveCategory?.(item.name)}
+                                    aria-label={`移除分类 ${item.name}`}
+                                >
+                                    ×
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                    <div className="magick-ad-template-category-hint">
+                        拖拽分类可排序，颜色用于模板标签。
+                    </div>
+                    <div className="magick-ad-template-category-add">
+                        <TextControl
+                            label="新增分类"
+                            value={newCategory}
+                            onChange={setNewCategory}
+                            placeholder="输入分类名称"
+                        />
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                if (!newCategory.trim()) {
+                                    return;
+                                }
+                                onAddCategory?.(newCategory);
+                                setNewCategory('');
+                            }}
+                        >
+                            添加
+                        </Button>
+                    </div>
+                </div>
+            </aside>
+            </div>
         </Modal>
         {confirmAction && (
             <Modal
