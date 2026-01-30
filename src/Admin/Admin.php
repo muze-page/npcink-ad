@@ -42,6 +42,15 @@ final class Admin {
             $capability,
             'edit.php?post_type=magick_ad'
         );
+
+        add_submenu_page(
+            'magick-ad',
+            __('统计看板', 'magick-ad'),
+            __('统计看板', 'magick-ad'),
+            $capability,
+            'magick-ad-report',
+            array($this, 'render_app')
+        );
     }
 
     public function register_debug_settings(): void {
@@ -103,7 +112,7 @@ final class Admin {
     }
 
     public function enqueue_assets(string $hook): void {
-        if ($hook !== 'toplevel_page_magick-ad') {
+        if (!in_array($hook, array('toplevel_page_magick-ad', 'magick-ad_page_magick-ad-report'), true)) {
             return;
         }
 
@@ -139,6 +148,11 @@ final class Admin {
             $asset['version']
         );
 
+        $initial_tab = 'ads';
+        if (isset($_GET['page']) && $_GET['page'] === 'magick-ad-report') {
+            $initial_tab = 'report';
+        }
+
         wp_localize_script(
             'magick-ad-app',
             'MagickAD',
@@ -162,6 +176,7 @@ final class Admin {
                     'tagline' => get_option('magick_ad_brand_tagline', '广告配置与投放规则管理'),
                 ),
                 'manageCapability' => \MagickAD\Utils\Capabilities::manage_capability(),
+                'initialTab' => $initial_tab,
             )
         );
     }
