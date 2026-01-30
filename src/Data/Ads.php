@@ -13,6 +13,7 @@ final class Ads {
     public const POST_TYPE = 'magick_ad';
     public const META_DATA = '_magick_ad_data';
     public const META_ID = '_magick_ad_id';
+    public const META_SLOT = '_magick_ad_slot';
 
     public static function register(): void {
         $capability = Capabilities::manage_capability();
@@ -82,9 +83,23 @@ final class Ads {
             )
         );
 
+        register_post_meta(
+            self::POST_TYPE,
+            self::META_SLOT,
+            array(
+                'type' => 'string',
+                'single' => true,
+                'show_in_rest' => true,
+                'sanitize_callback' => 'sanitize_text_field',
+                'auth_callback' => array(__CLASS__, 'can_manage_meta'),
+            )
+        );
+
         if (is_admin()) {
             add_filter('manage_' . self::POST_TYPE . '_posts_columns', array(__CLASS__, 'columns'));
             add_action('manage_' . self::POST_TYPE . '_posts_custom_column', array(__CLASS__, 'render_column'), 10, 2);
+            add_action('restrict_manage_posts', array(__CLASS__, 'render_slot_filter'));
+            add_action('pre_get_posts', array(__CLASS__, 'apply_slot_filter'));
         }
     }
 
@@ -217,6 +232,11 @@ final class Ads {
             }
 
             update_post_meta($post_id, self::META_ID, $ad_id);
+            $slot_value = '';
+            if (isset($ad['options']['slot'])) {
+                $slot_value = sanitize_title((string) $ad['options']['slot']);
+            }
+            update_post_meta($post_id, self::META_SLOT, $slot_value);
             $ad['id'] = $ad_id;
             $ad['name'] = $title;
             $ad['status'] = get_post_status($post_id);
@@ -286,6 +306,7 @@ final class Ads {
         $next['magick_ad_enabled'] = __('启用状态', 'magick-ad');
         $next['magick_ad_type'] = __('素材/容器', 'magick-ad');
         $next['magick_ad_placement'] = __('投放位置', 'magick-ad');
+        $next['magick_ad_slot'] = __('Slot', 'magick-ad');
         $next['date'] = $columns['date'] ?? __('日期', 'magick-ad');
         return $next;
     }
@@ -346,7 +367,45 @@ final class Ads {
                 $label = 'node ' . $prefix . $node_value;
             }
             echo esc_html($label ?: '-');
+            return;
         }
+
+        if ($column === 'magick_ad_slot') {
+            $slot = isset($options['slot']) ? (string) $options['slot'] : '';
+            echo $slot !== '' ? esc_html($slot) : '-';
+        }
+    }
+
+    public static function render_slot_filter(string $post_type): void {
+        if ($post_type !== self::POST_TYPE) {
+            return;
+        }
+        $value = isset($_GET['magick_ad_slot']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_slot'])) : '';
+        echo '<input type="text" name="magick_ad_slot" value="' . esc_attr($value) . '" placeholder="' . esc_attr__('Slot 筛选', 'magick-ad') . '" style="max-width:160px;margin-left:6px;" />';
+    }
+
+    public static function apply_slot_filter($query): void {
+        if (!is_admin() || !$query->is_main_query()) {
+            return;
+        }
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if (!$screen || $screen->post_type !== self::POST_TYPE) {
+            return;
+        }
+        if (empty($_GET['magick_ad_slot'])) {
+            return;
+        }
+        $slot = sanitize_text_field(wp_unslash($_GET['magick_ad_slot']));
+        $query->set(
+            'meta_query',
+            array(
+                array(
+                    'key' => self::META_SLOT,
+                    'value' => $slot,
+                    'compare' => 'LIKE',
+                ),
+            )
+        );
     }
 
     private static function sanitize_status($value): string {

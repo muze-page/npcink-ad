@@ -55,6 +55,14 @@
         "videoUrl": {
             "type": "string",
             "default": ""
+        },
+        "slot": {
+            "type": "string",
+            "default": ""
+        },
+        "adId": {
+            "type": "string",
+            "default": ""
         }
     }
 }

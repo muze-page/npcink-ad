@@ -11,6 +11,7 @@ use MagickAD\Data\Ads_Migrator;
 use MagickAD\Data\Schema;
 use MagickAD\Data\Template_Migrator;
 use MagickAD\Frontend\Frontend;
+use MagickAD\Frontend\Template_Tags;
 use MagickAD\REST\Routes;
 use MagickAD\Utils\Debug;
 
@@ -46,6 +47,7 @@ final class Plugin {
         (new Patterns())->register();
         (new Routes())->register();
         (new Frontend())->register();
+        (new Template_Tags())->register();
         (new Debug())->register();
         Ads::register();
 

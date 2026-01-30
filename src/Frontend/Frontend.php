@@ -27,10 +27,55 @@ final class Frontend {
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_assets'));
         add_action('template_redirect', array(__CLASS__, 'handle_preview_request'));
         self::init();
+        add_shortcode('magick_ad', array(__CLASS__, 'shortcode'));
     }
 
     public static function render_block_ad(array $ad): string {
-        return self::build_ad_markup($ad, 'content');
+        return self::render_ad_array($ad, array('position' => 'block'));
+    }
+
+    public static function render_ad_array(array $ad, array $args = array()): string {
+        if (empty($ad)) {
+            return '';
+        }
+        if (!self::should_display_ad($ad) && empty($args['force'])) {
+            return '';
+        }
+        $ad = self::apply_render_overrides($ad, $args);
+        $position = isset($args['position']) && is_string($args['position'])
+            ? $args['position']
+            : 'slot';
+        return self::build_ad_markup($ad, $position);
+    }
+
+    public static function render_slot($slot_or_id, array $args = array()): string {
+        $ad = self::resolve_ad($slot_or_id, $args);
+        if (!$ad) {
+            return '';
+        }
+        return self::render_ad_array($ad, $args);
+    }
+
+    public static function shortcode($atts = array()) {
+        $atts = shortcode_atts(
+            array(
+                'id' => '',
+                'slot' => '',
+                'container' => '',
+                'class' => '',
+                'position' => 'shortcode',
+            ),
+            $atts,
+            'magick_ad'
+        );
+        $slot_or_id = $atts['id'] ?: $atts['slot'];
+        return self::render_slot($slot_or_id, array(
+            'id' => $atts['id'],
+            'slot' => $atts['slot'],
+            'container' => $atts['container'],
+            'class' => $atts['class'],
+            'position' => $atts['position'] ?: 'shortcode',
+        ));
     }
 
     private static function init() {
@@ -66,6 +111,68 @@ final class Frontend {
             'position' => $position,
             'paragraph' => $paragraph,
         );
+    }
+
+    private static function apply_render_overrides(array $ad, array $args): array {
+        $options = isset($ad['options']) && is_array($ad['options']) ? $ad['options'] : array();
+        if (!empty($args['container'])) {
+            $container = Settings::sanitize_choice(
+                $args['container'],
+                array('inline', 'popup', 'banner', 'floating', 'interstitial'),
+                $options['container_type'] ?? 'inline'
+            );
+            $options['container_type'] = $container;
+        }
+        if (!empty($args['creative'])) {
+            $creative = Settings::sanitize_choice(
+                $args['creative'],
+                array('html', 'image', 'video', 'block'),
+                $options['creative_type'] ?? 'html'
+            );
+            $options['creative_type'] = $creative;
+        }
+        $ad['options'] = $options;
+
+        if (!empty($args['class']) && is_string($args['class'])) {
+            $ad['_extra_class'] = $args['class'];
+        }
+        if (!empty($args['slot']) && is_string($args['slot'])) {
+            $ad['_slot'] = $args['slot'];
+        } elseif (!empty($args['id']) && is_string($args['id'])) {
+            $ad['_slot'] = $args['id'];
+        }
+        return $ad;
+    }
+
+    private static function resolve_ad($slot_or_id, array $args = array()) {
+        $slot = isset($args['slot']) ? (string) $args['slot'] : '';
+        $id = isset($args['id']) ? (string) $args['id'] : '';
+        if (!$slot && $slot_or_id) {
+            $slot = (string) $slot_or_id;
+        }
+        if (!$id && $slot_or_id) {
+            $id = (string) $slot_or_id;
+        }
+        if ($slot) {
+            $slot = (string) apply_filters('magick_ad_resolve_slot', $slot, $args);
+            if ($slot && !$id) {
+                $id = $slot;
+            }
+        }
+
+        $settings = Settings::get_settings();
+        $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        foreach ($ads as $ad) {
+            $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
+            $ad_slot = isset($ad['options']['slot']) ? (string) $ad['options']['slot'] : '';
+            if ($id && $ad_id === $id) {
+                return $ad;
+            }
+            if ($slot && $ad_slot && $slot === $ad_slot) {
+                return $ad;
+            }
+        }
+        return null;
     }
 
     public static function enqueue_assets(): void {
@@ -1400,6 +1507,9 @@ final class Frontend {
         $random_strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
         $data_attrs = ' data-ad-id="' . esc_attr(isset($ad['id']) ? $ad['id'] : '') . '" data-ad-position="' . esc_attr($position) . '"';
         $data_attrs .= ' data-ad-container="' . esc_attr($container_type) . '"';
+        if (!empty($ad['_slot']) && is_string($ad['_slot'])) {
+            $data_attrs .= ' data-ad-slot="' . esc_attr($ad['_slot']) . '"';
+        }
         $placement_hook = isset($options['placement_hook']) ? $options['placement_hook'] : '';
         if ($placement_hook === 'node') {
             $node_type = isset($options['node_target_type']) ? $options['node_target_type'] : 'id';
@@ -1458,6 +1568,13 @@ final class Frontend {
         }
         if ($display_mode === 'random' && $random_strategy === 'session') {
             $unit_class .= ' magick-ad-is-hidden';
+        }
+        if (!empty($ad['_extra_class']) && is_string($ad['_extra_class'])) {
+            $classes = preg_split('/\s+/', trim($ad['_extra_class']));
+            $classes = array_filter(array_map('sanitize_html_class', $classes));
+            if (!empty($classes)) {
+                $unit_class .= ' ' . implode(' ', $classes);
+            }
         }
         $inner_style = '';
         if ($reserve_height > 0) {

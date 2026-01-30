@@ -43,6 +43,7 @@ import {
     TARGET_TYPE_OPTIONS,
     getPositionOptions,
 } from '../constants/options';
+import { cleanForSlug } from '@wordpress/url';
 
 const AdsConfig = () => {
     const ads = useStore((state) => state.ads);
@@ -213,6 +214,49 @@ const AdsConfig = () => {
         [ads, selectedId]
     );
 
+    const normalizedSlot = useMemo(
+        () => cleanForSlug(selectedAd?.options?.slot || ''),
+        [selectedAd?.options?.slot]
+    );
+
+    const autoSlot = useMemo(() => {
+        if (!selectedAd) {
+            return '';
+        }
+        return buildUniqueSlot(selectedAd.name || '', selectedAd.id);
+    }, [selectedAd?.name, selectedAd?.id, ads]);
+
+    useEffect(() => {
+        if (!selectedAd) {
+            return;
+        }
+        const mode = selectedAd.options?.slot_mode || 'auto';
+        if (mode !== 'auto') {
+            return;
+        }
+        const current = cleanForSlug(selectedAd.options?.slot || '');
+        if (autoSlot && current !== autoSlot) {
+            updateAdGroup(selectedAd.id, {
+                options: {
+                    ...selectedAd.options,
+                    slot: autoSlot,
+                    slot_mode: 'auto',
+                },
+            });
+        }
+    }, [autoSlot, selectedAd?.options?.slot_mode, selectedAd?.id]);
+
+    const slotConflict = useMemo(() => {
+        if (!normalizedSlot) {
+            return null;
+        }
+        return ads.find(
+            (ad) =>
+                ad.id !== selectedAd?.id &&
+                cleanForSlug(ad.options?.slot || '') === normalizedSlot
+        );
+    }, [ads, normalizedSlot, selectedAd?.id]);
+
     const editorModeRaw =
         selectedAd?.options?.editor_mode || 'design';
     const effectiveEditorMode =
@@ -259,6 +303,25 @@ const AdsConfig = () => {
         }
 
         return placement;
+    };
+
+    const buildUniqueSlot = (name, adId) => {
+        const base =
+            cleanForSlug(name || '') ||
+            (adId ? `ad-${adId.slice(-6)}` : 'ad-slot');
+        let candidate = base || 'ad-slot';
+        let index = 2;
+        while (
+            ads.some(
+                (ad) =>
+                    ad.id !== adId &&
+                    cleanForSlug(ad.options?.slot || '') === candidate
+            )
+        ) {
+            candidate = `${base}-${index}`;
+            index += 1;
+        }
+        return candidate;
     };
 
     const placementToSlotValue = (placement) => {
@@ -1536,6 +1599,45 @@ const AdsConfig = () => {
                             }}
                             help="达到排期时间后，广告会自动发布。"
                         />
+                    )}
+                    <TextControl
+                        label="Slot（广告位）"
+                        value={selectedAd.options?.slot || ''}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                slot: value,
+                                slot_mode: 'manual',
+                            })
+                        }
+                        help={
+                            slotConflict
+                                ? `已被“${slotConflict.name || '未命名广告'}”占用，请改为唯一值。`
+                                : '用于区块/短代码/模板标签调用。建议使用小写字母、数字和短横线。'
+                        }
+                        className={slotConflict ? 'magick-ad-field-error' : ''}
+                        disabled={(selectedAd.options?.slot_mode || 'auto') === 'auto'}
+                    />
+                    <ToggleControl
+                        label="自动生成 Slot"
+                        checked={(selectedAd.options?.slot_mode || 'auto') === 'auto'}
+                        onChange={(checked) => {
+                            if (checked) {
+                                handleUpdateOptions({
+                                    slot_mode: 'auto',
+                                    slot: autoSlot,
+                                });
+                                return;
+                            }
+                            handleUpdateOptions({
+                                slot_mode: 'manual',
+                            });
+                        }}
+                        help="自动模式会根据广告名称生成唯一 Slot。"
+                    />
+                    {slotConflict && (
+                        <Notice status="error" isDismissible={false}>
+                            Slot 重复会导致区块/短代码匹配冲突，请修改后再保存。
+                        </Notice>
                     )}
                 </CardBody>
             </Card>

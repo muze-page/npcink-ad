@@ -23,7 +23,7 @@ final class Blocks {
         wp_register_script(
             $editor_handle,
             MAGICK_AD_URL . 'assets/blocks/magick-ad-ad/editor.js',
-            array('wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components'),
+            array('wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-data', 'wp-core-data', 'wp-server-side-render'),
             MAGICK_AD_VERSION,
             true
         );
@@ -36,6 +36,18 @@ final class Blocks {
 
     public static function render_ad_block($attributes) {
         $attrs = is_array($attributes) ? $attributes : array();
+        $slot = isset($attrs['slot']) ? sanitize_title((string) $attrs['slot']) : '';
+        $ad_id = isset($attrs['adId']) ? sanitize_text_field((string) $attrs['adId']) : '';
+        if ($slot || $ad_id) {
+            $args = array('position' => 'block');
+            if ($slot) {
+                $args['slot'] = $slot;
+            } elseif ($ad_id) {
+                $args['id'] = $ad_id;
+            }
+            return Frontend::render_slot($slot ?: $ad_id, $args);
+        }
+
         $creative = isset($attrs['creativeType']) ? (string) $attrs['creativeType'] : 'html';
         if (!in_array($creative, array('html', 'image', 'video', 'block'), true)) {
             $creative = 'html';
@@ -89,6 +101,6 @@ final class Blocks {
             ),
         );
 
-        return Frontend::render_block_ad($ad);
+        return Frontend::render_ad_array($ad, array('position' => 'block'));
     }
 }
