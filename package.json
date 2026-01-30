@@ -14,6 +14,7 @@
     "@wordpress/block-library": "wp-6.9",
     "@wordpress/editor": "wp-6.9",
     "@wordpress/icons": "wp-6.9",
+    "@wordpress/url": "wp-6.9",
     "recharts": "^2.15.4",
     "zustand": "^5.0.10"
   }

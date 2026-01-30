@@ -98,6 +98,7 @@ final class Ads {
         if (is_admin()) {
             add_filter('manage_' . self::POST_TYPE . '_posts_columns', array(__CLASS__, 'columns'));
             add_action('manage_' . self::POST_TYPE . '_posts_custom_column', array(__CLASS__, 'render_column'), 10, 2);
+            add_filter('manage_edit-' . self::POST_TYPE . '_sortable_columns', array(__CLASS__, 'sortable_columns'));
             add_action('restrict_manage_posts', array(__CLASS__, 'render_slot_filter'));
             add_action('pre_get_posts', array(__CLASS__, 'apply_slot_filter'));
         }
@@ -376,6 +377,11 @@ final class Ads {
         }
     }
 
+    public static function sortable_columns(array $columns): array {
+        $columns['magick_ad_slot'] = 'magick_ad_slot';
+        return $columns;
+    }
+
     public static function render_slot_filter(string $post_type): void {
         if ($post_type !== self::POST_TYPE) {
             return;
@@ -391,6 +397,11 @@ final class Ads {
         $screen = function_exists('get_current_screen') ? get_current_screen() : null;
         if (!$screen || $screen->post_type !== self::POST_TYPE) {
             return;
+        }
+        if ($query->get('orderby') === 'magick_ad_slot') {
+            $query->set('meta_key', self::META_SLOT);
+            $query->set('orderby', 'meta_value');
+            $query->set('meta_type', 'CHAR');
         }
         if (empty($_GET['magick_ad_slot'])) {
             return;

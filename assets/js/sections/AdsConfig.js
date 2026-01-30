@@ -324,6 +324,57 @@ const AdsConfig = () => {
         return candidate;
     };
 
+    const ensureUniqueSlot = (slot, adId) => {
+        const base = cleanForSlug(slot || '');
+        if (!base) {
+            return '';
+        }
+        let candidate = base;
+        let index = 2;
+        while (
+            ads.some(
+                (ad) =>
+                    ad.id !== adId &&
+                    cleanForSlug(ad.options?.slot || '') === candidate
+            )
+        ) {
+            candidate = `${base}-${index}`;
+            index += 1;
+        }
+        return candidate;
+    };
+
+    const fixDuplicateSlots = () => {
+        const used = new Set();
+        let fixed = 0;
+        ads.forEach((ad) => {
+            const raw = cleanForSlug(ad.options?.slot || '');
+            if (!raw) {
+                return;
+            }
+            if (!used.has(raw)) {
+                used.add(raw);
+                return;
+            }
+            let candidate = raw;
+            let index = 2;
+            while (used.has(candidate)) {
+                candidate = `${raw}-${index}`;
+                index += 1;
+            }
+            used.add(candidate);
+            updateAdGroup(ad.id, {
+                options: {
+                    ...ad.options,
+                    slot: candidate,
+                    slot_mode: 'manual',
+                },
+            });
+            fixed += 1;
+        });
+        return fixed;
+    };
+
     const placementToSlotValue = (placement) => {
         if (!placement?.hook) {
             return '';
@@ -790,6 +841,15 @@ const AdsConfig = () => {
         }
         setShowValidation(false);
 
+        const fixed = fixDuplicateSlots();
+        if (fixed > 0) {
+            showNotice(
+                'warning',
+                `已自动修复 ${fixed} 个重复 Slot，正在继续保存...`,
+                2500
+            );
+        }
+
         try {
             await saveToDB();
             showNotice('success', '保存成功', 2500);
@@ -800,6 +860,18 @@ const AdsConfig = () => {
                 '保存失败，请检查网络或权限设置。';
             showNotice('error', message, 4000);
         }
+    };
+
+    const handleSaveWithSlotCheck = async () => {
+        const fixed = fixDuplicateSlots();
+        if (fixed > 0) {
+            showNotice(
+                'warning',
+                `已自动修复 ${fixed} 个重复 Slot，正在继续保存...`,
+                2500
+            );
+        }
+        return saveToDB();
     };
 
     const openSaveTemplate = async (type) => {
@@ -1609,6 +1681,30 @@ const AdsConfig = () => {
                                 slot_mode: 'manual',
                             })
                         }
+                        onBlur={() => {
+                            if (!selectedAd) {
+                                return;
+                            }
+                            const slot = selectedAd.options?.slot || '';
+                            const unique = ensureUniqueSlot(
+                                slot,
+                                selectedAd.id
+                            );
+                            if (unique && unique !== cleanForSlug(slot)) {
+                                updateAdGroup(selectedAd.id, {
+                                    options: {
+                                        ...selectedAd.options,
+                                        slot: unique,
+                                        slot_mode: 'manual',
+                                    },
+                                });
+                                showNotice(
+                                    'info',
+                                    `Slot 已自动修复为 "${unique}"`,
+                                    2500
+                                );
+                            }
+                        }}
                         help={
                             slotConflict
                                 ? `已被“${slotConflict.name || '未命名广告'}”占用，请改为唯一值。`
@@ -3339,7 +3435,7 @@ const AdsConfig = () => {
                                 if (selectedId === targetId) {
                                     setSelectedId(null);
                                 }
-                                saveToDB()
+                                handleSaveWithSlotCheck()
                                     .then(() => {
                                         showNotice(
                                             'success',
@@ -3390,7 +3486,7 @@ const AdsConfig = () => {
                                     name: renameValue.trim(),
                                 });
                                 setRenameTarget(null);
-                                saveToDB()
+                                handleSaveWithSlotCheck()
                                     .then(() => {
                                         showNotice('success', '名称已更新', 2000);
                                     })
