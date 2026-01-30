@@ -392,6 +392,130 @@ const AdsConfig = () => {
         });
     };
 
+    const openNodePicker = () => {
+        const base =
+            window.MagickAD?.previewUrl || window.location.origin;
+        let url = base;
+        try {
+            const next = new URL(base);
+            next.searchParams.set('magick_ad_picker', '1');
+            next.searchParams.set(
+                'magick_ad_picker_origin',
+                window.location.origin
+            );
+            url = next.toString();
+        } catch (err) {
+            url = base;
+        }
+        window.open(url, 'magick-ad-picker');
+    };
+
+    const renderNodePlacement = () => {
+        if (!selectedAd) {
+            return null;
+        }
+        if (resolvePlacement(selectedAd.options || {}).hook !== 'node') {
+            return null;
+        }
+        return (
+            <div className="magick-ad-node-placement">
+                <h4 className="magick-ad-field__label">节点投放</h4>
+                <Button variant="secondary" onClick={openNodePicker}>
+                    可视化选择
+                </Button>
+                <SelectControl
+                    label="定位方式"
+                    value={selectedAd.options?.node_target_type || 'id'}
+                    options={[
+                        { label: 'ID', value: 'id' },
+                        { label: 'Class', value: 'class' },
+                    ]}
+                    onChange={(value) =>
+                        handleUpdateOptions({
+                            node_target_type: value,
+                        })
+                    }
+                />
+                <TextControl
+                    label="节点值"
+                    value={selectedAd.options?.node_target_value || ''}
+                    onChange={(value) =>
+                        handleUpdateOptions({
+                            node_target_value: value.trim(),
+                        })
+                    }
+                    help="ID 不带 #，Class 不带 ."
+                />
+                <SelectControl
+                    label="插入方式"
+                    value={selectedAd.options?.node_insert || 'append'}
+                    options={[
+                        { label: '插入到节点内部末尾', value: 'append' },
+                        { label: '插入到节点内部开头', value: 'prepend' },
+                        { label: '插入到节点外部前面', value: 'before' },
+                        { label: '插入到节点外部后面', value: 'after' },
+                    ]}
+                    onChange={(value) =>
+                        handleUpdateOptions({
+                            node_insert: value,
+                        })
+                    }
+                />
+                <SelectControl
+                    label="匹配策略"
+                    value={selectedAd.options?.node_match || 'first'}
+                    options={[
+                        { label: '仅第一个匹配', value: 'first' },
+                        { label: '第 N 个', value: 'nth' },
+                        { label: '全部匹配', value: 'all' },
+                    ]}
+                    onChange={(value) =>
+                        handleUpdateOptions({
+                            node_match: value,
+                        })
+                    }
+                    help="Class 可能匹配多个元素，默认仅第一个。"
+                />
+                {selectedAd.options?.node_match === 'nth' && (
+                    <RangeControl
+                        label="第 N 个"
+                        min={1}
+                        max={20}
+                        value={Number(selectedAd.options?.node_index || 1) || 1}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                node_index: Number(value),
+                            })
+                        }
+                    />
+                )}
+                <SelectControl
+                    label="找不到节点时"
+                    value={selectedAd.options?.node_fallback || 'hide'}
+                    options={[
+                        { label: '隐藏广告', value: 'hide' },
+                        { label: '回退到页脚', value: 'footer' },
+                    ]}
+                    onChange={(value) =>
+                        handleUpdateOptions({
+                            node_fallback: value,
+                        })
+                    }
+                />
+                <ToggleControl
+                    label="紧凑模式"
+                    checked={selectedAd.options?.node_compact !== false}
+                    onChange={(value) =>
+                        handleUpdateOptions({
+                            node_compact: value,
+                        })
+                    }
+                    help="默认移除广告单元外边距，避免挤压布局。"
+                />
+            </div>
+        );
+    };
+
     useEffect(() => {
         const handleMessage = (event) => {
             if (event.origin !== window.location.origin) {
@@ -1725,204 +1849,7 @@ const AdsConfig = () => {
                                             />
                                         </>
                                     )}
-                                    {resolvePlacement(
-                                        selectedAd.options || {}
-                                    ).hook === 'node' && (
-                                        <div className="magick-ad-node-placement">
-                                            <h4 className="magick-ad-field__label">
-                                                节点投放
-                                            </h4>
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() => {
-                                                    const base =
-                                                        window.MagickAD
-                                                            ?.previewUrl ||
-                                                        window.location.origin;
-                                                    let url = base;
-                                                    try {
-                                                        const next = new URL(
-                                                            base
-                                                        );
-                                                        next.searchParams.set(
-                                                            'magick_ad_picker',
-                                                            '1'
-                                                        );
-                                                        next.searchParams.set(
-                                                            'magick_ad_picker_origin',
-                                                            window.location
-                                                                .origin
-                                                        );
-                                                        url = next.toString();
-                                                    } catch (err) {
-                                                        url = base;
-                                                    }
-                                                    window.open(
-                                                        url,
-                                                        'magick-ad-picker'
-                                                    );
-                                                }}
-                                            >
-                                                可视化选择
-                                            </Button>
-                                            <SelectControl
-                                                label="定位方式"
-                                                value={
-                                                    selectedAd.options
-                                                        ?.node_target_type ||
-                                                    'id'
-                                                }
-                                                options={[
-                                                    {
-                                                        label: 'ID',
-                                                        value: 'id',
-                                                    },
-                                                    {
-                                                        label: 'Class',
-                                                        value: 'class',
-                                                    },
-                                                ]}
-                                                onChange={(value) =>
-                                                    handleUpdateOptions({
-                                                        node_target_type:
-                                                            value,
-                                                    })
-                                                }
-                                            />
-                                            <TextControl
-                                                label="节点值"
-                                                value={
-                                                    selectedAd.options
-                                                        ?.node_target_value ||
-                                                    ''
-                                                }
-                                                onChange={(value) =>
-                                                    handleUpdateOptions({
-                                                        node_target_value:
-                                                            value.trim(),
-                                                    })
-                                                }
-                                                help="ID 不带 #，Class 不带 ."
-                                            />
-                                            <SelectControl
-                                                label="插入方式"
-                                                value={
-                                                    selectedAd.options
-                                                        ?.node_insert ||
-                                                    'append'
-                                                }
-                                                options={[
-                                                    {
-                                                        label: '插入到节点内部末尾',
-                                                        value: 'append',
-                                                    },
-                                                    {
-                                                        label: '插入到节点内部开头',
-                                                        value: 'prepend',
-                                                    },
-                                                    {
-                                                        label: '插入到节点外部前面',
-                                                        value: 'before',
-                                                    },
-                                                    {
-                                                        label: '插入到节点外部后面',
-                                                        value: 'after',
-                                                    },
-                                                ]}
-                                                onChange={(value) =>
-                                                    handleUpdateOptions({
-                                                        node_insert: value,
-                                                    })
-                                                }
-                                            />
-                                            <SelectControl
-                                                label="匹配策略"
-                                                value={
-                                                    selectedAd.options
-                                                        ?.node_match ||
-                                                    'first'
-                                                }
-                                                options={[
-                                                    {
-                                                        label: '仅第一个匹配',
-                                                        value: 'first',
-                                                    },
-                                                    {
-                                                        label: '第 N 个',
-                                                        value: 'nth',
-                                                    },
-                                                    {
-                                                        label: '全部匹配',
-                                                        value: 'all',
-                                                    },
-                                                ]}
-                                                onChange={(value) =>
-                                                    handleUpdateOptions({
-                                                        node_match: value,
-                                                    })
-                                                }
-                                                help="Class 可能匹配多个元素，默认仅第一个。"
-                                            />
-                                            {selectedAd.options
-                                                ?.node_match === 'nth' && (
-                                                <RangeControl
-                                                    label="第 N 个"
-                                                    min={1}
-                                                    max={20}
-                                                    value={
-                                                        Number(
-                                                            selectedAd.options
-                                                                ?.node_index ||
-                                                                1
-                                                        ) || 1
-                                                    }
-                                                    onChange={(value) =>
-                                                        handleUpdateOptions({
-                                                            node_index:
-                                                                Number(value),
-                                                        })
-                                                    }
-                                                />
-                                            )}
-                                            <SelectControl
-                                                label="找不到节点时"
-                                                value={
-                                                    selectedAd.options
-                                                        ?.node_fallback ||
-                                                    'hide'
-                                                }
-                                                options={[
-                                                    {
-                                                        label: '隐藏广告',
-                                                        value: 'hide',
-                                                    },
-                                                    {
-                                                        label: '回退到页脚',
-                                                        value: 'footer',
-                                                    },
-                                                ]}
-                                                onChange={(value) =>
-                                                    handleUpdateOptions({
-                                                        node_fallback: value,
-                                                    })
-                                                }
-                                            />
-                                            <ToggleControl
-                                                label="紧凑模式"
-                                                checked={
-                                                    selectedAd.options
-                                                        ?.node_compact !==
-                                                    false
-                                                }
-                                                onChange={(value) =>
-                                                    handleUpdateOptions({
-                                                        node_compact: value,
-                                                    })
-                                                }
-                                                help="默认移除广告单元外边距，避免挤压布局。"
-                                            />
-                                        </div>
-                                    )}
+                                    {renderNodePlacement()}
                                 </PanelBody>
                                 <PanelBody title="频控" initialOpen>
                                     <SelectControl
@@ -2710,6 +2637,7 @@ const AdsConfig = () => {
                                                 }
                                                 disabled={!isInlineContainer}
                                             />
+                                            {renderNodePlacement()}
                                             {resolvePlacement(
                                                 selectedAd.options || {}
                                             ).hook === 'head' && (
@@ -2818,6 +2746,7 @@ const AdsConfig = () => {
                                                     !isInlineContainer
                                                 }
                                             />
+                                            {renderNodePlacement()}
                                             {resolvePlacement(
                                                 selectedAd.options || {}
                                             ).hook === 'head' && (
