@@ -9,6 +9,8 @@
     }
 
     const origin = params.get('magick_ad_picker_origin') || '';
+    const safeOrigin =
+        origin && origin === window.location.origin ? origin : '';
     const voidElements = new Set([
         'AREA',
         'BASE',
@@ -73,8 +75,11 @@
 
     const sendSelection = (payload) => {
         if (window.opener && payload) {
+            if (!safeOrigin) {
+                return;
+            }
             try {
-                window.opener.postMessage(payload, origin || '*');
+                window.opener.postMessage(payload, safeOrigin);
             } catch (err) {
                 // ignore
             }

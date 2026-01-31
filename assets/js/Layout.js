@@ -45,6 +45,7 @@ const Layout = ({
     contentPanels,
     preview,
     previewTarget,
+    previewLogin = 'auto',
 }) => {
     const iframeRef = useRef(null);
     const editorRef = useRef(null);
@@ -434,6 +435,13 @@ const Layout = ({
         return url.toString();
     }, [adData?.id, devicePreview, previewTarget]);
 
+    const isPagePreview = useMemo(() => {
+        if (!previewTarget || typeof previewTarget !== 'string') {
+            return false;
+        }
+        return previewTarget.trim().length > 0;
+    }, [previewTarget]);
+
     const previewFrame = useMemo(() => {
         if (!previewSrc) {
             return previewBody;
@@ -527,12 +535,14 @@ const Layout = ({
         };
 
         const handler = window.setTimeout(() => {
+            const messageType = 'MAGICK_AD_PREVIEW_UPDATE';
             iframeRef.current?.contentWindow?.postMessage(
                 {
-                    type: 'MAGICK_AD_PREVIEW_UPDATE',
+                    type: messageType,
                     payload: {
                         ad: previewAd,
                         device: devicePreview,
+                        login: previewLogin,
                     },
                 },
                 window.location.origin
@@ -546,6 +556,8 @@ const Layout = ({
         creativeType,
         containerType,
         devicePreview,
+        previewLogin,
+        isPagePreview,
     ]);
 
     useEffect(() => {

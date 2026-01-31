@@ -55,8 +55,26 @@ final class Patterns {
         return sprintf('<!-- wp:magick-ad/ad %s /-->', $json ? $json : '{}');
     }
 
+    private function media_placeholder_html(string $label): string {
+        $text = esc_html($label);
+        return '<div style="position:relative;width:100%;padding-top:56.25%;border-radius:8px;background:linear-gradient(135deg,#0f172a,#1e293b);overflow:hidden;">'
+            . '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#e2e8f0;font-size:15px;text-align:center;">'
+            . '<div style="width:52px;height:52px;border-radius:999px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">'
+            . '<div style="width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-left:14px solid #e2e8f0;margin-left:3px;"></div>'
+            . '</div>'
+            . '<span>' . $text . '</span>'
+            . '</div>'
+            . '</div>';
+    }
+
     private function get_patterns(): array {
         $patterns = array();
+        $allow_external_assets = (bool) apply_filters('magick_ad_allow_external_pattern_assets', false);
+        $asset_base = rtrim(MAGICK_AD_URL, '/') . '/assets/placeholders/';
+        $banner_placeholder = $asset_base . 'banner.svg';
+        $square_placeholder = $asset_base . 'square.svg';
+        $feature_placeholder = $asset_base . 'feature.svg';
+        $floating_placeholder = $asset_base . 'floating.svg';
 
         $patterns[] = array(
             'name' => 'magick-ad/adsense-responsive',
@@ -81,7 +99,12 @@ final class Patterns {
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '促销',
-                    'html' => '<div class="magick-hero-banner" style="background-image:url(https://via.placeholder.com/1600x400?text=Banner);padding:64px 24px;text-align:center;color:#ffffff;"><div style="max-width:960px;margin:0 auto;"><h2 style="margin:0 0 12px;font-size:32px;">全站优惠活动</h2><p style="margin:0;font-size:18px;opacity:.9;">立即加入，获取专属折扣</p></div></div>',
+                    'html' => sprintf(
+                        '<div class="magick-hero-banner" style="%spadding:64px 24px;text-align:center;color:#ffffff;"><div style="max-width:960px;margin:0 auto;"><h2 style="margin:0 0 12px;font-size:32px;">全站优惠活动</h2><p style="margin:0;font-size:18px;opacity:.9;">立即加入，获取专属折扣</p></div></div>',
+                        $allow_external_assets
+                            ? 'background-image:url(https://via.placeholder.com/1600x400?text=Banner);'
+                            : 'background:linear-gradient(135deg,#2563eb,#22d3ee);'
+                    ),
                 )),
             ),
         );
@@ -90,12 +113,14 @@ final class Patterns {
             'name' => 'magick-ad/responsive-embed',
             'args' => array(
                 'title' => esc_html__('嵌入式视频', 'magick-ad'),
-                'description' => esc_html__('响应式 iframe 容器（16:9）', 'magick-ad'),
+                'description' => esc_html__('响应式视频容器（16:9）', 'magick-ad'),
                 'categories' => array('magick-ad'),
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '视频',
-                    'html' => '<div style="position:relative;width:100%;padding-top:56.25%;overflow:hidden;border-radius:8px;background:#000;"><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Video" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>',
+                    'html' => $allow_external_assets
+                        ? '<div style="position:relative;width:100%;padding-top:56.25%;overflow:hidden;border-radius:8px;background:#000;"><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Video" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>'
+                        : $this->media_placeholder_html('视频占位（请替换链接）'),
                 )),
             ),
         );
@@ -151,7 +176,9 @@ final class Patterns {
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'image',
                     'templateCategory' => '促销',
-                    'imageUrl' => 'https://via.placeholder.com/1200x240?text=Banner',
+                    'imageUrl' => $allow_external_assets
+                        ? 'https://via.placeholder.com/1200x240?text=Banner'
+                        : $banner_placeholder,
                     'imageAlt' => 'Banner',
                 )),
             ),
@@ -166,39 +193,73 @@ final class Patterns {
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'image',
                     'templateCategory' => '内容',
-                    'imageUrl' => 'https://via.placeholder.com/600x600?text=Image',
+                    'imageUrl' => $allow_external_assets
+                        ? 'https://via.placeholder.com/600x600?text=Image'
+                        : $square_placeholder,
                     'imageAlt' => 'Square',
                 )),
             ),
         );
 
-        $patterns[] = array(
-            'name' => 'magick-ad/video-inline',
-            'args' => array(
-                'title' => esc_html__('内嵌视频', 'magick-ad'),
-                'description' => esc_html__('贴合正文的视频广告', 'magick-ad'),
-                'categories' => array('magick-ad'),
-                'content' => $this->build_ad_block(array(
-                    'creativeType' => 'video',
-                    'templateCategory' => '视频',
-                    'videoUrl' => 'https://www.w3schools.com/html/mov_bbb.mp4',
-                )),
-            ),
-        );
+        if ($allow_external_assets) {
+            $patterns[] = array(
+                'name' => 'magick-ad/video-inline',
+                'args' => array(
+                    'title' => esc_html__('内嵌视频', 'magick-ad'),
+                    'description' => esc_html__('贴合正文的视频广告', 'magick-ad'),
+                    'categories' => array('magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'video',
+                        'templateCategory' => '视频',
+                        'videoUrl' => 'https://www.w3schools.com/html/mov_bbb.mp4',
+                    )),
+                ),
+            );
+        } else {
+            $patterns[] = array(
+                'name' => 'magick-ad/video-inline',
+                'args' => array(
+                    'title' => esc_html__('内嵌视频', 'magick-ad'),
+                    'description' => esc_html__('视频占位（请替换链接）', 'magick-ad'),
+                    'categories' => array('magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'html',
+                        'templateCategory' => '视频',
+                        'html' => $this->media_placeholder_html('视频占位（请替换链接）'),
+                    )),
+                ),
+            );
+        }
 
-        $patterns[] = array(
-            'name' => 'magick-ad/video-cover',
-            'args' => array(
-                'title' => esc_html__('封面视频', 'magick-ad'),
-                'description' => esc_html__('适合弹窗或浮层的展示', 'magick-ad'),
-                'categories' => array('magick-ad'),
-                'content' => $this->build_ad_block(array(
-                    'creativeType' => 'video',
-                    'templateCategory' => '视频',
-                    'videoUrl' => 'https://www.w3schools.com/html/movie.mp4',
-                )),
-            ),
-        );
+        if ($allow_external_assets) {
+            $patterns[] = array(
+                'name' => 'magick-ad/video-cover',
+                'args' => array(
+                    'title' => esc_html__('封面视频', 'magick-ad'),
+                    'description' => esc_html__('适合弹窗或浮层的展示', 'magick-ad'),
+                    'categories' => array('magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'video',
+                        'templateCategory' => '视频',
+                        'videoUrl' => 'https://www.w3schools.com/html/movie.mp4',
+                    )),
+                ),
+            );
+        } else {
+            $patterns[] = array(
+                'name' => 'magick-ad/video-cover',
+                'args' => array(
+                    'title' => esc_html__('封面视频', 'magick-ad'),
+                    'description' => esc_html__('视频占位（请替换链接）', 'magick-ad'),
+                    'categories' => array('magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'html',
+                        'templateCategory' => '视频',
+                        'html' => $this->media_placeholder_html('视频占位（请替换链接）'),
+                    )),
+                ),
+            );
+        }
 
         $patterns[] = array(
             'name' => 'magick-ad/block-cta',
@@ -223,7 +284,14 @@ final class Patterns {
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'block',
                     'templateCategory' => '内容',
-                    'blocks' => '<!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p>高转化广告位推荐</p><!-- /wp:paragraph --><!-- wp:list --><ul><li>快速配置</li><li>多端适配</li><li>自动统计</li></ul><!-- /wp:list --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:image {"sizeSlug":"large"} --><figure class="wp-block-image size-large"><img src="https://via.placeholder.com/400x240?text=Image" alt=""/></figure><!-- /wp:image --></div><!-- /wp:column --></div><!-- /wp:columns -->',
+                    'blocks' => sprintf(
+                        '<!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p>高转化广告位推荐</p><!-- /wp:paragraph --><!-- wp:list --><ul><li>快速配置</li><li>多端适配</li><li>自动统计</li></ul><!-- /wp:list --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:image {"sizeSlug":"large"} --><figure class="wp-block-image size-large"><img src="%s" alt=""/></figure><!-- /wp:image --></div><!-- /wp:column --></div><!-- /wp:columns -->',
+                        esc_url(
+                            $allow_external_assets
+                                ? 'https://via.placeholder.com/400x240?text=Image'
+                                : $feature_placeholder
+                        )
+                    ),
                 )),
             ),
         );
@@ -268,7 +336,9 @@ final class Patterns {
                     'creativeType' => 'image',
                     'containerType' => 'floating',
                     'templateCategory' => '转化',
-                    'imageUrl' => 'https://via.placeholder.com/320x320?text=Floating',
+                    'imageUrl' => $allow_external_assets
+                        ? 'https://via.placeholder.com/320x320?text=Floating'
+                        : $floating_placeholder,
                     'imageAlt' => 'Floating',
                 )),
             ),

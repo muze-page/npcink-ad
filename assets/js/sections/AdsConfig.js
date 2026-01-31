@@ -86,6 +86,7 @@ const AdsConfig = () => {
     const [previewOptionLinks, setPreviewOptionLinks] = useState({});
     const [previewSelected, setPreviewSelected] = useState('');
     const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewLogin, setPreviewLogin] = useState('auto');
     const [pickerConfirmOpen, setPickerConfirmOpen] = useState(false);
     const [pickerType, setPickerType] = useState('id');
     const [pickerValue, setPickerValue] = useState('');
@@ -3193,6 +3194,28 @@ const AdsConfig = () => {
                                             清空
                                         </Button>
                                     </div>
+                                    <SelectControl
+                                        label="模拟登录态"
+                                        value={previewLogin}
+                                        options={[
+                                            {
+                                                label: '跟随真实状态',
+                                                value: 'auto',
+                                            },
+                                            {
+                                                label: '模拟已登录',
+                                                value: 'logged-in',
+                                            },
+                                            {
+                                                label: '模拟未登录',
+                                                value: 'logged-out',
+                                            },
+                                        ]}
+                                        onChange={(value) =>
+                                            setPreviewLogin(value)
+                                        }
+                                        help="仅影响预览命中判断，不会改变真实登录态。"
+                                    />
                                 </div>
                             </div>
                         )}
@@ -5778,6 +5801,7 @@ const AdsConfig = () => {
                 containerType={selectedAd?.options?.container_type || 'inline'}
                 devicePreview={devicePreview}
                 previewTarget={previewTarget}
+                previewLogin={previewLogin}
                 onCreativeChange={(value) =>
                     selectedAd && handleUpdateOptions({ creative_type: value })
                 }

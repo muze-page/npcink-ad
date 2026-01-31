@@ -106,9 +106,13 @@ final class Track_Controller {
 
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats';
-        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
-        if ($exists !== $table) {
-            return new WP_Error('magick_ad_db_missing', 'Stats table missing', array('status' => 500));
+        $stats_ready = (string) get_option('magick_ad_stats_ready', '0');
+        if ($stats_ready !== (string) MAGICK_AD_DB_VERSION) {
+            $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+            if ($exists !== $table) {
+                return new WP_Error('magick_ad_db_missing', 'Stats table missing', array('status' => 500));
+            }
+            update_option('magick_ad_stats_ready', (string) MAGICK_AD_DB_VERSION, false);
         }
 
         $ad_id = sanitize_text_field($payload['ad_id']);
@@ -237,8 +241,16 @@ final class Track_Controller {
 
         if ($diagnostics_enabled) {
             $log_table = $wpdb->prefix . 'magick_ad_stats_log';
-            $log_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $log_table));
-            if ($log_exists === $log_table) {
+            $log_ready = (string) get_option('magick_ad_stats_log_ready', '0');
+            if ($log_ready !== (string) MAGICK_AD_DB_VERSION) {
+                $log_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $log_table));
+                if ($log_exists !== $log_table) {
+                    return rest_ensure_response(array('success' => true));
+                }
+                update_option('magick_ad_stats_log_ready', (string) MAGICK_AD_DB_VERSION, false);
+                $log_ready = (string) MAGICK_AD_DB_VERSION;
+            }
+            if ($log_ready === (string) MAGICK_AD_DB_VERSION) {
                 $wpdb->insert(
                     $log_table,
                     array(

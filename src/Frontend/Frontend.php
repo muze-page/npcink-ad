@@ -51,11 +51,19 @@ final class Frontend {
     }
 
     public static function render_slot($slot_or_id, array $args = array()): string {
-        $ad = self::resolve_ad($slot_or_id, $args);
-        if (!$ad) {
+        $ads = self::resolve_ads($slot_or_id, $args);
+        if (empty($ads)) {
             return '';
         }
-        return self::render_ad_array($ad, $args);
+
+        $markup = '';
+        foreach ($ads as $ad) {
+            $rendered = self::render_ad_array($ad, $args);
+            if ($rendered) {
+                $markup .= $rendered;
+            }
+        }
+        return $markup;
     }
 
     public static function shortcode($atts = array()) {
@@ -146,7 +154,7 @@ final class Frontend {
         return $ad;
     }
 
-    private static function resolve_ad($slot_or_id, array $args = array()) {
+    private static function resolve_ads($slot_or_id, array $args = array()): array {
         $slot = isset($args['slot']) ? (string) $args['slot'] : '';
         $id = isset($args['id']) ? (string) $args['id'] : '';
         if (!$slot && $slot_or_id) {
@@ -169,12 +177,12 @@ final class Frontend {
         foreach ($ads as $ad) {
             $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
             if ($id && $ad_id === $id) {
-                return $ad;
+                return array($ad);
             }
         }
 
         if (!$slot) {
-            return null;
+            return array();
         }
 
         $slot = sanitize_title($slot);
@@ -186,8 +194,12 @@ final class Frontend {
                 break;
             }
         }
-        if (!$slot_config || empty($slot_config['ad_ids']) || !is_array($slot_config['ad_ids'])) {
-            return null;
+        if (
+            !$slot_config ||
+            empty($slot_config['ad_ids']) ||
+            !is_array($slot_config['ad_ids'])
+        ) {
+            return array();
         }
 
         $ads_by_id = array();
@@ -213,7 +225,7 @@ final class Frontend {
         }
 
         if (empty($slot_candidates)) {
-            return null;
+            return array();
         }
 
         $eligible = array();
@@ -223,7 +235,7 @@ final class Frontend {
             }
         }
         if (empty($eligible)) {
-            return null;
+            return array();
         }
 
         $max_priority = null;
@@ -247,29 +259,55 @@ final class Frontend {
             }
         }
 
-        if (count($top) === 1) {
-            return $top[0];
+        $limit = isset($slot_config['limit']) ? max(1, absint($slot_config['limit'])) : 1;
+        if (count($top) <= 1) {
+            return $top;
         }
 
-        $weights = array();
-        $sum = 0;
-        foreach ($top as $candidate) {
-            $weight = isset($candidate['options']['weight']) ? absint($candidate['options']['weight']) : 1;
-            if ($weight < 1) {
-                $weight = 1;
+        $limit = min($limit, count($top));
+        $pool = array_values($top);
+        $selected = array();
+
+        while (count($selected) < $limit && !empty($pool)) {
+            $weights = array();
+            $sum = 0;
+            foreach ($pool as $candidate) {
+                $ad_id = isset($candidate['id']) ? (string) $candidate['id'] : '';
+                $ad_weight = isset($candidate['options']['weight'])
+                    ? absint($candidate['options']['weight'])
+                    : 1;
+                if ($ad_weight < 1) {
+                    $ad_weight = 1;
+                }
+                $slot_weight = isset($weight_map[$ad_id]) ? $weight_map[$ad_id] : 1;
+                if ($slot_weight < 1) {
+                    $slot_weight = 1;
+                }
+                $weight = $ad_weight * $slot_weight;
+                $weights[] = $weight;
+                $sum += $weight;
             }
-            $weights[] = $weight;
-            $sum += $weight;
-        }
-        $roll = wp_rand(1, max(1, $sum));
-        $acc = 0;
-        foreach ($top as $index => $candidate) {
-            $acc += $weights[$index];
-            if ($roll <= $acc) {
-                return $candidate;
+
+            $roll = wp_rand(1, max(1, $sum));
+            $acc = 0;
+            $picked_index = 0;
+            foreach ($pool as $index => $candidate) {
+                $acc += $weights[$index];
+                if ($roll <= $acc) {
+                    $picked_index = $index;
+                    break;
+                }
             }
+            $selected[] = $pool[$picked_index];
+            array_splice($pool, $picked_index, 1);
         }
-        return $top[0];
+
+        return $selected;
+    }
+
+    private static function resolve_ad($slot_or_id, array $args = array()) {
+        $ads = self::resolve_ads($slot_or_id, $args);
+        return !empty($ads) ? $ads[0] : null;
     }
 
     public static function enqueue_assets(): void {
@@ -327,6 +365,9 @@ final class Frontend {
         $defer = self::has_deferred_ads($ads, $container_index);
         $diagnostics_enabled = (get_option('magick_ad_stats_diagnostics', '0') === '1');
         $diagnostics_enabled = (bool) apply_filters('magick_ad_stats_diagnostics_enabled', $diagnostics_enabled);
+        $has_consent = (bool) apply_filters('magick_ad_has_consent', false);
+        $requires_consent = (get_option('magick_ad_tracking_require_consent', '0') === '1');
+        $requires_consent = (bool) apply_filters('magick_ad_tracking_require_consent', $requires_consent);
         $track_config = array(
             'restUrl' => esc_url_raw(rest_url('magick-ad/v1/track')),
             'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
@@ -334,6 +375,8 @@ final class Frontend {
             'scriptUrl' => esc_url_raw(MAGICK_AD_URL . 'assets/magick-ad-track.js'),
             'containerIndex' => $container_index,
             'collectPageUrl' => $diagnostics_enabled,
+            'hasConsent' => $has_consent,
+            'requireConsent' => $requires_consent,
         );
 
         if ($defer) {
@@ -382,7 +425,7 @@ final class Frontend {
             return $content;
         }
 
-        $ads = self::get_matching_ads_for('head');
+        $ads = self::get_matching_ads_for('content');
         if (empty($ads)) {
             return $content;
         }
@@ -438,7 +481,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads_for('footer');
+        $ads = self::get_matching_ads_for('head');
         if (empty($ads)) {
             return;
         }
@@ -459,6 +502,10 @@ final class Frontend {
             if (!$raw_html) {
                 continue;
             }
+            $html_mode = isset($options['html_mode']) ? $options['html_mode'] : 'safe';
+            if ($html_mode !== 'full' || is_multisite()) {
+                $raw_html = wp_kses_post($raw_html);
+            }
             $markup .= $raw_html . "\n";
         }
 
@@ -472,7 +519,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads_for('body_top');
+        $ads = self::get_matching_ads_for('footer');
         if (empty($ads)) {
             return;
         }
@@ -522,7 +569,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads_for('loop_before');
+        $ads = self::get_matching_ads_for('body_top');
         if (empty($ads)) {
             return;
         }
@@ -550,7 +597,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads_for('loop_after');
+        $ads = self::get_matching_ads_for('all');
         if (empty($ads)) {
             return;
         }
@@ -582,7 +629,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads_for('comments');
+        $ads = self::get_matching_ads_for('all');
         if (empty($ads)) {
             return;
         }
@@ -611,7 +658,7 @@ final class Frontend {
             return $template;
         }
 
-        $ads = self::get_matching_ads_for('comments_top');
+        $ads = self::get_matching_ads_for('comments');
         if (empty($ads)) {
             return $template;
         }
@@ -643,7 +690,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads_for('comments_bottom');
+        $ads = self::get_matching_ads_for('comments_top');
         if (empty($ads)) {
             return;
         }
@@ -668,7 +715,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads_for('comment_form_before');
+        $ads = self::get_matching_ads_for('comments_bottom');
         if (empty($ads)) {
             return;
         }
@@ -693,7 +740,7 @@ final class Frontend {
             return;
         }
 
-        $ads = self::get_matching_ads_for('comment_form_after');
+        $ads = self::get_matching_ads_for('comment_form_before');
         if (empty($ads)) {
             return;
         }
@@ -1146,6 +1193,7 @@ final class Frontend {
         self::$preview_mode = $mode === 'page' ? 'page' : 'shell';
 
         if (self::$preview_mode === 'page') {
+            add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_preview_assets'));
             return;
         }
 
@@ -1269,6 +1317,54 @@ final class Frontend {
         wp_footer();
         echo '</body></html>';
         exit;
+    }
+
+    public static function enqueue_preview_assets(): void {
+        if (!self::is_preview() || self::$preview_mode !== 'page') {
+            return;
+        }
+
+        wp_enqueue_script(
+            'magick-ad-preview',
+            MAGICK_AD_URL . 'assets/magick-ad-preview.js',
+            array(),
+            MAGICK_AD_VERSION,
+            true
+        );
+
+        $context = array(
+            'page' => array(
+                'is_home' => is_home(),
+                'is_front_page' => is_front_page(),
+                'is_single' => is_singular('post'),
+                'is_page' => is_page(),
+                'is_archive' => is_archive(),
+                'is_category' => is_category(),
+                'is_tag' => is_tag(),
+                'is_search' => is_search(),
+                'is_404' => is_404(),
+                'is_author' => is_author(),
+            ),
+            'user' => array(
+                'logged_in' => is_user_logged_in(),
+            ),
+            'device' => array(
+                'is_mobile' => wp_is_mobile(),
+                'is_tablet' => self::is_tablet_device(),
+            ),
+        );
+
+        wp_localize_script(
+            'magick-ad-preview',
+            'MagickADPreview',
+            array(
+                'context' => $context,
+                'ad' => self::$preview_ad,
+                'device' => isset($_GET['magick_ad_preview_device'])
+                    ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_device']))
+                    : '',
+            )
+        );
     }
 
     private static function matches_display_mode($ad, $options) {
@@ -1654,6 +1750,7 @@ final class Frontend {
             $body .= $custom_html;
         }
         if ($custom_css) {
+            $custom_css = preg_replace('/<\/?style[^>]*>/i', '', $custom_css);
             $body = '<style>' . $custom_css . '</style>' . $body;
         }
 

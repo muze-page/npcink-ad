@@ -5,7 +5,18 @@
         return;
     }
 
+    const hasConsent = config.hasConsent === true;
+    const requireConsent = config.requireConsent === true;
+    const allowLocalStorage = hasConsent;
+    const allowSessionStorage = hasConsent;
+
     const readStorageValue = (storage, key) => {
+        if (
+            (storage === localStorage && !allowLocalStorage) ||
+            (storage === sessionStorage && !allowSessionStorage)
+        ) {
+            return null;
+        }
         try {
             return storage.getItem(key);
         } catch (err) {
@@ -14,6 +25,12 @@
     };
 
     const writeStorageValue = (storage, key, value) => {
+        if (
+            (storage === localStorage && !allowLocalStorage) ||
+            (storage === sessionStorage && !allowSessionStorage)
+        ) {
+            return false;
+        }
         try {
             storage.setItem(key, value);
             return true;
@@ -23,6 +40,9 @@
     };
 
     const getSessionId = () => {
+        if (!allowSessionStorage) {
+            return '';
+        }
         const key = 'magick_ad_session_id';
         const existing = readStorageValue(sessionStorage, key);
         if (existing) {
@@ -50,6 +70,9 @@
     const pageHash = hashString(window.location.href);
 
     const sendTrack = (payload, useBeacon = false) => {
+        if (requireConsent && !hasConsent) {
+            return;
+        }
         const bodyData = {
             ad_id: payload.adId,
             event: payload.event,
@@ -147,6 +170,9 @@
     );
 
     const shouldShowByFrequency = (element) => {
+        if (!allowLocalStorage && !allowSessionStorage) {
+            return true;
+        }
         const mode = element.getAttribute('data-ad-freq-mode') || 'none';
         if (mode === 'none') {
             return true;
@@ -183,6 +209,9 @@
     };
 
     const recordFrequency = (element) => {
+        if (!allowLocalStorage && !allowSessionStorage) {
+            return;
+        }
         const mode = element.getAttribute('data-ad-freq-mode') || 'none';
         const adId = element.getAttribute('data-ad-id');
         if (!adId || mode === 'none') {
@@ -508,20 +537,27 @@
                 if (!adId) {
                     return;
                 }
-                const key = `magick_ad_random_${adId}_${bucket}`;
                 let value = null;
-                try {
-                    value = sessionStorage.getItem(key);
-                } catch (err) {
-                    value = null;
-                }
-                if (!value) {
-                    value = Math.random() >= 0.5 ? '1' : '0';
+                if (allowSessionStorage) {
+                    const key = `magick_ad_random_${adId}_${bucket}`;
                     try {
-                        sessionStorage.setItem(key, value);
+                        value = sessionStorage.getItem(key);
                     } catch (err) {
-                        // ignore
+                        value = null;
                     }
+                    if (!value) {
+                        value = Math.random() >= 0.5 ? '1' : '0';
+                        try {
+                            sessionStorage.setItem(key, value);
+                        } catch (err) {
+                            // ignore
+                        }
+                    }
+                } else if (element.dataset.adRandomDecided) {
+                    value = element.dataset.adRandomDecided;
+                } else {
+                    value = Math.random() >= 0.5 ? '1' : '0';
+                    element.dataset.adRandomDecided = value;
                 }
                 const delay = Number(
                     element.getAttribute('data-ad-delay') || 0

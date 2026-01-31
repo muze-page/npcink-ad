@@ -65,7 +65,24 @@ final class Bindings {
         return $pool[$index];
     }
 
+    private static function has_consent(): bool {
+        return (bool) apply_filters('magick_ad_has_consent', false);
+    }
+
+    private static function cookie_requires_consent(string $mode): bool {
+        $requires = true;
+        return (bool) apply_filters('magick_ad_bindings_cookie_requires_consent', $requires, $mode);
+    }
+
     private static function get_seed(string $mode): string {
+        if (
+            in_array($mode, array('session', 'cookie'), true)
+            && self::cookie_requires_consent($mode)
+            && !self::has_consent()
+        ) {
+            return 'request:' . wp_rand(0, 1000000);
+        }
+
         if ($mode === 'user' && is_user_logged_in()) {
             return 'user:' . get_current_user_id();
         }

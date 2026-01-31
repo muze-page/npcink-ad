@@ -28,6 +28,37 @@
             .forEach((node) => node.remove());
     };
 
+    const ensurePreviewStyles = () => {
+        if (document.getElementById('magick-ad-preview-style')) {
+            return;
+        }
+        const style = document.createElement('style');
+        style.id = 'magick-ad-preview-style';
+        style.textContent = `
+            .magick-ad-preview-highlight {
+                position: relative;
+                outline: 2px dashed #3b82f6;
+                outline-offset: 4px;
+                border-radius: 6px;
+            }
+            .magick-ad-preview-badge {
+                position: absolute;
+                top: -10px;
+                right: 8px;
+                background: #3b82f6;
+                color: #fff;
+                font-size: 10px;
+                line-height: 1;
+                padding: 2px 8px;
+                border-radius: 999px;
+                letter-spacing: 0.02em;
+                z-index: 2;
+                box-shadow: 0 6px 14px rgba(59, 130, 246, 0.3);
+            }
+        `;
+        document.head.appendChild(style);
+    };
+
     const formatReasons = (reasons) =>
         reasons
             .map((reason) => reasonLabels[reason] || reason)
@@ -122,13 +153,19 @@
         return true;
     };
 
-    const matchesLogin = (options, ctx) => {
+    const matchesLogin = (options, ctx, loginOverride) => {
         const login = options?.login || 'all';
+        const simulated =
+            loginOverride === 'logged-in'
+                ? true
+                : loginOverride === 'logged-out'
+                ? false
+                : !!ctx?.user?.logged_in;
         if (login === 'logged-in') {
-            return !!ctx?.user?.logged_in;
+            return simulated;
         }
         if (login === 'logged-out') {
-            return !ctx?.user?.logged_in;
+            return !simulated;
         }
         return true;
     };
@@ -155,7 +192,7 @@
         return true;
     };
 
-    const evaluateAd = (ad, ctx, deviceOverride) => {
+    const evaluateAd = (ad, ctx, deviceOverride, loginOverride) => {
         const reasons = [];
         const options = ad?.options || {};
 
@@ -185,7 +222,7 @@
             reasons.push('device');
         }
 
-        if (!matchesLogin(options, ctx)) {
+        if (!matchesLogin(options, ctx, loginOverride)) {
             reasons.push('login');
         }
 
@@ -357,6 +394,46 @@
         return { hook, position, paragraph };
     };
 
+    const findContentRoot = () =>
+        document.querySelector(
+            '.entry-content, .wp-block-post-content, .post-content, article .entry-content, article, main'
+        );
+
+    const insertAroundContent = (node, position, paragraph) => {
+        const root = findContentRoot();
+        if (!root || !root.parentNode) {
+            return false;
+        }
+        if (position === 'before') {
+            root.parentNode.insertBefore(node, root);
+            return true;
+        }
+        if (position === 'after') {
+            root.parentNode.insertBefore(node, root.nextSibling);
+            return true;
+        }
+        if (position === 'paragraph') {
+            const paragraphs = root.querySelectorAll('p');
+            if (!paragraphs.length) {
+                root.appendChild(node);
+                return true;
+            }
+            const index = Math.max(1, paragraph || 2) - 1;
+            const target =
+                paragraphs[index] || paragraphs[paragraphs.length - 1];
+            target.parentNode.insertBefore(node, target.nextSibling);
+            return true;
+        }
+        root.appendChild(node);
+        return true;
+    };
+
+    const findCommentsRoot = () =>
+        document.querySelector('#comments, .comments-area, .wp-block-comments');
+
+    const findCommentForm = () =>
+        document.querySelector('#respond, .comment-respond');
+
     const insertIntoZone = (node, zone) => {
         if (!node) {
             return;
@@ -366,12 +443,13 @@
         }
     };
 
-    const renderAd = (ad, deviceOverride) => {
+    const renderAd = (ad, deviceOverride, loginOverride) => {
         if (!ad) {
             return;
         }
         clearPreview();
-        const evaluation = evaluateAd(ad, context, deviceOverride);
+        ensurePreviewStyles();
+        const evaluation = evaluateAd(ad, context, deviceOverride, loginOverride);
         updateDebug(ad, evaluation);
         if (!evaluation.allowed) {
             return;
@@ -388,76 +466,112 @@
         const position = placement.position || placement.hook || 'content';
         const unitClass = `magick-ad-unit magick-ad-unit--${position} magick-ad-container--${containerType}`;
         const wrapper = document.createElement('div');
-        wrapper.className = `${unitClass} magick-ad-preview-item`;
+        wrapper.className = `${unitClass} magick-ad-preview-item magick-ad-preview-highlight`;
+        const badge = document.createElement('div');
+        badge.className = 'magick-ad-preview-badge';
+        badge.textContent = 'PREVIEW';
         const unitBody =
             containerType === 'popup' || containerType === 'interstitial'
                 ? `<div class="magick-ad-overlay"></div><div class="magick-ad-popup" role="dialog" aria-modal="true" tabindex="-1">${body}</div>`
                 : body;
         wrapper.innerHTML = `<div class="magick-ad-unit__inner">${unitBody}</div>`;
+        wrapper.appendChild(badge);
 
         if (placement.hook === 'head') {
-            insertIntoZone(
-                wrapper,
-                document.querySelector('[data-magick-zone="head"]')
-            );
+            const zone = document.querySelector('[data-magick-zone="head"]');
+            if (zone) {
+                insertIntoZone(wrapper, zone);
+            }
             return;
         }
         if (placement.hook === 'body_top') {
-            insertIntoZone(
-                wrapper,
-                document.querySelector('[data-magick-zone="body_top"]')
-            );
+            const zone = document.querySelector('[data-magick-zone="body_top"]');
+            if (zone) {
+                insertIntoZone(wrapper, zone);
+            } else if (document.body) {
+                document.body.insertBefore(wrapper, document.body.firstChild);
+            }
             return;
         }
         if (placement.hook === 'footer') {
-            insertIntoZone(
-                wrapper,
-                document.querySelector('[data-magick-zone="footer"]')
-            );
+            const zone = document.querySelector('[data-magick-zone="footer"]');
+            if (zone) {
+                insertIntoZone(wrapper, zone);
+            } else if (document.body) {
+                document.body.appendChild(wrapper);
+            }
             return;
         }
         if (placement.hook === 'comments_top') {
-            insertIntoZone(
-                wrapper,
-                document.querySelector('[data-magick-zone="comments_top"]')
-            );
+            const zone = document.querySelector('[data-magick-zone="comments_top"]');
+            if (zone) {
+                insertIntoZone(wrapper, zone);
+            } else {
+                const root = findCommentsRoot();
+                if (root?.parentNode) {
+                    root.parentNode.insertBefore(wrapper, root);
+                }
+            }
             return;
         }
         if (placement.hook === 'comments_bottom') {
-            insertIntoZone(
-                wrapper,
-                document.querySelector('[data-magick-zone="comments_bottom"]')
-            );
+            const zone = document.querySelector('[data-magick-zone="comments_bottom"]');
+            if (zone) {
+                insertIntoZone(wrapper, zone);
+            } else {
+                const root = findCommentsRoot();
+                if (root?.parentNode) {
+                    root.parentNode.insertBefore(wrapper, root.nextSibling);
+                }
+            }
             return;
         }
         if (placement.hook === 'comment_form_before') {
-            insertIntoZone(
-                wrapper,
-                document.querySelector('[data-magick-zone="comment_form_before"]')
-            );
+            const zone = document.querySelector('[data-magick-zone="comment_form_before"]');
+            if (zone) {
+                insertIntoZone(wrapper, zone);
+            } else {
+                const form = findCommentForm();
+                if (form?.parentNode) {
+                    form.parentNode.insertBefore(wrapper, form);
+                }
+            }
             return;
         }
         if (placement.hook === 'comment_form_after') {
-            insertIntoZone(
-                wrapper,
-                document.querySelector('[data-magick-zone="comment_form_after"]')
-            );
+            const zone = document.querySelector('[data-magick-zone="comment_form_after"]');
+            if (zone) {
+                insertIntoZone(wrapper, zone);
+            } else {
+                const form = findCommentForm();
+                if (form?.parentNode) {
+                    form.parentNode.insertBefore(wrapper, form.nextSibling);
+                }
+            }
             return;
         }
 
         if (placement.hook === 'content') {
+            const zoneBefore = document.querySelector(
+                '[data-magick-zone="content_before"]'
+            );
+            const zoneAfter = document.querySelector(
+                '[data-magick-zone="content_after"]'
+            );
             if (placement.position === 'before') {
-                insertIntoZone(
-                    wrapper,
-                    document.querySelector('[data-magick-zone="content_before"]')
-                );
+                if (zoneBefore) {
+                    insertIntoZone(wrapper, zoneBefore);
+                    return;
+                }
+                insertAroundContent(wrapper, 'before');
                 return;
             }
             if (placement.position === 'after') {
-                insertIntoZone(
-                    wrapper,
-                    document.querySelector('[data-magick-zone="content_after"]')
-                );
+                if (zoneAfter) {
+                    insertIntoZone(wrapper, zoneAfter);
+                    return;
+                }
+                insertAroundContent(wrapper, 'after');
                 return;
             }
             if (placement.position === 'paragraph') {
@@ -471,15 +585,29 @@
                         wrapper,
                         target.nextSibling
                     );
+                    return;
                 }
+                insertAroundContent(wrapper, 'paragraph', placement.paragraph);
                 return;
             }
         }
 
-        insertIntoZone(
-            wrapper,
-            document.querySelector('[data-magick-zone="content_before"]')
+        const fallbackZone = document.querySelector(
+            '[data-magick-zone="content_before"]'
         );
+        if (fallbackZone) {
+            insertIntoZone(wrapper, fallbackZone);
+        } else {
+            insertAroundContent(wrapper, 'before');
+        }
+    };
+
+    const updateStatusOnly = (ad, deviceOverride, loginOverride) => {
+        if (!ad) {
+            return;
+        }
+        const evaluation = evaluateAd(ad, context, deviceOverride, loginOverride);
+        updateDebug(ad, evaluation);
     };
 
     window.addEventListener('message', (event) => {
@@ -487,10 +615,23 @@
             return;
         }
         const payload = event.data;
-        if (!payload || payload.type !== 'MAGICK_AD_PREVIEW_UPDATE') {
+        if (!payload || !payload.type) {
             return;
         }
-        renderAd(payload?.payload?.ad, payload?.payload?.device);
+        if (payload.type === 'MAGICK_AD_PREVIEW_UPDATE') {
+            renderAd(
+                payload?.payload?.ad,
+                payload?.payload?.device,
+                payload?.payload?.login
+            );
+        }
+        if (payload.type === 'MAGICK_AD_PREVIEW_PING') {
+            updateStatusOnly(
+                payload?.payload?.ad || config.ad,
+                payload?.payload?.device,
+                payload?.payload?.login
+            );
+        }
     });
 
     window.parent?.postMessage?.(

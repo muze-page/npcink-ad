@@ -25,6 +25,16 @@ delete_option('magick_ad_brand_name');
 delete_option('magick_ad_brand_tagline');
 delete_option('magick_ad_manage_capability');
 
+$wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE 'magick_ad_%'");
+$wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_magick_ad_%'");
+$wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_magick_ad_%'");
+
+if (is_multisite()) {
+    $wpdb->query("DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE 'magick_ad_%'");
+    $wpdb->query("DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE '_site_transient_magick_ad_%'");
+    $wpdb->query("DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE '_site_transient_timeout_magick_ad_%'");
+}
+
 if (function_exists('remove_role')) {
     remove_role('magick_ad_manager');
     $admin = get_role('administrator');

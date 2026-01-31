@@ -150,22 +150,40 @@ final class Ads {
         $sanitized = Settings::sanitize_settings($settings);
         $raw_ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
 
+        $delete_ids = array();
+        $filtered_ads = array();
         foreach ($sanitized['ads'] as $index => $ad) {
             $raw = isset($raw_ads[$index]) && is_array($raw_ads[$index]) ? $raw_ads[$index] : array();
+            if (!empty($raw['deleted'])) {
+                $raw_id = isset($raw['id']) ? sanitize_text_field($raw['id']) : '';
+                if ($raw_id !== '') {
+                    $delete_ids[] = $raw_id;
+                }
+                continue;
+            }
             if (isset($raw['status'])) {
-                $sanitized['ads'][$index]['status'] = self::sanitize_status($raw['status']);
+                $ad['status'] = self::sanitize_status($raw['status']);
             }
             if (isset($raw['date'])) {
-                $sanitized['ads'][$index]['date'] = self::sanitize_datetime($raw['date']);
+                $ad['date'] = self::sanitize_datetime($raw['date']);
             }
+            $filtered_ads[] = $ad;
         }
+        $sanitized['ads'] = $filtered_ads;
 
         $validation = Settings::validate_settings($sanitized);
         if (is_wp_error($validation)) {
             return $validation;
         }
 
-        $result = self::store_ads($sanitized['ads']);
+        $replace_all = !empty($settings['_replace_all']);
+        $result = self::store_ads(
+            $sanitized['ads'],
+            array(
+                'replace_all' => $replace_all,
+                'delete_ids' => $delete_ids,
+            )
+        );
         if (is_wp_error($result)) {
             return $result;
         }
@@ -181,8 +199,24 @@ final class Ads {
         );
     }
 
-    public static function store_ads(array $ads) {
+    public static function store_ads(array $ads, array $options = array()) {
         $existing = self::get_existing_map();
+        $replace_all = !empty($options['replace_all']);
+        $delete_ids = isset($options['delete_ids']) && is_array($options['delete_ids'])
+            ? $options['delete_ids']
+            : array();
+
+        if (!empty($delete_ids)) {
+            foreach ($delete_ids as $delete_id) {
+                $delete_id = sanitize_text_field($delete_id);
+                if ($delete_id === '' || !isset($existing[$delete_id])) {
+                    continue;
+                }
+                wp_trash_post($existing[$delete_id]);
+                unset($existing[$delete_id]);
+            }
+        }
+
         $used_ids = array();
         $saved_ads = array();
 
@@ -247,9 +281,11 @@ final class Ads {
         }
 
         $all_ids = self::get_all_ids();
-        foreach ($all_ids as $post_id) {
-            if (!in_array($post_id, $used_ids, true)) {
-                wp_trash_post($post_id);
+        if ($replace_all) {
+            foreach ($all_ids as $post_id) {
+                if (!in_array($post_id, $used_ids, true)) {
+                    wp_trash_post($post_id);
+                }
             }
         }
 

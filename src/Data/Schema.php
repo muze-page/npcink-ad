@@ -8,10 +8,12 @@ if (!defined('ABSPATH')) {
 
 final class Schema {
     public const OPTION_KEY = 'magick_ad_db_version';
+    private const STATS_READY_KEY = 'magick_ad_stats_ready';
+    private const LOG_READY_KEY = 'magick_ad_stats_log_ready';
 
     public static function maybe_upgrade(): void {
         $stored = get_option(self::OPTION_KEY, '0');
-        if (version_compare((string) $stored, (string) MAGICK_AD_DB_VERSION, '>=')) {
+        if (version_compare((string) $stored, (string) MAGICK_AD_DB_VERSION, '>=') && self::is_schema_ready()) {
             return;
         }
         self::install();
@@ -24,15 +26,12 @@ final class Schema {
         $log_table = $wpdb->prefix . 'magick_ad_stats_log';
         $charset_collate = $wpdb->get_charset_collate();
 
-        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
-        if ($exists === $table) {
-            $has_impressions = $wpdb->get_var($wpdb->prepare(
-                'SHOW COLUMNS FROM ' . $table . ' LIKE %s',
-                'impressions'
-            ));
-            if (!$has_impressions) {
-                $wpdb->query("DROP TABLE IF EXISTS {$table}");
-            }
+        if (self::table_exists($table) && !self::table_has_column($table, 'impressions')) {
+            $wpdb->query(
+                "ALTER TABLE {$table}
+                 ADD COLUMN impressions bigint(20) unsigned NOT NULL DEFAULT 0
+                 AFTER ad_id"
+            );
         }
 
         $sql = "CREATE TABLE {$table} (
@@ -63,5 +62,36 @@ final class Schema {
         dbDelta($log_sql);
 
         update_option(self::OPTION_KEY, MAGICK_AD_DB_VERSION, false);
+        update_option(self::STATS_READY_KEY, (string) MAGICK_AD_DB_VERSION, false);
+        update_option(self::LOG_READY_KEY, (string) MAGICK_AD_DB_VERSION, false);
+    }
+
+    private static function is_schema_ready(): bool {
+        global $wpdb;
+        $table = $wpdb->prefix . 'magick_ad_stats';
+        if (!self::table_exists($table)) {
+            return false;
+        }
+        if (!self::table_has_column($table, 'impressions')) {
+            return false;
+        }
+        return true;
+    }
+
+    private static function table_exists(string $table): bool {
+        global $wpdb;
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+        return $exists === $table;
+    }
+
+    private static function table_has_column(string $table, string $column): bool {
+        global $wpdb;
+        $value = $wpdb->get_var(
+            $wpdb->prepare(
+                'SHOW COLUMNS FROM ' . $table . ' LIKE %s',
+                $column
+            )
+        );
+        return !empty($value);
     }
 }
