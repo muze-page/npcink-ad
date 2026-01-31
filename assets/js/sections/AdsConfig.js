@@ -21,7 +21,7 @@ import {
     TextareaControl,
     ToggleControl,
 } from '@wordpress/components';
-import { moreHorizontal } from '@wordpress/icons';
+import { cog, moreHorizontal } from '@wordpress/icons';
 import { useStore } from '../store';
 import Layout from '../Layout';
 import ImagePicker from '../components/ImagePicker';
@@ -75,6 +75,7 @@ const AdsConfig = () => {
     const [saveTemplateCategory, setSaveTemplateCategory] = useState('');
     const [saveTemplateCategoryName, setSaveTemplateCategoryName] =
         useState('');
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [pickerConfirmOpen, setPickerConfirmOpen] = useState(false);
     const [pickerType, setPickerType] = useState('id');
     const [pickerValue, setPickerValue] = useState('');
@@ -1103,6 +1104,13 @@ const AdsConfig = () => {
                             >
                                 {isSaving ? '保存中...' : '保存'}
                             </Button>
+                            <Button
+                                className="magick-ad-settings-trigger"
+                                icon={cog}
+                                label="设置"
+                                onClick={() => setSettingsOpen(true)}
+                                variant="tertiary"
+                            />
                         </div>
                     </div>
                     {ads.length === 0 ? (
@@ -1282,8 +1290,6 @@ const AdsConfig = () => {
                 onRemoveSlot={removeSlot}
                 onNotice={showNotice}
             />
-            <SystemSettingsPanel onNotice={showNotice} />
-            <DebugPanel onNotice={showNotice} />
         </div>
     );
 
@@ -3373,13 +3379,13 @@ const AdsConfig = () => {
                     });
                 }}
                 onDevicePreviewChange={setDevicePreview}
-            onUpdateRule={(key, value) =>
-                selectedAd && handleUpdateOptions({ [key]: value })
-            }
-            contentHeader={contentHeader}
-            leftSidebar={leftSidebar}
-            rightSidebar={rightSidebar}
-            contentPanels={contentPanels}
+                onUpdateRule={(key, value) =>
+                    selectedAd && handleUpdateOptions({ [key]: value })
+                }
+                contentHeader={contentHeader}
+                leftSidebar={leftSidebar}
+                rightSidebar={rightSidebar}
+                contentPanels={contentPanels}
             />
 
             <TemplateLibraryModal
@@ -3620,6 +3626,43 @@ const AdsConfig = () => {
                             }}
                         >
                             保存
+                        </Button>
+                    </div>
+                </Modal>
+            )}
+
+            {settingsOpen && (
+                <Modal
+                    title="系统与调试设置"
+                    className="magick-ad-settings-modal"
+                    onRequestClose={() => setSettingsOpen(false)}
+                >
+                    <TabPanel
+                        className="magick-ad-settings-tabs"
+                        tabs={[
+                            { name: 'system', title: '系统设置' },
+                            { name: 'debug', title: '调试设置' },
+                        ]}
+                        initialTabName="system"
+                    >
+                        {(tab) => (
+                            <div className="magick-ad-settings-body">
+                                {tab.name === 'system' ? (
+                                    <SystemSettingsPanel
+                                        onNotice={showNotice}
+                                    />
+                                ) : (
+                                    <DebugPanel onNotice={showNotice} />
+                                )}
+                            </div>
+                        )}
+                    </TabPanel>
+                    <div className="magick-ad-confirm-actions">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setSettingsOpen(false)}
+                        >
+                            关闭
                         </Button>
                     </div>
                 </Modal>

@@ -7,7 +7,6 @@ import {
     PanelBody,
     SelectControl,
     Toolbar,
-    ToolbarButton,
     ToolbarDropdownMenu,
     ToolbarGroup,
 } from '@wordpress/components';
@@ -19,6 +18,8 @@ import {
     image,
     code,
     layout,
+    fullscreen,
+    closeSmall,
 } from '@wordpress/icons';
 
 const previewIcons = {
@@ -43,7 +44,12 @@ const Layout = ({
     preview,
 }) => {
     const iframeRef = useRef(null);
+    const editorRef = useRef(null);
+    const resizingRef = useRef(false);
     const [previewReady, setPreviewReady] = useState(false);
+    const [splitRatio, setSplitRatio] = useState(0.45);
+    const [splitLocked, setSplitLocked] = useState(false);
+    const [previewCollapsed, setPreviewCollapsed] = useState(false);
     const adTypeControls = useMemo(
         () => [
             {
@@ -487,6 +493,51 @@ const Layout = ({
         devicePreview,
     ]);
 
+    useEffect(() => {
+        if (splitLocked || previewCollapsed) {
+            return;
+        }
+        setSplitRatio(creativeType === 'html' ? 0.6 : 0.45);
+    }, [creativeType, splitLocked, previewCollapsed]);
+
+    useEffect(() => {
+        const handleMove = (event) => {
+            if (!resizingRef.current || !editorRef.current) {
+                return;
+            }
+            const rect = editorRef.current.getBoundingClientRect();
+            const next =
+                (event.clientX - rect.left) / Math.max(rect.width, 1);
+            const clamped = Math.min(0.7, Math.max(0.32, next));
+            setSplitRatio(clamped);
+        };
+
+        const handleUp = () => {
+            if (!resizingRef.current) {
+                return;
+            }
+            resizingRef.current = false;
+            document.body.classList.remove('magick-ad-is-resizing');
+        };
+
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+        return () => {
+            window.removeEventListener('mousemove', handleMove);
+            window.removeEventListener('mouseup', handleUp);
+        };
+    }, []);
+
+    const handleResizeStart = (event) => {
+        event.preventDefault();
+        if (!editorRef.current || previewCollapsed) {
+            return;
+        }
+        resizingRef.current = true;
+        setSplitLocked(true);
+        document.body.classList.add('magick-ad-is-resizing');
+    };
+
     return (
         <div className="magick-ad-layout">
             <aside className="magick-ad-left">
@@ -508,7 +559,10 @@ const Layout = ({
             <main className="magick-ad-main">
                 <Card>
                     <CardBody>
-                        <Toolbar className="magick-ad-toolbar">
+                        <Toolbar
+                            className="magick-ad-toolbar"
+                            label="编辑工具"
+                        >
                             <ToolbarGroup>
                                 <ToolbarDropdownMenu
                                     icon={adTypeControls.find(
@@ -518,39 +572,58 @@ const Layout = ({
                                     controls={adTypeControls}
                                 />
                             </ToolbarGroup>
-                            <ToolbarGroup>
-                                <ToolbarDropdownMenu
-                                    icon={layout}
-                                    label="容器类型"
-                                    controls={containerControls}
-                                />
-                            </ToolbarGroup>
-                            <ToolbarGroup>
-                                {['desktop', 'tablet', 'mobile'].map(
-                                    (device) => (
-                                        <ToolbarButton
-                                            key={device}
-                                            icon={previewIcons[device]}
-                                            isPressed={
-                                                devicePreview === device
-                                            }
-                                            onClick={() =>
-                                                onDevicePreviewChange?.(device)
-                                            }
-                                        />
-                                    )
-                                )}
-                            </ToolbarGroup>
-                        </Toolbar>
+                        <ToolbarGroup>
+                            <ToolbarDropdownMenu
+                                icon={layout}
+                                label="容器类型"
+                                controls={containerControls}
+                            />
+                        </ToolbarGroup>
+                    </Toolbar>
 
-                        <div className="magick-ad-editor">
+                        <div
+                            className={`magick-ad-editor ${
+                                previewCollapsed
+                                    ? 'is-preview-collapsed'
+                                    : ''
+                            }`}
+                            ref={editorRef}
+                            style={{
+                                gridTemplateColumns: previewCollapsed
+                                    ? 'minmax(0, 1fr) 12px 56px'
+                                    : `${Math.round(
+                                          splitRatio * 100
+                                      )}% 12px minmax(0, 1fr)`,
+                            }}
+                        >
                             <div className="magick-ad-editor-left">
                                 {contentHeader && (
                                     <div className="magick-ad-editor-header">
                                         <div className="magick-ad-editor-title">
                                             内容配置
                                         </div>
-                                        {contentHeader}
+                                        <div className="magick-ad-editor-header-actions">
+                                            {contentHeader}
+                                            <Button
+                                                className="magick-ad-preview-toggle"
+                                                icon={
+                                                    previewCollapsed
+                                                        ? fullscreen
+                                                        : closeSmall
+                                                }
+                                                variant="tertiary"
+                                                label={
+                                                    previewCollapsed
+                                                        ? '展开预览'
+                                                        : '专注模式'
+                                                }
+                                                onClick={() =>
+                                                    setPreviewCollapsed(
+                                                        (prev) => !prev
+                                                    )
+                                                }
+                                            />
+                                        </div>
                                     </div>
                                 )}
                                 {contentPanels || (
@@ -567,10 +640,123 @@ const Layout = ({
                                     </Panel>
                                 )}
                             </div>
-                            <div className="magick-ad-editor-preview">
-                                <div className="magick-ad-preview">
-                                    {preview || previewFrame}
-                                </div>
+                            <div
+                                className="magick-ad-editor-resizer"
+                                role="separator"
+                                aria-label="调整编辑区与预览区宽度"
+                                onMouseDown={handleResizeStart}
+                                aria-hidden={previewCollapsed}
+                                style={{
+                                    pointerEvents: previewCollapsed
+                                        ? 'none'
+                                        : 'auto',
+                                    opacity: previewCollapsed ? 0.4 : 1,
+                                }}
+                            />
+                            <div
+                                className={`magick-ad-editor-preview ${
+                                    previewCollapsed ? 'is-collapsed' : ''
+                                }`}
+                            >
+                                {previewCollapsed ? (
+                                    <div className="magick-ad-preview-drawer">
+                                        <div className="magick-ad-preview-drawer__handle">
+                                            预览
+                                        </div>
+                                        <div className="magick-ad-preview-drawer__panel">
+                                            <div className="magick-ad-preview">
+                                                <div
+                                                    className="magick-ad-preview-toolbar"
+                                                    role="group"
+                                                    aria-label="设备预览"
+                                                >
+                                                    {[
+                                                        'desktop',
+                                                        'tablet',
+                                                        'mobile',
+                                                    ].map((device) => (
+                                                        <Button
+                                                            key={device}
+                                                            icon={
+                                                                previewIcons[
+                                                                    device
+                                                                ]
+                                                            }
+                                                            className={`magick-ad-preview-toolbar__btn ${
+                                                                devicePreview ===
+                                                                device
+                                                                    ? 'is-active'
+                                                                    : ''
+                                                            }`}
+                                                            onClick={() =>
+                                                                onDevicePreviewChange?.(
+                                                                    device
+                                                                )
+                                                            }
+                                                            aria-pressed={
+                                                                devicePreview ===
+                                                                device
+                                                            }
+                                                            label={
+                                                                device ===
+                                                                'desktop'
+                                                                    ? '桌面'
+                                                                    : device ===
+                                                                      'tablet'
+                                                                    ? '平板'
+                                                                    : '手机'
+                                                            }
+                                                        />
+                                                    ))}
+                                                </div>
+                                                {preview || previewFrame}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="magick-ad-preview">
+                                        <div
+                                            className="magick-ad-preview-toolbar"
+                                            role="group"
+                                            aria-label="设备预览"
+                                        >
+                                            {[
+                                                'desktop',
+                                                'tablet',
+                                                'mobile',
+                                            ].map((device) => (
+                                                <Button
+                                                    key={device}
+                                                    icon={previewIcons[device]}
+                                                    className={`magick-ad-preview-toolbar__btn ${
+                                                        devicePreview ===
+                                                        device
+                                                            ? 'is-active'
+                                                            : ''
+                                                    }`}
+                                                    onClick={() =>
+                                                        onDevicePreviewChange?.(
+                                                            device
+                                                        )
+                                                    }
+                                                    aria-pressed={
+                                                        devicePreview ===
+                                                        device
+                                                    }
+                                                    label={
+                                                        device === 'desktop'
+                                                            ? '桌面'
+                                                            : device ===
+                                                              'tablet'
+                                                            ? '平板'
+                                                            : '手机'
+                                                    }
+                                                />
+                                            ))}
+                                        </div>
+                                        {preview || previewFrame}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </CardBody>

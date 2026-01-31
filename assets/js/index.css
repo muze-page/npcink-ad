@@ -54,9 +54,13 @@
 
 .magick-ad-editor {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 40%);
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) 12px minmax(240px, 40%);
+    gap: 0;
     position: relative;
+}
+
+.magick-ad-editor.is-preview-collapsed {
+    overflow: visible;
 }
 
 .magick-ad-editor-left {
@@ -66,13 +70,42 @@
     gap: 12px;
     max-height: calc(100vh - 220px);
     overflow-y: auto;
-    padding-right: 6px;
+    padding-right: 16px;
     padding-top: 0;
+}
+
+.magick-ad-editor-resizer {
+    position: relative;
+    cursor: col-resize;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.magick-ad-editor-resizer::before {
+    content: '';
+    width: 2px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.magick-ad-editor-resizer:hover::before,
+.magick-ad-is-resizing .magick-ad-editor-resizer::before {
+    background: #94a3b8;
+    box-shadow: 0 0 0 6px rgba(148, 163, 184, 0.15);
+}
+
+.magick-ad-is-resizing {
+    cursor: col-resize;
+    user-select: none;
 }
 
 .magick-ad-editor-preview {
     display: flex;
     align-items: stretch;
+    min-width: 0;
+    padding-left: 16px;
 }
 
 .magick-ad-preview {
@@ -86,6 +119,92 @@
     align-items: center;
     justify-content: center;
     position: relative;
+}
+
+.magick-ad-editor-preview.is-collapsed {
+    position: relative;
+    padding-left: 0;
+}
+
+.magick-ad-preview-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 56px;
+    background: #f8fafc;
+    border-left: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+    transition: width 0.2s ease, box-shadow 0.2s ease;
+    z-index: 3;
+}
+
+.magick-ad-preview-drawer:hover {
+    width: 360px;
+    box-shadow: -10px 0 24px rgba(15, 23, 42, 0.12);
+}
+
+.magick-ad-preview-drawer__handle {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.08em;
+    padding: 8px 0;
+    user-select: none;
+}
+
+.magick-ad-preview-drawer__panel {
+    flex: 1;
+    min-width: 0;
+    padding: 16px 16px 16px 0;
+    opacity: 0;
+    transform: translateX(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.magick-ad-preview-drawer:hover .magick-ad-preview-drawer__panel {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.magick-ad-preview-drawer .magick-ad-preview {
+    min-height: 100%;
+    height: 100%;
+}
+
+.magick-ad-preview-toolbar {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    z-index: 2;
+}
+
+.magick-ad-preview-toolbar__btn.components-button {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 999px;
+    color: #475569;
+}
+
+.magick-ad-preview-toolbar__btn.is-active {
+    background: #2563eb;
+    color: #ffffff;
 }
 
 .magick-ad-preview-frame {
@@ -461,6 +580,14 @@
     gap: 10px;
 }
 
+.magick-ad-settings-trigger.components-button {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 10px;
+}
+
 .magick-ad-sidebar__list {
     display: flex;
     flex-direction: column;
@@ -477,11 +604,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 12px;
-    font-weight: 700;
-    color: #475467;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: none;
+    letter-spacing: 0.02em;
     padding: 0 4px;
 }
 
@@ -493,8 +620,8 @@
     height: 20px;
     padding: 0 6px;
     border-radius: 999px;
-    background: #eef2ff;
-    color: #364fc7;
+    background: #f1f5f9;
+    color: #64748b;
     font-size: 11px;
     font-weight: 700;
 }
@@ -504,14 +631,13 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
-    padding: 14px 14px 14px 18px;
-    border-radius: 16px;
-    border: 1px solid #e2e6ee;
-    background: #ffffff;
+    padding: 10px 12px 10px 14px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: transparent;
     position: relative;
-    box-shadow: 0 2px 6px rgba(17, 24, 39, 0.06);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease,
-        background 0.2s ease, transform 0.2s ease;
+    box-shadow: none;
+    transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .magick-ad-sidebar__body {
@@ -529,8 +655,7 @@
 }
 
 .magick-ad-sidebar__item:hover {
-    border-color: #cfd6ee;
-    box-shadow: 0 6px 14px rgba(17, 24, 39, 0.1);
+    background: #f1f5f9;
 }
 
 .magick-ad-sidebar__main {
@@ -682,17 +807,16 @@
 }
 
 .magick-ad-sidebar__item.is-active {
-    border-color: #3858e9;
-    background: #f4f7ff;
-    transform: translateY(-1px);
+    border-color: #dbe2ff;
+    background: #eef3ff;
 }
 
 .magick-ad-sidebar__item.is-active::before {
     content: '';
     position: absolute;
-    left: -1px;
-    top: 8px;
-    bottom: 8px;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
     width: 4px;
     border-radius: 4px;
     background: #3858e9;
@@ -740,6 +864,24 @@
     justify-content: flex-end;
     gap: 8px;
     margin-top: 16px;
+}
+
+.magick-ad-settings-modal .components-card {
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.magick-ad-settings-modal .components-card__body {
+    padding: 0;
+}
+
+.magick-ad-settings-modal .components-panel {
+    margin: 0;
+}
+
+.magick-ad-settings-body {
+    margin-top: 12px;
 }
 
 .magick-ad-detail .components-panel {
@@ -1252,6 +1394,20 @@
     font-size: 14px;
     font-weight: 600;
     color: #1d2327;
+}
+
+.magick-ad-editor-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.magick-ad-preview-toggle.components-button {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 10px;
 }
 
 .magick-ad-template-actions {
