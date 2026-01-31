@@ -21,7 +21,7 @@ import {
     TextareaControl,
     ToggleControl,
 } from '@wordpress/components';
-import { cog, moreHorizontal } from '@wordpress/icons';
+import { chevronDown, chevronUp, cog, moreHorizontal } from '@wordpress/icons';
 import { useStore } from '../store';
 import Layout from '../Layout';
 import ImagePicker from '../components/ImagePicker';
@@ -76,6 +76,7 @@ const AdsConfig = () => {
     const [saveTemplateCategoryName, setSaveTemplateCategoryName] =
         useState('');
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [scheduleOpen, setScheduleOpen] = useState(true);
     const [pickerConfirmOpen, setPickerConfirmOpen] = useState(false);
     const [pickerType, setPickerType] = useState('id');
     const [pickerValue, setPickerValue] = useState('');
@@ -1703,130 +1704,147 @@ const AdsConfig = () => {
                         <div className="magick-ad-schedule-title">
                             发布与排期
                         </div>
-                        <span
-                            className={`magick-ad-status-pill ${
-                                statusMeta(selectedAd).className
-                            }`}
-                        >
-                            {statusMeta(selectedAd).label}
-                        </span>
+                        <div className="magick-ad-schedule-actions">
+                            <span
+                                className={`magick-ad-status-pill ${
+                                    statusMeta(selectedAd).className
+                                }`}
+                            >
+                                {statusMeta(selectedAd).label}
+                            </span>
+                            <Button
+                                className="magick-ad-collapse-toggle"
+                                icon={scheduleOpen ? chevronUp : chevronDown}
+                                label={
+                                    scheduleOpen ? '折叠' : '展开'
+                                }
+                                variant="tertiary"
+                                onClick={() =>
+                                    setScheduleOpen((prev) => !prev)
+                                }
+                            />
+                        </div>
                     </div>
-                    <SelectControl
-                        label="发布状态"
-                        value={resolveStatus(selectedAd)}
-                        options={[
-                            { label: '已发布', value: 'publish' },
-                            { label: '定时发布', value: 'future' },
-                            { label: '待审核', value: 'pending' },
-                            { label: '草稿/停用', value: 'draft' },
-                        ]}
-                        onChange={(value) => {
-                            if (!selectedAd) {
-                                return;
-                            }
-                            if (value === 'draft') {
-                                handleUpdateMeta({
-                                    status: 'draft',
-                                    options: {
-                                        ...selectedAd.options,
-                                        enabled: false,
-                                    },
-                                });
-                                return;
-                            }
-                            if (value === 'pending') {
-                                handleUpdateMeta({
-                                    status: 'pending',
-                                    options: {
-                                        ...selectedAd.options,
-                                        enabled: true,
-                                    },
-                                });
-                                return;
-                            }
-                            if (value === 'future') {
-                                handleUpdateMeta({
-                                    status: 'future',
-                                    date: selectedAd.date || buildDefaultSchedule(),
-                                    options: {
-                                        ...selectedAd.options,
-                                        enabled: true,
-                                    },
-                                });
-                                return;
-                            }
-                            const nextDate =
-                                selectedAd.date && isFutureDate(selectedAd.date)
-                                    ? formatDateFromDate(new Date())
-                                    : selectedAd.date || '';
-                            handleUpdateMeta({
-                                status: 'publish',
-                                date: nextDate,
-                                options: {
-                                    ...selectedAd.options,
-                                    enabled: true,
-                                },
-                            });
-                        }}
-                    />
-                    {resolveStatus(selectedAd) === 'future' && (
-                        <TextControl
-                            label="排期时间"
-                            type="datetime-local"
-                            value={formatDateTimeLocalInput(selectedAd.date)}
-                            onChange={(value) => {
-                                const nextDate =
-                                    formatDateTimeStorage(value);
-                                if (!nextDate) {
+                    {scheduleOpen && (
+                        <>
+                            <SelectControl
+                                label="发布状态"
+                                value={resolveStatus(selectedAd)}
+                                options={[
+                                    { label: '已发布', value: 'publish' },
+                                    { label: '定时发布', value: 'future' },
+                                    { label: '待审核', value: 'pending' },
+                                    { label: '草稿/停用', value: 'draft' },
+                                ]}
+                                onChange={(value) => {
+                                    if (!selectedAd) {
+                                        return;
+                                    }
+                                    if (value === 'draft') {
+                                        handleUpdateMeta({
+                                            status: 'draft',
+                                            options: {
+                                                ...selectedAd.options,
+                                                enabled: false,
+                                            },
+                                        });
+                                        return;
+                                    }
+                                    if (value === 'pending') {
+                                        handleUpdateMeta({
+                                            status: 'pending',
+                                            options: {
+                                                ...selectedAd.options,
+                                                enabled: true,
+                                            },
+                                        });
+                                        return;
+                                    }
+                                    if (value === 'future') {
+                                        handleUpdateMeta({
+                                            status: 'future',
+                                            date: selectedAd.date || buildDefaultSchedule(),
+                                            options: {
+                                                ...selectedAd.options,
+                                                enabled: true,
+                                            },
+                                        });
+                                        return;
+                                    }
+                                    const nextDate =
+                                        selectedAd.date && isFutureDate(selectedAd.date)
+                                            ? formatDateFromDate(new Date())
+                                            : selectedAd.date || '';
                                     handleUpdateMeta({
-                                        date: '',
-                                        status: 'draft',
+                                        status: 'publish',
+                                        date: nextDate,
                                         options: {
                                             ...selectedAd.options,
-                                            enabled: false,
+                                            enabled: true,
                                         },
                                     });
-                                    return;
+                                }}
+                            />
+                            {resolveStatus(selectedAd) === 'future' && (
+                                <TextControl
+                                    label="排期时间"
+                                    type="datetime-local"
+                                    value={formatDateTimeLocalInput(selectedAd.date)}
+                                    onChange={(value) => {
+                                        const nextDate =
+                                            formatDateTimeStorage(value);
+                                        if (!nextDate) {
+                                            handleUpdateMeta({
+                                                date: '',
+                                                status: 'draft',
+                                                options: {
+                                                    ...selectedAd.options,
+                                                    enabled: false,
+                                                },
+                                            });
+                                            return;
+                                        }
+                                        const nextStatus = isFutureDate(nextDate)
+                                            ? 'future'
+                                            : 'publish';
+                                        handleUpdateMeta({
+                                            date: nextDate,
+                                            status: nextStatus,
+                                            options: {
+                                                ...selectedAd.options,
+                                                enabled: true,
+                                            },
+                                        });
+                                    }}
+                                    help="达到排期时间后，广告会自动发布。"
+                                />
+                            )}
+                            <TextControl
+                                label="优先级（越大越先展示）"
+                                type="number"
+                                min={1}
+                                value={selectedAd.options?.priority ?? 10}
+                                onChange={(value) =>
+                                    handleUpdateOptions({
+                                        priority: Math.max(1, Number(value) || 1),
+                                    })
                                 }
-                                const nextStatus = isFutureDate(nextDate)
-                                    ? 'future'
-                                    : 'publish';
-                                handleUpdateMeta({
-                                    date: nextDate,
-                                    status: nextStatus,
-                                    options: {
-                                        ...selectedAd.options,
-                                        enabled: true,
-                                    },
-                                });
-                            }}
-                            help="达到排期时间后，广告会自动发布。"
-                        />
+                                help="同一 Slot 内优先级最高的广告优先出场。"
+                            />
+                            <TextControl
+                                label="权重（同优先级下随机）"
+                                type="number"
+                                min={1}
+                                value={selectedAd.options?.weight ?? 1}
+                                onChange={(value) =>
+                                    handleUpdateOptions({
+                                        weight: Math.max(1, Number(value) || 1),
+                                    })
+                                }
+                                help="仅对同优先级广告生效，权重越大越容易被选中。"
+                            />
+                        </>
                     )}
-                    <TextControl
-                        label="优先级（越大越先展示）"
-                        type="number"
-                        min={1}
-                        value={selectedAd.options?.priority ?? 10}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                priority: Math.max(1, Number(value) || 1),
-                            })
-                        }
-                        help="同一 Slot 内优先级最高的广告优先出场。"
-                    />
-                    <TextControl
-                        label="权重（同优先级下随机）"
-                        type="number"
-                        min={1}
-                        value={selectedAd.options?.weight ?? 1}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                weight: Math.max(1, Number(value) || 1),
-                            })
-                        }
-                        help="仅对同优先级广告生效，权重越大越容易被选中。"
-                    />
                 </CardBody>
             </Card>
             <Card>

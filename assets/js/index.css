@@ -45,6 +45,50 @@
     flex: 0 0 300px;
 }
 
+.magick-ad-layout.is-left-collapsed .magick-ad-left,
+.magick-ad-layout.is-right-collapsed .magick-ad-right {
+    display: none;
+}
+
+.magick-ad-toolbar-toggle.components-button {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 10px;
+}
+
+.magick-ad-collapse-rail {
+    width: 44px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 4px;
+    color: #64748b;
+}
+
+.magick-ad-collapse-rail__button.components-button {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 8px;
+}
+
+.magick-ad-collapse-rail__label {
+    font-size: 11px;
+    font-weight: 600;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: 0.08em;
+    user-select: none;
+}
+
 .magick-ad-toolbar {
     display: flex;
     justify-content: space-between;
@@ -742,6 +786,20 @@
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 12px;
+}
+
+.magick-ad-schedule-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.magick-ad-collapse-toggle.components-button {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 8px;
 }
 
 .magick-ad-schedule-title {

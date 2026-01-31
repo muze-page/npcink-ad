@@ -20,6 +20,8 @@ import {
     layout,
     fullscreen,
     closeSmall,
+    chevronLeft,
+    chevronRight,
 } from '@wordpress/icons';
 
 const previewIcons = {
@@ -50,6 +52,8 @@ const Layout = ({
     const [splitRatio, setSplitRatio] = useState(0.45);
     const [splitLocked, setSplitLocked] = useState(false);
     const [previewCollapsed, setPreviewCollapsed] = useState(false);
+    const [leftCollapsed, setLeftCollapsed] = useState(false);
+    const [rightCollapsed, setRightCollapsed] = useState(false);
     const adTypeControls = useMemo(
         () => [
             {
@@ -539,22 +543,41 @@ const Layout = ({
     };
 
     return (
-        <div className="magick-ad-layout">
-            <aside className="magick-ad-left">
-                {leftSidebar || (
-                    <Card>
-                        <CardBody>
-                            <h3 className="magick-ad-section-title">
-                                广告列表
-                            </h3>
-                            <div className="magick-ad-list">
-                                左侧列表区域
-                            </div>
-                            <Button variant="secondary">新增</Button>
-                        </CardBody>
-                    </Card>
-                )}
-            </aside>
+        <div
+            className={`magick-ad-layout ${
+                leftCollapsed ? 'is-left-collapsed' : ''
+            } ${rightCollapsed ? 'is-right-collapsed' : ''}`}
+        >
+            {!leftCollapsed ? (
+                <aside className="magick-ad-left">
+                    {leftSidebar || (
+                        <Card>
+                            <CardBody>
+                                <h3 className="magick-ad-section-title">
+                                    广告列表
+                                </h3>
+                                <div className="magick-ad-list">
+                                    左侧列表区域
+                                </div>
+                                <Button variant="secondary">新增</Button>
+                            </CardBody>
+                        </Card>
+                    )}
+                </aside>
+            ) : (
+                <div className="magick-ad-collapse-rail is-left">
+                    <Button
+                        className="magick-ad-collapse-rail__button"
+                        icon={chevronRight}
+                        label="展开左侧栏"
+                        variant="tertiary"
+                        onClick={() => setLeftCollapsed(false)}
+                    />
+                    <span className="magick-ad-collapse-rail__label">
+                        展开
+                    </span>
+                </div>
+            )}
 
             <main className="magick-ad-main">
                 <Card>
@@ -572,14 +595,50 @@ const Layout = ({
                                     controls={adTypeControls}
                                 />
                             </ToolbarGroup>
-                        <ToolbarGroup>
-                            <ToolbarDropdownMenu
-                                icon={layout}
-                                label="容器类型"
-                                controls={containerControls}
-                            />
-                        </ToolbarGroup>
-                    </Toolbar>
+                            <ToolbarGroup>
+                                <ToolbarDropdownMenu
+                                    icon={layout}
+                                    label="容器类型"
+                                    controls={containerControls}
+                                />
+                            </ToolbarGroup>
+                            <ToolbarGroup>
+                                <Button
+                                    className="magick-ad-toolbar-toggle"
+                                    icon={
+                                        leftCollapsed
+                                            ? chevronRight
+                                            : chevronLeft
+                                    }
+                                    label={
+                                        leftCollapsed
+                                            ? '展开左侧栏'
+                                            : '折叠左侧栏'
+                                    }
+                                    variant="tertiary"
+                                    onClick={() =>
+                                        setLeftCollapsed((prev) => !prev)
+                                    }
+                                />
+                                <Button
+                                    className="magick-ad-toolbar-toggle"
+                                    icon={
+                                        rightCollapsed
+                                            ? chevronLeft
+                                            : chevronRight
+                                    }
+                                    label={
+                                        rightCollapsed
+                                            ? '展开右侧栏'
+                                            : '折叠右侧栏'
+                                    }
+                                    variant="tertiary"
+                                    onClick={() =>
+                                        setRightCollapsed((prev) => !prev)
+                                    }
+                                />
+                            </ToolbarGroup>
+                        </Toolbar>
 
                         <div
                             className={`magick-ad-editor ${
@@ -763,146 +822,161 @@ const Layout = ({
                 </Card>
             </main>
 
-            <aside className="magick-ad-right">
-                {rightSidebar || (
-                    <Card>
-                        <CardBody>
-                            <h3 className="magick-ad-section-title">
-                                投放规则
-                            </h3>
-                            <div className="magick-ad-rule-block">
-                                <SelectControl
-                                    label="展示页面"
-                                    value={adData?.options?.show_page || 'all'}
-                                    options={[
-                                        { label: '全站', value: 'all' },
-                                        { label: '仅首页', value: 'home' },
-                                        { label: '仅文章页', value: 'posts' },
-                                        { label: '仅单页', value: 'pages' },
-                                    ]}
-                                    onChange={(value) =>
-                                        onUpdateRule?.('show_page', value)
-                                    }
-                                />
-                            </div>
-                            <div className="magick-ad-rule-block">
-                                <SelectControl
-                                    label="设备限制"
-                                    value={adData?.options?.device || 'all'}
-                                    options={[
-                                        { label: '全部设备', value: 'all' },
-                                        { label: '仅移动端', value: 'mobile' },
-                                        { label: '仅桌面端', value: 'desktop' },
-                                    ]}
-                                    onChange={(value) =>
-                                        onUpdateRule?.('device', value)
-                                    }
-                                />
-                            </div>
-                            <div className="magick-ad-rule-block">
-                                <SelectControl
-                                    label="展示位置"
-                                    value={(() => {
-                                        const hook =
-                                            adData?.options
-                                                ?.placement_hook || '';
-                                        const position =
-                                            adData?.options
-                                                ?.placement_position || '';
-                                        const paragraph =
-                                            Number(
+            {!rightCollapsed ? (
+                <aside className="magick-ad-right">
+                    {rightSidebar || (
+                        <Card>
+                            <CardBody>
+                                <h3 className="magick-ad-section-title">
+                                    投放规则
+                                </h3>
+                                <div className="magick-ad-rule-block">
+                                    <SelectControl
+                                        label="展示页面"
+                                        value={adData?.options?.show_page || 'all'}
+                                        options={[
+                                            { label: '全站', value: 'all' },
+                                            { label: '仅首页', value: 'home' },
+                                            { label: '仅文章页', value: 'posts' },
+                                            { label: '仅单页', value: 'pages' },
+                                        ]}
+                                        onChange={(value) =>
+                                            onUpdateRule?.('show_page', value)
+                                        }
+                                    />
+                                </div>
+                                <div className="magick-ad-rule-block">
+                                    <SelectControl
+                                        label="设备限制"
+                                        value={adData?.options?.device || 'all'}
+                                        options={[
+                                            { label: '全部设备', value: 'all' },
+                                            { label: '仅移动端', value: 'mobile' },
+                                            { label: '仅桌面端', value: 'desktop' },
+                                        ]}
+                                        onChange={(value) =>
+                                            onUpdateRule?.('device', value)
+                                        }
+                                    />
+                                </div>
+                                <div className="magick-ad-rule-block">
+                                    <SelectControl
+                                        label="展示位置"
+                                        value={(() => {
+                                            const hook =
                                                 adData?.options
-                                                    ?.placement_paragraph || 0
+                                                    ?.placement_hook || '';
+                                            const position =
+                                                adData?.options
+                                                    ?.placement_position || '';
+                                            const paragraph =
+                                                Number(
+                                                    adData?.options
+                                                        ?.placement_paragraph || 0
+                                                );
+                                            if (hook === 'body_top') {
+                                                return 'top';
+                                            }
+                                            if (hook === 'footer') {
+                                                return 'bottom';
+                                            }
+                                            if (hook === 'content') {
+                                                if (position === 'before') {
+                                                    return 'content_before';
+                                                }
+                                                if (position === 'after') {
+                                                    return 'content_after';
+                                                }
+                                                if (position === 'paragraph') {
+                                                    return paragraph >= 1
+                                                        ? 'paragraph_3'
+                                                        : '';
+                                                }
+                                            }
+                                            return '';
+                                        })()}
+                                        options={[
+                                            { label: '顶部', value: 'top' },
+                                            {
+                                                label: '内容前',
+                                                value: 'content_before',
+                                            },
+                                            {
+                                                label: '位置第三段',
+                                                value: 'paragraph_3',
+                                            },
+                                            {
+                                                label: '内容后',
+                                                value: 'content_after',
+                                            },
+                                            { label: '底部', value: 'bottom' },
+                                        ]}
+                                        onChange={(value) => {
+                                            const updates = {
+                                                placement_hook: '',
+                                                placement_position: '',
+                                                placement_paragraph: 0,
+                                            };
+                                            switch (value) {
+                                                case 'top':
+                                                    updates.placement_hook =
+                                                        'body_top';
+                                                    break;
+                                                case 'bottom':
+                                                    updates.placement_hook =
+                                                        'footer';
+                                                    break;
+                                                case 'content_before':
+                                                    updates.placement_hook =
+                                                        'content';
+                                                    updates.placement_position =
+                                                        'before';
+                                                    break;
+                                                case 'content_after':
+                                                    updates.placement_hook =
+                                                        'content';
+                                                    updates.placement_position =
+                                                        'after';
+                                                    break;
+                                                case 'paragraph_3':
+                                                    updates.placement_hook =
+                                                        'content';
+                                                    updates.placement_position =
+                                                        'paragraph';
+                                                    updates.placement_paragraph =
+                                                        3;
+                                                    break;
+                                                default:
+                                                    updates.placement_hook = '';
+                                            }
+                                            Object.entries(updates).forEach(
+                                                ([key, nextValue]) =>
+                                                    onUpdateRule?.(
+                                                        key,
+                                                        nextValue
+                                                    )
                                             );
-                                        if (hook === 'body_top') {
-                                            return 'top';
-                                        }
-                                        if (hook === 'footer') {
-                                            return 'bottom';
-                                        }
-                                        if (hook === 'content') {
-                                            if (position === 'before') {
-                                                return 'content_before';
-                                            }
-                                            if (position === 'after') {
-                                                return 'content_after';
-                                            }
-                                            if (position === 'paragraph') {
-                                                return paragraph >= 1
-                                                    ? 'paragraph_3'
-                                                    : '';
-                                            }
-                                        }
-                                        return '';
-                                    })()}
-                                    options={[
-                                        { label: '顶部', value: 'top' },
-                                        {
-                                            label: '内容前',
-                                            value: 'content_before',
-                                        },
-                                        {
-                                            label: '位置第三段',
-                                            value: 'paragraph_3',
-                                        },
-                                        {
-                                            label: '内容后',
-                                            value: 'content_after',
-                                        },
-                                        { label: '底部', value: 'bottom' },
-                                    ]}
-                                    onChange={(value) => {
-                                        const updates = {
-                                            placement_hook: '',
-                                            placement_position: '',
-                                            placement_paragraph: 0,
-                                        };
-                                        switch (value) {
-                                            case 'top':
-                                                updates.placement_hook =
-                                                    'body_top';
-                                                break;
-                                            case 'bottom':
-                                                updates.placement_hook =
-                                                    'footer';
-                                                break;
-                                            case 'content_before':
-                                                updates.placement_hook =
-                                                    'content';
-                                                updates.placement_position =
-                                                    'before';
-                                                break;
-                                            case 'content_after':
-                                                updates.placement_hook =
-                                                    'content';
-                                                updates.placement_position =
-                                                    'after';
-                                                break;
-                                            case 'paragraph_3':
-                                                updates.placement_hook =
-                                                    'content';
-                                                updates.placement_position =
-                                                    'paragraph';
-                                                updates.placement_paragraph =
-                                                    3;
-                                                break;
-                                            default:
-                                                updates.placement_hook = '';
-                                        }
-                                        Object.entries(updates).forEach(
-                                            ([key, nextValue]) =>
-                                                onUpdateRule?.(
-                                                    key,
-                                                    nextValue
-                                                )
-                                        );
-                                    }}
-                                />
-                            </div>
-                        </CardBody>
-                    </Card>
-                )}
-            </aside>
+                                        }}
+                                    />
+                                </div>
+                            </CardBody>
+                        </Card>
+                    )}
+                </aside>
+            ) : (
+                <div className="magick-ad-collapse-rail is-right">
+                    <Button
+                        className="magick-ad-collapse-rail__button"
+                        icon={chevronLeft}
+                        label="展开右侧栏"
+                        variant="tertiary"
+                        onClick={() => setRightCollapsed(false)}
+                    />
+                    <span className="magick-ad-collapse-rail__label">
+                        展开
+                    </span>
+                </div>
+            )}
         </div>
     );
 };
