@@ -23,7 +23,7 @@ final class Bindings {
         );
     }
 
-    public static function get_value(array $args, array $block, array $context) {
+    public static function get_value(array $args, array $block, array $context): mixed {
         $type = isset($args['type']) ? sanitize_text_field($args['type']) : 'random';
         $pool = isset($args['pool']) && is_array($args['pool']) ? $args['pool'] : array();
         $pool = array_values(array_filter($pool, 'is_scalar'));
@@ -94,7 +94,18 @@ final class Bindings {
         if ($mode === 'cookie') {
             if (!isset($_COOKIE['magick_ad_uid']) || !is_string($_COOKIE['magick_ad_uid'])) {
                 $uid = wp_generate_uuid4();
-                setcookie('magick_ad_uid', $uid, time() + MONTH_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+                setcookie(
+                    name: 'magick_ad_uid',
+                    value: $uid,
+                    options: array(
+                        'expires' => time() + MONTH_IN_SECONDS,
+                        'path' => COOKIEPATH,
+                        'domain' => COOKIE_DOMAIN,
+                        'secure' => is_ssl(),
+                        'httponly' => true,
+                        'samesite' => 'Lax',
+                    )
+                );
                 $_COOKIE['magick_ad_uid'] = $uid;
             }
             return 'cookie:' . sanitize_text_field(wp_unslash($_COOKIE['magick_ad_uid']));

@@ -7,6 +7,8 @@ if (!defined('ABSPATH')) {
 }
 
 final class Patterns {
+    private const CATEGORY = 'magick-ad';
+
     public function register(): void {
         if (did_action('init')) {
             $this->register_patterns();
@@ -17,10 +19,9 @@ final class Patterns {
 
     public static function export_patterns(): array {
         $instance = new self();
-        $patterns = $instance->get_patterns();
         $payload = array();
 
-        foreach ($patterns as $pattern) {
+        foreach ($instance->get_patterns() as $pattern) {
             $args = isset($pattern['args']) && is_array($pattern['args'])
                 ? $pattern['args']
                 : array();
@@ -41,7 +42,7 @@ final class Patterns {
             return;
         }
 
-        register_block_pattern_category('magick-ad', array(
+        register_block_pattern_category(self::CATEGORY, array(
             'label' => esc_html__('Magick AD', 'magick-ad'),
         ));
 
@@ -67,35 +68,65 @@ final class Patterns {
             . '</div>';
     }
 
-    private function get_patterns(): array {
-        $patterns = array();
-        $allow_external_assets = (bool) apply_filters('magick_ad_allow_external_pattern_assets', false);
-        $asset_base = rtrim(MAGICK_AD_URL, '/') . '/assets/placeholders/';
-        $banner_placeholder = $asset_base . 'banner.svg';
-        $square_placeholder = $asset_base . 'square.svg';
-        $feature_placeholder = $asset_base . 'feature.svg';
-        $floating_placeholder = $asset_base . 'floating.svg';
+    private function allow_external_assets(): bool {
+        return (bool) apply_filters('magick_ad_allow_external_pattern_assets', false);
+    }
 
-        $patterns[] = array(
-            'name' => 'magick-ad/adsense-responsive',
-            'args' => array(
+    private function get_placeholder_assets(): array {
+        $asset_base = rtrim(MAGICK_AD_URL, '/') . '/assets/placeholders/';
+        return array(
+            'banner' => $asset_base . 'banner.svg',
+            'square' => $asset_base . 'square.svg',
+            'feature' => $asset_base . 'feature.svg',
+            'floating' => $asset_base . 'floating.svg',
+        );
+    }
+
+    private function pattern(string $name, array $args): array {
+        if (!isset($args['categories'])) {
+            $args['categories'] = array(self::CATEGORY);
+        }
+
+        return array(
+            'name' => $name,
+            'args' => $args,
+        );
+    }
+
+    private function get_patterns(): array {
+        $allow_external_assets = $this->allow_external_assets();
+        $placeholders = $this->get_placeholder_assets();
+
+        return array_merge(
+            $this->get_html_patterns($allow_external_assets),
+            $this->get_image_patterns($allow_external_assets, $placeholders),
+            $this->get_video_patterns($allow_external_assets),
+            $this->get_block_patterns($allow_external_assets, $placeholders),
+            $this->get_container_patterns($allow_external_assets, $placeholders)
+        );
+    }
+
+    private function get_html_patterns(bool $allow_external_assets): array {
+        $patterns = array();
+
+        $patterns[] = $this->pattern(
+            'magick-ad/adsense-responsive',
+            array(
                 'title' => esc_html__('AdSense 响应式', 'magick-ad'),
                 'description' => esc_html__('预置 adsbygoogle 响应式结构', 'magick-ad'),
-                'categories' => array('magick-ad'),
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '联盟广告',
                     'html' => '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXX" data-ad-slot="1234567890" data-ad-format="auto" data-full-width-responsive="true"></ins>',
                 )),
-            ),
+            )
         );
 
-        $patterns[] = array(
-            'name' => 'magick-ad/fullwidth-hero',
-            'args' => array(
+        $patterns[] = $this->pattern(
+            'magick-ad/fullwidth-hero',
+            array(
                 'title' => esc_html__('全宽横幅', 'magick-ad'),
                 'description' => esc_html__('背景图 + 文字居中', 'magick-ad'),
-                'categories' => array('magick-ad'),
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '促销',
@@ -106,15 +137,14 @@ final class Patterns {
                             : 'background:linear-gradient(135deg,#2563eb,#22d3ee);'
                     ),
                 )),
-            ),
+            )
         );
 
-        $patterns[] = array(
-            'name' => 'magick-ad/responsive-embed',
-            'args' => array(
+        $patterns[] = $this->pattern(
+            'magick-ad/responsive-embed',
+            array(
                 'title' => esc_html__('嵌入式视频', 'magick-ad'),
                 'description' => esc_html__('响应式视频容器（16:9）', 'magick-ad'),
-                'categories' => array('magick-ad'),
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '视频',
@@ -122,243 +152,228 @@ final class Patterns {
                         ? '<div style="position:relative;width:100%;padding-top:56.25%;overflow:hidden;border-radius:8px;background:#000;"><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Video" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>'
                         : $this->media_placeholder_html('视频占位（请替换链接）'),
                 )),
-            ),
+            )
         );
 
-        $patterns[] = array(
-            'name' => 'magick-ad/centered-banner',
-            'args' => array(
+        $patterns[] = $this->pattern(
+            'magick-ad/centered-banner',
+            array(
                 'title' => esc_html__('居中横幅', 'magick-ad'),
                 'description' => esc_html__('Flex 居中，背景透明', 'magick-ad'),
-                'categories' => array('magick-ad'),
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '品牌',
                     'html' => '<div class="banner-slot">横幅广告内容</div>',
                 )),
-            ),
+            )
         );
 
-        $patterns[] = array(
-            'name' => 'magick-ad/card-promo',
-            'args' => array(
+        $patterns[] = $this->pattern(
+            'magick-ad/card-promo',
+            array(
                 'title' => esc_html__('卡片式推广', 'magick-ad'),
                 'description' => esc_html__('白色背景 + 圆角 + 阴影', 'magick-ad'),
-                'categories' => array('magick-ad'),
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '转化',
                     'html' => '<h3>新品优惠</h3><p>立即领取专属折扣。</p>',
                 )),
-            ),
+            )
         );
 
-        $patterns[] = array(
-            'name' => 'magick-ad/raw-html',
-            'args' => array(
+        $patterns[] = $this->pattern(
+            'magick-ad/raw-html',
+            array(
                 'title' => esc_html__('原始代码', 'magick-ad'),
                 'description' => esc_html__('无任何包裹样式', 'magick-ad'),
-                'categories' => array('magick-ad'),
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '通用',
                     'html' => '<div class="custom-slot">粘贴你的 HTML 代码</div>',
                 )),
-            ),
-        );
-
-        $patterns[] = array(
-            'name' => 'magick-ad/image-banner',
-            'args' => array(
-                'title' => esc_html__('横幅图片', 'magick-ad'),
-                'description' => esc_html__('适用于文章内横幅', 'magick-ad'),
-                'categories' => array('magick-ad'),
-                'content' => $this->build_ad_block(array(
-                    'creativeType' => 'image',
-                    'templateCategory' => '促销',
-                    'imageUrl' => $allow_external_assets
-                        ? 'https://via.placeholder.com/1200x240?text=Banner'
-                        : $banner_placeholder,
-                    'imageAlt' => 'Banner',
-                )),
-            ),
-        );
-
-        $patterns[] = array(
-            'name' => 'magick-ad/image-square',
-            'args' => array(
-                'title' => esc_html__('方形图', 'magick-ad'),
-                'description' => esc_html__('适用于侧边栏或列表', 'magick-ad'),
-                'categories' => array('magick-ad'),
-                'content' => $this->build_ad_block(array(
-                    'creativeType' => 'image',
-                    'templateCategory' => '内容',
-                    'imageUrl' => $allow_external_assets
-                        ? 'https://via.placeholder.com/600x600?text=Image'
-                        : $square_placeholder,
-                    'imageAlt' => 'Square',
-                )),
-            ),
-        );
-
-        if ($allow_external_assets) {
-            $patterns[] = array(
-                'name' => 'magick-ad/video-inline',
-                'args' => array(
-                    'title' => esc_html__('内嵌视频', 'magick-ad'),
-                    'description' => esc_html__('贴合正文的视频广告', 'magick-ad'),
-                    'categories' => array('magick-ad'),
-                    'content' => $this->build_ad_block(array(
-                        'creativeType' => 'video',
-                        'templateCategory' => '视频',
-                        'videoUrl' => 'https://www.w3schools.com/html/mov_bbb.mp4',
-                    )),
-                ),
-            );
-        } else {
-            $patterns[] = array(
-                'name' => 'magick-ad/video-inline',
-                'args' => array(
-                    'title' => esc_html__('内嵌视频', 'magick-ad'),
-                    'description' => esc_html__('视频占位（请替换链接）', 'magick-ad'),
-                    'categories' => array('magick-ad'),
-                    'content' => $this->build_ad_block(array(
-                        'creativeType' => 'html',
-                        'templateCategory' => '视频',
-                        'html' => $this->media_placeholder_html('视频占位（请替换链接）'),
-                    )),
-                ),
-            );
-        }
-
-        if ($allow_external_assets) {
-            $patterns[] = array(
-                'name' => 'magick-ad/video-cover',
-                'args' => array(
-                    'title' => esc_html__('封面视频', 'magick-ad'),
-                    'description' => esc_html__('适合弹窗或浮层的展示', 'magick-ad'),
-                    'categories' => array('magick-ad'),
-                    'content' => $this->build_ad_block(array(
-                        'creativeType' => 'video',
-                        'templateCategory' => '视频',
-                        'videoUrl' => 'https://www.w3schools.com/html/movie.mp4',
-                    )),
-                ),
-            );
-        } else {
-            $patterns[] = array(
-                'name' => 'magick-ad/video-cover',
-                'args' => array(
-                    'title' => esc_html__('封面视频', 'magick-ad'),
-                    'description' => esc_html__('视频占位（请替换链接）', 'magick-ad'),
-                    'categories' => array('magick-ad'),
-                    'content' => $this->build_ad_block(array(
-                        'creativeType' => 'html',
-                        'templateCategory' => '视频',
-                        'html' => $this->media_placeholder_html('视频占位（请替换链接）'),
-                    )),
-                ),
-            );
-        }
-
-        $patterns[] = array(
-            'name' => 'magick-ad/block-cta',
-            'args' => array(
-                'title' => esc_html__('CTA 卡片', 'magick-ad'),
-                'description' => esc_html__('标题 + 文案 + 按钮', 'magick-ad'),
-                'categories' => array('magick-ad'),
-                'content' => $this->build_ad_block(array(
-                    'creativeType' => 'block',
-                    'templateCategory' => '转化',
-                    'blocks' => '<!-- wp:heading {"level":3} --><h3>限时特惠</h3><!-- /wp:heading --><!-- wp:paragraph --><p>今天下单享受 8 折优惠。</p><!-- /wp:paragraph --><!-- wp:buttons --><div class="wp-block-buttons"><div class="wp-block-button"><a class="wp-block-button__link">立即查看</a></div></div><!-- /wp:buttons -->',
-                )),
-            ),
-        );
-
-        $patterns[] = array(
-            'name' => 'magick-ad/block-feature',
-            'args' => array(
-                'title' => esc_html__('图文卖点', 'magick-ad'),
-                'description' => esc_html__('左右分栏图文排版', 'magick-ad'),
-                'categories' => array('magick-ad'),
-                'content' => $this->build_ad_block(array(
-                    'creativeType' => 'block',
-                    'templateCategory' => '内容',
-                    'blocks' => sprintf(
-                        '<!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p>高转化广告位推荐</p><!-- /wp:paragraph --><!-- wp:list --><ul><li>快速配置</li><li>多端适配</li><li>自动统计</li></ul><!-- /wp:list --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:image {"sizeSlug":"large"} --><figure class="wp-block-image size-large"><img src="%s" alt=""/></figure><!-- /wp:image --></div><!-- /wp:column --></div><!-- /wp:columns -->',
-                        esc_url(
-                            $allow_external_assets
-                                ? 'https://via.placeholder.com/400x240?text=Image'
-                                : $feature_placeholder
-                        )
-                    ),
-                )),
-            ),
-        );
-
-        $patterns[] = array(
-            'name' => 'magick-ad/popup-cta',
-            'args' => array(
-                'title' => esc_html__('弹窗 CTA', 'magick-ad'),
-                'description' => esc_html__('弹窗容器 + 促销文案', 'magick-ad'),
-                'categories' => array('magick-ad'),
-                'content' => $this->build_ad_block(array(
-                    'creativeType' => 'html',
-                    'containerType' => 'popup',
-                    'templateCategory' => '转化',
-                    'html' => '<h3>限时弹窗优惠</h3><p>现在领取 9 折券。</p>',
-                )),
-            ),
-        );
-
-        $patterns[] = array(
-            'name' => 'magick-ad/banner-sticky',
-            'args' => array(
-                'title' => esc_html__('横栏通知', 'magick-ad'),
-                'description' => esc_html__('横栏容器 + 简短提示', 'magick-ad'),
-                'categories' => array('magick-ad'),
-                'content' => $this->build_ad_block(array(
-                    'creativeType' => 'html',
-                    'containerType' => 'banner',
-                    'templateCategory' => '品牌',
-                    'html' => '<strong>新功能上线：</strong>立刻体验我们的新版服务。',
-                )),
-            ),
-        );
-
-        $patterns[] = array(
-            'name' => 'magick-ad/floating-corner',
-            'args' => array(
-                'title' => esc_html__('角落悬浮', 'magick-ad'),
-                'description' => esc_html__('悬浮容器 + 图片', 'magick-ad'),
-                'categories' => array('magick-ad'),
-                'content' => $this->build_ad_block(array(
-                    'creativeType' => 'image',
-                    'containerType' => 'floating',
-                    'templateCategory' => '转化',
-                    'imageUrl' => $allow_external_assets
-                        ? 'https://via.placeholder.com/320x320?text=Floating'
-                        : $floating_placeholder,
-                    'imageAlt' => 'Floating',
-                )),
-            ),
-        );
-
-        $patterns[] = array(
-            'name' => 'magick-ad/interstitial-full',
-            'args' => array(
-                'title' => esc_html__('全屏插屏', 'magick-ad'),
-                'description' => esc_html__('插屏容器 + 视觉冲击', 'magick-ad'),
-                'categories' => array('magick-ad'),
-                'content' => $this->build_ad_block(array(
-                    'creativeType' => 'html',
-                    'containerType' => 'interstitial',
-                    'templateCategory' => '促销',
-                    'html' => '<div style="text-align:center;"><h2>全屏活动</h2><p>限时福利，马上领取！</p></div>',
-                )),
-            ),
+            )
         );
 
         return $patterns;
+    }
+
+    private function get_image_patterns(bool $allow_external_assets, array $placeholders): array {
+        return array(
+            $this->pattern(
+                'magick-ad/image-banner',
+                array(
+                    'title' => esc_html__('横幅图片', 'magick-ad'),
+                    'description' => esc_html__('适用于文章内横幅', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'image',
+                        'templateCategory' => '促销',
+                        'imageUrl' => $allow_external_assets
+                            ? 'https://via.placeholder.com/1200x240?text=Banner'
+                            : $placeholders['banner'],
+                        'imageAlt' => 'Banner',
+                    )),
+                )
+            ),
+            $this->pattern(
+                'magick-ad/image-square',
+                array(
+                    'title' => esc_html__('方形图', 'magick-ad'),
+                    'description' => esc_html__('适用于侧边栏或列表', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'image',
+                        'templateCategory' => '内容',
+                        'imageUrl' => $allow_external_assets
+                            ? 'https://via.placeholder.com/600x600?text=Image'
+                            : $placeholders['square'],
+                        'imageAlt' => 'Square',
+                    )),
+                )
+            ),
+        );
+    }
+
+    private function get_video_patterns(bool $allow_external_assets): array {
+        $placeholder = $this->media_placeholder_html('视频占位（请替换链接）');
+
+        return array(
+            $this->pattern(
+                'magick-ad/video-inline',
+                array(
+                    'title' => esc_html__('内嵌视频', 'magick-ad'),
+                    'description' => $allow_external_assets
+                        ? esc_html__('贴合正文的视频广告', 'magick-ad')
+                        : esc_html__('视频占位（请替换链接）', 'magick-ad'),
+                    'content' => $this->build_ad_block($allow_external_assets
+                        ? array(
+                            'creativeType' => 'video',
+                            'templateCategory' => '视频',
+                            'videoUrl' => 'https://www.w3schools.com/html/mov_bbb.mp4',
+                        )
+                        : array(
+                            'creativeType' => 'html',
+                            'templateCategory' => '视频',
+                            'html' => $placeholder,
+                        )),
+                )
+            ),
+            $this->pattern(
+                'magick-ad/video-cover',
+                array(
+                    'title' => esc_html__('封面视频', 'magick-ad'),
+                    'description' => $allow_external_assets
+                        ? esc_html__('适合弹窗或浮层的展示', 'magick-ad')
+                        : esc_html__('视频占位（请替换链接）', 'magick-ad'),
+                    'content' => $this->build_ad_block($allow_external_assets
+                        ? array(
+                            'creativeType' => 'video',
+                            'templateCategory' => '视频',
+                            'videoUrl' => 'https://www.w3schools.com/html/movie.mp4',
+                        )
+                        : array(
+                            'creativeType' => 'html',
+                            'templateCategory' => '视频',
+                            'html' => $placeholder,
+                        )),
+                )
+            ),
+        );
+    }
+
+    private function get_block_patterns(bool $allow_external_assets, array $placeholders): array {
+        $image_url = esc_url(
+            $allow_external_assets
+                ? 'https://via.placeholder.com/400x240?text=Image'
+                : $placeholders['feature']
+        );
+
+        return array(
+            $this->pattern(
+                'magick-ad/block-cta',
+                array(
+                    'title' => esc_html__('CTA 卡片', 'magick-ad'),
+                    'description' => esc_html__('标题 + 文案 + 按钮', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'block',
+                        'templateCategory' => '转化',
+                        'blocks' => '<!-- wp:heading {"level":3} --><h3>限时特惠</h3><!-- /wp:heading --><!-- wp:paragraph --><p>今天下单享受 8 折优惠。</p><!-- /wp:paragraph --><!-- wp:buttons --><div class="wp-block-buttons"><div class="wp-block-button"><a class="wp-block-button__link">立即查看</a></div></div><!-- /wp:buttons -->',
+                    )),
+                )
+            ),
+            $this->pattern(
+                'magick-ad/block-feature',
+                array(
+                    'title' => esc_html__('图文卖点', 'magick-ad'),
+                    'description' => esc_html__('左右分栏图文排版', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'block',
+                        'templateCategory' => '内容',
+                        'blocks' => sprintf(
+                            '<!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p>高转化广告位推荐</p><!-- /wp:paragraph --><!-- wp:list --><ul><li>快速配置</li><li>多端适配</li><li>自动统计</li></ul><!-- /wp:list --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:image {"sizeSlug":"large"} --><figure class="wp-block-image size-large"><img src="%s" alt=""/></figure><!-- /wp:image --></div><!-- /wp:column --></div><!-- /wp:columns -->',
+                            $image_url
+                        ),
+                    )),
+                )
+            ),
+        );
+    }
+
+    private function get_container_patterns(bool $allow_external_assets, array $placeholders): array {
+        return array(
+            $this->pattern(
+                'magick-ad/popup-cta',
+                array(
+                    'title' => esc_html__('弹窗 CTA', 'magick-ad'),
+                    'description' => esc_html__('弹窗容器 + 促销文案', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'html',
+                        'containerType' => 'popup',
+                        'templateCategory' => '转化',
+                        'html' => '<h3>限时弹窗优惠</h3><p>现在领取 9 折券。</p>',
+                    )),
+                )
+            ),
+            $this->pattern(
+                'magick-ad/banner-sticky',
+                array(
+                    'title' => esc_html__('横栏通知', 'magick-ad'),
+                    'description' => esc_html__('横栏容器 + 简短提示', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'html',
+                        'containerType' => 'banner',
+                        'templateCategory' => '品牌',
+                        'html' => '<strong>新功能上线：</strong>立刻体验我们的新版服务。',
+                    )),
+                )
+            ),
+            $this->pattern(
+                'magick-ad/floating-corner',
+                array(
+                    'title' => esc_html__('角落悬浮', 'magick-ad'),
+                    'description' => esc_html__('悬浮容器 + 图片', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'image',
+                        'containerType' => 'floating',
+                        'templateCategory' => '转化',
+                        'imageUrl' => $allow_external_assets
+                            ? 'https://via.placeholder.com/320x320?text=Floating'
+                            : $placeholders['floating'],
+                        'imageAlt' => 'Floating',
+                    )),
+                )
+            ),
+            $this->pattern(
+                'magick-ad/interstitial-full',
+                array(
+                    'title' => esc_html__('全屏插屏', 'magick-ad'),
+                    'description' => esc_html__('插屏容器 + 视觉冲击', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'html',
+                        'containerType' => 'interstitial',
+                        'templateCategory' => '促销',
+                        'html' => '<div style="text-align:center;"><h2>全屏活动</h2><p>限时福利，马上领取！</p></div>',
+                    )),
+                )
+            ),
+        );
     }
 }

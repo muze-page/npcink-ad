@@ -3,6 +3,7 @@
 namespace MagickAD\REST\Controllers;
 
 use WP_REST_Request;
+use MagickAD\Utils\TrackingStrategy;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -25,10 +26,7 @@ final class System_Settings_Controller {
     }
 
     private static function sanitize_tracking_strategy($value): string {
-        $value = is_string($value) ? $value : '';
-        return in_array($value, array('request', 'session', 'cookie', 'user'), true)
-            ? $value
-            : 'session';
+        return TrackingStrategy::from_value($value)->value;
     }
 
     private static function sanitize_manage_capability($value): string {
@@ -48,7 +46,9 @@ final class System_Settings_Controller {
         $diagnostics_expires_at = (int) get_option('magick_ad_stats_diagnostics_expires_at', 0);
 
         $settings = array(
-            'tracking_strategy' => get_option('magick_ad_tracking_strategy', 'session'),
+            'tracking_strategy' => TrackingStrategy::from_value(
+                get_option('magick_ad_tracking_strategy', 'session')
+            )->value,
             'tracking_require_consent' => (get_option('magick_ad_tracking_require_consent', '0') === '1'),
             'tracking_dedupe_ttl' => $dedupe_ttl,
             'tracking_require_signature' => (get_option('magick_ad_track_require_signature', '1') === '1'),

@@ -7,67 +7,199 @@ if (!defined('ABSPATH')) {
 }
 
 final class Admin {
+    private const MENU_SLUG = 'magick-ad';
+    private const MENU_ICON = 'dashicons-megaphone';
+    private const MENU_POSITION = 60;
+    private const DEBUG_DEVICES = array('auto', 'mobile', 'tablet', 'desktop');
+    private const DEBUG_LOGIN_STATES = array('auto', 'logged-in', 'logged-out');
+
     public function register(): void {
         add_action('admin_menu', array($this, 'register_menu'));
         add_action('admin_init', array($this, 'register_debug_settings'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
 
+    public function enqueue_assets(string $hook): void {
+        if (!$this->is_app_screen($hook)) {
+            return;
+        }
+
+        $asset = $this->get_admin_asset();
+        $handle = 'magick-ad-admin';
+
+        wp_enqueue_style(
+            $handle,
+            MAGICK_AD_URL . 'build/index.css',
+            array('wp-components'),
+            $asset['version']
+        );
+
+        wp_enqueue_script(
+            $handle,
+            MAGICK_AD_URL . 'build/index.js',
+            $asset['dependencies'],
+            $asset['version'],
+            true
+        );
+
+        wp_set_script_translations($handle, 'magick-ad', MAGICK_AD_PATH . 'languages');
+        wp_enqueue_media();
+
+        $data = array(
+            'nonce' => wp_create_nonce('wp_rest'),
+            'initialTab' => $this->get_initial_tab($hook),
+            'previewUrl' => $this->get_preview_url(),
+            'previewNonce' => wp_create_nonce('magick_ad_preview'),
+            'branding' => $this->get_branding(),
+            'canUnfilteredHtml' => current_user_can('unfiltered_html'),
+            'patterns' => \\MagickAD\\Blocks\\Patterns::export_patterns(),
+            'diagnoseUrl' => admin_url('admin.php?page=magick-ad-debug'),
+            'buildVersion' => MAGICK_AD_VERSION,
+            'buildTime' => $this->get_build_time(),
+        );
+
+        wp_add_inline_script(
+            $handle,
+            'window.MagickAD = ' . wp_json_encode($data) . ';',
+            'before'
+        );
+    }
+
     public function register_menu(): void {
         $capability = \MagickAD\Utils\Capabilities::manage_capability();
-        $brand_name = get_option('magick_ad_brand_name', 'Magick AD');
+        $brand_name = $this->get_brand_name();
+
         add_menu_page(
             $brand_name,
             $brand_name,
             $capability,
-            'magick-ad',
+            self::MENU_SLUG,
             array($this, 'render_app'),
-            'dashicons-megaphone',
-            60
+            self::MENU_ICON,
+            self::MENU_POSITION
         );
 
-        add_submenu_page(
-            'magick-ad',
-            __('广告配置', 'magick-ad'),
-            __('广告配置', 'magick-ad'),
-            $capability,
-            'magick-ad',
-            array($this, 'render_app')
-        );
+        $this->register_submenu_pages($capability);
+    }
 
-        add_submenu_page(
-            'magick-ad',
-            __('广告列表', 'magick-ad'),
-            __('广告列表', 'magick-ad'),
-            $capability,
-            'edit.php?post_type=magick_ad'
-        );
+    private function get_brand_name(): string {
+        $name = (string) get_option('magick_ad_brand_name', 'Magick AD');
+        $name = sanitize_text_field($name);
+        return $name !== '' ? $name : 'Magick AD';
+    }
 
-        add_submenu_page(
-            'magick-ad',
-            __('统计看板', 'magick-ad'),
-            __('统计看板', 'magick-ad'),
-            $capability,
-            'magick-ad-report',
-            array($this, 'render_app')
-        );
+    private function get_branding(): array {
+        $name = (string) get_option('magick_ad_brand_name', 'Magick AD');
+        $tagline = (string) get_option('magick_ad_brand_tagline', '广告配置与投放规则管理');
 
-        add_submenu_page(
-            'magick-ad',
-            __('插入入口', 'magick-ad'),
-            __('插入入口', 'magick-ad'),
-            $capability,
-            'magick-ad-insert',
-            array($this, 'render_insert_help')
+        return array(
+            'name' => $name !== '' ? sanitize_text_field($name) : 'Magick AD',
+            'tagline' => $tagline !== '' ? sanitize_text_field($tagline) : '广告配置与投放规则管理',
         );
+    }
 
-        add_submenu_page(
-            'magick-ad',
-            __('调试面板', 'magick-ad'),
-            __('调试面板', 'magick-ad'),
-            $capability,
-            'magick-ad-debug',
-            array($this, 'render_debug_panel')
+    private function is_app_screen(string $hook): bool {
+        return in_array(
+            $hook,
+            array(
+                'toplevel_page_magick-ad',
+                'magick-ad_page_magick-ad',
+                'magick-ad_page_magick-ad-report',
+            ),
+            true
+        );
+    }
+
+    private function get_initial_tab(string $hook): string {
+        return str_contains($hook, 'magick-ad-report') ? 'report' : 'ads';
+    }
+
+    private function get_admin_asset(): array {
+        $asset_path = MAGICK_AD_PATH . 'build/index.asset.php';
+        if (file_exists($asset_path)) {
+            $asset = require $asset_path;
+            return array(
+                'dependencies' => isset($asset['dependencies']) && is_array($asset['dependencies'])
+                    ? $asset['dependencies']
+                    : array(),
+                'version' => isset($asset['version']) ? (string) $asset['version'] : MAGICK_AD_VERSION,
+            );
+        }
+
+        return array(
+            'dependencies' => array(),
+            'version' => MAGICK_AD_VERSION,
+        );
+    }
+
+    private function get_build_time(): int {
+        $file = MAGICK_AD_PATH . 'build/index.js';
+        return file_exists($file) ? (int) filemtime($file) : time();
+    }
+
+    private function get_preview_url(): string {
+        $url = home_url('/');
+        $url = (string) apply_filters('magick_ad_preview_url', $url);
+        return $url !== '' ? $url : home_url('/');
+    }
+
+    private function register_submenu_pages(string $capability): void {
+        foreach ($this->get_submenu_pages() as $page) {
+            if (!isset($page['menu_slug'], $page['page_title'], $page['menu_title'])) {
+                continue;
+            }
+            if (isset($page['callback'])) {
+                add_submenu_page(
+                    self::MENU_SLUG,
+                    $page['page_title'],
+                    $page['menu_title'],
+                    $capability,
+                    $page['menu_slug'],
+                    $page['callback']
+                );
+                continue;
+            }
+            add_submenu_page(
+                self::MENU_SLUG,
+                $page['page_title'],
+                $page['menu_title'],
+                $capability,
+                $page['menu_slug']
+            );
+        }
+    }
+
+    private function get_submenu_pages(): array {
+        return array(
+            array(
+                'page_title' => __('广告配置', 'magick-ad'),
+                'menu_title' => __('广告配置', 'magick-ad'),
+                'menu_slug' => self::MENU_SLUG,
+                'callback' => array($this, 'render_app'),
+            ),
+            array(
+                'page_title' => __('广告列表', 'magick-ad'),
+                'menu_title' => __('广告列表', 'magick-ad'),
+                'menu_slug' => 'edit.php?post_type=magick_ad',
+            ),
+            array(
+                'page_title' => __('统计看板', 'magick-ad'),
+                'menu_title' => __('统计看板', 'magick-ad'),
+                'menu_slug' => 'magick-ad-report',
+                'callback' => array($this, 'render_app'),
+            ),
+            array(
+                'page_title' => __('插入入口', 'magick-ad'),
+                'menu_title' => __('插入入口', 'magick-ad'),
+                'menu_slug' => 'magick-ad-insert',
+                'callback' => array($this, 'render_insert_help'),
+            ),
+            array(
+                'page_title' => __('调试面板', 'magick-ad'),
+                'menu_title' => __('调试面板', 'magick-ad'),
+                'menu_slug' => 'magick-ad-debug',
+                'callback' => array($this, 'render_debug_panel'),
+            ),
         );
     }
 
@@ -82,13 +214,20 @@ final class Admin {
             )
         );
 
+        $this->register_debug_section();
+        $this->register_debug_field_setting();
+    }
+
+    private function register_debug_section(): void {
         add_settings_section(
             'magick_ad_debug_section',
             esc_html__('调试设置', 'magick-ad'),
             '__return_false',
             'magick_ad_debug'
         );
+    }
 
+    private function register_debug_field_setting(): void {
         add_settings_field(
             'magick_ad_debug_field',
             esc_html__('启用调试日志', 'magick-ad'),
@@ -98,7 +237,7 @@ final class Admin {
         );
     }
 
-    public function sanitize_debug($value): string {
+    public function sanitize_debug(mixed $value): string {
         return !empty($value) ? '1' : '0';
     }
 
@@ -113,6 +252,11 @@ final class Admin {
     public function render_app(): void {
         echo '<div class="wrap">';
         echo '<div id="magick-ad-app"></div>';
+        $this->render_classic_editor_host();
+        echo '</div>';
+    }
+
+    private function render_classic_editor_host(): void {
         echo '<div id="magick-ad-classic-editor-host" style="display:none;">';
         wp_editor(
             '',
@@ -126,23 +270,10 @@ final class Admin {
             )
         );
         echo '</div>';
-        echo '</div>';
     }
 
     public function render_insert_help(): void {
-        $block_title = esc_html__('区块（Block）', 'magick-ad');
-        $shortcode_title = esc_html__('短代码（Shortcode）', 'magick-ad');
-        $template_title = esc_html__('主题模板函数（Template Tag / PHP API）', 'magick-ad');
-
-        $shortcode_example_1 = esc_html('[magick_ad slot="sidebar-top"]');
-        $shortcode_example_2 = esc_html('[magick_ad id="ad_123456"]');
-        $shortcode_example_3 = esc_html('[magick_ad slot="post-inline-1" class="my-ad"]');
-
-        $template_example = esc_html(
-            "<?php if (function_exists('magick_ad_the')) : ?>\n" .
-            "  <?php magick_ad_the('sidebar-top'); ?>\n" .
-            "<?php endif; ?>"
-        );
+        $payload = $this->get_insert_help_payload();
 
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__('插入入口', 'magick-ad') . '</h1>';
@@ -150,47 +281,101 @@ final class Admin {
 
         echo '<hr />';
 
-        echo '<h2>' . $block_title . '</h2>';
+        $this->render_block_help($payload['block_title']);
+        $this->render_shortcode_help($payload['shortcode_title'], $payload['shortcode_examples']);
+        $this->render_template_help($payload['template_title'], $payload['template_example']);
+        $this->render_slot_naming_help();
+
+        echo '</div>';
+    }
+
+    private function get_insert_help_payload(): array {
+        return array(
+            'block_title' => esc_html__('区块（Block）', 'magick-ad'),
+            'shortcode_title' => esc_html__('短代码（Shortcode）', 'magick-ad'),
+            'template_title' => esc_html__('主题模板函数（Template Tag / PHP API）', 'magick-ad'),
+            'shortcode_examples' => array(
+                esc_html('[magick_ad slot="sidebar-top"]'),
+                esc_html('[magick_ad id="ad_123456"]'),
+                esc_html('[magick_ad slot="post-inline-1" class="my-ad"]'),
+            ),
+            'template_example' => esc_html(
+                "<?php if (function_exists('magick_ad_the')) : ?>\n" .
+                "  <?php magick_ad_the('sidebar-top'); ?>\n" .
+                "<?php endif; ?>"
+            ),
+        );
+    }
+
+    private function render_block_help(string $title): void {
+        echo '<h2>' . $title . '</h2>';
         echo '<p>' . esc_html__('现代 WP 首选（Gutenberg / FSE），可在编辑器中直接插入 “Magick AD” 区块。', 'magick-ad') . '</p>';
         echo '<ol>';
         echo '<li>' . esc_html__('在区块编辑器中添加 “Magick AD” 区块。', 'magick-ad') . '</li>';
         echo '<li>' . esc_html__('在区块设置中选择广告位 Slot。', 'magick-ad') . '</li>';
         echo '<li>' . esc_html__('预览可实时渲染，前台根据投放规则显示。', 'magick-ad') . '</li>';
         echo '</ol>';
+    }
 
-        echo '<h2>' . $shortcode_title . '</h2>';
+    private function render_shortcode_help(string $title, array $examples): void {
+        echo '<h2>' . $title . '</h2>';
         echo '<p>' . esc_html__('兼容经典编辑器/复制粘贴场景，适合内容中快速插入。', 'magick-ad') . '</p>';
-        echo '<pre><code>' . $shortcode_example_1 . "\n" . $shortcode_example_2 . "\n" . $shortcode_example_3 . '</code></pre>';
+        echo '<pre><code>' . implode("\n", $examples) . '</code></pre>';
+    }
 
-        echo '<h2>' . $template_title . '</h2>';
+    private function render_template_help(string $title, string $example): void {
+        echo '<h2>' . $title . '</h2>';
         echo '<p>' . esc_html__('给主题开发者或模板文件使用，适合放在任意位置。', 'magick-ad') . '</p>';
-        echo '<pre><code>' . $template_example . '</code></pre>';
+        echo '<pre><code>' . $example . '</code></pre>';
+    }
 
+    private function render_slot_naming_help(): void {
         echo '<h3>' . esc_html__('Slot 命名建议', 'magick-ad') . '</h3>';
         echo '<ul>';
         echo '<li>' . esc_html__('推荐使用小写字母、数字与短横线。', 'magick-ad') . '</li>';
         echo '<li>' . esc_html__('保持唯一性，便于在区块/短代码/模板函数中稳定引用。', 'magick-ad') . '</li>';
         echo '</ul>';
+    }
+
+    public function render_debug_panel(): void {
+        $params = $this->get_debug_panel_params();
+        $debug_url = $this->build_debug_url($params['input_url'], $params['device'], $params['login_state']);
+
+        echo '<div class="wrap">';
+        echo '<h1>' . esc_html__('调试面板', 'magick-ad') . '</h1>';
+        echo '<p>' . esc_html__('输入页面 URL 并选择设备类型，生成投放诊断报告。页面类型将由 URL 自身决定。', 'magick-ad') . '</p>';
+
+        $this->render_debug_form($params);
+        $this->render_debug_result($debug_url);
 
         echo '</div>';
     }
 
-    public function render_debug_panel(): void {
+    private function get_debug_panel_params(): array {
         $base_url = home_url('/');
-        $input_url = isset($_GET['debug_url']) ? esc_url_raw(wp_unslash($_GET['debug_url'])) : $base_url;
-        if ($input_url === '') {
-            $input_url = $base_url;
-        }
-        $device = isset($_GET['debug_device']) ? sanitize_text_field(wp_unslash($_GET['debug_device'])) : 'auto';
-        if (!in_array($device, array('auto', 'mobile', 'tablet', 'desktop'), true)) {
-            $device = 'auto';
-        }
-        $login_state = isset($_GET['debug_login']) ? sanitize_text_field(wp_unslash($_GET['debug_login'])) : 'auto';
-        if (!in_array($login_state, array('auto', 'logged-in', 'logged-out'), true)) {
-            $login_state = 'auto';
-        }
+        $input_url = $this->get_url_param('debug_url', $base_url);
+        $device = $this->get_select_param('debug_device', self::DEBUG_DEVICES, 'auto');
+        $login_state = $this->get_select_param('debug_login', self::DEBUG_LOGIN_STATES, 'auto');
 
-        $debug_url = add_query_arg(
+        return array(
+            'input_url' => $input_url,
+            'device' => $device,
+            'login_state' => $login_state,
+        );
+    }
+
+    private function get_url_param(string $key, string $fallback): string {
+        $value = isset($_GET[$key]) ? esc_url_raw(wp_unslash($_GET[$key])) : '';
+        return $value !== '' ? $value : $fallback;
+    }
+
+    private function get_select_param(string $key, array $allowed, string $fallback): string {
+        $value = isset($_GET[$key]) ? sanitize_text_field(wp_unslash($_GET[$key])) : '';
+        return in_array($value, $allowed, true) ? $value : $fallback;
+    }
+
+    private function build_debug_url(string $input_url, string $device, string $login_state): string {
+        return add_query_arg(
             array(
                 'magick_ad_diagnose' => '1',
                 'magick_ad_diagnose_nonce' => wp_create_nonce('magick_ad_diagnose'),
@@ -199,10 +384,12 @@ final class Admin {
             ),
             $input_url
         );
+    }
 
-        echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('调试面板', 'magick-ad') . '</h1>';
-        echo '<p>' . esc_html__('输入页面 URL 并选择设备类型，生成投放诊断报告。页面类型将由 URL 自身决定。', 'magick-ad') . '</p>';
+    private function render_debug_form(array $params): void {
+        $input_url = $params['input_url'] ?? '';
+        $device = $params['device'] ?? 'auto';
+        $login_state = $params['login_state'] ?? 'auto';
 
         echo '<form method="get" style="margin:16px 0 24px;">';
         echo '<input type="hidden" name="page" value="magick-ad-debug" />';
@@ -228,7 +415,9 @@ final class Admin {
         echo '</table>';
         submit_button(__('生成诊断链接', 'magick-ad'));
         echo '</form>';
+    }
 
+    private function render_debug_result(string $debug_url): void {
         echo '<h2>' . esc_html__('诊断链接', 'magick-ad') . '</h2>';
         echo '<p><a href="' . esc_url($debug_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html($debug_url) . '</a></p>';
 
@@ -236,81 +425,5 @@ final class Admin {
         echo '<div style="border:1px solid #dcdcde;border-radius:8px;overflow:hidden;background:#fff;">';
         echo '<iframe title="Magick AD Diagnose" src="' . esc_url($debug_url) . '" style="width:100%;height:720px;border:0;"></iframe>';
         echo '</div>';
-        echo '</div>';
-    }
-
-    public function enqueue_assets(string $hook): void {
-        if (!in_array($hook, array('toplevel_page_magick-ad', 'magick-ad_page_magick-ad-report'), true)) {
-            return;
-        }
-
-        $asset_path = MAGICK_AD_PATH . 'build/index.asset.php';
-        $asset = file_exists($asset_path) ? include $asset_path : array(
-            'dependencies' => array('wp-element', 'wp-api-fetch'),
-            'version' => MAGICK_AD_VERSION,
-        );
-        if (!in_array('wp-editor', $asset['dependencies'], true)) {
-            $asset['dependencies'][] = 'wp-editor';
-        }
-
-        wp_enqueue_editor();
-        wp_enqueue_media();
-        wp_enqueue_script('wplink');
-        wp_enqueue_style('editor-buttons');
-        wp_enqueue_style('wp-block-library');
-        wp_enqueue_style('wp-block-editor');
-        wp_enqueue_style('wp-edit-blocks');
-
-        wp_enqueue_script(
-            'magick-ad-app',
-            MAGICK_AD_URL . 'build/index.js',
-            $asset['dependencies'],
-            $asset['version'],
-            true
-        );
-
-        wp_enqueue_style(
-            'magick-ad-app',
-            MAGICK_AD_URL . 'build/index.css',
-            array(),
-            $asset['version']
-        );
-
-        $initial_tab = 'ads';
-        if (isset($_GET['page']) && $_GET['page'] === 'magick-ad-report') {
-            $initial_tab = 'report';
-        }
-
-        $build_js = MAGICK_AD_PATH . 'build/index.js';
-        $build_time = file_exists($build_js) ? filemtime($build_js) : time();
-        wp_localize_script(
-            'magick-ad-app',
-            'MagickAD',
-            array(
-                'nonce' => wp_create_nonce('wp_rest'),
-                'restUrl' => esc_url_raw(rest_url('magick-ad/v1')),
-                'canUnfilteredHtml' => current_user_can('unfiltered_html'),
-                'previewUrl' => esc_url_raw(home_url('/')),
-                'previewNonce' => wp_create_nonce('magick_ad_preview'),
-                'diagnoseUrl' => esc_url_raw(
-                    add_query_arg(
-                        array(
-                            'magick_ad_diagnose' => '1',
-                            'magick_ad_diagnose_nonce' => wp_create_nonce('magick_ad_diagnose'),
-                        ),
-                        home_url('/')
-                    )
-                ),
-                'branding' => array(
-                    'name' => get_option('magick_ad_brand_name', 'Magick AD'),
-                    'tagline' => get_option('magick_ad_brand_tagline', '广告配置与投放规则管理'),
-                ),
-                'manageCapability' => \MagickAD\Utils\Capabilities::manage_capability(),
-                'patterns' => \MagickAD\Blocks\Patterns::export_patterns(),
-                'initialTab' => $initial_tab,
-                'buildTime' => $build_time,
-                'buildVersion' => $asset['version'],
-            )
-        );
     }
 }

@@ -1725,8 +1725,18 @@ const AdsConfig = () => {
                                                 html_mode: value,
                                             });
                                         }}
-                                        help="完全模式仅限高权限用户，可能存在安全风险。"
+                                        help="安全模式会过滤脚本/iframe；需要第三方脚本或 head 投放请切换完全模式（多站点强制安全）。"
                                     />
+                                    {selectedAd.options?.html_mode ===
+                                        'full' && (
+                                        <Notice
+                                            status="warning"
+                                            isDismissible={false}
+                                        >
+                                            完全模式将原样输出 HTML，请确保素材与
+                                            代码来源可信。
+                                        </Notice>
+                                    )}
                                     {selectedAd.options?.html_mode ===
                                         'safe' &&
                                         /<script[\s>]/i.test(

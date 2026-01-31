@@ -110,6 +110,13 @@ final class Ads {
         );
 
         $ads = array();
+        $post_ids = array();
+        foreach ($posts as $post) {
+            $post_ids[] = $post->ID;
+        }
+        if (!empty($post_ids)) {
+            update_meta_cache('post', $post_ids);
+        }
         foreach ($posts as $post) {
             $data = get_post_meta($post->ID, self::META_DATA, true);
             if (!is_array($data)) {
@@ -289,11 +296,16 @@ final class Ads {
             }
         }
 
+        wp_cache_delete('magick_ad_known_ads', 'magick_ad');
+
         return $saved_ads;
     }
 
     private static function get_existing_map(): array {
         $posts = self::get_all_ids();
+        if (!empty($posts)) {
+            update_meta_cache('post', $posts);
+        }
         $map = array();
         foreach ($posts as $post_id) {
             $ad_id = get_post_meta($post_id, self::META_ID, true);

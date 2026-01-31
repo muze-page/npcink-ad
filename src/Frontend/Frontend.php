@@ -10,19 +10,19 @@ if (!defined('ABSPATH')) {
 }
 
 final class Frontend {
-    private static $loop_before_rendered = false;
-    private static $loop_after_rendered = false;
-    private static $comments_template_original = null;
-    private static $preview_ad_id = null;
-    private static $preview_ad = null;
-    private static $preview_force = false;
-    private static $preview_mode = 'shell';
-    private static $preview_evaluation = array(
+    private static bool $loop_before_rendered = false;
+    private static bool $loop_after_rendered = false;
+    private static ?string $comments_template_original = null;
+    private static ?string $preview_ad_id = null;
+    private static ?array $preview_ad = null;
+    private static bool $preview_force = false;
+    private static string $preview_mode = 'shell';
+    private static array $preview_evaluation = array(
         'allowed' => false,
         'reasons' => array(),
     );
-    private static $matching_cache = null;
-    private static $container_index = null;
+    private static ?array $matching_cache = null;
+    private static ?array $container_index = null;
 
     public function register(): void {
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_assets'));
@@ -155,51 +155,75 @@ final class Frontend {
     }
 
     private static function resolve_ads($slot_or_id, array $args = array()): array {
-        $slot = isset($args['slot']) ? (string) $args['slot'] : '';
-        $id = isset($args['id']) ? (string) $args['id'] : '';
-        if (!$slot && $slot_or_id) {
-            $slot = (string) $slot_or_id;
-        }
-        if (!$id && $slot_or_id) {
-            $id = (string) $slot_or_id;
-        }
-        if ($slot) {
-            $slot = (string) apply_filters('magick_ad_resolve_slot', $slot, $args);
-            if ($slot && !$id) {
-                $id = $slot;
-            }
-        }
+        list($slot, $id) = self::resolve_slot_and_id($slot_or_id, $args);
 
         $settings = Settings::get_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
         $slots = isset($settings['slots']) && is_array($settings['slots']) ? $settings['slots'] : array();
 
-        foreach ($ads as $ad) {
-            $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
-            if ($id && $ad_id === $id) {
-                return array($ad);
+        if ($id !== '') {
+            foreach ($ads as $ad) {
+                $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
+                if ($ad_id === $id) {
+                    return array($ad);
+                }
             }
         }
 
-        if (!$slot) {
+        if ($slot === '') {
             return array();
         }
 
         $slot = sanitize_title($slot);
-        $slot_config = null;
+        $slot_config = self::find_slot_config($slots, $slot);
+        if (!$slot_config) {
+            return array();
+        }
+
+        list($slot_candidates, $weight_map) = self::build_slot_candidates($ads, $slot_config);
+        $eligible = self::filter_eligible_ads($slot_candidates);
+        if (empty($eligible)) {
+            return array();
+        }
+
+        $top = self::filter_top_priority($eligible);
+        $limit = isset($slot_config['limit']) ? max(1, absint($slot_config['limit'])) : 1;
+        return self::pick_weighted_ads($top, $weight_map, $limit);
+    }
+
+    private static function resolve_slot_and_id($slot_or_id, array $args): array {
+        $slot = isset($args['slot']) ? (string) $args['slot'] : '';
+        $id = isset($args['id']) ? (string) $args['id'] : '';
+
+        if ($slot === '' && $slot_or_id) {
+            $slot = (string) $slot_or_id;
+        }
+        if ($id === '' && $slot_or_id) {
+            $id = (string) $slot_or_id;
+        }
+        if ($slot !== '') {
+            $slot = (string) apply_filters('magick_ad_resolve_slot', $slot, $args);
+            if ($slot !== '' && $id === '') {
+                $id = $slot;
+            }
+        }
+
+        return array($slot, $id);
+    }
+
+    private static function find_slot_config(array $slots, string $slot): ?array {
         foreach ($slots as $slot_item) {
             $slot_id = isset($slot_item['id']) ? (string) $slot_item['id'] : '';
             if ($slot_id === $slot) {
-                $slot_config = $slot_item;
-                break;
+                return $slot_item;
             }
         }
-        if (
-            !$slot_config ||
-            empty($slot_config['ad_ids']) ||
-            !is_array($slot_config['ad_ids'])
-        ) {
-            return array();
+        return null;
+    }
+
+    private static function build_slot_candidates(array $ads, array $slot_config): array {
+        if (empty($slot_config['ad_ids']) || !is_array($slot_config['ad_ids'])) {
+            return array(array(), array());
         }
 
         $ads_by_id = array();
@@ -208,11 +232,13 @@ final class Frontend {
                 $ads_by_id[(string) $ad['id']] = $ad;
             }
         }
+
         $slot_candidates = array();
         $weight_map = array();
         $weights = isset($slot_config['weights']) && is_array($slot_config['weights'])
             ? $slot_config['weights']
             : array();
+
         foreach ($slot_config['ad_ids'] as $index => $ad_id) {
             $ad_id = is_string($ad_id) ? $ad_id : '';
             if ($ad_id === '' || !isset($ads_by_id[$ad_id])) {
@@ -224,47 +250,49 @@ final class Frontend {
             }
         }
 
-        if (empty($slot_candidates)) {
-            return array();
-        }
+        return array($slot_candidates, $weight_map);
+    }
 
+    private static function filter_eligible_ads(array $slot_candidates): array {
         $eligible = array();
         foreach ($slot_candidates as $candidate) {
             if (self::should_display_ad($candidate)) {
                 $eligible[] = $candidate;
             }
         }
-        if (empty($eligible)) {
-            return array();
-        }
+        return $eligible;
+    }
 
+    private static function filter_top_priority(array $eligible): array {
         $max_priority = null;
         foreach ($eligible as $candidate) {
             $priority = isset($candidate['options']['priority']) ? absint($candidate['options']['priority']) : 10;
-            if ($priority < 1) {
-                $priority = 1;
-            }
+            $priority = max(1, $priority);
             if ($max_priority === null || $priority > $max_priority) {
                 $max_priority = $priority;
             }
         }
+
         $top = array();
         foreach ($eligible as $candidate) {
             $priority = isset($candidate['options']['priority']) ? absint($candidate['options']['priority']) : 10;
-            if ($priority < 1) {
-                $priority = 1;
-            }
+            $priority = max(1, $priority);
             if ($priority === $max_priority) {
                 $top[] = $candidate;
             }
         }
+        return $top;
+    }
 
-        $limit = isset($slot_config['limit']) ? max(1, absint($slot_config['limit'])) : 1;
+    private static function pick_weighted_ads(array $top, array $weight_map, int $limit): array {
+        if (empty($top)) {
+            return array();
+        }
         if (count($top) <= 1) {
             return $top;
         }
 
-        $limit = min($limit, count($top));
+        $limit = min(max(1, $limit), count($top));
         $pool = array_values($top);
         $selected = array();
 
@@ -276,13 +304,9 @@ final class Frontend {
                 $ad_weight = isset($candidate['options']['weight'])
                     ? absint($candidate['options']['weight'])
                     : 1;
-                if ($ad_weight < 1) {
-                    $ad_weight = 1;
-                }
+                $ad_weight = max(1, $ad_weight);
                 $slot_weight = isset($weight_map[$ad_id]) ? $weight_map[$ad_id] : 1;
-                if ($slot_weight < 1) {
-                    $slot_weight = 1;
-                }
+                $slot_weight = max(1, $slot_weight);
                 $weight = $ad_weight * $slot_weight;
                 $weights[] = $weight;
                 $sum += $weight;
@@ -1424,22 +1448,18 @@ final class Frontend {
         $uid = wp_generate_uuid4();
         $expires = time() + MONTH_IN_SECONDS;
         $secure = is_ssl();
-        if (PHP_VERSION_ID >= 70300) {
-            setcookie(
-                'magick_ad_uid',
-                $uid,
-                array(
-                    'expires' => $expires,
-                    'path' => COOKIEPATH ?: '/',
-                    'domain' => COOKIE_DOMAIN ?: '',
-                    'secure' => $secure,
-                    'httponly' => true,
-                    'samesite' => 'Lax',
-                )
-            );
-        } else {
-            setcookie('magick_ad_uid', $uid, $expires, COOKIEPATH, COOKIE_DOMAIN, $secure, true);
-        }
+        setcookie(
+            name: 'magick_ad_uid',
+            value: $uid,
+            options: array(
+                'expires' => $expires,
+                'path' => COOKIEPATH ?: '/',
+                'domain' => COOKIE_DOMAIN ?: '',
+                'secure' => $secure,
+                'httponly' => true,
+                'samesite' => 'Lax',
+            )
+        );
         $_COOKIE['magick_ad_uid'] = $uid;
     }
 
@@ -1660,92 +1680,143 @@ final class Frontend {
     }
 
     public static function build_ad_markup($ad, $position) {
-        $content = isset($ad['content']) ? $ad['content'] : array();
-        $options = isset($ad['options']) ? $ad['options'] : array();
-        $content_type = isset($options['creative_type']) ? $options['creative_type'] : (isset($options['content_type']) ? $options['content_type'] : 'image');
-        $container_type = isset($options['container_type']) ? $options['container_type'] : 'inline';
-        $html = isset($content['html']) ? $content['html'] : '';
-        $blocks = isset($content['blocks']) ? $content['blocks'] : '';
+        $content = self::normalize_content($ad);
+        $options = self::normalize_options($ad);
+        $content_type = self::resolve_content_type($options);
+        $container_type = self::resolve_container_type($options);
+
+        $body = self::build_body_by_type($content_type, $content);
+        if ($body === '') {
+            return '';
+        }
+
+        $body = self::append_custom_markup($body, $content);
+        $body = self::wrap_container_markup($body, $content);
+        $body = self::wrap_modal_container($body, $container_type);
+
+        $data_attrs = self::build_data_attributes($ad, $options, $content, $position, $container_type);
+        $unit_class = self::build_unit_class($ad, $options, $position, $container_type);
+        $inner_style = self::build_inner_style($content);
+
+        return '<div class="' . esc_attr($unit_class) . '"' . $data_attrs . '><div class="magick-ad-unit__inner"' . $inner_style . '>' . $body . '</div></div>';
+    }
+
+    private static function normalize_content(array $ad): array {
+        $content = isset($ad['content']) && is_array($ad['content']) ? $ad['content'] : array();
+        if (!isset($content['container_style']) || !is_array($content['container_style'])) {
+            $content['container_style'] = array();
+        }
+        if (!isset($content['behavior']) || !is_array($content['behavior'])) {
+            $content['behavior'] = array();
+        }
+        if (!isset($content['image_settings']) || !is_array($content['image_settings'])) {
+            $content['image_settings'] = array();
+        }
+        return $content;
+    }
+
+    private static function normalize_options(array $ad): array {
+        return isset($ad['options']) && is_array($ad['options']) ? $ad['options'] : array();
+    }
+
+    private static function resolve_content_type(array $options): string {
+        $type = $options['creative_type'] ?? $options['content_type'] ?? 'image';
+        return match ($type) {
+            'block', 'html', 'image', 'video' => $type,
+            default => 'image',
+        };
+    }
+
+    private static function resolve_container_type(array $options): string {
+        $type = $options['container_type'] ?? 'inline';
+        return match ($type) {
+            'inline', 'popup', 'banner', 'floating', 'interstitial' => $type,
+            default => 'inline',
+        };
+    }
+
+    private static function build_body_by_type(string $content_type, array $content): string {
+        return match ($content_type) {
+            'block' => self::build_block_body($content),
+            'html' => self::build_html_body($content),
+            'image' => self::build_image_body($content),
+            'video' => self::build_video_body($content),
+            default => '',
+        };
+    }
+
+    private static function build_block_body(array $content): string {
+        $blocks = isset($content['blocks']) ? (string) $content['blocks'] : '';
+        return $blocks ? do_blocks($blocks) : '';
+    }
+
+    private static function build_html_body(array $content): string {
+        $html = isset($content['html']) ? (string) $content['html'] : '';
+        return $html ?: '';
+    }
+
+    private static function build_image_body(array $content): string {
+        $image = isset($content['image']) ? $content['image'] : array();
+        if (empty($image['url'])) {
+            return '';
+        }
+        $image_settings = isset($content['image_settings']) ? $content['image_settings'] : array();
+        $styles = array();
+        $radius = isset($image_settings['radius']) ? absint($image_settings['radius']) : 0;
+        $max_width = isset($image_settings['max_width']) ? absint($image_settings['max_width']) : 0;
+        $margin_top = isset($image_settings['margin_top']) ? absint($image_settings['margin_top']) : 0;
+        $margin_bottom = isset($image_settings['margin_bottom']) ? absint($image_settings['margin_bottom']) : 0;
+        $margin_left = isset($image_settings['margin_left']) ? absint($image_settings['margin_left']) : 0;
+        $margin_right = isset($image_settings['margin_right']) ? absint($image_settings['margin_right']) : 0;
+
+        if ($radius) {
+            $styles[] = 'border-radius:' . $radius . 'px';
+        }
+        if ($max_width) {
+            $styles[] = 'max-width:' . $max_width . 'px';
+            $styles[] = 'width:100%';
+        }
+        if ($margin_top) {
+            $styles[] = 'margin-top:' . $margin_top . 'px';
+        }
+        if ($margin_bottom) {
+            $styles[] = 'margin-bottom:' . $margin_bottom . 'px';
+        }
+        if ($margin_left) {
+            $styles[] = 'margin-left:' . $margin_left . 'px';
+        }
+        if ($margin_right) {
+            $styles[] = 'margin-right:' . $margin_right . 'px';
+        }
+
+        $style_attr = $styles ? ' style="' . esc_attr(implode(';', $styles)) . '"' : '';
+        $img_tag = '<img loading="lazy" decoding="async" src="' . esc_url($image['url']) . '" alt="' . esc_attr(isset($image['alt']) ? $image['alt'] : '') . '"' . $style_attr . ' />';
+
         $link = isset($content['link']) ? $content['link'] : '';
         $link_target = !empty($content['link_target']);
         $cta_text = isset($content['cta_text']) ? (string) $content['cta_text'] : '';
+
+        if ($link) {
+            $target = $link_target ? ' target="_blank" rel="noopener noreferrer"' : '';
+            $img_tag = '<a href="' . esc_url($link) . '"' . $target . '>' . $img_tag . '</a>';
+        }
+        if ($link && $cta_text) {
+            $target = $link_target ? ' target="_blank" rel="noopener noreferrer"' : '';
+            $img_tag .= '<a class="magick-ad-cta" href="' . esc_url($link) . '"' . $target . '>' . esc_html($cta_text) . '</a>';
+        }
+        return $img_tag;
+    }
+
+    private static function build_video_body(array $content): string {
+        if (empty($content['video_url'])) {
+            return '';
+        }
+        return '<div class="magick-ad-video"><video controls src="' . esc_url($content['video_url']) . '"></video></div>';
+    }
+
+    private static function append_custom_markup(string $body, array $content): string {
         $custom_html = isset($content['custom_html']) ? (string) $content['custom_html'] : '';
         $custom_css = isset($content['custom_css']) ? (string) $content['custom_css'] : '';
-        $image = isset($content['image']) ? $content['image'] : array();
-        $container_style = isset($content['container_style']) && is_array($content['container_style'])
-            ? $content['container_style']
-            : array();
-        $behavior = isset($content['behavior']) && is_array($content['behavior'])
-            ? $content['behavior']
-            : array();
-        $image_settings = isset($content['image_settings']) && is_array($content['image_settings'])
-            ? $content['image_settings']
-            : array();
-        $reserve_height = isset($container_style['reserve_height']) ? absint($container_style['reserve_height']) : 0;
-
-        $body = '';
-        if ($content_type === 'block') {
-            if ($blocks) {
-                $body = do_blocks($blocks);
-            }
-        } elseif ($content_type === 'html') {
-            if ($html) {
-                $body = $html;
-            }
-        } elseif ($content_type === 'image') {
-            if (!empty($image['url'])) {
-                $styles = array();
-                $radius = isset($image_settings['radius']) ? absint($image_settings['radius']) : 0;
-                $max_width = isset($image_settings['max_width']) ? absint($image_settings['max_width']) : 0;
-                $margin_top = isset($image_settings['margin_top']) ? absint($image_settings['margin_top']) : 0;
-                $margin_bottom = isset($image_settings['margin_bottom']) ? absint($image_settings['margin_bottom']) : 0;
-                $margin_left = isset($image_settings['margin_left']) ? absint($image_settings['margin_left']) : 0;
-                $margin_right = isset($image_settings['margin_right']) ? absint($image_settings['margin_right']) : 0;
-
-                if ($radius) {
-                    $styles[] = 'border-radius:' . $radius . 'px';
-                }
-                if ($max_width) {
-                    $styles[] = 'max-width:' . $max_width . 'px';
-                    $styles[] = 'width:100%';
-                }
-                if ($margin_top) {
-                    $styles[] = 'margin-top:' . $margin_top . 'px';
-                }
-                if ($margin_bottom) {
-                    $styles[] = 'margin-bottom:' . $margin_bottom . 'px';
-                }
-                if ($margin_left) {
-                    $styles[] = 'margin-left:' . $margin_left . 'px';
-                }
-                if ($margin_right) {
-                    $styles[] = 'margin-right:' . $margin_right . 'px';
-                }
-
-                $style_attr = $styles ? ' style="' . esc_attr(implode(';', $styles)) . '"' : '';
-                $img_tag = '<img loading="lazy" decoding="async" src="' . esc_url($image['url']) . '" alt="' . esc_attr(isset($image['alt']) ? $image['alt'] : '') . '"' . $style_attr . ' />';
-                if ($link) {
-                    $target = $link_target ? ' target="_blank" rel="noopener noreferrer"' : '';
-                    $img_tag = '<a href="' . esc_url($link) . '"' . $target . '>' . $img_tag . '</a>';
-                }
-                if ($link && $cta_text) {
-                    $target = $link_target ? ' target="_blank" rel="noopener noreferrer"' : '';
-                    $img_tag .= '<a class="magick-ad-cta" href="' . esc_url($link) . '"' . $target . '>' . esc_html($cta_text) . '</a>';
-                }
-                $body = $img_tag;
-            }
-        } elseif ($content_type === 'video') {
-            if (!empty($content['video_url'])) {
-                $body = '<div class="magick-ad-video"><video controls src="' . esc_url($content['video_url']) . '"></video></div>';
-            }
-        } else {
-            return '';
-        }
-
-        if (!$body) {
-            return '';
-        }
-
         if ($custom_html) {
             $body .= $custom_html;
         }
@@ -1753,75 +1824,102 @@ final class Frontend {
             $custom_css = preg_replace('/<\/?style[^>]*>/i', '', $custom_css);
             $body = '<style>' . $custom_css . '</style>' . $body;
         }
+        return $body;
+    }
 
+    private static function wrap_container_markup(string $body, array $content): string {
+        $container_style = isset($content['container_style']) ? $content['container_style'] : array();
+        $behavior = isset($content['behavior']) ? $content['behavior'] : array();
         $mode = isset($container_style['mode']) ? $container_style['mode'] : 'boxed';
-        if ($mode !== 'raw') {
-            $styles = array();
-            $classes = array('magick-ad-html-container');
-            $max_width = isset($container_style['max_width']) ? absint($container_style['max_width']) : 100;
-            $max_width_unit = isset($container_style['max_width_unit']) ? $container_style['max_width_unit'] : '%';
-            $padding_top = isset($container_style['padding_top']) ? absint($container_style['padding_top']) : 0;
-            $padding_right = isset($container_style['padding_right']) ? absint($container_style['padding_right']) : 0;
-            $padding_bottom = isset($container_style['padding_bottom']) ? absint($container_style['padding_bottom']) : 0;
-            $padding_left = isset($container_style['padding_left']) ? absint($container_style['padding_left']) : 0;
-            $background = isset($container_style['background']) ? $container_style['background'] : 'transparent';
-            $radius = isset($container_style['radius']) ? absint($container_style['radius']) : 0;
-            $shadow = isset($container_style['shadow']) ? $container_style['shadow'] : 'none';
-            $badge_enabled = !empty($container_style['badge_enabled']);
-            $badge_text = isset($container_style['badge_text']) ? $container_style['badge_text'] : '广告';
-            $badge_color = isset($container_style['badge_color']) ? $container_style['badge_color'] : '#1d2327';
-            $layout = isset($container_style['layout']) ? $container_style['layout'] : '';
-
-            if ($max_width) {
-                $styles[] = 'max-width:' . $max_width . $max_width_unit;
-                if ($max_width_unit === 'px') {
-                    $styles[] = 'width:100%';
-                }
-            }
-            if ($padding_top || $padding_right || $padding_bottom || $padding_left) {
-                $styles[] = sprintf(
-                    'padding:%dpx %dpx %dpx %dpx',
-                    $padding_top,
-                    $padding_right,
-                    $padding_bottom,
-                    $padding_left
-                );
-            }
-            if (!empty($background) && $background !== 'transparent') {
-                $styles[] = 'background:' . $background;
-            }
-            if ($radius) {
-                $styles[] = 'border-radius:' . $radius . 'px';
-            }
-            if ($shadow === 'soft') {
-                $classes[] = 'magick-ad-shadow--soft';
-            } elseif ($shadow === 'float') {
-                $classes[] = 'magick-ad-shadow--float';
-            }
-            if ($layout === 'centered') {
-                $classes[] = 'magick-ad-layout--centered';
-                $styles[] = 'margin-left:auto';
-                $styles[] = 'margin-right:auto';
-            }
-
-            $style_attr = $styles ? ' style="' . esc_attr(implode(';', $styles)) . '"' : '';
-            $badge_markup = '';
-            if ($badge_enabled) {
-                $badge_markup = '<span class="magick-ad-badge" style="background:' . esc_attr($badge_color) . ';">' . esc_html($badge_text) . '</span>';
-            }
-            $close_markup = '';
-            if (!empty($behavior['close_button'])) {
-                $close_markup = '<button type="button" class="magick-ad-close" aria-label="' . esc_attr__('关闭广告', 'magick-ad') . '">×</button>';
-            }
-
-            $body = '<div class="' . esc_attr(implode(' ', $classes)) . '"' . $style_attr . '>' . $badge_markup . $close_markup . '<div class="magick-ad-html-content">' . $body . '</div></div>';
+        if ($mode === 'raw') {
+            return $body;
         }
 
+        list($classes, $styles) = self::build_container_classes_and_styles($container_style);
+        $style_attr = $styles ? ' style="' . esc_attr(implode(';', $styles)) . '"' : '';
+        $badge_markup = self::build_badge_markup($container_style);
+        $close_markup = '';
+        if (!empty($behavior['close_button'])) {
+            $close_markup = '<button type="button" class="magick-ad-close" aria-label="' . esc_attr__('关闭广告', 'magick-ad') . '">×</button>';
+        }
+
+        return '<div class="' . esc_attr(implode(' ', $classes)) . '"' . $style_attr . '>' . $badge_markup . $close_markup . '<div class="magick-ad-html-content">' . $body . '</div></div>';
+    }
+
+    private static function build_container_classes_and_styles(array $container_style): array {
+        $styles = array();
+        $classes = array('magick-ad-html-container');
+        $max_width = isset($container_style['max_width']) ? absint($container_style['max_width']) : 100;
+        $max_width_unit = isset($container_style['max_width_unit']) ? $container_style['max_width_unit'] : '%';
+        $padding_top = isset($container_style['padding_top']) ? absint($container_style['padding_top']) : 0;
+        $padding_right = isset($container_style['padding_right']) ? absint($container_style['padding_right']) : 0;
+        $padding_bottom = isset($container_style['padding_bottom']) ? absint($container_style['padding_bottom']) : 0;
+        $padding_left = isset($container_style['padding_left']) ? absint($container_style['padding_left']) : 0;
+        $background = isset($container_style['background']) ? $container_style['background'] : 'transparent';
+        $radius = isset($container_style['radius']) ? absint($container_style['radius']) : 0;
+        $shadow = isset($container_style['shadow']) ? $container_style['shadow'] : 'none';
+        $layout = isset($container_style['layout']) ? $container_style['layout'] : '';
+
+        if ($max_width) {
+            $styles[] = 'max-width:' . $max_width . $max_width_unit;
+            if ($max_width_unit === 'px') {
+                $styles[] = 'width:100%';
+            }
+        }
+        if ($padding_top || $padding_right || $padding_bottom || $padding_left) {
+            $styles[] = sprintf(
+                'padding:%dpx %dpx %dpx %dpx',
+                $padding_top,
+                $padding_right,
+                $padding_bottom,
+                $padding_left
+            );
+        }
+        if (!empty($background) && $background !== 'transparent') {
+            $styles[] = 'background:' . $background;
+        }
+        if ($radius) {
+            $styles[] = 'border-radius:' . $radius . 'px';
+        }
+        if ($shadow === 'soft') {
+            $classes[] = 'magick-ad-shadow--soft';
+        } elseif ($shadow === 'float') {
+            $classes[] = 'magick-ad-shadow--float';
+        }
+        if ($layout === 'centered') {
+            $classes[] = 'magick-ad-layout--centered';
+            $styles[] = 'margin-left:auto';
+            $styles[] = 'margin-right:auto';
+        }
+
+        return array($classes, $styles);
+    }
+
+    private static function build_badge_markup(array $container_style): string {
+        if (empty($container_style['badge_enabled'])) {
+            return '';
+        }
+        $badge_text = isset($container_style['badge_text']) ? $container_style['badge_text'] : '广告';
+        $badge_color = isset($container_style['badge_color']) ? $container_style['badge_color'] : '#1d2327';
+        return '<span class="magick-ad-badge" style="background:' . esc_attr($badge_color) . ';">' . esc_html($badge_text) . '</span>';
+    }
+
+    private static function wrap_modal_container(string $body, string $container_type): string {
+        if (!in_array($container_type, array('popup', 'interstitial'), true)) {
+            return $body;
+        }
+        return '<div class="magick-ad-overlay"></div><div class="magick-ad-popup" role="dialog" aria-modal="true" tabindex="-1">' . $body . '</div>';
+    }
+
+    private static function build_data_attributes(array $ad, array $options, array $content, string $position, string $container_type): string {
+        $behavior = isset($content['behavior']) ? $content['behavior'] : array();
         $display_mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
         $random_strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
         $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
+
         $data_attrs = ' data-ad-id="' . esc_attr($ad_id) . '" data-ad-position="' . esc_attr($position) . '"';
         $data_attrs .= ' data-ad-container="' . esc_attr($container_type) . '"';
+
         if ($ad_id !== '') {
             $sig_ts = gmdate('Ymd', current_time('timestamp'));
             $sig = hash_hmac('sha256', $ad_id . '|' . $sig_ts, self::get_track_secret());
@@ -1831,25 +1929,12 @@ final class Frontend {
         if (!empty($ad['_slot']) && is_string($ad['_slot'])) {
             $data_attrs .= ' data-ad-slot="' . esc_attr($ad['_slot']) . '"';
         }
+
         $placement_hook = isset($options['placement_hook']) ? $options['placement_hook'] : '';
         if ($placement_hook === 'node') {
-            $node_type = isset($options['node_target_type']) ? $options['node_target_type'] : 'id';
-            $node_value = isset($options['node_target_value']) ? $options['node_target_value'] : '';
-            $node_insert = isset($options['node_insert']) ? $options['node_insert'] : 'append';
-            $node_match = isset($options['node_match']) ? $options['node_match'] : 'first';
-            $node_index = isset($options['node_index']) ? absint($options['node_index']) : 1;
-            $node_fallback = isset($options['node_fallback']) ? $options['node_fallback'] : 'hide';
-            $node_compact = !isset($options['node_compact']) ? true : (bool) $options['node_compact'];
-            $data_attrs .= ' data-ad-node-type="' . esc_attr($node_type) . '"';
-            $data_attrs .= ' data-ad-node-value="' . esc_attr($node_value) . '"';
-            $data_attrs .= ' data-ad-node-insert="' . esc_attr($node_insert) . '"';
-            $data_attrs .= ' data-ad-node-match="' . esc_attr($node_match) . '"';
-            if ($node_index > 0) {
-                $data_attrs .= ' data-ad-node-index="' . esc_attr($node_index) . '"';
-            }
-            $data_attrs .= ' data-ad-node-fallback="' . esc_attr($node_fallback) . '"';
-            $data_attrs .= ' data-ad-node-compact="' . ($node_compact ? '1' : '0') . '"';
+            $data_attrs .= self::build_node_data_attributes($options);
         }
+
         $delay = isset($behavior['delay']) ? absint($behavior['delay']) : 0;
         $animation = isset($behavior['animation']) ? $behavior['animation'] : 'none';
         $close_on_esc = array_key_exists('close_on_esc', $behavior) ? (bool) $behavior['close_on_esc'] : true;
@@ -1857,6 +1942,7 @@ final class Frontend {
         $lock_scroll = !empty($behavior['lock_scroll']);
         $frequency_mode = isset($behavior['frequency_mode']) ? $behavior['frequency_mode'] : 'none';
         $frequency_limit = isset($behavior['frequency_limit']) ? absint($behavior['frequency_limit']) : 1;
+
         if ($delay > 0) {
             $data_attrs .= ' data-ad-delay="' . esc_attr($delay) . '"';
         }
@@ -1879,10 +1965,37 @@ final class Frontend {
             $data_attrs .= ' data-ad-freq-mode="' . esc_attr($frequency_mode) . '"';
             $data_attrs .= ' data-ad-freq-limit="' . esc_attr($frequency_limit) . '"';
         }
-        $container_class = 'magick-ad-container--' . esc_attr($container_type);
-        if (in_array($container_type, array('popup', 'interstitial'), true)) {
-            $body = '<div class="magick-ad-overlay"></div><div class="magick-ad-popup" role="dialog" aria-modal="true" tabindex="-1">' . $body . '</div>';
+
+        return $data_attrs;
+    }
+
+    private static function build_node_data_attributes(array $options): string {
+        $node_type = isset($options['node_target_type']) ? $options['node_target_type'] : 'id';
+        $node_value = isset($options['node_target_value']) ? $options['node_target_value'] : '';
+        $node_insert = isset($options['node_insert']) ? $options['node_insert'] : 'append';
+        $node_match = isset($options['node_match']) ? $options['node_match'] : 'first';
+        $node_index = isset($options['node_index']) ? absint($options['node_index']) : 1;
+        $node_fallback = isset($options['node_fallback']) ? $options['node_fallback'] : 'hide';
+        $node_compact = !isset($options['node_compact']) ? true : (bool) $options['node_compact'];
+
+        $data_attrs = ' data-ad-node-type="' . esc_attr($node_type) . '"';
+        $data_attrs .= ' data-ad-node-value="' . esc_attr($node_value) . '"';
+        $data_attrs .= ' data-ad-node-insert="' . esc_attr($node_insert) . '"';
+        $data_attrs .= ' data-ad-node-match="' . esc_attr($node_match) . '"';
+        if ($node_index > 0) {
+            $data_attrs .= ' data-ad-node-index="' . esc_attr($node_index) . '"';
         }
+        $data_attrs .= ' data-ad-node-fallback="' . esc_attr($node_fallback) . '"';
+        $data_attrs .= ' data-ad-node-compact="' . ($node_compact ? '1' : '0') . '"';
+        return $data_attrs;
+    }
+
+    private static function build_unit_class(array $ad, array $options, string $position, string $container_type): string {
+        $display_mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
+        $random_strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
+        $placement_hook = isset($options['placement_hook']) ? $options['placement_hook'] : '';
+
+        $container_class = 'magick-ad-container--' . esc_attr($container_type);
         $unit_class = 'magick-ad-unit magick-ad-unit--' . esc_attr($position) . ' ' . $container_class;
         if ($placement_hook === 'node' && (!isset($options['node_compact']) || $options['node_compact'])) {
             $unit_class .= ' magick-ad-placement--node-compact';
@@ -1897,12 +2010,16 @@ final class Frontend {
                 $unit_class .= ' ' . implode(' ', $classes);
             }
         }
-        $inner_style = '';
-        if ($reserve_height > 0) {
-            $inner_style = ' style="min-height:' . esc_attr($reserve_height) . 'px"';
-        }
+        return $unit_class;
+    }
 
-        return '<div class="' . esc_attr($unit_class) . '"' . $data_attrs . '><div class="magick-ad-unit__inner"' . $inner_style . '>' . $body . '</div></div>';
+    private static function build_inner_style(array $content): string {
+        $container_style = isset($content['container_style']) ? $content['container_style'] : array();
+        $reserve_height = isset($container_style['reserve_height']) ? absint($container_style['reserve_height']) : 0;
+        if ($reserve_height <= 0) {
+            return '';
+        }
+        return ' style="min-height:' . esc_attr($reserve_height) . 'px"';
     }
 
     private static function wrap_zone_markup($markup, $zone) {

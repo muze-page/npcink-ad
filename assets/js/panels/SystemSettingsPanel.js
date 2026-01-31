@@ -133,6 +133,19 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             }
                             help="可通过 magick_ad_has_consent 接入站点同意逻辑。"
                         />
+                        {settings.tracking_require_consent && (
+                            <Notice status="warning" isDismissible={false}>
+                                已启用“需要同意”。如果站点未接入
+                                magick_ad_has_consent，将默认视为未同意：统计不写入，
+                                且前端不会写入 localStorage/sessionStorage。
+                            </Notice>
+                        )}
+                        {settings.tracking_strategy === 'cookie' && (
+                            <Notice status="info" isDismissible={false}>
+                                Cookie 策略依赖同意状态。未同意时会自动回退到无
+                                Cookie 的策略。
+                            </Notice>
+                        )}
                         <TextControl
                             label="统计去重窗口（秒）"
                             type="number"

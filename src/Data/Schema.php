@@ -75,6 +75,14 @@ final class Schema {
         if (!self::table_has_column($table, 'impressions')) {
             return false;
         }
+        $diagnostics_enabled = (get_option('magick_ad_stats_diagnostics', '0') === '1');
+        $diagnostics_enabled = (bool) apply_filters('magick_ad_stats_diagnostics_enabled', $diagnostics_enabled);
+        if ($diagnostics_enabled) {
+            $log_table = $wpdb->prefix . 'magick_ad_stats_log';
+            if (!self::table_exists($log_table)) {
+                return false;
+            }
+        }
         return true;
     }
 
