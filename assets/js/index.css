@@ -252,6 +252,47 @@
     color: #ffffff;
 }
 
+.magick-ad-preview-toast {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: #1f2937;
+    margin: 56px auto 16px;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+}
+
+.magick-ad-preview-toast__label {
+    font-weight: 700;
+}
+
+.magick-ad-preview-toast__reason {
+    font-weight: 500;
+    color: #64748b;
+}
+
+.magick-ad-preview-toast.is-hit {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.magick-ad-preview-toast.is-hit .magick-ad-preview-toast__reason {
+    color: #15803d;
+}
+
+.magick-ad-preview-toast.is-miss {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.magick-ad-preview-toast.is-miss .magick-ad-preview-toast__reason {
+    color: #b91c1c;
+}
+
 .magick-ad-preview-frame {
     width: 100%;
     display: flex;
@@ -569,6 +610,13 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+}
+
+.magick-ad-save-button.components-button {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 10px;
+    font-size: 13px;
 }
 
 .magick-ad-right-section__body {

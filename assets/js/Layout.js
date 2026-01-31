@@ -50,6 +50,7 @@ const Layout = ({
     const editorRef = useRef(null);
     const resizingRef = useRef(false);
     const [previewReady, setPreviewReady] = useState(false);
+    const [previewStatus, setPreviewStatus] = useState(null);
     const [splitRatio, setSplitRatio] = useState(0.45);
     const [splitLocked, setSplitLocked] = useState(false);
     const [previewCollapsed, setPreviewCollapsed] = useState(false);
@@ -461,17 +462,51 @@ const Layout = ({
         );
     }, [previewBody, previewSrc, devicePreview]);
 
+    const previewToast = useMemo(() => {
+        if (!previewStatus) {
+            return null;
+        }
+        const label = previewStatus.allowed ? '命中' : '未命中';
+        const reason =
+            !previewStatus.allowed && previewStatus.reasonText
+                ? previewStatus.reasonText
+                : '';
+        return (
+            <div
+                className={`magick-ad-preview-toast ${
+                    previewStatus.allowed ? 'is-hit' : 'is-miss'
+                }`}
+            >
+                <span className="magick-ad-preview-toast__label">{label}</span>
+                {reason && (
+                    <span className="magick-ad-preview-toast__reason">
+                        {reason}
+                    </span>
+                )}
+            </div>
+        );
+    }, [previewStatus]);
+
     useEffect(() => {
         setPreviewReady(false);
+        setPreviewStatus(null);
     }, [previewSrc]);
 
     useEffect(() => {
         const handleMessage = (event) => {
-            if (
-                event.origin === window.location.origin &&
-                event.data?.type === 'MAGICK_AD_PREVIEW_READY'
-            ) {
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+            const payload = event.data;
+            if (!payload?.type) {
+                return;
+            }
+            if (payload.type === 'MAGICK_AD_PREVIEW_READY') {
                 setPreviewReady(true);
+                return;
+            }
+            if (payload.type === 'MAGICK_AD_PREVIEW_STATUS') {
+                setPreviewStatus(payload.payload || null);
             }
         };
         window.addEventListener('message', handleMessage);
@@ -784,6 +819,7 @@ const Layout = ({
                                                         />
                                                     ))}
                                                 </div>
+                                                {previewToast}
                                                 {preview || previewFrame}
                                             </div>
                                         </div>
@@ -829,6 +865,7 @@ const Layout = ({
                                                 />
                                             ))}
                                         </div>
+                                        {previewToast}
                                         {preview || previewFrame}
                                     </div>
                                 )}

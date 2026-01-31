@@ -34,8 +34,28 @@
             .filter(Boolean)
             .join(' · ');
 
+    const postStatus = (ad, evaluation) => {
+        if (!window.parent || window.parent === window) {
+            return;
+        }
+        window.parent.postMessage(
+            {
+                type: 'MAGICK_AD_PREVIEW_STATUS',
+                payload: {
+                    adId: ad?.id || '',
+                    adName: ad?.name || '',
+                    allowed: !!evaluation?.allowed,
+                    reasons: evaluation?.reasons || [],
+                    reasonText: formatReasons(evaluation?.reasons || []),
+                },
+            },
+            window.location.origin
+        );
+    };
+
     const updateDebug = (ad, evaluation) => {
         if (!debugEl) {
+            postStatus(ad, evaluation);
             return;
         }
         if (titleEl && ad?.name) {
@@ -54,6 +74,7 @@
                 reasonEl.textContent = text ? `原因：${text}` : '';
             }
         }
+        postStatus(ad, evaluation);
     };
 
     const isExpired = (options) => {
