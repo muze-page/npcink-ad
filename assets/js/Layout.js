@@ -44,6 +44,7 @@ const Layout = ({
     contentHeader,
     contentPanels,
     preview,
+    previewTarget,
 }) => {
     const iframeRef = useRef(null);
     const editorRef = useRef(null);
@@ -409,13 +410,28 @@ const Layout = ({
         if (!previewUrl || !previewNonce || !adData?.id) {
             return '';
         }
-        const url = new URL(previewUrl, window.location.origin);
+        const baseUrl =
+            previewTarget && typeof previewTarget === 'string'
+                ? previewTarget.trim()
+                : '';
+        let url;
+        try {
+            url = new URL(baseUrl || previewUrl, window.location.origin);
+        } catch (err) {
+            url = new URL(previewUrl, window.location.origin);
+        }
+        if (url.origin !== window.location.origin) {
+            url = new URL(previewUrl, window.location.origin);
+        }
         url.searchParams.set('magick_ad_preview', '1');
         url.searchParams.set('magick_ad_preview_ad', adData.id);
         url.searchParams.set('magick_ad_preview_nonce', previewNonce);
         url.searchParams.set('magick_ad_preview_device', devicePreview);
+        if (baseUrl) {
+            url.searchParams.set('magick_ad_preview_mode', 'page');
+        }
         return url.toString();
-    }, [adData?.id, devicePreview]);
+    }, [adData?.id, devicePreview, previewTarget]);
 
     const previewFrame = useMemo(() => {
         if (!previewSrc) {

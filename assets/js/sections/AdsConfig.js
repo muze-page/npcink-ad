@@ -5,6 +5,7 @@ import {
     Card,
     CardBody,
     ColorPicker,
+    ComboboxControl,
     DropdownMenu,
     FormTokenField,
     Modal,
@@ -77,6 +78,13 @@ const AdsConfig = () => {
         useState('');
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [scheduleOpen, setScheduleOpen] = useState(true);
+    const [previewTarget, setPreviewTarget] = useState('');
+    const [previewMode, setPreviewMode] = useState('url');
+    const [previewSearch, setPreviewSearch] = useState('');
+    const [previewOptions, setPreviewOptions] = useState([]);
+    const [previewOptionLinks, setPreviewOptionLinks] = useState({});
+    const [previewSelected, setPreviewSelected] = useState('');
+    const [previewLoading, setPreviewLoading] = useState(false);
     const [pickerConfirmOpen, setPickerConfirmOpen] = useState(false);
     const [pickerType, setPickerType] = useState('id');
     const [pickerValue, setPickerValue] = useState('');
@@ -929,6 +937,83 @@ const AdsConfig = () => {
         showNotice,
     });
 
+    const stripHtml = (value) =>
+        typeof value === 'string'
+            ? value.replace(/<[^>]*>/g, '').trim()
+            : '';
+
+    const buildPreviewOptions = (items) => {
+        const links = {};
+        const options = items.map((item) => {
+            const label = stripHtml(item?.title?.rendered) || `ID ${item.id}`;
+            links[String(item.id)] = item?.link || '';
+            return {
+                label,
+                value: String(item.id),
+            };
+        });
+        setPreviewOptions(options);
+        setPreviewOptionLinks(links);
+    };
+
+    useEffect(() => {
+        if (previewMode === 'url') {
+            setPreviewSearch('');
+            setPreviewOptions([]);
+            setPreviewOptionLinks({});
+            setPreviewSelected('');
+            return;
+        }
+
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => {
+            const endpoint = previewMode === 'page' ? 'pages' : 'posts';
+            const params = new URLSearchParams();
+            params.set('per_page', '10');
+            params.set('_fields', 'id,title,link');
+            if (previewSearch.trim()) {
+                params.set('search', previewSearch.trim());
+            }
+            setPreviewLoading(true);
+            apiFetch({
+                path: `/wp/v2/${endpoint}?${params.toString()}`,
+                signal: controller.signal,
+            })
+                .then((items) => {
+                    buildPreviewOptions(Array.isArray(items) ? items : []);
+                    setPreviewLoading(false);
+                })
+                .catch(() => {
+                    setPreviewOptions([]);
+                    setPreviewOptionLinks({});
+                    setPreviewLoading(false);
+                });
+        }, 250);
+
+        return () => {
+            controller.abort();
+            window.clearTimeout(timer);
+        };
+    }, [previewMode, previewSearch]);
+
+    useEffect(() => {
+        if (previewMode !== 'url') {
+            setPreviewSearch('');
+            setPreviewSelected('');
+        }
+    }, [previewMode]);
+
+    const handlePreviewSelect = (value) => {
+        setPreviewSelected(value || '');
+        if (!value) {
+            return;
+        }
+        const link = previewOptionLinks[value];
+        if (link) {
+            setPreviewTarget(link);
+        }
+    };
+
     const handleSave = async () => {
         clearNotice();
 
@@ -1698,6 +1783,85 @@ const AdsConfig = () => {
 
     const rightSidebar = selectedAd ? (
         <div className="magick-ad-right-stack">
+            <Card>
+                <CardBody>
+                    <div className="magick-ad-preview-target__title">
+                        预览页面
+                    </div>
+                    <div className="magick-ad-preview-target__mode">
+                        <ButtonGroup>
+                            <Button
+                                variant="secondary"
+                                isPressed={previewMode === 'url'}
+                                onClick={() => setPreviewMode('url')}
+                            >
+                                链接
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                isPressed={previewMode === 'post'}
+                                onClick={() => setPreviewMode('post')}
+                            >
+                                文章
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                isPressed={previewMode === 'page'}
+                                onClick={() => setPreviewMode('page')}
+                            >
+                                页面
+                            </Button>
+                        </ButtonGroup>
+                    </div>
+                    {previewMode === 'url' ? (
+                    <TextControl
+                        label="页面链接（仅支持本站）"
+                        value={previewTarget}
+                        placeholder="https://example.com/your-page"
+                        onChange={(value) => setPreviewTarget(value)}
+                        help="填写后将使用该页面作为预览环境。"
+                    />
+                    ) : (
+                        <ComboboxControl
+                            label="选择页面"
+                            value={previewSelected}
+                            options={previewOptions}
+                            onChange={handlePreviewSelect}
+                            onFilterValueChange={(value) =>
+                                setPreviewSearch(value)
+                            }
+                            placeholder={
+                                previewMode === 'page'
+                                    ? '搜索页面...'
+                                    : '搜索文章...'
+                            }
+                            help={
+                                previewLoading
+                                    ? '正在加载列表...'
+                                    : '选择后将自动作为预览环境'
+                            }
+                        />
+                    )}
+                    <div className="magick-ad-preview-target__actions">
+                        <Button
+                            variant="secondary"
+                            onClick={() =>
+                                setPreviewTarget(
+                                    window?.MagickAD?.previewUrl || ''
+                                )
+                            }
+                        >
+                            使用首页
+                        </Button>
+                            <Button
+                                variant="tertiary"
+                                onClick={() => setPreviewTarget('')}
+                            >
+                                清空
+                            </Button>
+                    </div>
+                </CardBody>
+            </Card>
             <Card>
                 <CardBody>
                     <div className="magick-ad-schedule-header">
@@ -3376,6 +3540,7 @@ const AdsConfig = () => {
                 creativeType={selectedAd?.options?.creative_type || 'image'}
                 containerType={selectedAd?.options?.container_type || 'inline'}
                 devicePreview={devicePreview}
+                previewTarget={previewTarget}
                 onCreativeChange={(value) =>
                     selectedAd && handleUpdateOptions({ creative_type: value })
                 }

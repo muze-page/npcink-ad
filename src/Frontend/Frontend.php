@@ -16,6 +16,7 @@ final class Frontend {
     private static $preview_ad_id = null;
     private static $preview_ad = null;
     private static $preview_force = false;
+    private static $preview_mode = 'shell';
     private static $preview_evaluation = array(
         'allowed' => false,
         'reasons' => array(),
@@ -751,7 +752,7 @@ final class Frontend {
     }
 
     private static function build_matching_cache(): array {
-        if (self::is_preview()) {
+        if (self::is_preview() && self::$preview_mode !== 'page') {
             return array('all' => array());
         }
 
@@ -1139,6 +1140,14 @@ final class Frontend {
         self::$preview_ad = $ad;
         self::$preview_force = isset($_GET['magick_ad_preview_force']) && $_GET['magick_ad_preview_force'] === '1';
         self::$preview_evaluation = self::evaluate_ad($ad);
+        $mode = isset($_GET['magick_ad_preview_mode'])
+            ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_mode']))
+            : 'shell';
+        self::$preview_mode = $mode === 'page' ? 'page' : 'shell';
+
+        if (self::$preview_mode === 'page') {
+            return;
+        }
 
         $preview_content = '<h1>Magick AD 预览页面</h1>'
             . '<p>这是用于预览广告投放效果的真实页面环境。</p>'

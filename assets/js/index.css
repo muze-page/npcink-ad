@@ -807,6 +807,23 @@
     color: #1d2327;
 }
 
+.magick-ad-preview-target__title {
+    font-weight: 600;
+    color: #1d2327;
+    margin-bottom: 12px;
+}
+
+.magick-ad-preview-target__mode {
+    margin-bottom: 12px;
+}
+
+.magick-ad-preview-target__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
 .magick-ad-status {
     display: inline-flex;
     align-items: center;
