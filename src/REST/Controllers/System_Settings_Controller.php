@@ -44,6 +44,8 @@ final class System_Settings_Controller {
         $auto_off_days = (int) get_option('magick_ad_stats_diagnostics_auto_off_days', 7);
         $auto_off_days = self::sanitize_positive_int($auto_off_days, 7, 1, 90);
         $diagnostics_expires_at = (int) get_option('magick_ad_stats_diagnostics_expires_at', 0);
+        $slot_client_resolver = (get_option('magick_ad_slot_client_resolver', '1') === '1');
+        $html_sandbox = (get_option('magick_ad_html_sandbox', '0') === '1');
 
         $settings = array(
             'tracking_strategy' => TrackingStrategy::from_value(
@@ -56,6 +58,8 @@ final class System_Settings_Controller {
             'stats_diagnostics_retention_days' => $retention_days,
             'stats_diagnostics_auto_off_days' => $auto_off_days,
             'stats_diagnostics_expires_at' => $diagnostics_expires_at,
+            'slot_client_resolver' => $slot_client_resolver,
+            'html_sandbox' => $html_sandbox,
             'brand_name' => get_option('magick_ad_brand_name', 'Magick AD'),
             'brand_tagline' => get_option('magick_ad_brand_tagline', '广告配置与投放规则管理'),
             'manage_capability' => get_option('magick_ad_manage_capability', 'manage_options'),
@@ -94,6 +98,12 @@ final class System_Settings_Controller {
             1,
             90
         );
+        $slot_client_resolver = !array_key_exists('slot_client_resolver', $params)
+            ? (get_option('magick_ad_slot_client_resolver', '1') === '1')
+            : !empty($params['slot_client_resolver']);
+        $html_sandbox = !array_key_exists('html_sandbox', $params)
+            ? (get_option('magick_ad_html_sandbox', '0') === '1')
+            : !empty($params['html_sandbox']);
         $brand_name = isset($params['brand_name']) && is_string($params['brand_name'])
             ? sanitize_text_field($params['brand_name'])
             : get_option('magick_ad_brand_name', 'Magick AD');
@@ -111,6 +121,8 @@ final class System_Settings_Controller {
         update_option('magick_ad_stats_diagnostics', $stats_diagnostics ? '1' : '0');
         update_option('magick_ad_stats_diagnostics_retention_days', $stats_diagnostics_retention_days);
         update_option('magick_ad_stats_diagnostics_auto_off_days', $stats_diagnostics_auto_off_days);
+        update_option('magick_ad_slot_client_resolver', $slot_client_resolver ? '1' : '0');
+        update_option('magick_ad_html_sandbox', $html_sandbox ? '1' : '0');
         update_option('magick_ad_brand_name', $brand_name);
         update_option('magick_ad_brand_tagline', $brand_tagline);
         update_option('magick_ad_manage_capability', $manage_capability);
@@ -129,6 +141,8 @@ final class System_Settings_Controller {
             'stats_diagnostics_retention_days' => $stats_diagnostics_retention_days,
             'stats_diagnostics_auto_off_days' => $stats_diagnostics_auto_off_days,
             'stats_diagnostics_expires_at' => $expires_at,
+            'slot_client_resolver' => $slot_client_resolver,
+            'html_sandbox' => $html_sandbox,
             'brand_name' => $brand_name,
             'brand_tagline' => $brand_tagline,
             'manage_capability' => $manage_capability,

@@ -15,7 +15,7 @@ define('MAGICK_AD_FILE', __FILE__);
 define('MAGICK_AD_PATH', plugin_dir_path(__FILE__));
 define('MAGICK_AD_URL', plugin_dir_url(__FILE__));
 define('MAGICK_AD_VERSION', '0.1.0');
-define('MAGICK_AD_DB_VERSION', '2');
+define('MAGICK_AD_DB_VERSION', '3');
 
 spl_autoload_register(function ($class) {
     $prefix = 'MagickAD\\';

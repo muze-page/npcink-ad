@@ -359,6 +359,7 @@ final class Settings {
                 array('all', 'logged-in', 'logged-out'),
                 'all'
             ),
+            'start_date' => self::sanitize_datetime(isset($options['start_date']) ? $options['start_date'] : ''),
             'end_date' => self::sanitize_date(isset($options['end_date']) ? $options['end_date'] : ''),
             'target_type' => self::sanitize_choice(
                 isset($options['target_type']) ? $options['target_type'] : '',
@@ -533,6 +534,18 @@ final class Settings {
             return $value;
         }
         return 'transparent';
+    }
+
+    private static function sanitize_datetime($value): string {
+        $value = is_string($value) ? trim($value) : '';
+        if ($value === '') {
+            return '';
+        }
+        $timestamp = strtotime($value);
+        if ($timestamp === false) {
+            return '';
+        }
+        return date('Y-m-d H:i:s', $timestamp);
     }
 
     private static function sanitize_date($value): string {

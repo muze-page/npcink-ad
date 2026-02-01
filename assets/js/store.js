@@ -22,6 +22,7 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
         show_page: 'all',
         device: 'all',
         login: 'all',
+        start_date: '',
         end_date: '',
         target_type: '',
         target_ids: [],
@@ -208,6 +209,7 @@ const normalizeAd = (ad) => {
             show_page: options.show_page || 'all',
             device: options.device || 'all',
             login: options.login || 'all',
+            start_date: options.start_date || '',
             end_date: options.end_date || '',
             target_type: options.target_type || '',
             target_ids: Array.isArray(options.target_ids)

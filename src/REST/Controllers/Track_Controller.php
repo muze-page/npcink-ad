@@ -6,6 +6,7 @@ use WP_Error;
 use WP_REST_Request;
 use MagickAD\Data\Ads;
 use MagickAD\Utils\TrackingStrategy;
+use MagickAD\Utils\Tracking_Signature;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -16,13 +17,13 @@ final class Track_Controller {
     private const KNOWN_ADS_CACHE_KEY = 'magick_ad_known_ads';
     private const KNOWN_ADS_CACHE_TTL = 120;
 
-    private const OPTION_TRACK_SECRET = 'magick_ad_track_secret';
     private const OPTION_TRACK_STRATEGY = 'magick_ad_tracking_strategy';
     private const OPTION_TRACK_REQUIRE_CONSENT = 'magick_ad_tracking_require_consent';
     private const OPTION_TRACK_REQUIRE_SIGNATURE = 'magick_ad_track_require_signature';
     private const OPTION_TRACK_DEDUPE_TTL = 'magick_ad_track_dedupe_ttl';
     private const OPTION_STATS_READY = 'magick_ad_stats_ready';
     private const OPTION_LOG_READY = 'magick_ad_stats_log_ready';
+    private const OPTION_DIM_READY = 'magick_ad_stats_dim_ready';
     private const OPTION_DIAGNOSTICS_ENABLED = 'magick_ad_stats_diagnostics';
     private const OPTION_DIAGNOSTICS_EXPIRES = 'magick_ad_stats_diagnostics_expires_at';
     private const OPTION_DIAGNOSTICS_RETENTION = 'magick_ad_stats_diagnostics_retention_days';
@@ -91,6 +92,18 @@ final class Track_Controller {
             return $written;
         }
 
+        $dim_written = self::write_dimension_stats(
+            $payload['ad_id'],
+            $payload['event'],
+            $payload['date'],
+            $payload['slot'],
+            $payload['position'],
+            $payload['container']
+        );
+        if (is_wp_error($dim_written)) {
+            return $dim_written;
+        }
+
         if (self::diagnostics_enabled()) {
             self::write_log(
                 $payload['ad_id'],
@@ -120,6 +133,9 @@ final class Track_Controller {
         $session_id = isset($payload['session_id']) ? sanitize_text_field($payload['session_id']) : '';
         $page_url = isset($payload['page_url']) ? esc_url_raw($payload['page_url']) : '';
         $page_hash = isset($payload['page_hash']) ? sanitize_text_field($payload['page_hash']) : '';
+        $slot = isset($payload['slot']) ? self::sanitize_dimension($payload['slot']) : '';
+        $position = isset($payload['position']) ? self::sanitize_dimension($payload['position']) : '';
+        $container = isset($payload['container']) ? self::sanitize_container($payload['container']) : '';
 
         return array(
             'ad_id' => $ad_id,
@@ -129,6 +145,9 @@ final class Track_Controller {
             'session_id' => $session_id,
             'page_url' => $page_url,
             'page_hash' => $page_hash,
+            'slot' => $slot,
+            'position' => $position,
+            'container' => $container,
             'date' => current_time('Y-m-d'),
             'user_id' => get_current_user_id(),
         );
@@ -140,6 +159,22 @@ final class Track_Controller {
             'impression', 'click' => $event,
             default => null,
         };
+    }
+
+    private static function sanitize_dimension(mixed $value): string {
+        $value = is_scalar($value) ? (string) $value : '';
+        $value = sanitize_text_field($value);
+        if ($value === '') {
+            return '';
+        }
+        return substr($value, 0, 191);
+    }
+
+    private static function sanitize_container(mixed $value): string {
+        $value = self::sanitize_dimension($value);
+        return in_array($value, array('inline', 'popup', 'banner', 'floating', 'interstitial'), true)
+            ? $value
+            : '';
     }
 
     private static function tracking_strategy(): string {
@@ -157,30 +192,8 @@ final class Track_Controller {
         return (bool) apply_filters('magick_ad_has_consent', false);
     }
 
-    private static function get_track_secret(): string {
-        $secret = get_option(self::OPTION_TRACK_SECRET, '');
-        if (!is_string($secret) || $secret === '') {
-            $secret = wp_generate_password(32, true, true);
-            update_option(self::OPTION_TRACK_SECRET, $secret, false);
-        }
-        return (string) $secret;
-    }
-
     private static function is_valid_signature(string $ad_id, string $sig, string $sig_ts): bool {
-        if ($ad_id === '' || $sig === '' || $sig_ts === '') {
-            return false;
-        }
-        if (!preg_match('/^\d{8}$/', $sig_ts)) {
-            return false;
-        }
-        $secret = self::get_track_secret();
-        $expected = hash_hmac('sha256', $ad_id . '|' . $sig_ts, $secret);
-        if (!hash_equals($expected, $sig)) {
-            return false;
-        }
-        $today = gmdate('Ymd', current_time('timestamp'));
-        $yesterday = gmdate('Ymd', current_time('timestamp') - DAY_IN_SECONDS);
-        return ($sig_ts === $today || $sig_ts === $yesterday);
+        return Tracking_Signature::is_valid($ad_id, $sig, $sig_ts);
     }
 
     private static function get_known_ad_ids(): array {
@@ -194,12 +207,28 @@ final class Track_Controller {
             return $cached;
         }
 
-        $ads = Ads::get_ads();
+        $stored = get_option(Ads::KNOWN_ADS_OPTION, array());
         $map = array();
-        foreach ($ads as $ad) {
-            if (!empty($ad['id']) && is_string($ad['id'])) {
-                $map[$ad['id']] = true;
+        if (is_array($stored)) {
+            foreach ($stored as $key => $value) {
+                if (is_string($key) && $key !== '') {
+                    $map[$key] = true;
+                    continue;
+                }
+                if (is_string($value) && $value !== '') {
+                    $map[$value] = true;
+                }
             }
+        }
+
+        if (empty($map)) {
+            $ads = Ads::get_ads();
+            foreach ($ads as $ad) {
+                if (!empty($ad['id']) && is_string($ad['id'])) {
+                    $map[$ad['id']] = true;
+                }
+            }
+            update_option(Ads::KNOWN_ADS_OPTION, $map, false);
         }
 
         wp_cache_set(
@@ -255,7 +284,6 @@ final class Track_Controller {
         $allow_unsigned = (bool) apply_filters('magick_ad_track_allow_unsigned', false);
         $require_signature = (get_option(self::OPTION_TRACK_REQUIRE_SIGNATURE, '1') === '1');
         $require_signature = (bool) apply_filters('magick_ad_track_require_signature', $require_signature, $ad_id, $event);
-        $known_ad = self::is_known_ad_id($ad_id);
 
         if ($sig_valid) {
             return true;
@@ -265,7 +293,12 @@ final class Track_Controller {
             return new WP_Error('magick_ad_invalid_signature', 'Invalid signature', array('status' => 403));
         }
 
-        if (!$allow_unsigned || !$known_ad) {
+        if (!$allow_unsigned) {
+            return new WP_Error('magick_ad_invalid_signature', 'Invalid signature', array('status' => 403));
+        }
+
+        $known_ad = self::is_known_ad_id($ad_id);
+        if (!$known_ad) {
             return new WP_Error('magick_ad_invalid_signature', 'Invalid signature', array('status' => 403));
         }
 
@@ -364,6 +397,21 @@ final class Track_Controller {
         return true;
     }
 
+    private static function ensure_dim_ready(): bool {
+        global $wpdb;
+        $table = $wpdb->prefix . 'magick_ad_stats_dim';
+        $dim_ready = (string) get_option(self::OPTION_DIM_READY, '0');
+        if ($dim_ready === (string) MAGICK_AD_DB_VERSION) {
+            return true;
+        }
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+        if ($exists !== $table) {
+            return false;
+        }
+        update_option(self::OPTION_DIM_READY, (string) MAGICK_AD_DB_VERSION, false);
+        return true;
+    }
+
     private static function write_stats(string $ad_id, string $event, string $date): WP_Error|true {
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats';
@@ -378,6 +426,45 @@ final class Track_Controller {
                 clicks = clicks + VALUES(clicks)",
             $date,
             $ad_id,
+            $impressions,
+            $clicks
+        );
+
+        $result = $wpdb->query($sql);
+        if ($result === false) {
+            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+        }
+
+        return true;
+    }
+
+    private static function write_dimension_stats(
+        string $ad_id,
+        string $event,
+        string $date,
+        string $slot,
+        string $position,
+        string $container
+    ): WP_Error|true {
+        if (!self::ensure_dim_ready()) {
+            return true;
+        }
+        if ($slot === '' && $position === '' && $container === '') {
+            return true;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'magick_ad_stats_dim';
+        $impressions = $event === 'impression' ? 1 : 0;
+        $clicks = $event === 'click' ? 1 : 0;
+
+        $sql = $wpdb->prepare(
+            "INSERT INTO {$table} (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`)\n             VALUES (%s, %s, %s, %s, %s, %d, %d)\n             ON DUPLICATE KEY UPDATE\n                impressions = impressions + VALUES(impressions),\n                clicks = clicks + VALUES(clicks)",
+            $date,
+            $ad_id,
+            $slot,
+            $position,
+            $container,
             $impressions,
             $clicks
         );

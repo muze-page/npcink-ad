@@ -14,6 +14,7 @@ final class Ads {
     public const POST_TYPE = 'magick_ad';
     public const META_DATA = '_magick_ad_data';
     public const META_ID = '_magick_ad_id';
+    public const KNOWN_ADS_OPTION = 'magick_ad_known_ad_ids';
 
     public static function register(): void {
         $capability = Capabilities::manage_capability();
@@ -297,8 +298,26 @@ final class Ads {
         }
 
         wp_cache_delete('magick_ad_known_ads', 'magick_ad');
+        self::refresh_known_ads_index();
 
         return $saved_ads;
+    }
+
+    private static function refresh_known_ads_index(): void {
+        $map = array();
+        $posts = self::get_all_ids();
+        if (!empty($posts)) {
+            update_meta_cache('post', $posts);
+        }
+        foreach ($posts as $post_id) {
+            $ad_id = get_post_meta($post_id, self::META_ID, true);
+            if (!$ad_id) {
+                $ad_id = 'ad_' . $post_id;
+                update_post_meta($post_id, self::META_ID, $ad_id);
+            }
+            $map[(string) $ad_id] = 1;
+        }
+        update_option(self::KNOWN_ADS_OPTION, $map, false);
     }
 
     private static function get_existing_map(): array {

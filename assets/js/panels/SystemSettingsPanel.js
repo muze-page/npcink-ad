@@ -20,6 +20,8 @@ const DEFAULT_SETTINGS = {
     stats_diagnostics_retention_days: 7,
     stats_diagnostics_auto_off_days: 7,
     stats_diagnostics_expires_at: 0,
+    slot_client_resolver: true,
+    html_sandbox: false,
     brand_name: 'Magick AD',
     brand_tagline: '广告配置与投放规则管理',
     manage_capability: 'manage_options',
@@ -168,6 +170,28 @@ const SystemSettingsPanel = ({ onNotice }) => {
                                 })
                             }
                             help="关闭后可接受无签名的 /track 请求（风险更高）。"
+                        />
+                        <ToggleControl
+                            label="启用缓存友好 Slot 轮播（客户端选择）"
+                            checked={Boolean(settings.slot_client_resolver)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    slot_client_resolver: value,
+                                })
+                            }
+                            help="开启后仅输出候选 ID，由前端按权重决定展示，适配全页缓存场景。"
+                        />
+                        <ToggleControl
+                            label="Full HTML 启用 iframe 沙箱"
+                            checked={Boolean(settings.html_sandbox)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    html_sandbox: value,
+                                })
+                            }
+                            help="仅对 Full HTML 生效，默认关闭；开启后将隔离第三方脚本。"
                         />
                         <ToggleControl
                             label="启用统计诊断日志"

@@ -10,6 +10,7 @@ final class Schema {
     public const OPTION_KEY = 'magick_ad_db_version';
     private const STATS_READY_KEY = 'magick_ad_stats_ready';
     private const LOG_READY_KEY = 'magick_ad_stats_log_ready';
+    private const DIM_READY_KEY = 'magick_ad_stats_dim_ready';
 
     public static function maybe_upgrade(): void {
         $stored = get_option(self::OPTION_KEY, '0');
@@ -24,6 +25,7 @@ final class Schema {
 
         $table = $wpdb->prefix . 'magick_ad_stats';
         $log_table = $wpdb->prefix . 'magick_ad_stats_log';
+        $dim_table = $wpdb->prefix . 'magick_ad_stats_dim';
         $charset_collate = $wpdb->get_charset_collate();
 
         if (self::table_exists($table) && !self::table_has_column($table, 'impressions')) {
@@ -57,13 +59,32 @@ final class Schema {
             KEY created_at (created_at)
         ) {$charset_collate};";
 
+        $dim_sql = "CREATE TABLE {$dim_table} (
+            date date NOT NULL,
+            ad_id varchar(191) NOT NULL,
+            slot varchar(191) NOT NULL DEFAULT '',
+            position varchar(191) NOT NULL DEFAULT '',
+            container varchar(191) NOT NULL DEFAULT '',
+            impressions bigint(20) unsigned NOT NULL DEFAULT 0,
+            clicks bigint(20) unsigned NOT NULL DEFAULT 0,
+            PRIMARY KEY  (date, ad_id, slot, position, container),
+            KEY ad_id (ad_id),
+            KEY slot (slot),
+            KEY position (position),
+            KEY container (container)
+        ) {$charset_collate};";
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
         dbDelta($log_sql);
+        dbDelta($dim_sql);
 
         update_option(self::OPTION_KEY, MAGICK_AD_DB_VERSION, false);
         update_option(self::STATS_READY_KEY, (string) MAGICK_AD_DB_VERSION, false);
         update_option(self::LOG_READY_KEY, (string) MAGICK_AD_DB_VERSION, false);
+        update_option(self::DIM_READY_KEY, (string) MAGICK_AD_DB_VERSION, false);
+        add_option('magick_ad_slot_client_resolver', '1', '', false);
+        add_option('magick_ad_html_sandbox', '0', '', false);
     }
 
     private static function is_schema_ready(): bool {
@@ -73,6 +94,10 @@ final class Schema {
             return false;
         }
         if (!self::table_has_column($table, 'impressions')) {
+            return false;
+        }
+        $dim_table = $wpdb->prefix . 'magick_ad_stats_dim';
+        if (!self::table_exists($dim_table)) {
             return false;
         }
         $diagnostics_enabled = (get_option('magick_ad_stats_diagnostics', '0') === '1');

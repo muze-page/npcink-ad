@@ -4,6 +4,7 @@ namespace MagickAD\REST;
 
 use MagickAD\REST\Controllers\Debug_Controller;
 use MagickAD\REST\Controllers\Reports_Controller;
+use MagickAD\REST\Controllers\Render_Controller;
 use MagickAD\REST\Controllers\Settings_Controller;
 use MagickAD\REST\Controllers\System_Settings_Controller;
 use MagickAD\REST\Controllers\Template_Categories_Controller;
@@ -59,6 +60,11 @@ final class Routes {
         register_rest_route('magick-ad/v1', '/track', array(
             'methods' => 'POST',
             'callback' => array(Track_Controller::class, 'track'),
+            'permission_callback' => '__return_true',
+        ));
+        register_rest_route('magick-ad/v1', '/render-ad', array(
+            'methods' => 'POST',
+            'callback' => array(Render_Controller::class, 'render'),
             'permission_callback' => '__return_true',
         ));
         register_rest_route('magick-ad/v1', '/template-categories', array(

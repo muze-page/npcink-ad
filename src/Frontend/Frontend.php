@@ -50,14 +50,52 @@ final class Frontend {
         return self::build_ad_markup($ad, $position);
     }
 
+    public static function render_ad_by_id(string $ad_id, array $args = array()): string {
+        if ($ad_id === '') {
+            return '';
+        }
+        $ad = self::get_ad_by_id($ad_id);
+        if (!$ad) {
+            return '';
+        }
+        if (!isset($args['slot']) && !isset($args['id'])) {
+            $args['id'] = $ad_id;
+        }
+        $args['force'] = true;
+        $ad = self::apply_render_overrides($ad, $args);
+        $position = isset($args['position']) && is_string($args['position'])
+            ? $args['position']
+            : 'slot';
+        return self::build_ad_markup($ad, $position);
+    }
+
     public static function render_slot($slot_or_id, array $args = array()): string {
-        $ads = self::resolve_ads($slot_or_id, $args);
-        if (empty($ads)) {
+        list($slot, $id) = self::resolve_slot_and_id($slot_or_id, $args);
+        if ($slot === '' && $id === '') {
+            return '';
+        }
+
+        $settings = Settings::get_settings();
+        $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        $slots = isset($settings['slots']) && is_array($settings['slots']) ? $settings['slots'] : array();
+
+        $slot_key = $slot !== '' ? sanitize_title($slot) : '';
+        $slot_config = $slot_key !== '' ? self::find_slot_config($slots, $slot_key) : null;
+
+        if ($slot_config !== null && self::should_use_slot_client_resolver($slot_key, $args, $slot_config)) {
+            $placeholder = self::render_slot_placeholder($slot_key, $args, $ads, $slot_config);
+            if ($placeholder !== '') {
+                return $placeholder;
+            }
+        }
+
+        $resolved = self::resolve_ads($slot_or_id, $args);
+        if (empty($resolved)) {
             return '';
         }
 
         $markup = '';
-        foreach ($ads as $ad) {
+        foreach ($resolved as $ad) {
             $rendered = self::render_ad_array($ad, $args);
             if ($rendered) {
                 $markup .= $rendered;
@@ -209,6 +247,101 @@ final class Frontend {
         }
 
         return array($slot, $id);
+    }
+
+    private static function should_use_slot_client_resolver(string $slot, array $args, array $slot_config): bool {
+        if (is_admin() || self::is_preview_request() || self::is_preview()) {
+            return false;
+        }
+        $enabled = (get_option('magick_ad_slot_client_resolver', '1') === '1');
+        return (bool) apply_filters('magick_ad_slot_client_resolver_enabled', $enabled, $slot, $slot_config, $args);
+    }
+
+    private static function render_slot_placeholder(
+        string $slot,
+        array $args,
+        array $ads,
+        array $slot_config
+    ): string {
+        list($candidates, $weight_map, $limit) = self::resolve_slot_candidates($ads, $slot_config);
+        if (empty($candidates)) {
+            return '';
+        }
+
+        $sig_ts = gmdate('Ymd', current_time('timestamp'));
+        $payload_candidates = array();
+        foreach ($candidates as $candidate) {
+            $ad_id = isset($candidate['id']) ? (string) $candidate['id'] : '';
+            if ($ad_id === '') {
+                continue;
+            }
+            $ad_weight = isset($candidate['options']['weight'])
+                ? absint($candidate['options']['weight'])
+                : 1;
+            $ad_weight = max(1, $ad_weight);
+            $slot_weight = isset($weight_map[$ad_id]) ? $weight_map[$ad_id] : 1;
+            $slot_weight = max(1, absint($slot_weight));
+            $weight = $ad_weight * $slot_weight;
+
+            $payload_candidates[] = array(
+                'id' => $ad_id,
+                'weight' => $weight,
+                'sig' => \MagickAD\Utils\Tracking_Signature::build($ad_id, $sig_ts),
+                'sig_ts' => $sig_ts,
+            );
+        }
+
+        if (empty($payload_candidates)) {
+            return '';
+        }
+
+        $resolver_args = self::build_slot_resolver_args($args, $slot);
+        $candidates_json = wp_json_encode($payload_candidates, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $args_json = wp_json_encode($resolver_args, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        $attrs = ' data-magick-ad-slot-resolver="1"';
+        $attrs .= ' data-magick-ad-slot="' . esc_attr($slot) . '"';
+        $attrs .= ' data-magick-ad-limit="' . esc_attr((string) $limit) . '"';
+        if ($candidates_json) {
+            $attrs .= ' data-magick-ad-candidates="' . esc_attr($candidates_json) . '"';
+        }
+        if ($args_json) {
+            $attrs .= ' data-magick-ad-args="' . esc_attr($args_json) . '"';
+        }
+
+        return '<div class="magick-ad-slot-resolver"' . $attrs . '></div>';
+    }
+
+    private static function build_slot_resolver_args(array $args, string $slot): array {
+        $resolver_args = array(
+            'slot' => $slot,
+        );
+
+        if (!empty($args['position']) && is_string($args['position'])) {
+            $resolver_args['position'] = $args['position'];
+        }
+        if (!empty($args['class']) && is_string($args['class'])) {
+            $resolver_args['class'] = $args['class'];
+        }
+        if (!empty($args['container']) && is_string($args['container'])) {
+            $resolver_args['container'] = $args['container'];
+        }
+        if (!empty($args['creative']) && is_string($args['creative'])) {
+            $resolver_args['creative'] = $args['creative'];
+        }
+
+        return $resolver_args;
+    }
+
+    private static function resolve_slot_candidates(array $ads, array $slot_config): array {
+        list($slot_candidates, $weight_map) = self::build_slot_candidates($ads, $slot_config);
+        $eligible = self::filter_eligible_ads($slot_candidates);
+        if (empty($eligible)) {
+            return array(array(), array(), 0);
+        }
+        $top = self::filter_top_priority($eligible);
+        $limit = isset($slot_config['limit']) ? max(1, absint($slot_config['limit'])) : 1;
+        return array($top, $weight_map, $limit);
     }
 
     private static function find_slot_config(array $slots, string $slot): ?array {
@@ -394,6 +527,7 @@ final class Frontend {
         $requires_consent = (bool) apply_filters('magick_ad_tracking_require_consent', $requires_consent);
         $track_config = array(
             'restUrl' => esc_url_raw(rest_url('magick-ad/v1/track')),
+            'renderUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ad')),
             'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
             'defer' => $defer,
             'scriptUrl' => esc_url_raw(MAGICK_AD_URL . 'assets/magick-ad-track.js'),
@@ -951,6 +1085,10 @@ final class Frontend {
             return false;
         }
 
+        if (self::is_before_start($options)) {
+            return false;
+        }
+
         if (self::is_expired($options)) {
             return false;
         }
@@ -991,6 +1129,10 @@ final class Frontend {
 
         if (isset($options['enabled']) && !$options['enabled']) {
             $reasons[] = 'disabled';
+        }
+
+        if (self::is_before_start($options)) {
+            $reasons[] = 'not_started';
         }
 
         if (self::is_expired($options)) {
@@ -1061,6 +1203,7 @@ final class Frontend {
         }
         $map = array(
             'disabled' => '未启用',
+            'not_started' => '未到开始时间',
             'expired' => '已过期',
             'status' => '未发布/排期中',
             'display_mode=hide' => '展示模式=隐藏',
@@ -1502,6 +1645,18 @@ final class Frontend {
         return $result;
     }
 
+    private static function is_before_start($options) {
+        $start_date = isset($options['start_date']) ? $options['start_date'] : '';
+        if (!$start_date) {
+            return false;
+        }
+        $timestamp = strtotime($start_date);
+        if ($timestamp === false) {
+            return false;
+        }
+        return current_time('timestamp') < $timestamp;
+    }
+
     private static function is_expired($options) {
         $end_date = isset($options['end_date']) ? $options['end_date'] : '';
         if (!$end_date) {
@@ -1685,7 +1840,7 @@ final class Frontend {
         $content_type = self::resolve_content_type($options);
         $container_type = self::resolve_container_type($options);
 
-        $body = self::build_body_by_type($content_type, $content);
+        $body = self::build_body_by_type($content_type, $content, $options);
         if ($body === '') {
             return '';
         }
@@ -1735,10 +1890,10 @@ final class Frontend {
         };
     }
 
-    private static function build_body_by_type(string $content_type, array $content): string {
+    private static function build_body_by_type(string $content_type, array $content, array $options): string {
         return match ($content_type) {
             'block' => self::build_block_body($content),
-            'html' => self::build_html_body($content),
+            'html' => self::build_html_body($content, $options),
             'image' => self::build_image_body($content),
             'video' => self::build_video_body($content),
             default => '',
@@ -1750,9 +1905,38 @@ final class Frontend {
         return $blocks ? do_blocks($blocks) : '';
     }
 
-    private static function build_html_body(array $content): string {
+    private static function build_html_body(array $content, array $options): string {
         $html = isset($content['html']) ? (string) $content['html'] : '';
-        return $html ?: '';
+        if ($html === '') {
+            return '';
+        }
+        if (!self::should_sandbox_html($options)) {
+            return $html;
+        }
+        return self::build_sandboxed_html($html);
+    }
+
+    private static function should_sandbox_html(array $options): bool {
+        $enabled = (get_option('magick_ad_html_sandbox', '0') === '1');
+        $enabled = (bool) apply_filters('magick_ad_html_sandbox_enabled', $enabled, $options);
+        if (!$enabled) {
+            return false;
+        }
+        $html_mode = isset($options['html_mode']) ? $options['html_mode'] : 'safe';
+        return $html_mode === 'full';
+    }
+
+    private static function build_sandboxed_html(string $html): string {
+        $sandbox = (string) apply_filters(
+            'magick_ad_html_sandbox_permissions',
+            'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox'
+        );
+        $referrer = (string) apply_filters('magick_ad_html_sandbox_referrerpolicy', 'no-referrer');
+        $sandbox_attr = $sandbox !== '' ? ' sandbox="' . esc_attr(trim($sandbox)) . '"' : ' sandbox';
+        $referrer_attr = $referrer !== '' ? ' referrerpolicy="' . esc_attr($referrer) . '"' : '';
+        $srcdoc = esc_attr($html);
+
+        return '<iframe class="magick-ad-html-sandbox"' . $sandbox_attr . $referrer_attr . ' loading="lazy" srcdoc="' . $srcdoc . '"></iframe>';
     }
 
     private static function build_image_body(array $content): string {
@@ -1922,7 +2106,7 @@ final class Frontend {
 
         if ($ad_id !== '') {
             $sig_ts = gmdate('Ymd', current_time('timestamp'));
-            $sig = hash_hmac('sha256', $ad_id . '|' . $sig_ts, self::get_track_secret());
+            $sig = \MagickAD\Utils\Tracking_Signature::build($ad_id, $sig_ts);
             $data_attrs .= ' data-ad-sig="' . esc_attr($sig) . '"';
             $data_attrs .= ' data-ad-sig-ts="' . esc_attr($sig_ts) . '"';
         }
@@ -2029,12 +2213,4 @@ final class Frontend {
         return '<div class="magick-ad-zone magick-ad-zone--' . esc_attr($zone) . '">' . $markup . '</div>';
     }
 
-    private static function get_track_secret(): string {
-        $secret = get_option('magick_ad_track_secret', '');
-        if (!is_string($secret) || $secret === '') {
-            $secret = wp_generate_password(32, true, true);
-            update_option('magick_ad_track_secret', $secret, false);
-        }
-        return (string) $secret;
-    }
 }

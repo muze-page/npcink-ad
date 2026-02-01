@@ -8,10 +8,13 @@ global $wpdb;
 
 $table = $wpdb->prefix . 'magick_ad_stats';
 $log_table = $wpdb->prefix . 'magick_ad_stats_log';
+$dim_table = $wpdb->prefix . 'magick_ad_stats_dim';
 $safe_table = preg_replace('/[^A-Za-z0-9_]/', '', $table);
 $safe_log_table = preg_replace('/[^A-Za-z0-9_]/', '', $log_table);
+$safe_dim_table = preg_replace('/[^A-Za-z0-9_]/', '', $dim_table);
 $wpdb->query("DROP TABLE IF EXISTS {$safe_table}");
 $wpdb->query("DROP TABLE IF EXISTS {$safe_log_table}");
+$wpdb->query("DROP TABLE IF EXISTS {$safe_dim_table}");
 
 $option_like = $wpdb->esc_like('magick_ad_') . '%';
 $transient_like = $wpdb->esc_like('_transient_magick_ad_') . '%';
