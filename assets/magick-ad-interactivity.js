@@ -37,6 +37,81 @@
         window.matchMedia &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const renderCache = new Map();
+    const resolverQueue = new Map();
+    let resolverFlushTimer = null;
+    const resolverBatchDelay = 20;
+
+    const scheduleResolverFlush = () => {
+        if (resolverFlushTimer) {
+            return;
+        }
+        resolverFlushTimer = window.setTimeout(() => {
+            resolverFlushTimer = null;
+            flushResolverQueue();
+        }, resolverBatchDelay);
+    };
+
+    const flushResolverQueue = () => {
+        if (!resolverQueue.size) {
+            return;
+        }
+        const pending = Array.from(resolverQueue.values());
+        resolverQueue.clear();
+        const requests = [];
+
+        pending.forEach((entry) => {
+            if (!entry || !entry.element) {
+                return;
+            }
+            const selected = pickWeightedCandidates(
+                entry.candidates,
+                entry.limit
+            );
+            if (!selected.length) {
+                return;
+            }
+            requests.push({
+                entry,
+                selected,
+            });
+        });
+
+        if (!requests.length) {
+            return;
+        }
+
+        const fetchTasks = requests.map(({ entry, selected }) =>
+            fetchAdMarkups(selected, entry.args).then((results) => ({
+                entry,
+                results,
+            }))
+        );
+
+        Promise.all(fetchTasks).then((responses) => {
+            responses.forEach(({ entry, results }) => {
+                if (!entry || !entry.element) {
+                    return;
+                }
+                const element = entry.element;
+                results.forEach((html) => {
+                    if (!html) {
+                        return;
+                    }
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = html;
+                    const nodes = hydrateScriptNodes(
+                        Array.from(wrapper.childNodes)
+                    );
+                    nodes.forEach((node) => {
+                        element.appendChild(node);
+                    });
+                    element.querySelectorAll('[data-ad-id]').forEach((ad) => {
+                        initAdBehavior(ad);
+                    });
+                });
+            });
+        });
+    };
 
     const readStorageValue = (storage, key) => {
         if (
@@ -635,28 +710,13 @@
         const limit = Number(
             element.getAttribute('data-magick-ad-limit') || 1
         );
-        const selected = pickWeightedCandidates(candidates, limit);
-        if (!selected.length) {
-            return;
-        }
-        fetchAdMarkups(selected, args).then((results) => {
-            results.forEach((html) => {
-                if (!html) {
-                    return;
-                }
-                const wrapper = document.createElement('div');
-                wrapper.innerHTML = html;
-                const nodes = hydrateScriptNodes(
-                    Array.from(wrapper.childNodes)
-                );
-                nodes.forEach((node) => {
-                    element.appendChild(node);
-                });
-                element.querySelectorAll('[data-ad-id]').forEach((ad) => {
-                    initAdBehavior(ad);
-                });
-            });
+        resolverQueue.set(element, {
+            element,
+            candidates,
+            args,
+            limit,
         });
+        scheduleResolverFlush();
     };
 
     const resolveSlotPlaceholders = (root = document) => {
