@@ -262,7 +262,15 @@
     font-weight: 600;
     background: #f1f5f9;
     color: #1f2937;
-    margin: 56px auto 16px;
+    position: absolute;
+    top: 64px;
+    left: 20px;
+    margin: 0;
+    max-width: min(360px, 60%);
+    flex-wrap: wrap;
+    line-height: 1.3;
+    z-index: 2;
+    pointer-events: none;
     box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
 }
 
@@ -273,6 +281,7 @@
 .magick-ad-preview-toast__reason {
     font-weight: 500;
     color: #64748b;
+    white-space: normal;
 }
 
 .magick-ad-preview-toast.is-hit {

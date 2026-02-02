@@ -72,6 +72,11 @@ final class Routes {
             'callback' => array(Render_Controller::class, 'render'),
             'permission_callback' => '__return_true',
         ));
+        register_rest_route('magick-ad/v1', '/render-ads', array(
+            'methods' => 'POST',
+            'callback' => array(Render_Controller::class, 'render_batch'),
+            'permission_callback' => '__return_true',
+        ));
         register_rest_route('magick-ad/v1', '/template-categories', array(
             'methods' => 'GET',
             'callback' => array(Template_Categories_Controller::class, 'get'),

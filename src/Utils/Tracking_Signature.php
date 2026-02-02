@@ -8,25 +8,85 @@ if (!defined('ABSPATH')) {
 
 final class Tracking_Signature {
     private const OPTION_TRACK_SECRET = 'magick_ad_track_secret';
+    private const POSITION_ALLOWLIST = array(
+        'block',
+        'slot',
+        'shortcode',
+        'content',
+        'content_before',
+        'content_after',
+        'footer',
+        'node',
+        'top',
+        'comments_top',
+        'comments_bottom',
+        'comment_form_before',
+        'comment_form_after',
+    );
+    private const CONTAINER_ALLOWLIST = array(
+        'inline',
+        'popup',
+        'banner',
+        'floating',
+        'interstitial',
+    );
 
-    public static function build(string $ad_id, string $sig_ts): string {
-        return hash_hmac('sha256', $ad_id . '|' . $sig_ts, self::get_secret());
+    public static function build(
+        string $ad_id,
+        string $sig_ts,
+        string $slot = '',
+        string $position = '',
+        string $container = ''
+    ): string {
+        $payload = implode('|', array(
+            $ad_id,
+            $sig_ts,
+            self::normalize_slot($slot),
+            self::normalize_position($position),
+            self::normalize_container($container),
+        ));
+        return hash_hmac('sha256', $payload, self::get_secret());
     }
 
-    public static function is_valid(string $ad_id, string $sig, string $sig_ts): bool {
+    public static function is_valid(
+        string $ad_id,
+        string $sig,
+        string $sig_ts,
+        string $slot = '',
+        string $position = '',
+        string $container = ''
+    ): bool {
         if ($ad_id === '' || $sig === '' || $sig_ts === '') {
             return false;
         }
         if (!preg_match('/^\d{8}$/', $sig_ts)) {
             return false;
         }
-        $expected = self::build($ad_id, $sig_ts);
+        $expected = self::build($ad_id, $sig_ts, $slot, $position, $container);
         if (!hash_equals($expected, $sig)) {
             return false;
         }
         $today = gmdate('Ymd', current_time('timestamp'));
         $yesterday = gmdate('Ymd', current_time('timestamp') - DAY_IN_SECONDS);
         return ($sig_ts === $today || $sig_ts === $yesterday);
+    }
+
+    private static function normalize_slot(string $slot): string {
+        $slot = sanitize_title($slot);
+        if ($slot === '') {
+            return '';
+        }
+        return substr($slot, 0, 64);
+    }
+
+    private static function normalize_position(string $position): string {
+        $position = sanitize_text_field($position);
+        return in_array($position, self::POSITION_ALLOWLIST, true) ? $position : '';
+    }
+
+    private static function normalize_container(string $container): string {
+        $container = sanitize_text_field($container);
+        return in_array($container, self::CONTAINER_ALLOWLIST, true) ? $container : '';
     }
 
     private static function get_secret(): string {

@@ -75,7 +75,7 @@ final class Frontend {
             return '';
         }
 
-        $settings = Settings::get_settings();
+        $settings = Settings::get_runtime_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
         $slots = isset($settings['slots']) && is_array($settings['slots']) ? $settings['slots'] : array();
 
@@ -195,7 +195,7 @@ final class Frontend {
     private static function resolve_ads($slot_or_id, array $args = array()): array {
         list($slot, $id) = self::resolve_slot_and_id($slot_or_id, $args);
 
-        $settings = Settings::get_settings();
+        $settings = Settings::get_runtime_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
         $slots = isset($settings['slots']) && is_array($settings['slots']) ? $settings['slots'] : array();
 
@@ -268,6 +268,10 @@ final class Frontend {
             return '';
         }
 
+        $resolver_args = self::build_slot_resolver_args($args, $slot);
+        $resolver_position = isset($resolver_args['position']) ? (string) $resolver_args['position'] : '';
+        $resolver_container = isset($resolver_args['container']) ? (string) $resolver_args['container'] : '';
+
         $sig_ts = gmdate('Ymd', current_time('timestamp'));
         $payload_candidates = array();
         foreach ($candidates as $candidate) {
@@ -286,7 +290,13 @@ final class Frontend {
             $payload_candidates[] = array(
                 'id' => $ad_id,
                 'weight' => $weight,
-                'sig' => \MagickAD\Utils\Tracking_Signature::build($ad_id, $sig_ts),
+                'sig' => \MagickAD\Utils\Tracking_Signature::build(
+                    $ad_id,
+                    $sig_ts,
+                    $slot,
+                    $resolver_position,
+                    $resolver_container
+                ),
                 'sig_ts' => $sig_ts,
             );
         }
@@ -295,7 +305,6 @@ final class Frontend {
             return '';
         }
 
-        $resolver_args = self::build_slot_resolver_args($args, $slot);
         $candidates_json = wp_json_encode($payload_candidates, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $args_json = wp_json_encode($resolver_args, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
@@ -315,6 +324,7 @@ final class Frontend {
     private static function build_slot_resolver_args(array $args, string $slot): array {
         $resolver_args = array(
             'slot' => $slot,
+            'position' => 'slot',
         );
 
         if (!empty($args['position']) && is_string($args['position'])) {
@@ -467,7 +477,7 @@ final class Frontend {
         return !empty($ads) ? $ads[0] : null;
     }
 
-    public static function enqueue_assets(): void {
+    public static function enqueue_assets(bool $force = false): void {
         if (is_admin()) {
             return;
         }
@@ -506,7 +516,7 @@ final class Frontend {
         }
 
         $ads = self::get_matching_ads_for('all');
-        if (empty($ads)) {
+        if (empty($ads) && !$force) {
             return;
         }
 
@@ -525,20 +535,41 @@ final class Frontend {
         $has_consent = (bool) apply_filters('magick_ad_has_consent', false);
         $requires_consent = (get_option('magick_ad_tracking_require_consent', '0') === '1');
         $requires_consent = (bool) apply_filters('magick_ad_tracking_require_consent', $requires_consent);
+        wp_enqueue_script(
+            'magick-ad-interactivity',
+            MAGICK_AD_URL . 'assets/magick-ad-interactivity.js',
+            array('wp-interactivity'),
+            MAGICK_AD_VERSION,
+            true
+        );
+        wp_localize_script(
+            'magick-ad-interactivity',
+            'MagickADBehavior',
+            array(
+                'hasConsent' => $has_consent,
+                'requireConsent' => $requires_consent,
+            )
+        );
+        $track_deps = array('magick-ad-interactivity');
         $track_config = array(
             'restUrl' => esc_url_raw(rest_url('magick-ad/v1/track')),
             'renderUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ad')),
             'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
             'defer' => $defer,
             'scriptUrl' => esc_url_raw(MAGICK_AD_URL . 'assets/magick-ad-track.js'),
+            'renderBatchUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ads')),
             'containerIndex' => $container_index,
             'collectPageUrl' => $diagnostics_enabled,
             'hasConsent' => $has_consent,
             'requireConsent' => $requires_consent,
+            'dedupeScope' => (string) apply_filters(
+                'magick_ad_track_dedupe_scope',
+                get_option('magick_ad_track_dedupe_scope', 'ad')
+            ),
         );
 
         if ($defer) {
-            wp_register_script($track_handle, '', array(), MAGICK_AD_VERSION, true);
+            wp_register_script($track_handle, '', $track_deps, MAGICK_AD_VERSION, true);
             wp_enqueue_script($track_handle);
             wp_localize_script($track_handle, 'MagickADTrack', $track_config);
             wp_add_inline_script(
@@ -549,7 +580,7 @@ final class Frontend {
             wp_enqueue_script(
                 $track_handle,
                 MAGICK_AD_URL . 'assets/magick-ad-track.js',
-                array(),
+                $track_deps,
                 MAGICK_AD_VERSION,
                 true
             );
@@ -961,7 +992,7 @@ final class Frontend {
             return array('all' => array());
         }
 
-        $settings = Settings::get_settings();
+        $settings = Settings::get_runtime_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
 
         $zones = array(
@@ -1187,7 +1218,7 @@ final class Frontend {
     }
 
     private static function get_ad_by_id(string $ad_id): ?array {
-        $settings = Settings::get_settings();
+        $settings = Settings::get_runtime_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
         foreach ($ads as $ad) {
             if (isset($ad['id']) && (string) $ad['id'] === $ad_id) {
@@ -1269,7 +1300,7 @@ final class Frontend {
             return;
         }
 
-        $settings = Settings::get_settings();
+        $settings = Settings::get_runtime_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
         $report = array(
             'generated_at' => current_time('mysql'),
@@ -1571,7 +1602,7 @@ final class Frontend {
             return;
         }
 
-        $settings = Settings::get_settings();
+        $settings = Settings::get_runtime_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
         $needs_cookie = false;
         foreach ($ads as $ad) {
@@ -1850,6 +1881,7 @@ final class Frontend {
         $body = self::wrap_modal_container($body, $container_type);
 
         $data_attrs = self::build_data_attributes($ad, $options, $content, $position, $container_type);
+        $data_attrs .= ' data-wp-interactive="magick-ad"';
         $unit_class = self::build_unit_class($ad, $options, $position, $container_type);
         $inner_style = self::build_inner_style($content);
 
@@ -2024,7 +2056,7 @@ final class Frontend {
         $badge_markup = self::build_badge_markup($container_style);
         $close_markup = '';
         if (!empty($behavior['close_button'])) {
-            $close_markup = '<button type="button" class="magick-ad-close" aria-label="' . esc_attr__('关闭广告', 'magick-ad') . '">×</button>';
+            $close_markup = '<button type="button" class="magick-ad-close" aria-label="' . esc_attr__('关闭广告', 'magick-ad') . '" data-wp-on--click="actions.close">×</button>';
         }
 
         return '<div class="' . esc_attr(implode(' ', $classes)) . '"' . $style_attr . '>' . $badge_markup . $close_markup . '<div class="magick-ad-html-content">' . $body . '</div></div>';
@@ -2092,7 +2124,7 @@ final class Frontend {
         if (!in_array($container_type, array('popup', 'interstitial'), true)) {
             return $body;
         }
-        return '<div class="magick-ad-overlay"></div><div class="magick-ad-popup" role="dialog" aria-modal="true" tabindex="-1">' . $body . '</div>';
+        return '<div class="magick-ad-overlay" data-wp-on--click="actions.onOverlayClick"></div><div class="magick-ad-popup" role="dialog" aria-modal="true" tabindex="-1">' . $body . '</div>';
     }
 
     private static function build_data_attributes(array $ad, array $options, array $content, string $position, string $container_type): string {
@@ -2104,14 +2136,26 @@ final class Frontend {
         $data_attrs = ' data-ad-id="' . esc_attr($ad_id) . '" data-ad-position="' . esc_attr($position) . '"';
         $data_attrs .= ' data-ad-container="' . esc_attr($container_type) . '"';
 
+        $slot = '';
+        if (!empty($ad['_slot']) && is_string($ad['_slot'])) {
+            $slot = sanitize_title($ad['_slot']);
+            if ($slot !== '') {
+                $slot = substr($slot, 0, 64);
+                $data_attrs .= ' data-ad-slot="' . esc_attr($slot) . '"';
+            }
+        }
+
         if ($ad_id !== '') {
             $sig_ts = gmdate('Ymd', current_time('timestamp'));
-            $sig = \MagickAD\Utils\Tracking_Signature::build($ad_id, $sig_ts);
+            $sig = \MagickAD\Utils\Tracking_Signature::build(
+                $ad_id,
+                $sig_ts,
+                $slot,
+                $position,
+                $container_type
+            );
             $data_attrs .= ' data-ad-sig="' . esc_attr($sig) . '"';
             $data_attrs .= ' data-ad-sig-ts="' . esc_attr($sig_ts) . '"';
-        }
-        if (!empty($ad['_slot']) && is_string($ad['_slot'])) {
-            $data_attrs .= ' data-ad-slot="' . esc_attr($ad['_slot']) . '"';
         }
 
         $placement_hook = isset($options['placement_hook']) ? $options['placement_hook'] : '';
@@ -2149,6 +2193,7 @@ final class Frontend {
             $data_attrs .= ' data-ad-freq-mode="' . esc_attr($frequency_mode) . '"';
             $data_attrs .= ' data-ad-freq-limit="' . esc_attr($frequency_limit) . '"';
         }
+        $data_attrs .= ' data-wp-init="actions.initAd"';
 
         return $data_attrs;
     }

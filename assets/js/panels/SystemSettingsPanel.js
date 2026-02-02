@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
     tracking_strategy: 'session',
     tracking_require_consent: false,
     tracking_dedupe_ttl: 86400,
+    tracking_dedupe_scope: 'ad',
     tracking_require_signature: true,
     stats_diagnostics: false,
     stats_diagnostics_retention_days: 7,
@@ -159,6 +160,27 @@ const SystemSettingsPanel = ({ onNotice }) => {
                                 })
                             }
                             help="用于去重/防刷；在窗口内同一广告只计一次。默认 86400 秒。"
+                        />
+                        <SelectControl
+                            label="去重口径"
+                            value={settings.tracking_dedupe_scope}
+                            disabled={loading || saving}
+                            options={[
+                                {
+                                    label: '按广告（同页同广告仅算一次）',
+                                    value: 'ad',
+                                },
+                                {
+                                    label: '按位置（同广告不同位置分别统计）',
+                                    value: 'placement',
+                                },
+                            ]}
+                            onChange={(value) =>
+                                updateSettings({
+                                    tracking_dedupe_scope: value,
+                                })
+                            }
+                            help="默认按广告去重；如需按位置统计请选择“按位置”。"
                         />
                         <ToggleControl
                             label="强制签名校验"

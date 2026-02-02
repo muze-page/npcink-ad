@@ -2,6 +2,7 @@
     const config = window.MagickADTrack || {};
     const trackUrl = config.restUrl;
     const renderUrl = config.renderUrl;
+    const renderBatchUrl = config.renderBatchUrl;
     if (!trackUrl) {
         return;
     }
@@ -10,6 +11,37 @@
     const requireConsent = config.requireConsent === true;
     const allowLocalStorage = hasConsent;
     const allowSessionStorage = hasConsent;
+    const renderCache = new Map();
+
+    const buildRenderCacheKey = (candidate, args) => {
+        if (!candidate || !candidate.id) {
+            return '';
+        }
+        const slot = args?.slot || '';
+        const position = args?.position || '';
+        const container = args?.container || '';
+        const className = args?.class || '';
+        const creative = args?.creative || '';
+        return [
+            candidate.id,
+            slot,
+            position,
+            container,
+            className,
+            creative,
+        ].join('|');
+    };
+
+    const buildRenderPayload = (candidate, args) => ({
+        ad_id: candidate.id,
+        sig: candidate.sig || '',
+        sig_ts: candidate.sig_ts || '',
+        slot: args?.slot || '',
+        position: args?.position || '',
+        class: args?.class || '',
+        container: args?.container || '',
+        creative: args?.creative || '',
+    });
 
     const readStorageValue = (storage, key) => {
         if (
@@ -140,29 +172,7 @@
     };
 
     const observed = new Map();
-    const activeModal = {
-        element: null,
-        lastFocused: null,
-    };
-    const voidElements = new Set([
-        'AREA',
-        'BASE',
-        'BR',
-        'COL',
-        'EMBED',
-        'HR',
-        'IMG',
-        'INPUT',
-        'LINK',
-        'META',
-        'PARAM',
-        'SOURCE',
-        'TRACK',
-        'WBR',
-    ]);
-    const prefersReducedMotion =
-        window.matchMedia &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const dedupeScope = config.dedupeScope === 'placement' ? 'placement' : 'ad';
     const observer = new IntersectionObserver(
         (entries) => {
             entries.forEach((entry) => {
@@ -174,7 +184,17 @@
                     return;
                 }
 
-                const state = observed.get(payload.adId) || {
+                const observedKey =
+                    dedupeScope === 'placement'
+                        ? [
+                              payload.adId,
+                              payload.slot || '',
+                              payload.position || '',
+                              payload.container || '',
+                          ].join('|')
+                        : payload.adId;
+
+                const state = observed.get(observedKey) || {
                     seen: false,
                     timer: null,
                 };
@@ -185,7 +205,7 @@
                             sendTrack(payload);
                             state.seen = true;
                             state.timer = null;
-                            observed.set(payload.adId, state);
+                            observed.set(observedKey, state);
                         }, 2000);
                     }
                 } else if (state.timer) {
@@ -193,223 +213,11 @@
                     state.timer = null;
                 }
 
-                observed.set(payload.adId, state);
+                observed.set(observedKey, state);
             });
         },
         { threshold: 0.5 }
     );
-
-    const shouldShowByFrequency = (element) => {
-        if (!allowLocalStorage && !allowSessionStorage) {
-            return true;
-        }
-        const mode = element.getAttribute('data-ad-freq-mode') || 'none';
-        if (mode === 'none') {
-            return true;
-        }
-        const adId = element.getAttribute('data-ad-id');
-        if (!adId) {
-            return true;
-        }
-        if (mode === 'session') {
-            return !readStorageValue(
-                sessionStorage,
-                `magick_ad_freq_${adId}`
-            );
-        }
-        if (mode === 'day') {
-            const day = new Date().toISOString().slice(0, 10);
-            return !readStorageValue(
-                localStorage,
-                `magick_ad_freq_${adId}_${day}`
-            );
-        }
-        if (mode === 'count') {
-            const limit = Number(
-                element.getAttribute('data-ad-freq-limit') || 1
-            );
-            const rawCount = readStorageValue(
-                localStorage,
-                `magick_ad_freq_${adId}`
-            );
-            const count = Number(rawCount || 0);
-            return count < limit;
-        }
-        return true;
-    };
-
-    const recordFrequency = (element) => {
-        if (!allowLocalStorage && !allowSessionStorage) {
-            return;
-        }
-        const mode = element.getAttribute('data-ad-freq-mode') || 'none';
-        const adId = element.getAttribute('data-ad-id');
-        if (!adId || mode === 'none') {
-            return;
-        }
-        if (mode === 'session') {
-            writeStorageValue(
-                sessionStorage,
-                `magick_ad_freq_${adId}`,
-                '1'
-            );
-        } else if (mode === 'day') {
-            const day = new Date().toISOString().slice(0, 10);
-            writeStorageValue(
-                localStorage,
-                `magick_ad_freq_${adId}_${day}`,
-                '1'
-            );
-        } else if (mode === 'count') {
-            const key = `magick_ad_freq_${adId}`;
-            const limit = Number(
-                element.getAttribute('data-ad-freq-limit') || 1
-            );
-            const rawCount = readStorageValue(localStorage, key);
-            const count = Number(rawCount || 0);
-            if (count < limit) {
-                writeStorageValue(localStorage, key, String(count + 1));
-            }
-        }
-    };
-
-    const lockScroll = (element) => {
-        const shouldLock = element.getAttribute('data-ad-lock-scroll') === '1';
-        const container = element.getAttribute('data-ad-container') || '';
-        if (container !== 'popup') {
-            return;
-        }
-        if (!shouldLock) {
-            return;
-        }
-        document.body.classList.add('magick-ad-lock-scroll');
-    };
-
-    const unlockScroll = () => {
-        document.body.classList.remove('magick-ad-lock-scroll');
-    };
-
-    const activateModal = (element) => {
-        const container = element.getAttribute('data-ad-container') || '';
-        if (
-            container === 'popup' ||
-            container === 'interstitial' ||
-            container === 'banner'
-        ) {
-            activeModal.element = element;
-            activeModal.lastFocused = document.activeElement;
-            if (container === 'popup' || container === 'interstitial') {
-                const popup = element.querySelector('.magick-ad-popup');
-                if (popup) {
-                    popup.setAttribute('tabindex', '-1');
-                    popup.focus({ preventScroll: true });
-                }
-            }
-            if (container === 'popup') {
-                lockScroll(element);
-            }
-        }
-    };
-
-    const deactivateModal = (element) => {
-        if (!element) {
-            return;
-        }
-        if (activeModal.element === element) {
-            const lastFocused = activeModal.lastFocused;
-            activeModal.element = null;
-            activeModal.lastFocused = null;
-            unlockScroll();
-            if (lastFocused && typeof lastFocused.focus === 'function') {
-                lastFocused.focus();
-            }
-        }
-    };
-
-    const closeAd = (element) => {
-        if (!element) {
-            return;
-        }
-        element.classList.add('magick-ad-is-hidden');
-        element.setAttribute('aria-hidden', 'true');
-        deactivateModal(element);
-    };
-
-    const trapFocus = (event) => {
-        if (event.key !== 'Tab' || !activeModal.element) {
-            return;
-        }
-        const container =
-            activeModal.element.getAttribute('data-ad-container') || '';
-        if (container !== 'popup' && container !== 'interstitial') {
-            return;
-        }
-        const popup = activeModal.element.querySelector('.magick-ad-popup');
-        if (!popup) {
-            return;
-        }
-        const focusable = popup.querySelectorAll(
-            'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) {
-            event.preventDefault();
-            popup.focus();
-            return;
-        }
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (event.shiftKey) {
-            if (document.activeElement === first || document.activeElement === popup) {
-                event.preventDefault();
-                last.focus();
-            }
-        } else if (document.activeElement === last) {
-            event.preventDefault();
-            first.focus();
-        }
-    };
-
-    const applyBehaviorToElement = (element) => {
-        if (!element) {
-            return;
-        }
-        const delay = Number(element.getAttribute('data-ad-delay') || 0);
-        const animation = element.getAttribute('data-ad-anim');
-
-        if (!shouldShowByFrequency(element)) {
-            element.dataset.adFreqBlocked = '1';
-            element.classList.add('magick-ad-is-hidden');
-            element.setAttribute('aria-hidden', 'true');
-            return;
-        }
-
-        const showAd = () => {
-            element.classList.remove('magick-ad-is-hidden');
-            element.removeAttribute('aria-hidden');
-            if (animation && !prefersReducedMotion) {
-                element.classList.add(`magick-ad-anim--${animation}`);
-            }
-            recordFrequency(element);
-            activateModal(element);
-        };
-
-        if (element.getAttribute('data-ad-random') === 'session') {
-            element.classList.add('magick-ad-is-hidden');
-            return;
-        }
-
-        if (delay > 0) {
-            element.classList.add('magick-ad-is-hidden');
-            window.setTimeout(showAd, delay * 1000);
-        } else if (animation && !prefersReducedMotion) {
-            element.classList.add(`magick-ad-anim--${animation}`);
-            recordFrequency(element);
-            activateModal(element);
-        } else {
-            recordFrequency(element);
-            activateModal(element);
-        }
-    };
 
     const initAdElement = (element) => {
         if (!element || element.dataset.adInitialized === '1') {
@@ -417,218 +225,17 @@
         }
         element.dataset.adInitialized = '1';
         observer.observe(element);
-        applyBehaviorToElement(element);
     };
 
-    const applyBehavior = () => {
+    const initTracking = () => {
         document.querySelectorAll('[data-ad-id]').forEach((element) => {
             initAdElement(element);
         });
     };
 
-    const ensureFooterZone = () => {
-        let zone = document.querySelector('.magick-ad-zone--footer');
-        if (zone) {
-            return zone;
-        }
-        zone = document.createElement('div');
-        zone.className = 'magick-ad-zone magick-ad-zone--footer';
-        document.body.appendChild(zone);
-        return zone;
-    };
-
-    const normalizeInsertMode = (target, insertMode) => {
-        if (!target) {
-            return insertMode;
-        }
-        const tag = target.tagName || '';
-        if (insertMode === 'append' || insertMode === 'prepend') {
-            if (tag === 'P' || voidElements.has(tag)) {
-                return insertMode === 'append' ? 'after' : 'before';
-            }
-        }
-        return insertMode;
-    };
-
-    const insertElement = (target, element, insertMode) => {
-        if (!target || !element) {
-            return false;
-        }
-        const mode = normalizeInsertMode(target, insertMode);
-        try {
-            switch (mode) {
-                case 'prepend':
-                    target.insertAdjacentElement('afterbegin', element);
-                    break;
-                case 'before':
-                    target.insertAdjacentElement('beforebegin', element);
-                    break;
-                case 'after':
-                    target.insertAdjacentElement('afterend', element);
-                    break;
-                case 'append':
-                default:
-                    target.insertAdjacentElement('beforeend', element);
-                    break;
-            }
-            return true;
-        } catch (err) {
-            return false;
-        }
-    };
-
-    const placeNodeAds = () => {
-        const stash = document.getElementById('magick-ad-stash');
-        if (!stash) {
-            return;
-        }
-        const units = Array.from(
-            stash.querySelectorAll('[data-ad-node-type][data-ad-node-value]')
-        );
-        if (!units.length) {
-            return;
-        }
-        units.forEach((unit) => {
-            if (unit.dataset.nodeInserted === '1') {
-                return;
-            }
-            const type = unit.getAttribute('data-ad-node-type') || 'id';
-            const value = unit.getAttribute('data-ad-node-value') || '';
-            const insertMode =
-                unit.getAttribute('data-ad-node-insert') || 'append';
-            const matchMode =
-                unit.getAttribute('data-ad-node-match') || 'first';
-            const fallback =
-                unit.getAttribute('data-ad-node-fallback') || 'hide';
-            const index = Number(
-                unit.getAttribute('data-ad-node-index') || 1
-            );
-            const compact =
-                unit.getAttribute('data-ad-node-compact') === '1';
-            if (compact) {
-                unit.classList.add('magick-ad-placement--node-compact');
-            }
-
-            if (!value) {
-                unit.remove();
-                return;
-            }
-
-            let targets = [];
-            if (type === 'id') {
-                const target = document.getElementById(value);
-                if (target) {
-                    targets = [target];
-                }
-            } else if (type === 'class') {
-                targets = Array.from(
-                    document.getElementsByClassName(value)
-                );
-            }
-
-            if (matchMode === 'nth') {
-                const target = targets[index - 1];
-                targets = target ? [target] : [];
-            } else if (matchMode === 'first') {
-                targets = targets.slice(0, 1);
-            }
-
-            if (!targets.length) {
-                if (fallback === 'footer') {
-                    const zone = ensureFooterZone();
-                    insertElement(zone, unit, 'append');
-                    unit.dataset.nodeInserted = '1';
-                    return;
-                }
-                unit.remove();
-                return;
-            }
-
-            if (matchMode === 'all' && targets.length > 1) {
-                targets.forEach((target, idx) => {
-                    const node = idx === 0 ? unit : unit.cloneNode(true);
-                    node.dataset.nodeInserted = '1';
-                    insertElement(target, node, insertMode);
-                });
-            } else {
-                const target = targets[0];
-                insertElement(target, unit, insertMode);
-                unit.dataset.nodeInserted = '1';
-            }
-        });
-
-        if (!stash.children.length) {
-            stash.remove();
-        }
-    };
-
     const initObservers = () => {
-        placeNodeAds();
-        applyBehavior();
-        applyRandomStrategy();
+        initTracking();
         resolveSlotPlaceholders();
-    };
-
-    const applyRandomStrategy = () => {
-        const bucket = Math.floor(Date.now() / 300000);
-        document
-            .querySelectorAll('[data-ad-random="session"]')
-            .forEach((element) => {
-                if (element.dataset.adFreqBlocked === '1') {
-                    return;
-                }
-                const adId = element.getAttribute('data-ad-id');
-                if (!adId) {
-                    return;
-                }
-                let value = null;
-                if (allowSessionStorage) {
-                    const key = `magick_ad_random_${adId}_${bucket}`;
-                    try {
-                        value = sessionStorage.getItem(key);
-                    } catch (err) {
-                        value = null;
-                    }
-                    if (!value) {
-                        value = Math.random() >= 0.5 ? '1' : '0';
-                        try {
-                            sessionStorage.setItem(key, value);
-                        } catch (err) {
-                            // ignore
-                        }
-                    }
-                } else if (element.dataset.adRandomDecided) {
-                    value = element.dataset.adRandomDecided;
-                } else {
-                    value = Math.random() >= 0.5 ? '1' : '0';
-                    element.dataset.adRandomDecided = value;
-                }
-                const delay = Number(
-                    element.getAttribute('data-ad-delay') || 0
-                );
-                const animation = element.getAttribute('data-ad-anim');
-                const showAd = () => {
-                    element.classList.remove('magick-ad-is-hidden');
-                    element.removeAttribute('aria-hidden');
-                    if (animation && !prefersReducedMotion) {
-                        element.classList.add(`magick-ad-anim--${animation}`);
-                    }
-                    recordFrequency(element);
-                    activateModal(element);
-                };
-
-                if (value === '1') {
-                    if (delay > 0) {
-                        element.classList.add('magick-ad-is-hidden');
-                        window.setTimeout(showAd, delay * 1000);
-                    } else {
-                        showAd();
-                    }
-                } else {
-                    element.classList.add('magick-ad-is-hidden');
-                    element.setAttribute('aria-hidden', 'true');
-                }
-            });
     };
 
     const parseJsonAttribute = (element, name) => {
@@ -713,31 +320,104 @@
         if (!renderUrl || !candidate || !candidate.id) {
             return '';
         }
-        const payload = {
-            ad_id: candidate.id,
-            sig: candidate.sig || '',
-            sig_ts: candidate.sig_ts || '',
-            slot: args?.slot || '',
-            position: args?.position || '',
-            class: args?.class || '',
-            container: args?.container || '',
-            creative: args?.creative || '',
-        };
+        const cacheKey = buildRenderCacheKey(candidate, args);
+        if (cacheKey && renderCache.has(cacheKey)) {
+            return renderCache.get(cacheKey);
+        }
+        const payload = buildRenderPayload(candidate, args);
+        const request = (async () => {
+            try {
+                const response = await fetch(renderUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(config.nonce ? { 'X-WP-Nonce': config.nonce } : {}),
+                    },
+                    body: JSON.stringify(payload),
+                    credentials: 'same-origin',
+                    keepalive: true,
+                });
+                const data = await response.json();
+                return data?.html || '';
+            } catch (err) {
+                return '';
+            }
+        })();
+        if (cacheKey) {
+            renderCache.set(cacheKey, request);
+        }
+        return request;
+    };
+
+    const fetchAdMarkups = async (candidates, args) => {
+        if (!Array.isArray(candidates) || !candidates.length) {
+            return [];
+        }
+        if (!renderBatchUrl) {
+            return Promise.all(
+                candidates.map((candidate) => fetchAdMarkup(candidate, args))
+            );
+        }
         try {
-            const response = await fetch(renderUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(config.nonce ? { 'X-WP-Nonce': config.nonce } : {}),
-                },
-                body: JSON.stringify(payload),
-                credentials: 'same-origin',
-                keepalive: true,
+            const results = new Array(candidates.length).fill('');
+            const pending = [];
+
+            candidates.forEach((candidate, index) => {
+                const key = buildRenderCacheKey(candidate, args);
+                if (key && renderCache.has(key)) {
+                    results[index] = renderCache.get(key);
+                } else {
+                    pending.push({ candidate, index, key });
+                }
             });
-            const data = await response.json();
-            return data?.html || '';
+
+            if (pending.length) {
+                const payloadItems = pending.map(({ candidate }) =>
+                    buildRenderPayload(candidate, args)
+                );
+                const batchPromise = (async () => {
+                    const response = await fetch(renderBatchUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(config.nonce
+                                ? { 'X-WP-Nonce': config.nonce }
+                                : {}),
+                        },
+                        body: JSON.stringify({ items: payloadItems }),
+                        credentials: 'same-origin',
+                        keepalive: true,
+                    });
+                    const data = await response.json();
+                    return Array.isArray(data?.items) ? data.items : [];
+                })();
+
+                pending.forEach(({ index, key }, idx) => {
+                    const htmlPromise = batchPromise.then(
+                        (items) => items[idx]?.html || ''
+                    );
+                    if (key) {
+                        renderCache.set(key, htmlPromise);
+                    }
+                    results[index] = htmlPromise;
+                });
+            }
+
+            return Promise.all(
+                results.map(async (value) => {
+                    if (!value) {
+                        return '';
+                    }
+                    if (typeof value.then === 'function') {
+                        return await value;
+                    }
+                    return value;
+                })
+            );
         } catch (err) {
-            return '';
+            return Promise.all(
+                candidates.map((candidate) => fetchAdMarkup(candidate, args))
+            );
         }
     };
 
@@ -767,11 +447,7 @@
                 if (!selected.length) {
                     return;
                 }
-                Promise.all(
-                    selected.map((candidate) =>
-                        fetchAdMarkup(candidate, args)
-                    )
-                ).then((results) => {
+                fetchAdMarkups(selected, args).then((results) => {
                     results.forEach((html) => {
                         if (!html) {
                             return;
@@ -789,34 +465,16 @@
                             .forEach((adElement) => {
                                 initAdElement(adElement);
                             });
-                        applyRandomStrategy();
                     });
                 });
             });
     };
 
     const handleClick = (event) => {
-        const overlay = event.target.closest('.magick-ad-overlay');
-        if (overlay) {
-            const ad = overlay.closest('[data-ad-id]');
-            if (
-                ad &&
-                ad.getAttribute('data-ad-close-overlay') === '1'
-            ) {
-                closeAd(ad);
-                event.preventDefault();
-                event.stopPropagation();
-            }
+        if (event.target.closest('.magick-ad-overlay')) {
             return;
         }
-        const closeButton = event.target.closest('.magick-ad-close');
-        if (closeButton) {
-            const ad = closeButton.closest('[data-ad-id]');
-            if (ad) {
-                closeAd(ad);
-            }
-            event.preventDefault();
-            event.stopPropagation();
+        if (event.target.closest('.magick-ad-close')) {
             return;
         }
         const target = event.target.closest('[data-ad-id]');
@@ -835,20 +493,5 @@
     } else {
         initObservers();
     }
-
-    document.addEventListener('keydown', (event) => {
-        if (!activeModal.element) {
-            return;
-        }
-        if (event.key === 'Escape') {
-            if (activeModal.element.getAttribute('data-ad-close-esc') === '1') {
-                closeAd(activeModal.element);
-                event.preventDefault();
-            }
-            return;
-        }
-        trapFocus(event);
-    });
-
     document.addEventListener('click', handleClick, true);
 })();

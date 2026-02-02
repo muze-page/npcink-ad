@@ -3,6 +3,7 @@
 namespace MagickAD;
 
 use MagickAD\Admin\Admin;
+use MagickAD\Admin\Privacy;
 use MagickAD\Admin\Site_Health;
 use MagickAD\Blocks\Bindings;
 use MagickAD\Blocks\Blocks;
@@ -18,6 +19,7 @@ use MagickAD\Frontend\Frontend;
 use MagickAD\Frontend\Template_Tags;
 use MagickAD\REST\Routes;
 use MagickAD\Utils\Debug;
+use MagickAD\Utils\Diagnostics_Cron;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -53,10 +55,12 @@ final class Plugin {
         (new Frontend())->register();
         (new Template_Tags())->register();
         (new Debug())->register();
+        (new Diagnostics_Cron())->register();
         Ads::register();
 
         if (is_admin()) {
             (new Admin())->register();
+            (new Privacy())->register();
             (new Site_Health())->register();
         }
 

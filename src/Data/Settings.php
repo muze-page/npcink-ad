@@ -10,9 +10,60 @@ if (!defined('ABSPATH')) {
 
 final class Settings {
     public const OPTION_KEY = 'magick_ad_settings';
+    public const RUNTIME_OPTION_KEY = 'magick_ad_runtime_settings';
+    public const RUNTIME_REV_KEY = 'magick_ad_settings_rev';
+    private const RUNTIME_CACHE_GROUP = 'magick_ad';
+    private const RUNTIME_CACHE_PREFIX = 'magick_ad_runtime_settings_';
 
     public static function get_settings(): array {
         return Ads::get_settings();
+    }
+
+    public static function get_runtime_settings(): array {
+        $rev = (int) get_option(self::RUNTIME_REV_KEY, 0);
+        $cache_key = self::RUNTIME_CACHE_PREFIX . $rev;
+        $cached = wp_cache_get($cache_key, self::RUNTIME_CACHE_GROUP);
+        if (is_array($cached)) {
+            return self::strip_runtime_meta($cached);
+        }
+
+        $stored = get_option(self::RUNTIME_OPTION_KEY, array());
+        if (is_array($stored) && isset($stored['_rev']) && (int) $stored['_rev'] === $rev) {
+            wp_cache_set($cache_key, $stored, self::RUNTIME_CACHE_GROUP);
+            return self::strip_runtime_meta($stored);
+        }
+
+        return self::refresh_runtime_cache();
+    }
+
+    public static function refresh_runtime_cache(?array $ads = null, ?array $slots = null): array {
+        if ($ads === null || $slots === null) {
+            $settings = Ads::get_settings();
+            $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+            $slots = isset($settings['slots']) && is_array($settings['slots']) ? $settings['slots'] : array();
+        }
+
+        $rev = (int) get_option(self::RUNTIME_REV_KEY, 0) + 1;
+        $payload = array(
+            'ads' => is_array($ads) ? $ads : array(),
+            'slots' => is_array($slots) ? $slots : array(),
+            '_rev' => $rev,
+        );
+
+        update_option(self::RUNTIME_OPTION_KEY, $payload, false);
+        update_option(self::RUNTIME_REV_KEY, $rev, false);
+
+        $cache_key = self::RUNTIME_CACHE_PREFIX . $rev;
+        wp_cache_set($cache_key, $payload, self::RUNTIME_CACHE_GROUP);
+
+        return self::strip_runtime_meta($payload);
+    }
+
+    private static function strip_runtime_meta(array $settings): array {
+        if (isset($settings['_rev'])) {
+            unset($settings['_rev']);
+        }
+        return $settings;
     }
 
     public static function sanitize_settings($settings): array {

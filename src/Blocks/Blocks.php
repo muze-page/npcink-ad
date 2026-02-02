@@ -77,6 +77,8 @@ final class Blocks {
     }
 
     public static function render_ad_block(mixed $attributes): string {
+        Frontend::enqueue_assets(true);
+
         $attrs = is_array($attributes) ? $attributes : array();
         $slot = self::sanitize_slot($attrs);
         $ad_id = self::sanitize_ad_id($attrs);

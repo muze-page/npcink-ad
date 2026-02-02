@@ -5,6 +5,7 @@ namespace MagickAD\REST\Controllers;
 use WP_Error;
 use WP_REST_Request;
 use MagickAD\Data\Ads;
+use MagickAD\Data\Schema;
 use MagickAD\Utils\TrackingStrategy;
 use MagickAD\Utils\Tracking_Signature;
 
@@ -45,7 +46,10 @@ final class Track_Controller {
             $payload['ad_id'],
             $payload['sig'],
             $payload['sig_ts'],
-            $payload['event']
+            $payload['event'],
+            $payload['slot'],
+            $payload['position'],
+            $payload['container']
         );
         if (is_wp_error($signature_error)) {
             return $signature_error;
@@ -74,8 +78,24 @@ final class Track_Controller {
             $viewer_key = 'r:' . wp_generate_uuid4();
         }
 
-        $dedupe_key = 'magick_ad_track_' . md5($payload['ad_id'] . '|' . $payload['event'] . '|' . $payload['date'] . '|' . $page_hash . '|' . $viewer_key);
+        $dedupe_scope = self::get_dedupe_scope();
+        $dedupe_parts = array(
+            $payload['ad_id'],
+            $payload['event'],
+            $payload['date'],
+            $page_hash,
+            $viewer_key,
+        );
+        if ($dedupe_scope === 'placement') {
+            $dedupe_parts[] = $payload['slot'];
+            $dedupe_parts[] = $payload['position'];
+            $dedupe_parts[] = $payload['container'];
+        }
+        $dedupe_key = 'magick_ad_track_' . md5(implode('|', $dedupe_parts));
         $should_dedupe = self::should_dedupe($strategy, $payload['session_id'], $payload['event']);
+        if ($should_dedupe && !self::should_use_persistent_cache()) {
+            $should_dedupe = false;
+        }
         if ($should_dedupe && get_transient($dedupe_key)) {
             return rest_ensure_response(array('success' => true, 'deduped' => true));
         }
@@ -133,8 +153,8 @@ final class Track_Controller {
         $session_id = isset($payload['session_id']) ? sanitize_text_field($payload['session_id']) : '';
         $page_url = isset($payload['page_url']) ? esc_url_raw($payload['page_url']) : '';
         $page_hash = isset($payload['page_hash']) ? sanitize_text_field($payload['page_hash']) : '';
-        $slot = isset($payload['slot']) ? self::sanitize_dimension($payload['slot']) : '';
-        $position = isset($payload['position']) ? self::sanitize_dimension($payload['position']) : '';
+        $slot = isset($payload['slot']) ? self::sanitize_slot($payload['slot']) : '';
+        $position = isset($payload['position']) ? self::sanitize_position($payload['position']) : '';
         $container = isset($payload['container']) ? self::sanitize_container($payload['container']) : '';
 
         return array(
@@ -170,6 +190,35 @@ final class Track_Controller {
         return substr($value, 0, 191);
     }
 
+    private static function sanitize_slot(mixed $value): string {
+        $value = is_scalar($value) ? (string) $value : '';
+        $value = sanitize_title($value);
+        if ($value === '') {
+            return '';
+        }
+        return substr($value, 0, 64);
+    }
+
+    private static function sanitize_position(mixed $value): string {
+        $value = self::sanitize_dimension($value);
+        $allowed = array(
+            'block',
+            'slot',
+            'shortcode',
+            'content',
+            'content_before',
+            'content_after',
+            'footer',
+            'node',
+            'top',
+            'comments_top',
+            'comments_bottom',
+            'comment_form_before',
+            'comment_form_after',
+        );
+        return in_array($value, $allowed, true) ? $value : '';
+    }
+
     private static function sanitize_container(mixed $value): string {
         $value = self::sanitize_dimension($value);
         return in_array($value, array('inline', 'popup', 'banner', 'floating', 'interstitial'), true)
@@ -192,8 +241,15 @@ final class Track_Controller {
         return (bool) apply_filters('magick_ad_has_consent', false);
     }
 
-    private static function is_valid_signature(string $ad_id, string $sig, string $sig_ts): bool {
-        return Tracking_Signature::is_valid($ad_id, $sig, $sig_ts);
+    private static function is_valid_signature(
+        string $ad_id,
+        string $sig,
+        string $sig_ts,
+        string $slot,
+        string $position,
+        string $container
+    ): bool {
+        return Tracking_Signature::is_valid($ad_id, $sig, $sig_ts, $slot, $position, $container);
     }
 
     private static function get_known_ad_ids(): array {
@@ -251,7 +307,8 @@ final class Track_Controller {
 
     private static function get_request_ip(): string {
         $ip = '';
-        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $trust_proxy = (bool) apply_filters('magick_ad_track_trust_proxy', false, $_SERVER);
+        if ($trust_proxy && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
             $parts = explode(',', sanitize_text_field(wp_unslash($_SERVER['HTTP_X_FORWARDED_FOR'])));
             $ip = trim($parts[0]);
         }
@@ -268,6 +325,9 @@ final class Track_Controller {
         if ($limit <= 0) {
             return null;
         }
+        if (!self::should_use_persistent_cache()) {
+            return null;
+        }
         $ip = self::get_request_ip();
         $bucket = gmdate('YmdHi', current_time('timestamp'));
         $rate_key = 'magick_ad_rl_' . md5($ip . '|' . $ad_id . '|' . $event . '|' . $bucket);
@@ -279,8 +339,16 @@ final class Track_Controller {
         return null;
     }
 
-    private static function validate_signature(string $ad_id, string $sig, string $sig_ts, string $event): WP_Error|true {
-        $sig_valid = self::is_valid_signature($ad_id, $sig, $sig_ts);
+    private static function validate_signature(
+        string $ad_id,
+        string $sig,
+        string $sig_ts,
+        string $event,
+        string $slot,
+        string $position,
+        string $container
+    ): WP_Error|true {
+        $sig_valid = self::is_valid_signature($ad_id, $sig, $sig_ts, $slot, $position, $container);
         $allow_unsigned = (bool) apply_filters('magick_ad_track_allow_unsigned', false);
         $require_signature = (get_option(self::OPTION_TRACK_REQUIRE_SIGNATURE, '1') === '1');
         $require_signature = (bool) apply_filters('magick_ad_track_require_signature', $require_signature, $ad_id, $event);
@@ -336,8 +404,8 @@ final class Track_Controller {
                 value: $uid,
                 options: array(
                     'expires' => time() + MONTH_IN_SECONDS,
-                    'path' => COOKIEPATH,
-                    'domain' => COOKIE_DOMAIN,
+                    'path' => COOKIEPATH ?: '/',
+                    'domain' => COOKIE_DOMAIN ?: '',
                     'secure' => is_ssl(),
                     'httponly' => true,
                     'samesite' => 'Lax',
@@ -367,15 +435,24 @@ final class Track_Controller {
         return (int) apply_filters('magick_ad_track_dedupe_ttl', $dedupe_ttl, $event);
     }
 
+    private static function get_dedupe_scope(): string {
+        $scope = (string) get_option('magick_ad_track_dedupe_scope', 'ad');
+        $scope = (string) apply_filters('magick_ad_track_dedupe_scope', $scope);
+        return $scope === 'placement' ? 'placement' : 'ad';
+    }
+
+    private static function should_use_persistent_cache(): bool {
+        $use = wp_using_ext_object_cache();
+        return (bool) apply_filters('magick_ad_track_use_persistent_cache', $use);
+    }
+
     private static function ensure_stats_ready(): WP_Error|true {
-        global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats';
         $stats_ready = (string) get_option(self::OPTION_STATS_READY, '0');
         if ($stats_ready === (string) MAGICK_AD_DB_VERSION) {
             return true;
         }
-        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
-        if ($exists !== $table) {
+        $status = Schema::get_table_status();
+        if (empty($status['stats'])) {
             return new WP_Error('magick_ad_db_missing', 'Stats table missing', array('status' => 500));
         }
         update_option(self::OPTION_STATS_READY, (string) MAGICK_AD_DB_VERSION, false);
@@ -383,14 +460,12 @@ final class Track_Controller {
     }
 
     private static function ensure_log_ready(): bool {
-        global $wpdb;
-        $log_table = $wpdb->prefix . 'magick_ad_stats_log';
         $log_ready = (string) get_option(self::OPTION_LOG_READY, '0');
         if ($log_ready === (string) MAGICK_AD_DB_VERSION) {
             return true;
         }
-        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $log_table));
-        if ($exists !== $log_table) {
+        $status = Schema::get_table_status();
+        if (empty($status['log'])) {
             return false;
         }
         update_option(self::OPTION_LOG_READY, (string) MAGICK_AD_DB_VERSION, false);
@@ -398,14 +473,12 @@ final class Track_Controller {
     }
 
     private static function ensure_dim_ready(): bool {
-        global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats_dim';
         $dim_ready = (string) get_option(self::OPTION_DIM_READY, '0');
         if ($dim_ready === (string) MAGICK_AD_DB_VERSION) {
             return true;
         }
-        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
-        if ($exists !== $table) {
+        $status = Schema::get_table_status();
+        if (empty($status['dim'])) {
             return false;
         }
         update_option(self::OPTION_DIM_READY, (string) MAGICK_AD_DB_VERSION, false);
@@ -511,19 +584,6 @@ final class Track_Controller {
             array('%s', '%s', '%s', '%s', '%d', '%s')
         );
 
-        $cleanup_key = 'magick_ad_stats_log_cleanup';
-        if (!get_transient($cleanup_key)) {
-            $retention_days = (int) get_option(self::OPTION_DIAGNOSTICS_RETENTION, 7);
-            $retention_days = max(1, min($retention_days, 90));
-            $retention_days = (int) apply_filters('magick_ad_stats_diagnostics_retention_days', $retention_days);
-            $cutoff = date('Y-m-d H:i:s', current_time('timestamp') - $retention_days * DAY_IN_SECONDS);
-            $wpdb->query(
-                $wpdb->prepare(
-                    "DELETE FROM {$log_table} WHERE created_at < %s",
-                    $cutoff
-                )
-            );
-            set_transient($cleanup_key, 1, DAY_IN_SECONDS);
-        }
+        // Log cleanup is handled by WP-Cron.
     }
 }

@@ -4,6 +4,7 @@ namespace MagickAD\REST\Controllers;
 
 use WP_REST_Request;
 use MagickAD\Utils\TrackingStrategy;
+use MagickAD\Utils\Diagnostics_Cron;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -36,9 +37,17 @@ final class System_Settings_Controller {
             : 'manage_options';
     }
 
+    private static function sanitize_dedupe_scope($value): string {
+        $value = is_string($value) ? $value : '';
+        return in_array($value, array('ad', 'placement'), true) ? $value : 'ad';
+    }
+
     public static function get() {
         $dedupe_ttl = (int) get_option('magick_ad_track_dedupe_ttl', DAY_IN_SECONDS);
         $dedupe_ttl = self::sanitize_positive_int($dedupe_ttl, DAY_IN_SECONDS, 60, WEEK_IN_SECONDS);
+        $dedupe_scope = self::sanitize_dedupe_scope(
+            get_option('magick_ad_track_dedupe_scope', 'ad')
+        );
         $retention_days = (int) get_option('magick_ad_stats_diagnostics_retention_days', 7);
         $retention_days = self::sanitize_positive_int($retention_days, 7, 1, 90);
         $auto_off_days = (int) get_option('magick_ad_stats_diagnostics_auto_off_days', 7);
@@ -53,6 +62,7 @@ final class System_Settings_Controller {
             )->value,
             'tracking_require_consent' => (get_option('magick_ad_tracking_require_consent', '0') === '1'),
             'tracking_dedupe_ttl' => $dedupe_ttl,
+            'tracking_dedupe_scope' => $dedupe_scope,
             'tracking_require_signature' => (get_option('magick_ad_track_require_signature', '1') === '1'),
             'stats_diagnostics' => (get_option('magick_ad_stats_diagnostics', '0') === '1'),
             'stats_diagnostics_retention_days' => $retention_days,
@@ -81,6 +91,9 @@ final class System_Settings_Controller {
             DAY_IN_SECONDS,
             60,
             WEEK_IN_SECONDS
+        );
+        $tracking_dedupe_scope = self::sanitize_dedupe_scope(
+            $params['tracking_dedupe_scope'] ?? get_option('magick_ad_track_dedupe_scope', 'ad')
         );
         $tracking_require_signature = !array_key_exists('tracking_require_signature', $params)
             ? (get_option('magick_ad_track_require_signature', '1') === '1')
@@ -117,6 +130,7 @@ final class System_Settings_Controller {
         update_option('magick_ad_tracking_strategy', $tracking_strategy);
         update_option('magick_ad_tracking_require_consent', $tracking_require_consent ? '1' : '0');
         update_option('magick_ad_track_dedupe_ttl', $tracking_dedupe_ttl);
+        update_option('magick_ad_track_dedupe_scope', $tracking_dedupe_scope);
         update_option('magick_ad_track_require_signature', $tracking_require_signature ? '1' : '0');
         update_option('magick_ad_stats_diagnostics', $stats_diagnostics ? '1' : '0');
         update_option('magick_ad_stats_diagnostics_retention_days', $stats_diagnostics_retention_days);
@@ -131,11 +145,13 @@ final class System_Settings_Controller {
             ? current_time('timestamp') + $stats_diagnostics_auto_off_days * DAY_IN_SECONDS
             : 0;
         update_option('magick_ad_stats_diagnostics_expires_at', $expires_at);
+        Diagnostics_Cron::reschedule($stats_diagnostics);
 
         return rest_ensure_response(array(
             'tracking_strategy' => $tracking_strategy,
             'tracking_require_consent' => $tracking_require_consent,
             'tracking_dedupe_ttl' => $tracking_dedupe_ttl,
+            'tracking_dedupe_scope' => $tracking_dedupe_scope,
             'tracking_require_signature' => $tracking_require_signature,
             'stats_diagnostics' => $stats_diagnostics,
             'stats_diagnostics_retention_days' => $stats_diagnostics_retention_days,

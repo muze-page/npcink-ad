@@ -52,7 +52,7 @@ final class Admin {
             'previewNonce' => wp_create_nonce('magick_ad_preview'),
             'branding' => $this->get_branding(),
             'canUnfilteredHtml' => current_user_can('unfiltered_html'),
-            'patterns' => \\MagickAD\\Blocks\\Patterns::export_patterns(),
+            'patterns' => \MagickAD\Blocks\Patterns::export_patterns(),
             'diagnoseUrl' => admin_url('admin.php?page=magick-ad-debug'),
             'buildVersion' => MAGICK_AD_VERSION,
             'buildTime' => $this->get_build_time(),

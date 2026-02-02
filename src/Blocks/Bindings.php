@@ -99,8 +99,8 @@ final class Bindings {
                     value: $uid,
                     options: array(
                         'expires' => time() + MONTH_IN_SECONDS,
-                        'path' => COOKIEPATH,
-                        'domain' => COOKIE_DOMAIN,
+                        'path' => COOKIEPATH ?: '/',
+                        'domain' => COOKIE_DOMAIN ?: '',
                         'secure' => is_ssl(),
                         'httponly' => true,
                         'samesite' => 'Lax',

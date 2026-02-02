@@ -20,6 +20,10 @@ final class Schema {
         self::install();
     }
 
+    public static function is_ready(): bool {
+        return self::is_schema_ready();
+    }
+
     public static function install(): void {
         global $wpdb;
 
@@ -121,11 +125,14 @@ final class Schema {
         $stats_ready = $stats_exists && self::table_has_column($stats_table, 'impressions');
         $log_exists = self::table_exists($log_table);
         $dim_exists = self::table_exists($dim_table);
+        $dim_ready = $dim_exists
+            && self::table_has_column($dim_table, 'impressions')
+            && self::table_has_column($dim_table, 'clicks');
 
         return array(
             'stats' => $stats_ready,
             'log' => $log_exists,
-            'dim' => $dim_exists,
+            'dim' => $dim_ready,
         );
     }
 

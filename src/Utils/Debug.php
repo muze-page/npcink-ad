@@ -33,7 +33,7 @@ final class Debug {
             return;
         }
 
-        $settings = Settings::get_settings();
+        $settings = Settings::get_runtime_settings();
         Logger::log('Magick AD Debug: settings=' . print_r($settings, true));
     }
 
@@ -70,7 +70,7 @@ final class Debug {
     }
 
     private static function log_ad_filter_results(): void {
-        $settings = Settings::get_settings();
+        $settings = Settings::get_runtime_settings();
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
 
         if (empty($ads)) {

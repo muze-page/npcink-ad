@@ -5,6 +5,7 @@ namespace MagickAD\Data;
 use WP_Error;
 use MagickAD\Utils\Capabilities;
 use MagickAD\Data\Slots;
+use MagickAD\Data\Settings;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -190,6 +191,7 @@ final class Ads {
             array(
                 'replace_all' => $replace_all,
                 'delete_ids' => $delete_ids,
+                'refresh_runtime' => false,
             )
         );
         if (is_wp_error($result)) {
@@ -198,8 +200,10 @@ final class Ads {
 
         $include_slots = array_key_exists('slots', $settings);
         $saved_slots = $include_slots
-            ? Slots::save_slots(isset($sanitized['slots']) ? $sanitized['slots'] : array())
+            ? Slots::save_slots(isset($sanitized['slots']) ? $sanitized['slots'] : array(), false)
             : Slots::get_slots();
+
+        Settings::refresh_runtime_cache($result, $saved_slots);
 
         return array(
             'ads' => $result,
@@ -213,6 +217,7 @@ final class Ads {
         $delete_ids = isset($options['delete_ids']) && is_array($options['delete_ids'])
             ? $options['delete_ids']
             : array();
+        $refresh_runtime = !array_key_exists('refresh_runtime', $options) || !empty($options['refresh_runtime']);
 
         if (!empty($delete_ids)) {
             foreach ($delete_ids as $delete_id) {
@@ -299,6 +304,9 @@ final class Ads {
 
         wp_cache_delete('magick_ad_known_ads', 'magick_ad');
         self::refresh_known_ads_index();
+        if ($refresh_runtime) {
+            Settings::refresh_runtime_cache($saved_ads, Slots::get_slots());
+        }
 
         return $saved_ads;
     }
