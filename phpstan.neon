@@ -1,0 +1,16 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+        - magick-ad.php
+        - uninstall.php
+    excludePaths:
+        - vendor
+        - node_modules
+        - build
+        - assets/js
+        - dist
+        - docs

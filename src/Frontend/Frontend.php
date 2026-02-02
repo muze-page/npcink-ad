@@ -23,6 +23,10 @@ final class Frontend {
     );
     private static ?array $matching_cache = null;
     private static ?array $container_index = null;
+    private static bool $content_insert_active = false;
+    private static bool $content_insert_used = false;
+    private static int $content_insert_index = 0;
+    private static ?array $content_insert_map = null;
 
     public function register(): void {
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_assets'));
@@ -127,7 +131,9 @@ final class Frontend {
     }
 
     private static function init() {
+        add_filter('the_content', array(__CLASS__, 'prepare_content_ads'), 8);
         add_filter('the_content', array(__CLASS__, 'inject_content_ads'));
+        add_filter('render_block_core/paragraph', array(__CLASS__, 'inject_content_into_paragraph'), 10, 2);
         add_action('wp_head', array(__CLASS__, 'render_head_ads'));
         add_action('wp_footer', array(__CLASS__, 'render_node_ads'), 5);
         add_action('wp_footer', array(__CLASS__, 'render_footer_ads'));
@@ -138,6 +144,49 @@ final class Frontend {
         add_action('comment_form_before', array(__CLASS__, 'render_comment_form_before_ads'));
         add_action('comment_form_after', array(__CLASS__, 'render_comment_form_after_ads'));
         add_filter('comments_template', array(__CLASS__, 'filter_comments_template'), 9);
+    }
+
+    private static function should_process_content_ads(): bool {
+        if (self::is_preview()) {
+            return true;
+        }
+        return !(is_admin() || !is_singular() || !in_the_loop() || !is_main_query());
+    }
+
+    private static function reset_content_insert_state(): void {
+        self::$content_insert_active = false;
+        self::$content_insert_used = false;
+        self::$content_insert_index = 0;
+        self::$content_insert_map = null;
+    }
+
+    public static function prepare_content_ads($content) {
+        if (!self::should_process_content_ads()) {
+            return $content;
+        }
+
+        self::reset_content_insert_state();
+
+        if (!function_exists('has_blocks') || !has_blocks($content)) {
+            return $content;
+        }
+
+        $ads = self::get_matching_ads_for('content');
+        if (empty($ads)) {
+            return $content;
+        }
+
+        $insert_map = self::build_content_insert_map($ads);
+        if (empty($insert_map)) {
+            return $content;
+        }
+
+        self::$content_insert_map = $insert_map;
+        self::$content_insert_active = true;
+        self::$content_insert_used = false;
+        self::$content_insert_index = 0;
+
+        return $content;
     }
 
     private static function get_placement(array $options): array {
@@ -548,17 +597,16 @@ final class Frontend {
             array(
                 'hasConsent' => $has_consent,
                 'requireConsent' => $requires_consent,
+                'renderUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ad')),
+                'renderBatchUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ads')),
+                'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
             )
         );
         $track_deps = array('magick-ad-interactivity');
         $track_config = array(
             'restUrl' => esc_url_raw(rest_url('magick-ad/v1/track')),
-            'renderUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ad')),
             'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
-            'defer' => $defer,
             'scriptUrl' => esc_url_raw(MAGICK_AD_URL . 'assets/magick-ad-track.js'),
-            'renderBatchUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ads')),
-            'containerIndex' => $container_index,
             'collectPageUrl' => $diagnostics_enabled,
             'hasConsent' => $has_consent,
             'requireConsent' => $requires_consent,
@@ -610,16 +658,16 @@ final class Frontend {
 
 
     public static function inject_content_ads($content) {
-        if (!self::is_preview() && (is_admin() || !is_singular() || !in_the_loop() || !is_main_query())) {
+        if (!self::should_process_content_ads()) {
             return $content;
         }
 
         $ads = self::get_matching_ads_for('content');
         if (empty($ads)) {
+            self::reset_content_insert_state();
             return $content;
         }
 
-        $insert_map = array();
         $prepend = '';
         $append = '';
         foreach ($ads as $ad) {
@@ -636,6 +684,48 @@ final class Frontend {
                 $append .= self::build_ad_markup($ad, 'content_after');
                 continue;
             }
+        }
+
+        $insert_map = self::$content_insert_active
+            ? (self::$content_insert_map ?? array())
+            : self::build_content_insert_map($ads);
+
+        if (!self::$content_insert_active && !empty($insert_map)) {
+            $content = self::insert_after_paragraphs($content, $insert_map);
+        }
+
+        if ($prepend) {
+            $content = self::wrap_zone_markup($prepend, 'content-before') . $content;
+        }
+        if ($append) {
+            $content .= self::wrap_zone_markup($append, 'content-after');
+        }
+
+        self::reset_content_insert_state();
+
+        return $content;
+    }
+
+    public static function inject_content_into_paragraph(string $block_content, array $block): string {
+        if (!self::$content_insert_active || empty(self::$content_insert_map)) {
+            return $block_content;
+        }
+        self::$content_insert_index += 1;
+        if (isset(self::$content_insert_map[self::$content_insert_index])) {
+            $block_content .= implode('', self::$content_insert_map[self::$content_insert_index]);
+            self::$content_insert_used = true;
+        }
+        return $block_content;
+    }
+
+    private static function build_content_insert_map(array $ads): array {
+        $insert_map = array();
+        foreach ($ads as $ad) {
+            $options = isset($ad['options']) ? $ad['options'] : array();
+            $placement = self::get_placement($options);
+            if ($placement['hook'] !== 'content') {
+                continue;
+            }
             if ($placement['position'] !== 'paragraph') {
                 continue;
             }
@@ -650,19 +740,7 @@ final class Frontend {
                 $insert_map[$insert_after][] = $markup;
             }
         }
-
-        if (!empty($insert_map)) {
-            $content = self::insert_after_paragraphs($content, $insert_map);
-        }
-
-        if ($prepend) {
-            $content = self::wrap_zone_markup($prepend, 'content-before') . $content;
-        }
-        if ($append) {
-            $content .= self::wrap_zone_markup($append, 'content-after');
-        }
-
-        return $content;
+        return $insert_map;
     }
 
     public static function render_head_ads() {

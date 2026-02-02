@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<psalm
+    errorLevel="5"
+    resolveFromConfigFile="true"
+    findUnusedBaselineEntry="true"
+>
+    <projectFiles>
+        <directory name="src"/>
+        <file name="magick-ad.php"/>
+        <file name="uninstall.php"/>
+        <directory name="templates"/>
+    </projectFiles>
+
+    <excludeFiles>
+        <directory name="vendor"/>
+        <directory name="node_modules"/>
+        <directory name="build"/>
+        <directory name="assets/js"/>
+        <directory name="dist"/>
+        <directory name="docs"/>
+    </excludeFiles>
+</psalm>
