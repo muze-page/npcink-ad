@@ -844,8 +844,21 @@
         });
     };
 
-    const observeNewAds = () => {
+    const shouldObserveMutations = () => {
         if (!window.MutationObserver || !document.body) {
+            return false;
+        }
+        if (document.querySelector('[data-magick-ad-slot-resolver="1"]')) {
+            return true;
+        }
+        if (document.querySelector('[data-ad-node-type]')) {
+            return true;
+        }
+        return behaviorConfig.observeMutations === true;
+    };
+
+    const observeNewAds = () => {
+        if (!shouldObserveMutations()) {
             return;
         }
         const observer = new MutationObserver((mutations) => {

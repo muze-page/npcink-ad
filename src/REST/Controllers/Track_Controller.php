@@ -6,8 +6,10 @@ use WP_Error;
 use WP_REST_Request;
 use MagickAD\Data\Ads;
 use MagickAD\Data\Schema;
+use MagickAD\Data\Slots;
 use MagickAD\Utils\TrackingStrategy;
 use MagickAD\Utils\Tracking_Signature;
+use MagickAD\Utils\Stats_Accumulator;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -30,11 +32,12 @@ final class Track_Controller {
     private const OPTION_DIAGNOSTICS_RETENTION = 'magick_ad_stats_diagnostics_retention_days';
 
     private static ?array $known_ads = null;
+    private static ?array $slot_allowlist = null;
 
     public static function track(WP_REST_Request $request) {
-        $payload = self::parse_payload($request);
-        if (is_wp_error($payload)) {
-            return $payload;
+        $payload = $request->get_json_params();
+        if (!is_array($payload)) {
+            return new WP_Error('magick_ad_invalid_payload', 'Invalid payload', array('status' => 400));
         }
 
         $ready = self::ensure_stats_ready();
@@ -42,6 +45,140 @@ final class Track_Controller {
             return $ready;
         }
 
+        if (isset($payload['items']) && is_array($payload['items'])) {
+            return self::track_batch($payload);
+        }
+
+        $item = self::parse_payload_item($payload, array());
+        if (is_wp_error($item)) {
+            return $item;
+        }
+
+        $result = self::process_item($item);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        return rest_ensure_response($result);
+    }
+
+    private static function parse_payload_defaults(array $payload): array {
+        $defaults = array();
+
+        if (isset($payload['session_id'])) {
+            $defaults['session_id'] = sanitize_text_field((string) $payload['session_id']);
+        }
+        if (isset($payload['page_url'])) {
+            $defaults['page_url'] = esc_url_raw((string) $payload['page_url']);
+        }
+        if (isset($payload['page_hash'])) {
+            $defaults['page_hash'] = sanitize_text_field((string) $payload['page_hash']);
+        }
+
+        return $defaults;
+    }
+
+    private static function parse_payload_item(array $payload, array $defaults): array|WP_Error {
+        $payload = array_merge($defaults, $payload);
+
+        $ad_id = isset($payload['ad_id']) ? sanitize_text_field($payload['ad_id']) : '';
+        $event = isset($payload['event']) ? self::normalize_event($payload['event']) : null;
+        if ($ad_id === '' || $event === null) {
+            return new WP_Error('magick_ad_invalid_payload', 'Invalid payload', array('status' => 400));
+        }
+
+        $sig = isset($payload['sig']) ? sanitize_text_field($payload['sig']) : '';
+        $sig_ts = isset($payload['sig_ts']) ? sanitize_text_field($payload['sig_ts']) : '';
+        $session_id = isset($payload['session_id']) ? sanitize_text_field($payload['session_id']) : '';
+        $page_url = isset($payload['page_url']) ? esc_url_raw($payload['page_url']) : '';
+        $page_hash = isset($payload['page_hash']) ? sanitize_text_field($payload['page_hash']) : '';
+        $slot = isset($payload['slot']) ? self::sanitize_slot($payload['slot']) : '';
+        $position = isset($payload['position']) ? self::sanitize_position($payload['position']) : '';
+        $container = isset($payload['container']) ? self::sanitize_container($payload['container']) : '';
+
+        return array(
+            'ad_id' => $ad_id,
+            'event' => $event,
+            'sig' => $sig,
+            'sig_ts' => $sig_ts,
+            'session_id' => $session_id,
+            'page_url' => $page_url,
+            'page_hash' => $page_hash,
+            'slot' => $slot,
+            'position' => $position,
+            'container' => $container,
+            'date' => current_time('Y-m-d'),
+            'user_id' => get_current_user_id(),
+        );
+    }
+
+    private static function track_batch(array $payload) {
+        $items = isset($payload['items']) && is_array($payload['items']) ? $payload['items'] : array();
+        if (empty($items)) {
+            return new WP_Error('magick_ad_invalid_payload', 'Invalid payload', array('status' => 400));
+        }
+
+        $limit = (int) apply_filters('magick_ad_track_batch_limit', 20);
+        if ($limit < 1) {
+            $limit = 1;
+        }
+        if (count($items) > $limit) {
+            $items = array_slice($items, 0, $limit);
+        }
+
+        $defaults = self::parse_payload_defaults($payload);
+        $results = array();
+        $processed = 0;
+        $errors = 0;
+
+        foreach ($items as $item) {
+            $item = is_array($item) ? $item : array();
+            $parsed = self::parse_payload_item($item, $defaults);
+            if (is_wp_error($parsed)) {
+                $errors += 1;
+                $results[] = array(
+                    'success' => false,
+                    'error' => $parsed->get_error_code(),
+                );
+                continue;
+            }
+
+            $result = self::process_item($parsed);
+            if (is_wp_error($result)) {
+                $errors += 1;
+                $status = $result->get_error_data()['status'] ?? 500;
+                if ($status >= 500) {
+                    return $result;
+                }
+                $results[] = array(
+                    'success' => false,
+                    'ad_id' => $parsed['ad_id'],
+                    'event' => $parsed['event'],
+                    'error' => $result->get_error_code(),
+                );
+                continue;
+            }
+
+            $processed += 1;
+            $results[] = array_merge(
+                array(
+                    'success' => true,
+                    'ad_id' => $parsed['ad_id'],
+                    'event' => $parsed['event'],
+                ),
+                $result
+            );
+        }
+
+        return rest_ensure_response(array(
+            'success' => true,
+            'processed' => $processed,
+            'errors' => $errors,
+            'items' => $results,
+        ));
+    }
+
+    private static function process_item(array $payload): array|WP_Error {
         $signature_error = self::validate_signature(
             $payload['ad_id'],
             $payload['sig'],
@@ -57,12 +194,12 @@ final class Track_Controller {
 
         $rate_limited = self::apply_rate_limit($payload['ad_id'], $payload['event']);
         if ($rate_limited) {
-            return $rate_limited;
+            return array('success' => true, 'rate_limited' => true);
         }
 
         $has_consent = self::has_consent();
         if (self::tracking_requires_consent() && !$has_consent) {
-            return rest_ensure_response(array('success' => true, 'blocked' => true));
+            return array('success' => true, 'blocked' => true);
         }
 
         $strategy = self::tracking_strategy();
@@ -97,7 +234,7 @@ final class Track_Controller {
             $should_dedupe = false;
         }
         if ($should_dedupe && get_transient($dedupe_key)) {
-            return rest_ensure_response(array('success' => true, 'deduped' => true));
+            return array('success' => true, 'deduped' => true);
         }
         if ($should_dedupe) {
             set_transient($dedupe_key, 1, self::get_dedupe_ttl($payload['event']));
@@ -133,44 +270,7 @@ final class Track_Controller {
             );
         }
 
-        return rest_ensure_response(array('success' => true));
-    }
-
-    private static function parse_payload(WP_REST_Request $request): array|WP_Error {
-        $payload = $request->get_json_params();
-        if (!is_array($payload)) {
-            return new WP_Error('magick_ad_invalid_payload', 'Invalid payload', array('status' => 400));
-        }
-
-        $ad_id = isset($payload['ad_id']) ? sanitize_text_field($payload['ad_id']) : '';
-        $event = isset($payload['event']) ? self::normalize_event($payload['event']) : null;
-        if ($ad_id === '' || $event === null) {
-            return new WP_Error('magick_ad_invalid_payload', 'Invalid payload', array('status' => 400));
-        }
-
-        $sig = isset($payload['sig']) ? sanitize_text_field($payload['sig']) : '';
-        $sig_ts = isset($payload['sig_ts']) ? sanitize_text_field($payload['sig_ts']) : '';
-        $session_id = isset($payload['session_id']) ? sanitize_text_field($payload['session_id']) : '';
-        $page_url = isset($payload['page_url']) ? esc_url_raw($payload['page_url']) : '';
-        $page_hash = isset($payload['page_hash']) ? sanitize_text_field($payload['page_hash']) : '';
-        $slot = isset($payload['slot']) ? self::sanitize_slot($payload['slot']) : '';
-        $position = isset($payload['position']) ? self::sanitize_position($payload['position']) : '';
-        $container = isset($payload['container']) ? self::sanitize_container($payload['container']) : '';
-
-        return array(
-            'ad_id' => $ad_id,
-            'event' => $event,
-            'sig' => $sig,
-            'sig_ts' => $sig_ts,
-            'session_id' => $session_id,
-            'page_url' => $page_url,
-            'page_hash' => $page_hash,
-            'slot' => $slot,
-            'position' => $position,
-            'container' => $container,
-            'date' => current_time('Y-m-d'),
-            'user_id' => get_current_user_id(),
-        );
+        return array('success' => true);
     }
 
     private static function normalize_event(string $event): ?string {
@@ -196,7 +296,13 @@ final class Track_Controller {
         if ($value === '') {
             return '';
         }
-        return substr($value, 0, 64);
+        $value = substr($value, 0, 64);
+        $allow_unknown = (bool) apply_filters('magick_ad_track_allow_unknown_slot', false, $value);
+        if ($allow_unknown) {
+            return $value;
+        }
+        $allowlist = self::get_slot_allowlist();
+        return isset($allowlist[$value]) ? $value : '';
     }
 
     private static function sanitize_position(mixed $value): string {
@@ -224,6 +330,23 @@ final class Track_Controller {
         return in_array($value, array('inline', 'popup', 'banner', 'floating', 'interstitial'), true)
             ? $value
             : '';
+    }
+
+    private static function get_slot_allowlist(): array {
+        if (self::$slot_allowlist !== null) {
+            return self::$slot_allowlist;
+        }
+
+        $slots = Slots::get_slots();
+        $map = array();
+        foreach ($slots as $slot) {
+            $slot_id = isset($slot['id']) ? (string) $slot['id'] : '';
+            if ($slot_id !== '') {
+                $map[$slot_id] = true;
+            }
+        }
+        self::$slot_allowlist = $map;
+        return $map;
     }
 
     private static function tracking_strategy(): string {
@@ -486,6 +609,10 @@ final class Track_Controller {
     }
 
     private static function write_stats(string $ad_id, string $event, string $date): WP_Error|true {
+        if (Stats_Accumulator::record_stats($ad_id, $event, $date)) {
+            return true;
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats';
         $impressions = $event === 'impression' ? 1 : 0;
@@ -523,6 +650,10 @@ final class Track_Controller {
             return true;
         }
         if ($slot === '' && $position === '' && $container === '') {
+            return true;
+        }
+
+        if (Stats_Accumulator::record_dimension($ad_id, $event, $date, $slot, $position, $container)) {
             return true;
         }
 
@@ -568,16 +699,21 @@ final class Track_Controller {
 
         global $wpdb;
         $log_table = $wpdb->prefix . 'magick_ad_stats_log';
+        $page_url = self::sanitize_log_page_url($page_url);
 
         $wpdb->insert(
             $log_table,
             array(
                 'ad_id' => $ad_id,
                 'event_type' => $event,
-                'page_url' => $page_url,
-                'user_agent' => isset($_SERVER['HTTP_USER_AGENT'])
-                    ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT']))
-                    : '',
+                'page_url' => substr($page_url, 0, 255),
+                'user_agent' => substr(
+                    isset($_SERVER['HTTP_USER_AGENT'])
+                        ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT']))
+                        : '',
+                    0,
+                    255
+                ),
                 'user_id' => $user_id,
                 'created_at' => current_time('mysql'),
             ),
@@ -585,5 +721,29 @@ final class Track_Controller {
         );
 
         // Log cleanup is handled by WP-Cron.
+    }
+
+    private static function sanitize_log_page_url(string $page_url): string {
+        $page_url = esc_url_raw($page_url);
+        if ($page_url === '') {
+            return '';
+        }
+        $keep_query = (bool) apply_filters('magick_ad_log_keep_query', false, $page_url);
+        if ($keep_query) {
+            return $page_url;
+        }
+        $parts = wp_parse_url($page_url);
+        if (!is_array($parts)) {
+            return $page_url;
+        }
+        $path = $parts['path'] ?? '';
+        $scheme = $parts['scheme'] ?? '';
+        $host = $parts['host'] ?? '';
+        $port = isset($parts['port']) ? ':' . (int) $parts['port'] : '';
+        if ($host !== '') {
+            $base = ($scheme ? $scheme . '://' : '') . $host . $port;
+            return $base . $path;
+        }
+        return $path;
     }
 }

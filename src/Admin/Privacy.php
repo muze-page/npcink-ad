@@ -56,6 +56,7 @@ final class Privacy {
         $content .= '<li>' . esc_html__('关闭“需要同意”将停止写入 localStorage/sessionStorage。', 'magick-ad') . '</li>';
         $content .= '<li>' . esc_html__('切换统计策略为“session/request”可避免持久 Cookie。', 'magick-ad') . '</li>';
         $content .= '<li>' . esc_html__('关闭诊断模式将不再写入诊断日志。', 'magick-ad') . '</li>';
+        $content .= '<li>' . esc_html__('可通过 magick_ad_has_consent 过滤器接入站点的同意管理（CMP）逻辑。', 'magick-ad') . '</li>';
         $content .= '</ul>';
 
         wp_add_privacy_policy_content(
@@ -198,7 +199,13 @@ final class Privacy {
         }
 
         $safe_ids = array_map('absint', $ids);
-        $wpdb->query("DELETE FROM {$table} WHERE id IN (" . implode(',', $safe_ids) . ')');
+        $placeholders = implode(',', array_fill(0, count($safe_ids), '%d'));
+        $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$table} WHERE id IN ({$placeholders})",
+                $safe_ids
+            )
+        );
 
         return array(
             'items_removed' => true,

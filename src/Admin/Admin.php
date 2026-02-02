@@ -50,6 +50,8 @@ final class Admin {
             'initialTab' => $this->get_initial_tab($hook),
             'previewUrl' => $this->get_preview_url(),
             'previewNonce' => wp_create_nonce('magick_ad_preview'),
+            'pickerNonce' => wp_create_nonce('magick_ad_picker'),
+            'nodeDebugNonce' => wp_create_nonce('magick_ad_node_debug'),
             'branding' => $this->get_branding(),
             'canUnfilteredHtml' => current_user_can('unfiltered_html'),
             'patterns' => \MagickAD\Blocks\Patterns::export_patterns(),

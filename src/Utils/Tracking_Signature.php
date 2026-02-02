@@ -8,6 +8,8 @@ if (!defined('ABSPATH')) {
 
 final class Tracking_Signature {
     private const OPTION_TRACK_SECRET = 'magick_ad_track_secret';
+    private const OPTION_TRACK_SIGNATURE_DAYS = 'magick_ad_track_signature_days';
+    private const OPTION_TRACK_SIGNATURE_MODE = 'magick_ad_track_signature_mode';
     private const POSITION_ALLOWLIST = array(
         'block',
         'slot',
@@ -59,16 +61,86 @@ final class Tracking_Signature {
         if ($ad_id === '' || $sig === '' || $sig_ts === '') {
             return false;
         }
-        if (!preg_match('/^\d{8}$/', $sig_ts)) {
-            return false;
-        }
+
         $expected = self::build($ad_id, $sig_ts, $slot, $position, $container);
         if (!hash_equals($expected, $sig)) {
             return false;
         }
-        $today = gmdate('Ymd', current_time('timestamp'));
-        $yesterday = gmdate('Ymd', current_time('timestamp') - DAY_IN_SECONDS);
-        return ($sig_ts === $today || $sig_ts === $yesterday);
+
+        $timestamp = self::parse_sig_ts($sig_ts);
+        if ($timestamp === null) {
+            return false;
+        }
+
+        $now = current_time('timestamp');
+        $age_days = (int) floor(($now - $timestamp) / DAY_IN_SECONDS);
+        if ($age_days < 0) {
+            return false;
+        }
+
+        $window_days = self::get_signature_window_days();
+        return $age_days < $window_days;
+    }
+
+    public static function current_sig_ts(): string {
+        $now = current_time('timestamp');
+        if (self::get_signature_mode() === 'week') {
+            return gmdate('oW', $now);
+        }
+        return gmdate('Ymd', $now);
+    }
+
+    public static function get_signature_window_days(): int {
+        $days = (int) get_option(self::OPTION_TRACK_SIGNATURE_DAYS, 14);
+        $days = max(1, min($days, 90));
+        $days = (int) apply_filters('magick_ad_track_signature_window_days', $days);
+        return max(1, min($days, 90));
+    }
+
+    private static function parse_sig_ts(string $sig_ts): ?int {
+        $tz = function_exists('wp_timezone') ? wp_timezone() : new \DateTimeZone('UTC');
+
+        if (self::get_signature_mode() === 'week') {
+            if (!preg_match('/^\d{6}$/', $sig_ts)) {
+                return null;
+            }
+            $year = (int) substr($sig_ts, 0, 4);
+            $week = (int) substr($sig_ts, 4, 2);
+            if ($week < 1 || $week > 53) {
+                return null;
+            }
+            $date = (new \DateTimeImmutable('now', $tz))->setISODate($year, $week, 1)->setTime(0, 0, 0);
+            return (int) $date->getTimestamp();
+        }
+
+        if (!preg_match('/^\d{8}$/', $sig_ts)) {
+            return null;
+        }
+
+        $year = (int) substr($sig_ts, 0, 4);
+        $month = (int) substr($sig_ts, 4, 2);
+        $day = (int) substr($sig_ts, 6, 2);
+
+        if (!checkdate($month, $day, $year)) {
+            return null;
+        }
+
+        $date = \DateTimeImmutable::createFromFormat(
+            'Y-m-d H:i:s',
+            sprintf('%04d-%02d-%02d 00:00:00', $year, $month, $day),
+            $tz
+        );
+        if ($date === false) {
+            return null;
+        }
+
+        return (int) $date->getTimestamp();
+    }
+
+    private static function get_signature_mode(): string {
+        $mode = (string) get_option(self::OPTION_TRACK_SIGNATURE_MODE, 'day');
+        $mode = (string) apply_filters('magick_ad_track_signature_mode', $mode);
+        return $mode === 'week' ? 'week' : 'day';
     }
 
     private static function normalize_slot(string $slot): string {

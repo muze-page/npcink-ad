@@ -16,12 +16,20 @@ final class Reports_Controller {
             $days = 7;
         }
 
+        $cache_key = self::build_cache_key('report', array('days' => $days));
+        $cached = self::get_cached_response($cache_key);
+        if (is_array($cached)) {
+            return rest_ensure_response($cached);
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats';
 
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
-            return rest_ensure_response(self::build_empty_series($days));
+            $empty = self::build_empty_series($days);
+            self::set_cached_response($cache_key, $empty);
+            return rest_ensure_response($empty);
         }
 
         $start = date('Y-m-d', current_time('timestamp') - ($days - 1) * DAY_IN_SECONDS);
@@ -60,6 +68,7 @@ final class Reports_Controller {
             }
         }
 
+        self::set_cached_response($cache_key, $series);
         return rest_ensure_response($series);
     }
 
@@ -75,6 +84,15 @@ final class Reports_Controller {
             return new WP_Error('magick_ad_invalid_group', 'Invalid group_by', array('status' => 400));
         }
 
+        $cache_key = self::build_cache_key('report_dim', array(
+            'days' => $days,
+            'group_by' => $group_by,
+        ));
+        $cached = self::get_cached_response($cache_key);
+        if (is_array($cached)) {
+            return rest_ensure_response($cached);
+        }
+
         global $wpdb;
         $start = date('Y-m-d', current_time('timestamp') - ($days - 1) * DAY_IN_SECONDS);
         $column = $group_by;
@@ -84,7 +102,9 @@ final class Reports_Controller {
 
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
-            return rest_ensure_response(array());
+            $empty = array();
+            self::set_cached_response($cache_key, $empty);
+            return rest_ensure_response($empty);
         }
 
         if ($group_by === 'ad_id') {
@@ -128,6 +148,7 @@ final class Reports_Controller {
             );
         }
 
+        self::set_cached_response($cache_key, $result);
         return rest_ensure_response($result);
     }
 
@@ -142,5 +163,31 @@ final class Reports_Controller {
             );
         }
         return $series;
+    }
+
+    private static function get_cached_response(string $key): ?array {
+        if (!self::should_cache()) {
+            return null;
+        }
+        $cached = wp_cache_get($key, 'magick_ad_report');
+        return is_array($cached) ? $cached : null;
+    }
+
+    private static function set_cached_response(string $key, array $value): void {
+        if (!self::should_cache()) {
+            return;
+        }
+        $ttl = (int) apply_filters('magick_ad_report_cache_ttl', 300);
+        $ttl = max(60, $ttl);
+        wp_cache_set($key, $value, 'magick_ad_report', $ttl);
+    }
+
+    private static function should_cache(): bool {
+        $use = wp_using_ext_object_cache();
+        return (bool) apply_filters('magick_ad_report_cache_enabled', $use);
+    }
+
+    private static function build_cache_key(string $prefix, array $params): string {
+        return 'magick_ad_' . $prefix . '_' . md5(wp_json_encode($params));
     }
 }

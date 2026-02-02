@@ -5,6 +5,7 @@ namespace MagickAD\REST\Controllers;
 use WP_REST_Request;
 use MagickAD\Utils\TrackingStrategy;
 use MagickAD\Utils\Diagnostics_Cron;
+use MagickAD\Utils\Stats_Dim_Cron;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -19,6 +20,21 @@ final class System_Settings_Controller {
         }
         if ($value < $min) {
             $value = $min;
+        }
+        if ($value > $max) {
+            $value = $max;
+        }
+        return $value;
+    }
+
+    private static function sanitize_optional_int($value, int $default, int $max): int {
+        if (is_numeric($value)) {
+            $value = (int) $value;
+        } else {
+            $value = $default;
+        }
+        if ($value < 0) {
+            $value = 0;
         }
         if ($value > $max) {
             $value = $max;
@@ -53,6 +69,8 @@ final class System_Settings_Controller {
         $auto_off_days = (int) get_option('magick_ad_stats_diagnostics_auto_off_days', 7);
         $auto_off_days = self::sanitize_positive_int($auto_off_days, 7, 1, 90);
         $diagnostics_expires_at = (int) get_option('magick_ad_stats_diagnostics_expires_at', 0);
+        $stats_dim_retention_days = (int) get_option('magick_ad_stats_dim_retention_days', 30);
+        $stats_dim_retention_days = self::sanitize_optional_int($stats_dim_retention_days, 30, 365);
         $slot_client_resolver = (get_option('magick_ad_slot_client_resolver', '1') === '1');
         $html_sandbox = (get_option('magick_ad_html_sandbox', '0') === '1');
 
@@ -68,6 +86,7 @@ final class System_Settings_Controller {
             'stats_diagnostics_retention_days' => $retention_days,
             'stats_diagnostics_auto_off_days' => $auto_off_days,
             'stats_diagnostics_expires_at' => $diagnostics_expires_at,
+            'stats_dim_retention_days' => $stats_dim_retention_days,
             'slot_client_resolver' => $slot_client_resolver,
             'html_sandbox' => $html_sandbox,
             'brand_name' => get_option('magick_ad_brand_name', 'Magick AD'),
@@ -111,6 +130,11 @@ final class System_Settings_Controller {
             1,
             90
         );
+        $stats_dim_retention_days = self::sanitize_optional_int(
+            $params['stats_dim_retention_days'] ?? get_option('magick_ad_stats_dim_retention_days', 30),
+            30,
+            365
+        );
         $slot_client_resolver = !array_key_exists('slot_client_resolver', $params)
             ? (get_option('magick_ad_slot_client_resolver', '1') === '1')
             : !empty($params['slot_client_resolver']);
@@ -135,6 +159,7 @@ final class System_Settings_Controller {
         update_option('magick_ad_stats_diagnostics', $stats_diagnostics ? '1' : '0');
         update_option('magick_ad_stats_diagnostics_retention_days', $stats_diagnostics_retention_days);
         update_option('magick_ad_stats_diagnostics_auto_off_days', $stats_diagnostics_auto_off_days);
+        update_option('magick_ad_stats_dim_retention_days', $stats_dim_retention_days);
         update_option('magick_ad_slot_client_resolver', $slot_client_resolver ? '1' : '0');
         update_option('magick_ad_html_sandbox', $html_sandbox ? '1' : '0');
         update_option('magick_ad_brand_name', $brand_name);
@@ -146,6 +171,7 @@ final class System_Settings_Controller {
             : 0;
         update_option('magick_ad_stats_diagnostics_expires_at', $expires_at);
         Diagnostics_Cron::reschedule($stats_diagnostics);
+        Stats_Dim_Cron::reschedule();
 
         return rest_ensure_response(array(
             'tracking_strategy' => $tracking_strategy,
@@ -157,6 +183,7 @@ final class System_Settings_Controller {
             'stats_diagnostics_retention_days' => $stats_diagnostics_retention_days,
             'stats_diagnostics_auto_off_days' => $stats_diagnostics_auto_off_days,
             'stats_diagnostics_expires_at' => $expires_at,
+            'stats_dim_retention_days' => $stats_dim_retention_days,
             'slot_client_resolver' => $slot_client_resolver,
             'html_sandbox' => $html_sandbox,
             'brand_name' => $brand_name,

@@ -65,7 +65,23 @@ final class Ads {
                 'show_in_rest' => array(
                     'schema' => array(
                         'type' => 'object',
-                        'additionalProperties' => true,
+                        'additionalProperties' => false,
+                        'properties' => array(
+                            'id' => array(
+                                'type' => 'string',
+                            ),
+                            'name' => array(
+                                'type' => 'string',
+                            ),
+                            'options' => array(
+                                'type' => 'object',
+                                'additionalProperties' => true,
+                            ),
+                            'content' => array(
+                                'type' => 'object',
+                                'additionalProperties' => true,
+                            ),
+                        ),
                     ),
                 ),
                 'sanitize_callback' => array(__CLASS__, 'sanitize_meta_data'),
@@ -135,6 +151,7 @@ final class Ads {
                 ? $sanitized['ads'][0]
                 : array();
             $ad['id'] = $ad_id;
+            $ad['post_id'] = $post->ID;
             $ad['name'] = $post->post_title;
             $ad['status'] = $post->post_status;
             $ad['date'] = $post->post_date;
@@ -153,6 +170,52 @@ final class Ads {
         }
 
         return $ads;
+    }
+
+    public static function get_ad_by_post_id(int $post_id): ?array {
+        if ($post_id < 1) {
+            return null;
+        }
+
+        $post = get_post($post_id);
+        if (!$post || $post->post_type !== self::POST_TYPE) {
+            return null;
+        }
+
+        $data = get_post_meta($post->ID, self::META_DATA, true);
+        if (!is_array($data)) {
+            $data = array();
+        }
+
+        $ad_id = get_post_meta($post->ID, self::META_ID, true);
+        if (!$ad_id) {
+            $ad_id = 'ad_' . $post->ID;
+            update_post_meta($post->ID, self::META_ID, $ad_id);
+        }
+
+        $sanitized = Settings::sanitize_settings(array('ads' => array($data)));
+        $ad = isset($sanitized['ads'][0]) && is_array($sanitized['ads'][0])
+            ? $sanitized['ads'][0]
+            : array();
+
+        $ad['id'] = $ad_id;
+        $ad['post_id'] = $post->ID;
+        $ad['name'] = $post->post_title;
+        $ad['status'] = $post->post_status;
+        $ad['date'] = $post->post_date;
+        $ad['date_gmt'] = $post->post_date_gmt;
+
+        if (!isset($ad['options']) || !is_array($ad['options'])) {
+            $ad['options'] = array();
+        }
+        if (!isset($ad['content']) || !is_array($ad['content'])) {
+            $ad['content'] = array();
+        }
+        if ($post->post_status !== 'publish') {
+            $ad['options']['enabled'] = false;
+        }
+
+        return $ad;
     }
 
     public static function save_settings(array $settings) {
@@ -280,6 +343,7 @@ final class Ads {
 
             update_post_meta($post_id, self::META_ID, $ad_id);
             $ad['id'] = $ad_id;
+            $ad['post_id'] = $post_id;
             $ad['name'] = $title;
             $ad['status'] = get_post_status($post_id);
             $ad['date'] = get_post_field('post_date', $post_id);
@@ -356,11 +420,15 @@ final class Ads {
         );
     }
 
-    public static function sanitize_meta_data($value): array {
+    public static function sanitize_meta_data($value, $post_id = 0, $meta_key = '', $single = false): array {
         if (!is_array($value)) {
             return array();
         }
-        return $value;
+        $sanitized = Settings::sanitize_settings(array('ads' => array($value)));
+        if (isset($sanitized['ads'][0]) && is_array($sanitized['ads'][0])) {
+            return $sanitized['ads'][0];
+        }
+        return array();
     }
 
     public static function can_manage_meta(): bool {

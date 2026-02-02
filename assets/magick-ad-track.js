@@ -88,38 +88,51 @@
         };
     };
 
-    const sendTrack = (payload, useBeacon = false) => {
-        if (requireConsent && !hasConsent) {
-            return;
-        }
-        if (!payload || !payload.adId) {
-            return;
-        }
-        const bodyData = {
+    const batchSize = Number.parseInt(config.batchSize, 10) || 10;
+    const batchInterval = Number.parseInt(config.batchInterval, 10) || 2000;
+    const trackQueue = [];
+    let flushTimer = null;
+
+    const buildItemPayload = (payload) => {
+        const item = {
             ad_id: payload.adId,
             event: payload.event,
-            session_id: sessionId,
-            page_hash: pageHash,
         };
         if (payload.sig) {
-            bodyData.sig = payload.sig;
+            item.sig = payload.sig;
         }
         if (payload.sigTs) {
-            bodyData.sig_ts = payload.sigTs;
+            item.sig_ts = payload.sigTs;
         }
         if (payload.slot) {
-            bodyData.slot = payload.slot;
+            item.slot = payload.slot;
         }
         if (payload.position) {
-            bodyData.position = payload.position;
+            item.position = payload.position;
         }
         if (payload.container) {
-            bodyData.container = payload.container;
+            item.container = payload.container;
         }
+        return item;
+    };
+
+    const buildBatchPayload = (items) => {
+        const bodyData = {
+            session_id: sessionId,
+            page_hash: pageHash,
+            items: items.map(buildItemPayload),
+        };
         if (config.collectPageUrl) {
             bodyData.page_url = window.location.href;
         }
-        const body = JSON.stringify(bodyData);
+        return bodyData;
+    };
+
+    const sendBatch = (items, useBeacon = false) => {
+        if (!items.length) {
+            return;
+        }
+        const body = JSON.stringify(buildBatchPayload(items));
 
         if (useBeacon && navigator.sendBeacon) {
             const blob = new Blob([body], { type: 'application/json' });
@@ -138,46 +151,131 @@
         }).catch(() => undefined);
     };
 
+    const scheduleFlush = () => {
+        if (flushTimer) {
+            return;
+        }
+        flushTimer = window.setTimeout(() => {
+            flushTimer = null;
+            flushQueue();
+        }, batchInterval);
+    };
+
+    const flushQueue = (options = {}) => {
+        if (!trackQueue.length) {
+            return;
+        }
+        if (flushTimer) {
+            window.clearTimeout(flushTimer);
+            flushTimer = null;
+        }
+        const useBeacon = options.useBeacon === true;
+        const force = options.force === true;
+
+        do {
+            const items = trackQueue.splice(0, batchSize);
+            sendBatch(items, useBeacon);
+        } while ((useBeacon || force) && trackQueue.length);
+
+        if (trackQueue.length && !useBeacon && !force) {
+            if (trackQueue.length >= batchSize) {
+                window.setTimeout(() => flushQueue(), 100);
+            } else {
+                scheduleFlush();
+            }
+        }
+    };
+
+    const enqueueTrack = (payload, options = {}) => {
+        if (requireConsent && !hasConsent) {
+            return;
+        }
+        if (!payload || !payload.adId) {
+            return;
+        }
+        trackQueue.push(payload);
+        if (trackQueue.length >= batchSize) {
+            flushQueue(options);
+            return;
+        }
+        scheduleFlush();
+    };
+
     const observed = new Map();
+    const pendingImpressions = new Set();
+    let impressionTimer = null;
+    const impressionDelay = 2000;
+    const impressionTick = 250;
     const dedupeScope = config.dedupeScope === 'placement' ? 'placement' : 'ad';
+    const buildObservedKey = (payload) =>
+        dedupeScope === 'placement'
+            ? [
+                  payload.adId,
+                  payload.slot || '',
+                  payload.position || '',
+                  payload.container || '',
+              ].join('|')
+            : payload.adId;
+
+    const startImpressionTicker = () => {
+        if (impressionTimer) {
+            return;
+        }
+        impressionTimer = window.setInterval(() => {
+            if (!pendingImpressions.size) {
+                window.clearInterval(impressionTimer);
+                impressionTimer = null;
+                return;
+            }
+            const now = Date.now();
+            pendingImpressions.forEach((key) => {
+                const state = observed.get(key);
+                if (!state || state.seen || !state.startAt) {
+                    pendingImpressions.delete(key);
+                    return;
+                }
+                if (now - state.startAt >= impressionDelay) {
+                    enqueueTrack(state.payload);
+                    state.seen = true;
+                    state.startAt = null;
+                    state.payload = null;
+                    observed.set(key, state);
+                    pendingImpressions.delete(key);
+                }
+            });
+        }, impressionTick);
+    };
+
     const observer = new IntersectionObserver(
         (entries) => {
             entries.forEach((entry) => {
-                const payload = buildTrackPayload(
-                    entry.target,
-                    'impression'
-                );
+                const target = entry.target;
+                if (!target || target.nodeType !== 1) {
+                    return;
+                }
+                const payload = buildTrackPayload(target, 'impression');
                 if (!payload) {
                     return;
                 }
 
-                const observedKey =
-                    dedupeScope === 'placement'
-                        ? [
-                              payload.adId,
-                              payload.slot || '',
-                              payload.position || '',
-                              payload.container || '',
-                          ].join('|')
-                        : payload.adId;
-
+                const observedKey = buildObservedKey(payload);
                 const state = observed.get(observedKey) || {
                     seen: false,
-                    timer: null,
+                    startAt: null,
+                    payload: null,
                 };
 
                 if (entry.isIntersecting) {
-                    if (!state.seen && !state.timer) {
-                        state.timer = window.setTimeout(() => {
-                            sendTrack(payload);
-                            state.seen = true;
-                            state.timer = null;
-                            observed.set(observedKey, state);
-                        }, 2000);
+                    if (!state.seen && !state.startAt) {
+                        state.startAt = Date.now();
+                        state.payload = payload;
+                        pendingImpressions.add(observedKey);
+                        startImpressionTicker();
                     }
-                } else if (state.timer) {
-                    window.clearTimeout(state.timer);
-                    state.timer = null;
+                } else if (state.startAt) {
+                    state.startAt = null;
+                    state.payload = null;
+                    pendingImpressions.delete(observedKey);
                 }
 
                 observed.set(observedKey, state);
@@ -204,8 +302,21 @@
         initTracking();
     };
 
-    const observeNewAds = () => {
+    const shouldObserveMutations = () => {
         if (!window.MutationObserver || !document.body) {
+            return false;
+        }
+        if (document.querySelector('[data-magick-ad-slot-resolver="1"]')) {
+            return true;
+        }
+        if (document.querySelector('[data-ad-node-type]')) {
+            return true;
+        }
+        return config.observeMutations === true;
+    };
+
+    const observeNewAds = () => {
+        if (!shouldObserveMutations()) {
             return;
         }
         const observer = new MutationObserver((mutations) => {
@@ -248,7 +359,7 @@
         if (!payload) {
             return;
         }
-        sendTrack(payload, true);
+        enqueueTrack(payload, { useBeacon: true, force: true });
     };
 
     if (document.readyState === 'loading') {
@@ -261,4 +372,12 @@
         observeNewAds();
     }
     document.addEventListener('click', handleClick, true);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            flushQueue({ useBeacon: true, force: true });
+        }
+    });
+    window.addEventListener('pagehide', () => {
+        flushQueue({ useBeacon: true, force: true });
+    });
 })();

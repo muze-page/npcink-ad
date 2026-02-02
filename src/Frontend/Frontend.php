@@ -2,6 +2,7 @@
 
 namespace MagickAD\Frontend;
 
+use MagickAD\Data\Ads;
 use MagickAD\Data\Settings;
 use MagickAD\Utils\Capabilities;
 
@@ -23,6 +24,7 @@ final class Frontend {
     );
     private static ?array $matching_cache = null;
     private static ?array $container_index = null;
+    private static array $hydrated_ads = array();
     private static bool $content_insert_active = false;
     private static bool $content_insert_used = false;
     private static int $content_insert_index = 0;
@@ -321,7 +323,7 @@ final class Frontend {
         $resolver_position = isset($resolver_args['position']) ? (string) $resolver_args['position'] : '';
         $resolver_container = isset($resolver_args['container']) ? (string) $resolver_args['container'] : '';
 
-        $sig_ts = gmdate('Ymd', current_time('timestamp'));
+        $sig_ts = \MagickAD\Utils\Tracking_Signature::current_sig_ts();
         $payload_candidates = array();
         foreach ($candidates as $candidate) {
             $ad_id = isset($candidate['id']) ? (string) $candidate['id'] : '';
@@ -536,6 +538,9 @@ final class Frontend {
         }
 
         if (self::is_picker_request()) {
+            if (!self::can_view_picker()) {
+                return;
+            }
             wp_enqueue_script(
                 'magick-ad-picker',
                 MAGICK_AD_URL . 'assets/magick-ad-picker.js',
@@ -547,6 +552,9 @@ final class Frontend {
         }
 
         if (self::is_node_debug_request()) {
+            if (!self::can_view_node_debug()) {
+                return;
+            }
             wp_enqueue_script(
                 'magick-ad-node-debug',
                 MAGICK_AD_URL . 'assets/magick-ad-node-debug.js',
@@ -591,6 +599,7 @@ final class Frontend {
             MAGICK_AD_VERSION,
             true
         );
+        wp_script_add_data('magick-ad-interactivity', 'strategy', 'defer');
         wp_localize_script(
             'magick-ad-interactivity',
             'MagickADBehavior',
@@ -599,6 +608,7 @@ final class Frontend {
                 'requireConsent' => $requires_consent,
                 'renderUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ad')),
                 'renderBatchUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ads')),
+                'observeMutations' => (bool) apply_filters('magick_ad_behavior_observe_mutations', false),
                 'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
             )
         );
@@ -610,6 +620,9 @@ final class Frontend {
             'collectPageUrl' => $diagnostics_enabled,
             'hasConsent' => $has_consent,
             'requireConsent' => $requires_consent,
+            'batchSize' => (int) apply_filters('magick_ad_track_batch_size', 10),
+            'batchInterval' => (int) apply_filters('magick_ad_track_batch_interval', 2000),
+            'observeMutations' => (bool) apply_filters('magick_ad_track_observe_mutations', false),
             'dedupeScope' => (string) apply_filters(
                 'magick_ad_track_dedupe_scope',
                 get_option('magick_ad_track_dedupe_scope', 'ad')
@@ -1291,6 +1304,32 @@ final class Frontend {
         return isset($_GET['magick_ad_node_debug']) && $_GET['magick_ad_node_debug'] === '1';
     }
 
+    private static function can_view_picker(): bool {
+        if (!Capabilities::current_user_can_manage()) {
+            return false;
+        }
+        $nonce = isset($_GET['magick_ad_picker_nonce'])
+            ? sanitize_text_field(wp_unslash($_GET['magick_ad_picker_nonce']))
+            : '';
+        if (!$nonce) {
+            return false;
+        }
+        return wp_verify_nonce($nonce, 'magick_ad_picker');
+    }
+
+    private static function can_view_node_debug(): bool {
+        if (!Capabilities::current_user_can_manage()) {
+            return false;
+        }
+        $nonce = isset($_GET['magick_ad_node_debug_nonce'])
+            ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_debug_nonce']))
+            : '';
+        if (!$nonce) {
+            return false;
+        }
+        return wp_verify_nonce($nonce, 'magick_ad_node_debug');
+    }
+
     private static function is_preview(): bool {
         return !empty(self::$preview_ad_id);
     }
@@ -1944,6 +1983,7 @@ final class Frontend {
     }
 
     public static function build_ad_markup($ad, $position) {
+        $ad = is_array($ad) ? self::maybe_hydrate_ad($ad) : array();
         $content = self::normalize_content($ad);
         $options = self::normalize_options($ad);
         $content_type = self::resolve_content_type($options);
@@ -1978,6 +2018,56 @@ final class Frontend {
             $content['image_settings'] = array();
         }
         return $content;
+    }
+
+    private static function maybe_hydrate_ad(array $ad): array {
+        if (empty($ad['_content_lazy'])) {
+            return $ad;
+        }
+
+        $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
+        if ($ad_id !== '' && isset(self::$hydrated_ads[$ad_id])) {
+            return self::merge_hydrated_ad(self::$hydrated_ads[$ad_id], $ad);
+        }
+
+        $post_id = isset($ad['post_id']) ? absint($ad['post_id']) : 0;
+        if ($post_id < 1) {
+            return $ad;
+        }
+
+        $full = Ads::get_ad_by_post_id($post_id);
+        if (!is_array($full) || empty($full)) {
+            return $ad;
+        }
+
+        $full = self::merge_hydrated_ad($full, $ad);
+        if ($ad_id !== '') {
+            self::$hydrated_ads[$ad_id] = $full;
+        }
+
+        return $full;
+    }
+
+    private static function merge_hydrated_ad(array $full, array $runtime): array {
+        $runtime_options = isset($runtime['options']) && is_array($runtime['options']) ? $runtime['options'] : array();
+        if (!isset($full['options']) || !is_array($full['options'])) {
+            $full['options'] = array();
+        }
+        if (!empty($runtime_options)) {
+            $full['options'] = array_merge($full['options'], $runtime_options);
+        }
+
+        foreach ($runtime as $key => $value) {
+            if (is_string($key) && str_starts_with($key, '_')) {
+                $full[$key] = $value;
+            }
+        }
+
+        if (isset($full['_content_lazy'])) {
+            unset($full['_content_lazy']);
+        }
+
+        return $full;
     }
 
     private static function normalize_options(array $ad): array {
@@ -2224,7 +2314,7 @@ final class Frontend {
         }
 
         if ($ad_id !== '') {
-            $sig_ts = gmdate('Ymd', current_time('timestamp'));
+            $sig_ts = \MagickAD\Utils\Tracking_Signature::current_sig_ts();
             $sig = \MagickAD\Utils\Tracking_Signature::build(
                 $ad_id,
                 $sig_ts,

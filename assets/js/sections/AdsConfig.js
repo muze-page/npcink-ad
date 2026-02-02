@@ -550,6 +550,12 @@ const AdsConfig = () => {
                 'magick_ad_picker_origin',
                 window.location.origin
             );
+            if (window.MagickAD?.pickerNonce) {
+                next.searchParams.set(
+                    'magick_ad_picker_nonce',
+                    window.MagickAD.pickerNonce
+                );
+            }
             url = next.toString();
         } catch (err) {
             url = base;
@@ -583,6 +589,12 @@ const AdsConfig = () => {
                 next.searchParams.set(
                     'magick_ad_node_index',
                     String(Number(selectedAd.options?.node_index || 1) || 1)
+                );
+            }
+            if (window.MagickAD?.nodeDebugNonce) {
+                next.searchParams.set(
+                    'magick_ad_node_debug_nonce',
+                    window.MagickAD.nodeDebugNonce
                 );
             }
             url = next.toString();

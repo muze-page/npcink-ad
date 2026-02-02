@@ -14,6 +14,7 @@ final class Settings {
     public const RUNTIME_REV_KEY = 'magick_ad_settings_rev';
     private const RUNTIME_CACHE_GROUP = 'magick_ad';
     private const RUNTIME_CACHE_PREFIX = 'magick_ad_runtime_settings_';
+    private const RUNTIME_LOCK_KEY = 'magick_ad_runtime_lock';
 
     public static function get_settings(): array {
         return Ads::get_settings();
@@ -33,6 +34,11 @@ final class Settings {
             return self::strip_runtime_meta($stored);
         }
 
+        $stale = is_array($stored) ? self::strip_runtime_meta($stored) : array();
+        if (!self::acquire_runtime_lock()) {
+            return $stale;
+        }
+
         return self::refresh_runtime_cache();
     }
 
@@ -45,7 +51,7 @@ final class Settings {
 
         $rev = (int) get_option(self::RUNTIME_REV_KEY, 0) + 1;
         $payload = array(
-            'ads' => is_array($ads) ? $ads : array(),
+            'ads' => self::maybe_strip_runtime_ads(is_array($ads) ? $ads : array()),
             'slots' => is_array($slots) ? $slots : array(),
             '_rev' => $rev,
         );
@@ -56,6 +62,8 @@ final class Settings {
         $cache_key = self::RUNTIME_CACHE_PREFIX . $rev;
         wp_cache_set($cache_key, $payload, self::RUNTIME_CACHE_GROUP);
 
+        self::release_runtime_lock();
+
         return self::strip_runtime_meta($payload);
     }
 
@@ -64,6 +72,63 @@ final class Settings {
             unset($settings['_rev']);
         }
         return $settings;
+    }
+
+    private static function maybe_strip_runtime_ads(array $ads): array {
+        $enabled = (bool) apply_filters('magick_ad_runtime_strip_content', true);
+        if (!$enabled) {
+            return $ads;
+        }
+
+        foreach ($ads as &$ad) {
+            if (!is_array($ad)) {
+                continue;
+            }
+            if (!isset($ad['content']) || !is_array($ad['content'])) {
+                continue;
+            }
+
+            $content = $ad['content'];
+            $changed = false;
+            foreach (array('html', 'blocks', 'custom_html', 'custom_css') as $key) {
+                if (isset($content[$key]) && is_string($content[$key]) && $content[$key] !== '') {
+                    $content[$key] = '';
+                    $changed = true;
+                }
+            }
+
+            if ($changed) {
+                $ad['content'] = $content;
+                $ad['_content_lazy'] = true;
+            }
+        }
+        unset($ad);
+
+        return $ads;
+    }
+
+    private static function acquire_runtime_lock(): bool {
+        $ttl = (int) apply_filters('magick_ad_runtime_lock_ttl', 15);
+        $ttl = max(5, $ttl);
+
+        if (wp_using_ext_object_cache()) {
+            return (bool) wp_cache_add(self::RUNTIME_LOCK_KEY, 1, self::RUNTIME_CACHE_GROUP, $ttl);
+        }
+
+        $lock = get_transient(self::RUNTIME_LOCK_KEY);
+        if ($lock) {
+            return false;
+        }
+        set_transient(self::RUNTIME_LOCK_KEY, 1, $ttl);
+        return true;
+    }
+
+    private static function release_runtime_lock(): void {
+        if (wp_using_ext_object_cache()) {
+            wp_cache_delete(self::RUNTIME_LOCK_KEY, self::RUNTIME_CACHE_GROUP);
+            return;
+        }
+        delete_transient(self::RUNTIME_LOCK_KEY);
     }
 
     public static function sanitize_settings($settings): array {

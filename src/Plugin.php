@@ -20,6 +20,8 @@ use MagickAD\Frontend\Template_Tags;
 use MagickAD\REST\Routes;
 use MagickAD\Utils\Debug;
 use MagickAD\Utils\Diagnostics_Cron;
+use MagickAD\Utils\Stats_Cron;
+use MagickAD\Utils\Stats_Dim_Cron;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -56,6 +58,8 @@ final class Plugin {
         (new Template_Tags())->register();
         (new Debug())->register();
         (new Diagnostics_Cron())->register();
+        (new Stats_Cron())->register();
+        (new Stats_Dim_Cron())->register();
         Ads::register();
 
         if (is_admin()) {
