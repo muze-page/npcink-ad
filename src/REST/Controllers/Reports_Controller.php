@@ -3,6 +3,7 @@
 namespace MagickAD\REST\Controllers;
 
 use WP_REST_Request;
+use WP_Error;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -60,6 +61,74 @@ final class Reports_Controller {
         }
 
         return rest_ensure_response($series);
+    }
+
+    public static function report_dimensions(WP_REST_Request $request) {
+        $days = absint($request->get_param('days'));
+        if (!in_array($days, array(7, 30), true)) {
+            $days = 7;
+        }
+
+        $group_by = sanitize_text_field((string) $request->get_param('group_by'));
+        $allowed = array('slot', 'position', 'container', 'ad_id');
+        if (!in_array($group_by, $allowed, true)) {
+            return new WP_Error('magick_ad_invalid_group', 'Invalid group_by', array('status' => 400));
+        }
+
+        global $wpdb;
+        $start = date('Y-m-d', current_time('timestamp') - ($days - 1) * DAY_IN_SECONDS);
+        $column = $group_by;
+        $table = $group_by === 'ad_id'
+            ? $wpdb->prefix . 'magick_ad_stats'
+            : $wpdb->prefix . 'magick_ad_stats_dim';
+
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+        if ($exists !== $table) {
+            return rest_ensure_response(array());
+        }
+
+        if ($group_by === 'ad_id') {
+            $sql = $wpdb->prepare(
+                "SELECT {$column} AS dimension,
+                    SUM(impressions) AS views,
+                    SUM(clicks) AS clicks
+                 FROM {$table}
+                 WHERE `date` >= %s
+                 GROUP BY {$column}
+                 ORDER BY views DESC, clicks DESC
+                 LIMIT 50",
+                $start
+            );
+        } else {
+            $sql = $wpdb->prepare(
+                "SELECT {$column} AS dimension,
+                    SUM(impressions) AS views,
+                    SUM(clicks) AS clicks
+                 FROM {$table}
+                 WHERE `date` >= %s
+                 AND {$column} <> ''
+                 GROUP BY {$column}
+                 ORDER BY views DESC, clicks DESC
+                 LIMIT 50",
+                $start
+            );
+        }
+
+        $rows = $wpdb->get_results($sql, ARRAY_A);
+        $result = array();
+        foreach ($rows as $row) {
+            $dimension = isset($row['dimension']) ? (string) $row['dimension'] : '';
+            if ($dimension === '') {
+                continue;
+            }
+            $result[] = array(
+                'dimension' => $dimension,
+                'views' => (int) $row['views'],
+                'clicks' => (int) $row['clicks'],
+            );
+        }
+
+        return rest_ensure_response($result);
     }
 
     private static function build_empty_series(int $days): array {

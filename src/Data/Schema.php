@@ -111,6 +111,24 @@ final class Schema {
         return true;
     }
 
+    public static function get_table_status(): array {
+        global $wpdb;
+        $stats_table = $wpdb->prefix . 'magick_ad_stats';
+        $log_table = $wpdb->prefix . 'magick_ad_stats_log';
+        $dim_table = $wpdb->prefix . 'magick_ad_stats_dim';
+
+        $stats_exists = self::table_exists($stats_table);
+        $stats_ready = $stats_exists && self::table_has_column($stats_table, 'impressions');
+        $log_exists = self::table_exists($log_table);
+        $dim_exists = self::table_exists($dim_table);
+
+        return array(
+            'stats' => $stats_ready,
+            'log' => $log_exists,
+            'dim' => $dim_exists,
+        );
+    }
+
     private static function table_exists(string $table): bool {
         global $wpdb;
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));

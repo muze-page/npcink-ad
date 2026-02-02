@@ -3,6 +3,7 @@
 namespace MagickAD;
 
 use MagickAD\Admin\Admin;
+use MagickAD\Admin\Site_Health;
 use MagickAD\Blocks\Bindings;
 use MagickAD\Blocks\Blocks;
 use MagickAD\Blocks\Patterns;
@@ -56,6 +57,7 @@ final class Plugin {
 
         if (is_admin()) {
             (new Admin())->register();
+            (new Site_Health())->register();
         }
 
         if (defined('WP_CLI') && WP_CLI) {

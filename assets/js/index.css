@@ -1625,6 +1625,56 @@
     min-height: 320px;
 }
 
+.magick-ad-dashboard__breakdowns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.magick-ad-dashboard__filters {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(200px, 240px);
+    gap: 12px;
+    align-items: end;
+}
+
+.magick-ad-dashboard__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.magick-ad-dashboard__section-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.magick-ad-dashboard__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.magick-ad-dashboard__table th,
+.magick-ad-dashboard__table td {
+    padding: 6px 4px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.magick-ad-dashboard__table th {
+    color: #50575e;
+    font-weight: 600;
+}
+
+.magick-ad-dashboard__table td {
+    color: #1f2937;
+}
+
 .magick-ad-control--error .components-input-control__backdrop,
 .magick-ad-control--error .components-select-control__input {
     border-color: #d63638;
@@ -1641,6 +1691,14 @@
     }
 
     .magick-ad-dashboard__cards {
+        grid-template-columns: 1fr;
+    }
+
+    .magick-ad-dashboard__breakdowns {
+        grid-template-columns: 1fr;
+    }
+
+    .magick-ad-dashboard__filters {
         grid-template-columns: 1fr;
     }
 
