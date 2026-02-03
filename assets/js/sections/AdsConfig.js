@@ -209,6 +209,44 @@ const AdsConfig = () => {
         return { label: '已停用', className: 'is-disabled' };
     };
 
+    const deviceOptions = [
+        { label: '全部设备', value: 'all' },
+        { label: '仅移动端', value: 'mobile' },
+        { label: '仅平板', value: 'tablet' },
+        { label: '仅桌面端', value: 'desktop' },
+    ];
+
+    const loginOptions = [
+        { label: '全部用户', value: 'all' },
+        { label: '仅登录用户', value: 'logged-in' },
+        { label: '仅未登录用户', value: 'logged-out' },
+    ];
+
+    const renderDeviceLoginControls = () => (
+        <>
+            <SelectControl
+                label="设备限制"
+                value={selectedAd?.options?.device || 'all'}
+                options={deviceOptions}
+                onChange={(value) =>
+                    handleUpdateOptions({
+                        device: value,
+                    })
+                }
+            />
+            <SelectControl
+                label="登录状态"
+                value={selectedAd?.options?.login || 'all'}
+                options={loginOptions}
+                onChange={(value) =>
+                    handleUpdateOptions({
+                        login: value,
+                    })
+                }
+            />
+        </>
+    );
+
     useEffect(() => {
         fetchFromDB();
     }, [fetchFromDB]);
@@ -2267,6 +2305,7 @@ const AdsConfig = () => {
                                     />
                                 </>
                             )}
+                            {renderDeviceLoginControls()}
                             {renderNodePlacement()}
                         </PanelBody>
                     </Panel>
@@ -3080,6 +3119,7 @@ const AdsConfig = () => {
                                                 />
                                             </>
                                         )}
+                                        {renderDeviceLoginControls()}
                                         {renderNodePlacement()}
                                     </PanelBody>
                                 </Panel>
