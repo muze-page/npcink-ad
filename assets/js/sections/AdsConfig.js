@@ -90,6 +90,7 @@ const AdsConfig = () => {
     const [scheduleOpen, setScheduleOpen] = useState(true);
     const [publishModalOpen, setPublishModalOpen] = useState(false);
     const [placementModalOpen, setPlacementModalOpen] = useState(false);
+    const [placementTab, setPlacementTab] = useState('placement');
     const [advancedOpen, setAdvancedOpen] = useState(false);
     const [previewTarget, setPreviewTarget] = useState('');
     const [previewMode, setPreviewMode] = useState('url');
@@ -361,6 +362,10 @@ const AdsConfig = () => {
         editorModeRaw === 'expert' && !canUnfilteredHtml
             ? 'design'
             : editorModeRaw;
+
+    useEffect(() => {
+        setPlacementTab('placement');
+    }, [selectedId, effectiveEditorMode]);
 
     const { targetItems, targetSuggestions, targetLoading, handleTargetSearch } =
         useTargeting(selectedAd);
@@ -969,6 +974,48 @@ const AdsConfig = () => {
             )}
         </>
     );
+
+    const getFrequencySummary = (behavior = {}) => {
+        const mode = behavior.frequency_mode || 'none';
+        if (mode === 'session') {
+            return '每会话一次';
+        }
+        if (mode === 'day') {
+            return '每天一次';
+        }
+        if (mode === 'count') {
+            const limit = Math.max(
+                1,
+                Number(behavior.frequency_limit ?? 1)
+            );
+            return `最多 ${limit} 次`;
+        }
+        return '不限制';
+    };
+
+    const renderFrequencySummary = (behavior = {}, options = {}) => {
+        const { showLink = true } = options;
+        return (
+        <div className="magick-ad-right-subsection">
+            <div className="magick-ad-right-subsection__title">
+                频控摘要
+            </div>
+            <div className="magick-ad-right-subsection__body">
+                <div className="magick-ad-frequency-summary">
+                    <span>频控：{getFrequencySummary(behavior)}</span>
+                    {showLink && (
+                        <Button
+                            variant="link"
+                            onClick={() => setPlacementTab('frequency')}
+                        >
+                            去设置
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </div>
+        );
+    };
 
     const getCreativeTemplateData = (type, ad) => {
         const content = ad?.content || {};
@@ -2025,6 +2072,134 @@ const AdsConfig = () => {
 
     );
 
+    const renderAdvancedControls = () => (
+        <>
+            <TextControl
+                label="优先级（越大越先展示）"
+                type="number"
+                min={1}
+                value={selectedAd.options?.priority ?? 10}
+                onChange={(value) =>
+                    handleUpdateOptions({
+                        priority: Math.max(1, Number(value) || 1),
+                    })
+                }
+                help="同一 Slot 内优先级最高的广告优先出场。"
+            />
+            <TextControl
+                label="权重（同优先级下随机）"
+                type="number"
+                min={1}
+                value={selectedAd.options?.weight ?? 1}
+                onChange={(value) =>
+                    handleUpdateOptions({
+                        weight: Math.max(1, Number(value) || 1),
+                    })
+                }
+                help="仅对同优先级广告生效，权重越大越容易被选中。"
+            />
+            <div className="magick-ad-preview-target">
+                <div className="magick-ad-preview-target__title">
+                    预览页面
+                </div>
+                <div className="magick-ad-preview-target__mode">
+                    <ButtonGroup>
+                        <Button
+                            variant="secondary"
+                            isPressed={previewMode === 'url'}
+                            onClick={() => setPreviewMode('url')}
+                        >
+                            链接
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            isPressed={previewMode === 'post'}
+                            onClick={() => setPreviewMode('post')}
+                        >
+                            文章
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            isPressed={previewMode === 'page'}
+                            onClick={() => setPreviewMode('page')}
+                        >
+                            页面
+                        </Button>
+                    </ButtonGroup>
+                </div>
+                {previewMode === 'url' ? (
+                    <TextControl
+                        label="页面链接（仅支持本站）"
+                        value={previewTarget}
+                        placeholder="https://example.com/your-page"
+                        onChange={(value) => setPreviewTarget(value)}
+                        help="填写后将使用该页面作为预览环境。"
+                    />
+                ) : (
+                    <ComboboxControl
+                        label="选择页面"
+                        value={previewSelected}
+                        options={previewOptions}
+                        onChange={handlePreviewSelect}
+                        onFilterValueChange={(value) =>
+                            setPreviewSearch(value)
+                        }
+                        placeholder={
+                            previewMode === 'page'
+                                ? '搜索页面...'
+                                : '搜索文章...'
+                        }
+                        help={
+                            previewLoading
+                                ? '正在加载列表...'
+                                : '选择后将自动作为预览环境'
+                        }
+                    />
+                )}
+                <div className="magick-ad-preview-target__actions">
+                    <Button
+                        variant="secondary"
+                        onClick={() =>
+                            setPreviewTarget(
+                                window?.MagickAD?.previewUrl || ''
+                            )
+                        }
+                    >
+                        使用首页
+                    </Button>
+                    <Button
+                        variant="tertiary"
+                        onClick={() => setPreviewTarget('')}
+                    >
+                        清空
+                    </Button>
+                </div>
+                <SelectControl
+                    label="模拟登录态"
+                    value={previewLogin}
+                    options={[
+                        { label: '跟随真实状态', value: 'auto' },
+                        { label: '模拟已登录', value: 'logged-in' },
+                        { label: '模拟未登录', value: 'logged-out' },
+                    ]}
+                    onChange={(value) => setPreviewLogin(value)}
+                    help="仅影响预览命中判断，不会改变真实登录态。"
+                />
+            </div>
+        </>
+    );
+
+    const renderFrequencyAdvancedTab = (behavior = {}) => (
+        <Panel>
+            <PanelBody title="频控" initialOpen>
+                {renderFrequencyControls(behavior)}
+            </PanelBody>
+            <PanelBody title="高级设置" initialOpen={false}>
+                {renderAdvancedControls()}
+            </PanelBody>
+        </Panel>
+    );
+
     const renderPlacementSection = () => (
         <>
             <div className="magick-ad-right-section">
@@ -2294,6 +2469,10 @@ const AdsConfig = () => {
                             )}
                             {renderDeviceLoginControls()}
                             {renderNodePlacement()}
+                            {renderFrequencySummary(
+                                selectedAd.content?.behavior || {},
+                                { showLink: false }
+                            )}
                         </PanelBody>
                     </Panel>
                 )}
@@ -2304,8 +2483,11 @@ const AdsConfig = () => {
                             { name: 'container', title: '容器' },
                             { name: 'behavior', title: '交互' },
                             { name: 'placement', title: '投放' },
+                            { name: 'frequency', title: '频控与高级' },
                         ]}
-                        initialTabName="placement"
+                        initialTabName={placementTab}
+                        onSelect={(name) => setPlacementTab(name)}
+                        key={placementTab}
                     >
                         {(tab) => {
                             const containerStyle =
@@ -2317,6 +2499,10 @@ const AdsConfig = () => {
                             const isInlineContainer =
                                 (selectedAd.options?.container_type ||
                                     'inline') === 'inline';
+
+                            if (tab.name === 'frequency') {
+                                return renderFrequencyAdvancedTab(behavior);
+                            }
 
                             if (tab.name === 'container') {
                                 return (
@@ -3184,6 +3370,7 @@ const AdsConfig = () => {
                                         )}
                                         {renderDeviceLoginControls()}
                                         {renderNodePlacement()}
+                                        {renderFrequencySummary(behavior)}
                                     </PanelBody>
                                 </Panel>
                             );
@@ -3193,185 +3380,44 @@ const AdsConfig = () => {
             </div>
         </div>
 
-        <div className="magick-ad-right-section">
-            <div className="magick-ad-right-section__header">
-                <div className="magick-ad-right-section__title">
-                    频控
-                </div>
-            </div>
-            <div className="magick-ad-right-section__body">
-                {renderFrequencyControls(
-                    selectedAd.content?.behavior || {}
-                )}
-            </div>
-        </div>
-
-        <div className="magick-ad-right-section">
-            <div className="magick-ad-right-section__header">
-                <div className="magick-ad-right-section__title">
-                    高级设置
-                </div>
-                <Button
-                    className="magick-ad-collapse-toggle"
-                    icon={advancedOpen ? chevronUp : chevronDown}
-                    label={advancedOpen ? '折叠' : '展开'}
-                    variant="tertiary"
-                    onClick={() =>
-                        setAdvancedOpen((prev) => !prev)
-                    }
-                />
-            </div>
-            {advancedOpen && (
-                <div className="magick-ad-right-section__body">
-                    <TextControl
-                        label="优先级（越大越先展示）"
-                        type="number"
-                        min={1}
-                        value={selectedAd.options?.priority ?? 10}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                priority: Math.max(
-                                    1,
-                                    Number(value) || 1
-                                ),
-                            })
-                        }
-                        help="同一 Slot 内优先级最高的广告优先出场。"
-                    />
-                    <TextControl
-                        label="权重（同优先级下随机）"
-                        type="number"
-                        min={1}
-                        value={selectedAd.options?.weight ?? 1}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                weight: Math.max(
-                                    1,
-                                    Number(value) || 1
-                                ),
-                            })
-                        }
-                        help="仅对同优先级广告生效，权重越大越容易被选中。"
-                    />
-                    <div className="magick-ad-preview-target">
-                        <div className="magick-ad-preview-target__title">
-                            预览页面
+        {effectiveEditorMode === 'quick' && (
+            <>
+                <div className="magick-ad-right-section">
+                    <div className="magick-ad-right-section__header">
+                        <div className="magick-ad-right-section__title">
+                            频控
                         </div>
-                        <div className="magick-ad-preview-target__mode">
-                            <ButtonGroup>
-                                <Button
-                                    variant="secondary"
-                                    isPressed={
-                                        previewMode === 'url'
-                                    }
-                                    onClick={() =>
-                                        setPreviewMode('url')
-                                    }
-                                >
-                                    链接
-                                </Button>
-                                <Button
-                                    variant="secondary"
-                                    isPressed={
-                                        previewMode === 'post'
-                                    }
-                                    onClick={() =>
-                                        setPreviewMode('post')
-                                    }
-                                >
-                                    文章
-                                </Button>
-                                <Button
-                                    variant="secondary"
-                                    isPressed={
-                                        previewMode === 'page'
-                                    }
-                                    onClick={() =>
-                                        setPreviewMode('page')
-                                    }
-                                >
-                                    页面
-                                </Button>
-                            </ButtonGroup>
-                        </div>
-                        {previewMode === 'url' ? (
-                            <TextControl
-                                label="页面链接（仅支持本站）"
-                                value={previewTarget}
-                                placeholder="https://example.com/your-page"
-                                onChange={(value) =>
-                                    setPreviewTarget(value)
-                                }
-                                help="填写后将使用该页面作为预览环境。"
-                            />
-                        ) : (
-                            <ComboboxControl
-                                label="选择页面"
-                                value={previewSelected}
-                                options={previewOptions}
-                                onChange={handlePreviewSelect}
-                                onFilterValueChange={(value) =>
-                                    setPreviewSearch(value)
-                                }
-                                placeholder={
-                                    previewMode === 'page'
-                                        ? '搜索页面...'
-                                        : '搜索文章...'
-                                }
-                                help={
-                                    previewLoading
-                                        ? '正在加载列表...'
-                                        : '选择后将自动作为预览环境'
-                                }
-                            />
+                    </div>
+                    <div className="magick-ad-right-section__body">
+                        {renderFrequencyControls(
+                            selectedAd.content?.behavior || {}
                         )}
-                        <div className="magick-ad-preview-target__actions">
-                            <Button
-                                variant="secondary"
-                                onClick={() =>
-                                    setPreviewTarget(
-                                        window?.MagickAD
-                                            ?.previewUrl || ''
-                                    )
-                                }
-                            >
-                                使用首页
-                            </Button>
-                            <Button
-                                variant="tertiary"
-                                onClick={() =>
-                                    setPreviewTarget('')
-                                }
-                            >
-                                清空
-                            </Button>
-                        </div>
-                        <SelectControl
-                            label="模拟登录态"
-                            value={previewLogin}
-                            options={[
-                                {
-                                    label: '跟随真实状态',
-                                    value: 'auto',
-                                },
-                                {
-                                    label: '模拟已登录',
-                                    value: 'logged-in',
-                                },
-                                {
-                                    label: '模拟未登录',
-                                    value: 'logged-out',
-                                },
-                            ]}
-                            onChange={(value) =>
-                                setPreviewLogin(value)
-                            }
-                            help="仅影响预览命中判断，不会改变真实登录态。"
-                        />
                     </div>
                 </div>
-            )}
-            </div>
+
+                <div className="magick-ad-right-section">
+                    <div className="magick-ad-right-section__header">
+                        <div className="magick-ad-right-section__title">
+                            高级设置
+                        </div>
+                        <Button
+                            className="magick-ad-collapse-toggle"
+                            icon={advancedOpen ? chevronUp : chevronDown}
+                            label={advancedOpen ? '折叠' : '展开'}
+                            variant="tertiary"
+                            onClick={() =>
+                                setAdvancedOpen((prev) => !prev)
+                            }
+                        />
+                    </div>
+                    {advancedOpen && (
+                        <div className="magick-ad-right-section__body">
+                            {renderAdvancedControls()}
+                        </div>
+                    )}
+                </div>
+            </>
+        )}
         </>
     );
 

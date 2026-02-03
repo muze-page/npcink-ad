@@ -78,6 +78,246 @@
     };
 
     if (!window.wp || !window.wp.interactivity) {
+        const prefersReducedMotion =
+            window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const readStorageValue = (storage, key) => {
+            if (
+                (storage === localStorage && !allowLocalStorage) ||
+                (storage === sessionStorage && !allowSessionStorage)
+            ) {
+                return null;
+            }
+            try {
+                return storage.getItem(key);
+            } catch (err) {
+                return null;
+            }
+        };
+
+        const writeStorageValue = (storage, key, value) => {
+            if (
+                (storage === localStorage && !allowLocalStorage) ||
+                (storage === sessionStorage && !allowSessionStorage)
+            ) {
+                return false;
+            }
+            try {
+                storage.setItem(key, value);
+                return true;
+            } catch (err) {
+                return false;
+            }
+        };
+
+        const shouldShowByFrequency = (ad) => {
+            if (!allowLocalStorage && !allowSessionStorage) {
+                return true;
+            }
+            const mode = ad.getAttribute('data-ad-freq-mode') || 'none';
+            if (mode === 'none') {
+                return true;
+            }
+            const adId = ad.getAttribute('data-ad-id');
+            if (!adId) {
+                return true;
+            }
+            if (mode === 'session') {
+                return !readStorageValue(
+                    sessionStorage,
+                    `magick_ad_freq_${adId}`
+                );
+            }
+            if (mode === 'day') {
+                const day = new Date().toISOString().slice(0, 10);
+                return !readStorageValue(
+                    localStorage,
+                    `magick_ad_freq_${adId}_${day}`
+                );
+            }
+            if (mode === 'count') {
+                const limit = Number(
+                    ad.getAttribute('data-ad-freq-limit') || 1
+                );
+                const rawCount = readStorageValue(
+                    localStorage,
+                    `magick_ad_freq_${adId}`
+                );
+                const count = Number(rawCount || 0);
+                return count < limit;
+            }
+            return true;
+        };
+
+        const recordFrequency = (ad) => {
+            if (!allowLocalStorage && !allowSessionStorage) {
+                return;
+            }
+            const mode = ad.getAttribute('data-ad-freq-mode') || 'none';
+            const adId = ad.getAttribute('data-ad-id');
+            if (!adId || mode === 'none') {
+                return;
+            }
+            if (mode === 'session') {
+                writeStorageValue(
+                    sessionStorage,
+                    `magick_ad_freq_${adId}`,
+                    '1'
+                );
+            } else if (mode === 'day') {
+                const day = new Date().toISOString().slice(0, 10);
+                writeStorageValue(
+                    localStorage,
+                    `magick_ad_freq_${adId}_${day}`,
+                    '1'
+                );
+            } else if (mode === 'count') {
+                const key = `magick_ad_freq_${adId}`;
+                const limit = Number(
+                    ad.getAttribute('data-ad-freq-limit') || 1
+                );
+                const rawCount = readStorageValue(localStorage, key);
+                const count = Number(rawCount || 0);
+                if (count < limit) {
+                    writeStorageValue(localStorage, key, String(count + 1));
+                }
+            }
+        };
+
+        const decideRandomSession = (ad) => {
+            const adId = ad.getAttribute('data-ad-id');
+            if (!adId) {
+                return true;
+            }
+            const bucket = Math.floor(Date.now() / 300000);
+            let value = null;
+            if (allowSessionStorage) {
+                const key = `magick_ad_random_${adId}_${bucket}`;
+                value = readStorageValue(sessionStorage, key);
+                if (!value) {
+                    value = Math.random() >= 0.5 ? '1' : '0';
+                    writeStorageValue(sessionStorage, key, value);
+                }
+            } else if (ad.dataset.adRandomDecided) {
+                value = ad.dataset.adRandomDecided;
+            } else {
+                value = Math.random() >= 0.5 ? '1' : '0';
+                ad.dataset.adRandomDecided = value;
+            }
+            return value === '1';
+        };
+
+        const shouldShowByRandom = (ad) => {
+            const randomMode = ad.getAttribute('data-ad-random') || '';
+            if (randomMode !== 'session') {
+                return true;
+            }
+            return decideRandomSession(ad);
+        };
+
+        const updateLockScroll = (ad, shouldLock) => {
+            if (!ad || !document.body) {
+                return;
+            }
+            const container = ad.getAttribute('data-ad-container') || '';
+            if (
+                (container === 'popup' || container === 'interstitial') &&
+                ad.getAttribute('data-ad-lock-scroll') === '1'
+            ) {
+                document.body.classList.toggle(
+                    'magick-ad-lock-scroll',
+                    shouldLock
+                );
+            }
+        };
+
+        const showFallbackAd = (ad) => {
+            if (!ad) {
+                return;
+            }
+            ad.classList.remove('magick-ad-is-hidden');
+            ad.removeAttribute('aria-hidden');
+            const animation = ad.getAttribute('data-ad-anim');
+            if (animation && !prefersReducedMotion) {
+                ad.classList.add(`magick-ad-anim--${animation}`);
+            }
+            updateLockScroll(ad, true);
+            recordFrequency(ad);
+        };
+
+        const hideFallbackAd = (ad) => {
+            if (!ad) {
+                return;
+            }
+            ad.classList.add('magick-ad-is-hidden');
+            ad.setAttribute('aria-hidden', 'true');
+            updateLockScroll(ad, false);
+        };
+
+        const initFallbackAd = (ad) => {
+            if (!ad || ad.dataset.adBehaviorInitialized === '1') {
+                return;
+            }
+            ad.dataset.adBehaviorInitialized = '1';
+
+            if (!shouldShowByFrequency(ad)) {
+                ad.dataset.adFreqBlocked = '1';
+                hideFallbackAd(ad);
+                return;
+            }
+
+            if (!shouldShowByRandom(ad)) {
+                hideFallbackAd(ad);
+                return;
+            }
+
+            const delay = Number(ad.getAttribute('data-ad-delay') || 0);
+            if (delay > 0) {
+                hideFallbackAd(ad);
+                window.setTimeout(() => {
+                    showFallbackAd(ad);
+                }, delay * 1000);
+                return;
+            }
+
+            showFallbackAd(ad);
+        };
+
+        const initFallbackAdsInRoot = (root) => {
+            if (!root) {
+                return;
+            }
+            if (root.matches?.('[data-ad-id]')) {
+                initFallbackAd(root);
+            }
+            if (root.querySelectorAll) {
+                root.querySelectorAll('[data-ad-id]').forEach((ad) => {
+                    initFallbackAd(ad);
+                });
+            }
+        };
+
+        const observeFallbackAds = () => {
+            if (!window.MutationObserver || !document.body) {
+                return;
+            }
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (!node || node.nodeType !== 1) {
+                            return;
+                        }
+                        initFallbackAdsInRoot(node);
+                    });
+                });
+            });
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+            });
+        };
+
         const closeFallback = (ad) => {
             if (!ad) {
                 return;
@@ -85,15 +325,19 @@
             if (ad.contains(document.activeElement)) {
                 document.activeElement.blur?.();
             }
-            ad.classList.add('magick-ad-is-hidden');
-            ad.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('magick-ad-lock-scroll');
+            hideFallbackAd(ad);
         };
 
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initConsentBanner);
+            document.addEventListener('DOMContentLoaded', () => {
+                initConsentBanner();
+                initFallbackAdsInRoot(document.body);
+                observeFallbackAds();
+            });
         } else {
             initConsentBanner();
+            initFallbackAdsInRoot(document.body);
+            observeFallbackAds();
         }
 
         document.addEventListener(

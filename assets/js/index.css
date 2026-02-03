@@ -853,6 +853,15 @@
     gap: 12px;
 }
 
+.magick-ad-frequency-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    color: #0f172a;
+}
+
 .magick-ad-left-stack {
     display: flex;
     flex-direction: column;
