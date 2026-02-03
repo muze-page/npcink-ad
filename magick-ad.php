@@ -92,5 +92,27 @@ spl_autoload_register(function ($class) {
 
 \MagickAD\Plugin::instance()->init();
 
+add_filter('magick_ad_has_consent', function ($has_consent) {
+    if ($has_consent) {
+        return true;
+    }
+
+    // Prefer WordPress consent API when available.
+    if (function_exists('wp_has_consent')) {
+        if (wp_has_consent('statistics') || wp_has_consent('marketing')) {
+            return true;
+        }
+    }
+
+    // Fallback to a simple CMP cookie flag.
+    $cookie = isset($_COOKIE['magick_ad_consent']) ? $_COOKIE['magick_ad_consent'] : '';
+    if (is_string($cookie)) {
+        $value = strtolower(trim($cookie));
+        return in_array($value, array('1', 'true', 'yes', 'y'), true);
+    }
+
+    return false;
+});
+
 register_activation_hook(MAGICK_AD_FILE, array('MagickAD\\Data\\Schema', 'install'));
 register_activation_hook(MAGICK_AD_FILE, array('MagickAD\\Data\\Roles', 'install'));

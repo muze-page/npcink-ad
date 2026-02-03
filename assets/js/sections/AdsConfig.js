@@ -42,6 +42,7 @@ import TemplateActions from '../components/TemplateActions';
 import BuildProbe from '../components/BuildProbe';
 import DebugPanel from '../panels/DebugPanel';
 import SystemSettingsPanel from '../panels/SystemSettingsPanel';
+import ConsentPanel from '../panels/ConsentPanel';
 import SlotsPanel from '../panels/SlotsPanel';
 import useNotice from '../hooks/useNotice';
 import useTemplateLibrary from '../hooks/useTemplateLibrary';
@@ -3829,6 +3830,7 @@ const AdsConfig = () => {
                         className="magick-ad-settings-tabs"
                         tabs={[
                             { name: 'system', title: '系统设置' },
+                            { name: 'consent', title: '同意与合规' },
                             { name: 'debug', title: '调试设置' },
                         ]}
                         initialTabName="system"
@@ -3839,6 +3841,8 @@ const AdsConfig = () => {
                                     <SystemSettingsPanel
                                         onNotice={showNotice}
                                     />
+                                ) : tab.name === 'consent' ? (
+                                    <ConsentPanel onNotice={showNotice} />
                                 ) : (
                                     <DebugPanel onNotice={showNotice} />
                                 )}

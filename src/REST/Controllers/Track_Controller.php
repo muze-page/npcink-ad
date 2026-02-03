@@ -356,6 +356,11 @@ final class Track_Controller {
     }
 
     private static function tracking_requires_consent(): bool {
+        $guard_enabled = (get_option('magick_ad_consent_guard_enabled', '0') === '1');
+        $guard_enabled = (bool) apply_filters('magick_ad_consent_guard_enabled', $guard_enabled);
+        if (!$guard_enabled) {
+            return false;
+        }
         $requires = (get_option(self::OPTION_TRACK_REQUIRE_CONSENT, '0') === '1');
         return (bool) apply_filters('magick_ad_tracking_require_consent', $requires);
     }

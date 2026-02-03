@@ -1,13 +1,100 @@
 (() => {
+    const behaviorConfig = window.MagickADBehavior || {};
+    const renderUrl = behaviorConfig.renderUrl || '';
+    const renderBatchUrl = behaviorConfig.renderBatchUrl || '';
+    const requestNonce = behaviorConfig.nonce || '';
+    const requiresConsent =
+        behaviorConfig.requireConsent === true ||
+        behaviorConfig.requireConsent === '1' ||
+        behaviorConfig.requireConsent === 1;
+    let hasConsent =
+        behaviorConfig.hasConsent === true ||
+        behaviorConfig.hasConsent === '1' ||
+        behaviorConfig.hasConsent === 1 ||
+        !requiresConsent;
+    let allowLocalStorage = hasConsent;
+    let allowSessionStorage = hasConsent;
+    const consentBannerEnabled =
+        behaviorConfig.consentBannerEnabled !== false &&
+        behaviorConfig.consentBannerEnabled !== '0' &&
+        behaviorConfig.consentBannerEnabled !== 0;
+    const consentBannerText =
+        typeof behaviorConfig.consentBannerText === 'string' &&
+        behaviorConfig.consentBannerText.trim()
+            ? behaviorConfig.consentBannerText.trim()
+            : '为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。';
+    const consentBannerButton =
+        typeof behaviorConfig.consentBannerButton === 'string' &&
+        behaviorConfig.consentBannerButton.trim()
+            ? behaviorConfig.consentBannerButton.trim()
+            : '同意';
+
+    const setConsentCookie = () => {
+        const maxAge = 60 * 60 * 24 * 365;
+        const secure = window.location.protocol === 'https:' ? '; secure' : '';
+        document.cookie = `magick_ad_consent=1; path=/; max-age=${maxAge}; samesite=lax${secure}`;
+    };
+
+    const initConsentBanner = () => {
+        if (!requiresConsent || hasConsent || !consentBannerEnabled) {
+            return;
+        }
+        if (!document.body) {
+            return;
+        }
+        if (document.querySelector('.magick-ad-consent')) {
+            return;
+        }
+        const bar = document.createElement('div');
+        bar.className = 'magick-ad-consent';
+
+        const text = document.createElement('div');
+        text.className = 'magick-ad-consent__text';
+        text.textContent = consentBannerText;
+
+        const actions = document.createElement('div');
+        actions.className = 'magick-ad-consent__actions';
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'magick-ad-consent__btn';
+        button.textContent = consentBannerButton;
+
+        button.addEventListener('click', () => {
+            setConsentCookie();
+            hasConsent = true;
+            allowLocalStorage = true;
+            allowSessionStorage = true;
+            if (window.MagickADBehavior) {
+                window.MagickADBehavior.hasConsent = true;
+            }
+            bar.remove();
+        });
+
+        actions.appendChild(button);
+        bar.appendChild(text);
+        bar.appendChild(actions);
+        document.body.appendChild(bar);
+    };
+
     if (!window.wp || !window.wp.interactivity) {
         const closeFallback = (ad) => {
             if (!ad) {
                 return;
             }
+            if (ad.contains(document.activeElement)) {
+                document.activeElement.blur?.();
+            }
             ad.classList.add('magick-ad-is-hidden');
             ad.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('magick-ad-lock-scroll');
         };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initConsentBanner);
+        } else {
+            initConsentBanner();
+        }
 
         document.addEventListener(
             'click',
@@ -58,13 +145,6 @@
         'TRACK',
         'WBR',
     ]);
-    const behaviorConfig = window.MagickADBehavior || {};
-    const renderUrl = behaviorConfig.renderUrl || '';
-    const renderBatchUrl = behaviorConfig.renderBatchUrl || '';
-    const requestNonce = behaviorConfig.nonce || '';
-    const hasConsent = behaviorConfig.hasConsent === true;
-    const allowLocalStorage = hasConsent;
-    const allowSessionStorage = hasConsent;
     const prefersReducedMotion =
         window.matchMedia &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -471,9 +551,12 @@
         if (!ad) {
             return;
         }
+        deactivateModal(ad);
+        if (ad.contains(document.activeElement)) {
+            document.activeElement.blur?.();
+        }
         ad.classList.add('magick-ad-is-hidden');
         ad.setAttribute('aria-hidden', 'true');
-        deactivateModal(ad);
     };
 
     const trapFocus = (event, ad) => {
@@ -1003,10 +1086,12 @@
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
+            initConsentBanner();
             initAll();
             observeNewAds();
         });
     } else {
+        initConsentBanner();
         initAll();
         observeNewAds();
     }

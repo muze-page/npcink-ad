@@ -73,6 +73,13 @@ final class System_Settings_Controller {
         $stats_dim_retention_days = self::sanitize_optional_int($stats_dim_retention_days, 30, 365);
         $slot_client_resolver = (get_option('magick_ad_slot_client_resolver', '1') === '1');
         $html_sandbox = (get_option('magick_ad_html_sandbox', '0') === '1');
+        $consent_guard_enabled = (get_option('magick_ad_consent_guard_enabled', '0') === '1');
+        $consent_banner_enabled = (get_option('magick_ad_consent_banner_enabled', '1') === '1');
+        $consent_banner_text = get_option(
+            'magick_ad_consent_banner_text',
+            '为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。'
+        );
+        $consent_banner_button = get_option('magick_ad_consent_banner_button', '同意');
 
         $settings = array(
             'tracking_strategy' => TrackingStrategy::from_value(
@@ -89,6 +96,10 @@ final class System_Settings_Controller {
             'stats_dim_retention_days' => $stats_dim_retention_days,
             'slot_client_resolver' => $slot_client_resolver,
             'html_sandbox' => $html_sandbox,
+            'consent_guard_enabled' => $consent_guard_enabled,
+            'consent_banner_enabled' => $consent_banner_enabled,
+            'consent_banner_text' => $consent_banner_text,
+            'consent_banner_button' => $consent_banner_button,
             'brand_name' => get_option('magick_ad_brand_name', 'Magick AD'),
             'brand_tagline' => get_option('magick_ad_brand_tagline', '广告配置与投放规则管理'),
             'manage_capability' => get_option('magick_ad_manage_capability', 'manage_options'),
@@ -135,6 +146,21 @@ final class System_Settings_Controller {
             30,
             365
         );
+        $consent_guard_enabled = !array_key_exists('consent_guard_enabled', $params)
+            ? (get_option('magick_ad_consent_guard_enabled', '0') === '1')
+            : !empty($params['consent_guard_enabled']);
+        $consent_banner_enabled = !array_key_exists('consent_banner_enabled', $params)
+            ? (get_option('magick_ad_consent_banner_enabled', '1') === '1')
+            : !empty($params['consent_banner_enabled']);
+        $consent_banner_text = isset($params['consent_banner_text']) && is_string($params['consent_banner_text'])
+            ? sanitize_text_field($params['consent_banner_text'])
+            : get_option(
+                'magick_ad_consent_banner_text',
+                '为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。'
+            );
+        $consent_banner_button = isset($params['consent_banner_button']) && is_string($params['consent_banner_button'])
+            ? sanitize_text_field($params['consent_banner_button'])
+            : get_option('magick_ad_consent_banner_button', '同意');
         $slot_client_resolver = !array_key_exists('slot_client_resolver', $params)
             ? (get_option('magick_ad_slot_client_resolver', '1') === '1')
             : !empty($params['slot_client_resolver']);
@@ -162,6 +188,10 @@ final class System_Settings_Controller {
         update_option('magick_ad_stats_dim_retention_days', $stats_dim_retention_days);
         update_option('magick_ad_slot_client_resolver', $slot_client_resolver ? '1' : '0');
         update_option('magick_ad_html_sandbox', $html_sandbox ? '1' : '0');
+        update_option('magick_ad_consent_guard_enabled', $consent_guard_enabled ? '1' : '0');
+        update_option('magick_ad_consent_banner_enabled', $consent_banner_enabled ? '1' : '0');
+        update_option('magick_ad_consent_banner_text', $consent_banner_text);
+        update_option('magick_ad_consent_banner_button', $consent_banner_button);
         update_option('magick_ad_brand_name', $brand_name);
         update_option('magick_ad_brand_tagline', $brand_tagline);
         update_option('magick_ad_manage_capability', $manage_capability);
@@ -186,6 +216,10 @@ final class System_Settings_Controller {
             'stats_dim_retention_days' => $stats_dim_retention_days,
             'slot_client_resolver' => $slot_client_resolver,
             'html_sandbox' => $html_sandbox,
+            'consent_guard_enabled' => $consent_guard_enabled,
+            'consent_banner_enabled' => $consent_banner_enabled,
+            'consent_banner_text' => $consent_banner_text,
+            'consent_banner_button' => $consent_banner_button,
             'brand_name' => $brand_name,
             'brand_tagline' => $brand_tagline,
             'manage_capability' => $manage_capability,

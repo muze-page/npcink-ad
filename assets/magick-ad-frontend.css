@@ -294,6 +294,58 @@ body.magick-ad-lock-scroll {
     display: none;
 }
 
+.magick-ad-consent {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    z-index: 10002;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+}
+
+.magick-ad-consent__text {
+    color: #1f2937;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.magick-ad-consent__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.magick-ad-consent__btn {
+    border: none;
+    border-radius: 999px;
+    padding: 8px 16px;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.magick-ad-consent__btn:hover {
+    background: #1d4ed8;
+}
+
+@media (max-width: 640px) {
+    .magick-ad-consent {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 .magick-ad-diagnose__header {
     display: flex;
     align-items: center;

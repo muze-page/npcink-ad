@@ -617,6 +617,15 @@ final class Frontend {
         $has_consent = (bool) apply_filters('magick_ad_has_consent', false);
         $requires_consent = (get_option('magick_ad_tracking_require_consent', '0') === '1');
         $requires_consent = (bool) apply_filters('magick_ad_tracking_require_consent', $requires_consent);
+        $consent_guard_enabled = (get_option('magick_ad_consent_guard_enabled', '0') === '1');
+        $consent_guard_enabled = (bool) apply_filters('magick_ad_consent_guard_enabled', $consent_guard_enabled);
+        $requires_consent = $consent_guard_enabled ? $requires_consent : false;
+        $consent_banner_enabled = $consent_guard_enabled && (get_option('magick_ad_consent_banner_enabled', '1') === '1');
+        $consent_banner_text = get_option(
+            'magick_ad_consent_banner_text',
+            '为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。'
+        );
+        $consent_banner_button = get_option('magick_ad_consent_banner_button', '同意');
         $interactivity_deps = wp_script_is('wp-interactivity', 'registered')
             ? array('wp-interactivity')
             : array();
@@ -632,8 +641,12 @@ final class Frontend {
             'magick-ad-interactivity',
             'MagickADBehavior',
             array(
-                'hasConsent' => $has_consent,
+                'hasConsent' => $has_consent || !$requires_consent,
                 'requireConsent' => $requires_consent,
+                'consentGuardEnabled' => $consent_guard_enabled,
+                'consentBannerEnabled' => $consent_banner_enabled,
+                'consentBannerText' => $consent_banner_text,
+                'consentBannerButton' => $consent_banner_button,
                 'renderUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ad')),
                 'renderBatchUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ads')),
                 'observeMutations' => (bool) apply_filters('magick_ad_behavior_observe_mutations', false),
