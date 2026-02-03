@@ -28,6 +28,7 @@ import {
     chevronUp,
     cog,
     external,
+    globe,
     megaphone,
     moreHorizontal,
 } from '@wordpress/icons';
@@ -90,6 +91,7 @@ const AdsConfig = () => {
     const [scheduleOpen, setScheduleOpen] = useState(true);
     const [publishModalOpen, setPublishModalOpen] = useState(false);
     const [placementModalOpen, setPlacementModalOpen] = useState(false);
+    const [previewModalOpen, setPreviewModalOpen] = useState(false);
     const [placementTab, setPlacementTab] = useState('placement');
     const [advancedOpen, setAdvancedOpen] = useState(false);
     const [previewTarget, setPreviewTarget] = useState('');
@@ -2072,6 +2074,93 @@ const AdsConfig = () => {
 
     );
 
+    const renderPreviewControls = () => (
+        <div className="magick-ad-preview-target">
+            <div className="magick-ad-preview-target__title">预览页面</div>
+            <div className="magick-ad-preview-target__mode">
+                <ButtonGroup>
+                    <Button
+                        variant="secondary"
+                        isPressed={previewMode === 'url'}
+                        onClick={() => setPreviewMode('url')}
+                    >
+                        链接
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        isPressed={previewMode === 'post'}
+                        onClick={() => setPreviewMode('post')}
+                    >
+                        文章
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        isPressed={previewMode === 'page'}
+                        onClick={() => setPreviewMode('page')}
+                    >
+                        页面
+                    </Button>
+                </ButtonGroup>
+            </div>
+            {previewMode === 'url' ? (
+                <TextControl
+                    label="页面链接（仅支持本站）"
+                    value={previewTarget}
+                    placeholder="https://example.com/your-page"
+                    onChange={(value) => setPreviewTarget(value)}
+                    help="填写后将使用该页面作为预览环境。"
+                />
+            ) : (
+                <ComboboxControl
+                    label="选择页面"
+                    value={previewSelected}
+                    options={previewOptions}
+                    onChange={handlePreviewSelect}
+                    onFilterValueChange={(value) => setPreviewSearch(value)}
+                    placeholder={
+                        previewMode === 'page'
+                            ? '搜索页面...'
+                            : '搜索文章...'
+                    }
+                    help={
+                        previewLoading
+                            ? '正在加载列表...'
+                            : '选择后将自动作为预览环境'
+                    }
+                />
+            )}
+            <div className="magick-ad-preview-target__actions">
+                <Button
+                    variant="secondary"
+                    onClick={() =>
+                        setPreviewTarget(
+                            window?.MagickAD?.previewUrl || ''
+                        )
+                    }
+                >
+                    使用首页
+                </Button>
+                <Button
+                    variant="tertiary"
+                    onClick={() => setPreviewTarget('')}
+                >
+                    清空
+                </Button>
+            </div>
+            <SelectControl
+                label="模拟登录态"
+                value={previewLogin}
+                options={[
+                    { label: '跟随真实状态', value: 'auto' },
+                    { label: '模拟已登录', value: 'logged-in' },
+                    { label: '模拟未登录', value: 'logged-out' },
+                ]}
+                onChange={(value) => setPreviewLogin(value)}
+                help="仅影响预览命中判断，不会改变真实登录态。"
+            />
+        </div>
+    );
+
     const renderAdvancedControls = () => (
         <>
             <TextControl
@@ -2098,94 +2187,7 @@ const AdsConfig = () => {
                 }
                 help="仅对同优先级广告生效，权重越大越容易被选中。"
             />
-            <div className="magick-ad-preview-target">
-                <div className="magick-ad-preview-target__title">
-                    预览页面
-                </div>
-                <div className="magick-ad-preview-target__mode">
-                    <ButtonGroup>
-                        <Button
-                            variant="secondary"
-                            isPressed={previewMode === 'url'}
-                            onClick={() => setPreviewMode('url')}
-                        >
-                            链接
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            isPressed={previewMode === 'post'}
-                            onClick={() => setPreviewMode('post')}
-                        >
-                            文章
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            isPressed={previewMode === 'page'}
-                            onClick={() => setPreviewMode('page')}
-                        >
-                            页面
-                        </Button>
-                    </ButtonGroup>
-                </div>
-                {previewMode === 'url' ? (
-                    <TextControl
-                        label="页面链接（仅支持本站）"
-                        value={previewTarget}
-                        placeholder="https://example.com/your-page"
-                        onChange={(value) => setPreviewTarget(value)}
-                        help="填写后将使用该页面作为预览环境。"
-                    />
-                ) : (
-                    <ComboboxControl
-                        label="选择页面"
-                        value={previewSelected}
-                        options={previewOptions}
-                        onChange={handlePreviewSelect}
-                        onFilterValueChange={(value) =>
-                            setPreviewSearch(value)
-                        }
-                        placeholder={
-                            previewMode === 'page'
-                                ? '搜索页面...'
-                                : '搜索文章...'
-                        }
-                        help={
-                            previewLoading
-                                ? '正在加载列表...'
-                                : '选择后将自动作为预览环境'
-                        }
-                    />
-                )}
-                <div className="magick-ad-preview-target__actions">
-                    <Button
-                        variant="secondary"
-                        onClick={() =>
-                            setPreviewTarget(
-                                window?.MagickAD?.previewUrl || ''
-                            )
-                        }
-                    >
-                        使用首页
-                    </Button>
-                    <Button
-                        variant="tertiary"
-                        onClick={() => setPreviewTarget('')}
-                    >
-                        清空
-                    </Button>
-                </div>
-                <SelectControl
-                    label="模拟登录态"
-                    value={previewLogin}
-                    options={[
-                        { label: '跟随真实状态', value: 'auto' },
-                        { label: '模拟已登录', value: 'logged-in' },
-                        { label: '模拟未登录', value: 'logged-out' },
-                    ]}
-                    onChange={(value) => setPreviewLogin(value)}
-                    help="仅影响预览命中判断，不会改变真实登录态。"
-                />
-            </div>
+            {renderPreviewControls()}
         </>
     );
 
@@ -3440,6 +3442,13 @@ const AdsConfig = () => {
                     setPublishModalOpen(true);
                 }}
             />
+            <Button
+                className="magick-ad-toolbar-toggle"
+                icon={globe}
+                label="预览设置"
+                variant="tertiary"
+                onClick={() => setPreviewModalOpen(true)}
+            />
         </>
     ) : null;
 
@@ -3620,6 +3629,20 @@ const AdsConfig = () => {
                     onRequestClose={() => setPlacementModalOpen(false)}
                 >
                     {renderPlacementSection()}
+                </Modal>
+            )}
+
+            {previewModalOpen && selectedAd && (
+                <Modal
+                    title="预览设置"
+                    className="magick-ad-config-modal"
+                    onRequestClose={() => setPreviewModalOpen(false)}
+                >
+                    <Panel>
+                        <PanelBody title="预览页面" initialOpen>
+                            {renderPreviewControls()}
+                        </PanelBody>
+                    </Panel>
                 </Modal>
             )}
 
