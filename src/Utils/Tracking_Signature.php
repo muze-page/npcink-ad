@@ -38,15 +38,21 @@ final class Tracking_Signature {
         string $sig_ts,
         string $slot = '',
         string $position = '',
-        string $container = ''
+        string $container = '',
+        string $rev = ''
     ): string {
-        $payload = implode('|', array(
+        $payload = array(
             $ad_id,
             $sig_ts,
             self::normalize_slot($slot),
             self::normalize_position($position),
             self::normalize_container($container),
-        ));
+        );
+        $rev = self::normalize_rev($rev);
+        if ($rev !== '') {
+            $payload[] = $rev;
+        }
+        $payload = implode('|', $payload);
         return hash_hmac('sha256', $payload, self::get_secret());
     }
 
@@ -56,13 +62,14 @@ final class Tracking_Signature {
         string $sig_ts,
         string $slot = '',
         string $position = '',
-        string $container = ''
+        string $container = '',
+        string $rev = ''
     ): bool {
         if ($ad_id === '' || $sig === '' || $sig_ts === '') {
             return false;
         }
 
-        $expected = self::build($ad_id, $sig_ts, $slot, $position, $container);
+        $expected = self::build($ad_id, $sig_ts, $slot, $position, $container, $rev);
         if (!hash_equals($expected, $sig)) {
             return false;
         }
@@ -91,7 +98,7 @@ final class Tracking_Signature {
     }
 
     public static function get_signature_window_days(): int {
-        $days = (int) get_option(self::OPTION_TRACK_SIGNATURE_DAYS, 14);
+        $days = (int) get_option(self::OPTION_TRACK_SIGNATURE_DAYS, 3);
         $days = max(1, min($days, 90));
         $days = (int) apply_filters('magick_ad_track_signature_window_days', $days);
         return max(1, min($days, 90));
@@ -159,6 +166,18 @@ final class Tracking_Signature {
     private static function normalize_container(string $container): string {
         $container = sanitize_text_field($container);
         return in_array($container, self::CONTAINER_ALLOWLIST, true) ? $container : '';
+    }
+
+    private static function normalize_rev(string $rev): string {
+        if ($rev === '') {
+            return '';
+        }
+        if (is_numeric($rev)) {
+            $value = (int) $rev;
+            return $value > 0 ? (string) $value : '';
+        }
+        $rev = sanitize_text_field($rev);
+        return $rev !== '' ? $rev : '';
     }
 
     private static function get_secret(): string {

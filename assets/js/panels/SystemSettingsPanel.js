@@ -1,5 +1,6 @@
 import { useEffect, useState } from '@wordpress/element';
 import {
+    Button,
     Card,
     CardBody,
     Notice,
@@ -21,6 +22,7 @@ const DEFAULT_SETTINGS = {
     stats_diagnostics_retention_days: 7,
     stats_diagnostics_auto_off_days: 7,
     stats_diagnostics_expires_at: 0,
+    page_cache_detected: false,
     slot_client_resolver: true,
     html_sandbox: false,
     brand_name: 'Magick AD',
@@ -186,6 +188,27 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             }
                             help="开启后仅输出候选 ID，由前端按权重决定展示，适配全页缓存场景。"
                         />
+                        {settings.page_cache_detected &&
+                            !settings.slot_client_resolver && (
+                                <Notice status="warning" isDismissible={false}>
+                                    检测到可能启用了全页缓存，随机策略=请求在缓存页面会失效。
+                                    建议启用“缓存友好 Slot 轮播”或改用随机=会话策略。
+                                    <div style={{ marginTop: 8 }}>
+                                        <Button
+                                            variant="primary"
+                                            size="small"
+                                            disabled={loading || saving}
+                                            onClick={() =>
+                                                updateSettings({
+                                                    slot_client_resolver: true,
+                                                })
+                                            }
+                                        >
+                                            一键启用轮播
+                                        </Button>
+                                    </div>
+                                </Notice>
+                            )}
                         <ToggleControl
                             label="Full HTML 启用 iframe 沙箱"
                             checked={Boolean(settings.html_sandbox)}

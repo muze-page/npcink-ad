@@ -5,6 +5,7 @@ namespace MagickAD\REST\Controllers;
 use WP_Error;
 use WP_REST_Request;
 use MagickAD\Frontend\Frontend;
+use MagickAD\Data\Ads;
 use MagickAD\Data\Settings;
 use MagickAD\Utils\Tracking_Signature;
 
@@ -14,6 +15,10 @@ if (!defined('ABSPATH')) {
 
 final class Render_Controller {
     private const CACHE_GROUP = 'magick_ad_render';
+    private const MAX_AD_ID_LENGTH = 64;
+    private const MAX_SIG_LENGTH = 64;
+    private const MAX_SIG_TS_LENGTH = 16;
+    private const MAX_SIG_REV_LENGTH = 16;
 
     public static function render(WP_REST_Request $request) {
         $payload = $request->get_json_params();
@@ -24,16 +29,38 @@ final class Render_Controller {
             return $rate_limited;
         }
 
-        $ad_id = isset($payload['ad_id']) ? sanitize_text_field($payload['ad_id']) : '';
-        $sig = isset($payload['sig']) ? sanitize_text_field($payload['sig']) : '';
-        $sig_ts = isset($payload['sig_ts']) ? sanitize_text_field($payload['sig_ts']) : '';
+        $ad_id = isset($payload['ad_id'])
+            ? self::sanitize_short_text((string) $payload['ad_id'], self::MAX_AD_ID_LENGTH)
+            : '';
+        $sig = isset($payload['sig'])
+            ? self::sanitize_short_text((string) $payload['sig'], self::MAX_SIG_LENGTH)
+            : '';
+        $sig_ts = isset($payload['sig_ts'])
+            ? self::sanitize_short_text((string) $payload['sig_ts'], self::MAX_SIG_TS_LENGTH)
+            : '';
+        $sig_rev = isset($payload['sig_rev'])
+            ? self::sanitize_short_text((string) $payload['sig_rev'], self::MAX_SIG_REV_LENGTH)
+            : '';
 
         $args = self::sanitize_args($payload);
         $slot = isset($args['slot']) ? (string) $args['slot'] : '';
         $position = isset($args['position']) ? (string) $args['position'] : '';
         $container = isset($args['container']) ? (string) $args['container'] : '';
 
-        if ($ad_id === '' || !Tracking_Signature::is_valid($ad_id, $sig, $sig_ts, $slot, $position, $container)) {
+        $runtime_rev = self::get_runtime_rev();
+        if ($runtime_rev > 0 && (int) $sig_rev !== $runtime_rev) {
+            return new WP_Error('magick_ad_invalid_signature', 'Invalid signature', array('status' => 403));
+        }
+        $signature_valid = Tracking_Signature::is_valid(
+            $ad_id,
+            $sig,
+            $sig_ts,
+            $slot,
+            $position,
+            $container,
+            $runtime_rev > 0 ? (string) $runtime_rev : ''
+        );
+        if ($ad_id === '' || (self::is_signature_required() && !$signature_valid)) {
             return new WP_Error('magick_ad_invalid_signature', 'Invalid signature', array('status' => 403));
         }
 
@@ -55,6 +82,11 @@ final class Render_Controller {
     }
 
     public static function render_batch(WP_REST_Request $request) {
+        $body_limit = self::get_body_limit();
+        if ($body_limit > 0 && self::is_request_too_large($request, $body_limit)) {
+            return new WP_Error('magick_ad_payload_too_large', 'Payload too large', array('status' => 413));
+        }
+
         $payload = $request->get_json_params();
         $payload = is_array($payload) ? $payload : array();
         $items = isset($payload['items']) && is_array($payload['items']) ? $payload['items'] : array();
@@ -72,19 +104,48 @@ final class Render_Controller {
             $items = array_slice($items, 0, $limit);
         }
 
+        self::prime_post_cache_from_items($items);
+
         $response_items = array();
         foreach ($items as $item) {
             $item = is_array($item) ? $item : array();
-            $ad_id = isset($item['ad_id']) ? sanitize_text_field($item['ad_id']) : '';
-            $sig = isset($item['sig']) ? sanitize_text_field($item['sig']) : '';
-            $sig_ts = isset($item['sig_ts']) ? sanitize_text_field($item['sig_ts']) : '';
+            $ad_id = isset($item['ad_id'])
+                ? self::sanitize_short_text((string) $item['ad_id'], self::MAX_AD_ID_LENGTH)
+                : '';
+            $sig = isset($item['sig'])
+                ? self::sanitize_short_text((string) $item['sig'], self::MAX_SIG_LENGTH)
+                : '';
+            $sig_ts = isset($item['sig_ts'])
+                ? self::sanitize_short_text((string) $item['sig_ts'], self::MAX_SIG_TS_LENGTH)
+                : '';
+            $sig_rev = isset($item['sig_rev'])
+                ? self::sanitize_short_text((string) $item['sig_rev'], self::MAX_SIG_REV_LENGTH)
+                : '';
 
             $args = self::sanitize_args($item);
             $slot = isset($args['slot']) ? (string) $args['slot'] : '';
             $position = isset($args['position']) ? (string) $args['position'] : '';
             $container = isset($args['container']) ? (string) $args['container'] : '';
 
-            if ($ad_id === '' || !Tracking_Signature::is_valid($ad_id, $sig, $sig_ts, $slot, $position, $container)) {
+            $runtime_rev = self::get_runtime_rev();
+            if ($runtime_rev > 0 && (int) $sig_rev !== $runtime_rev) {
+                $response_items[] = array(
+                    'success' => false,
+                    'ad_id' => $ad_id,
+                    'html' => '',
+                );
+                continue;
+            }
+            $signature_valid = Tracking_Signature::is_valid(
+                $ad_id,
+                $sig,
+                $sig_ts,
+                $slot,
+                $position,
+                $container,
+                $runtime_rev > 0 ? (string) $runtime_rev : ''
+            );
+            if ($ad_id === '' || (self::is_signature_required() && !$signature_valid)) {
                 $response_items[] = array(
                     'success' => false,
                     'ad_id' => $ad_id,
@@ -116,6 +177,114 @@ final class Render_Controller {
             'success' => true,
             'items' => $response_items,
         ));
+    }
+
+    private static function prime_post_cache_from_items(array $items): void {
+        if (empty($items)) {
+            return;
+        }
+
+        $ad_ids = array();
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $ad_id = isset($item['ad_id']) ? sanitize_text_field((string) $item['ad_id']) : '';
+            if ($ad_id !== '') {
+                $ad_ids[$ad_id] = true;
+            }
+        }
+        if (empty($ad_ids)) {
+            return;
+        }
+
+        $settings = Settings::get_runtime_settings();
+        $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        if (empty($ads)) {
+            return;
+        }
+
+        $post_ids = array();
+        foreach ($ads as $ad) {
+            if (!is_array($ad)) {
+                continue;
+            }
+            $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
+            if ($ad_id === '' || !isset($ad_ids[$ad_id])) {
+                continue;
+            }
+            $post_id = isset($ad['post_id']) ? absint($ad['post_id']) : 0;
+            if ($post_id > 0) {
+                $post_ids[$post_id] = true;
+            }
+        }
+
+        if (empty($post_ids)) {
+            return;
+        }
+
+        $post_ids = array_keys($post_ids);
+        get_posts(
+            array(
+                'post_type' => Ads::POST_TYPE,
+                'post_status' => 'any',
+                'posts_per_page' => -1,
+                'post__in' => $post_ids,
+                'orderby' => 'post__in',
+                'no_found_rows' => true,
+                'suppress_filters' => true,
+                'update_post_term_cache' => false,
+                'update_post_meta_cache' => true,
+            )
+        );
+        update_meta_cache('post', $post_ids);
+    }
+
+    private static function is_signature_required(): bool {
+        $required = (bool) apply_filters('magick_ad_render_require_signature', true);
+        if (self::is_production_environment()) {
+            return true;
+        }
+        return $required;
+    }
+
+    private static function get_runtime_rev(): int {
+        return (int) get_option(\MagickAD\Data\Settings::RUNTIME_REV_KEY, 0);
+    }
+
+    private static function get_body_limit(): int {
+        $limit = (int) apply_filters('magick_ad_render_body_limit', 131072);
+        return max(0, $limit);
+    }
+
+    private static function is_request_too_large(WP_REST_Request $request, int $limit): bool {
+        $length = $request->get_header('content-length');
+        if ($length === '' && isset($_SERVER['CONTENT_LENGTH'])) {
+            $length = (string) $_SERVER['CONTENT_LENGTH'];
+        }
+        if (is_numeric($length)) {
+            return (int) $length > $limit;
+        }
+        $body = $request->get_body();
+        if ($body !== '') {
+            return strlen($body) > $limit;
+        }
+        return false;
+    }
+
+    private static function sanitize_short_text(string $value, int $max): string {
+        $value = sanitize_text_field($value);
+        if ($max > 0 && strlen($value) > $max) {
+            return substr($value, 0, $max);
+        }
+        return $value;
+    }
+
+    private static function is_production_environment(): bool {
+        if (!function_exists('wp_get_environment_type')) {
+            return false;
+        }
+        return wp_get_environment_type() === 'production';
     }
 
     private static function sanitize_args(array $payload): array {
@@ -225,7 +394,9 @@ final class Render_Controller {
             return null;
         }
         if (!self::should_use_persistent_cache()) {
-            return null;
+            if (self::get_rate_limit_fallback() !== 'transient') {
+                return null;
+            }
         }
 
         $ip = self::get_request_ip();
@@ -246,6 +417,12 @@ final class Render_Controller {
     private static function should_use_persistent_cache(): bool {
         $use = wp_using_ext_object_cache();
         return (bool) apply_filters('magick_ad_render_use_persistent_cache', $use);
+    }
+
+    private static function get_rate_limit_fallback(): string {
+        $fallback = (string) get_option('magick_ad_rate_limit_fallback', 'transient');
+        $fallback = (string) apply_filters('magick_ad_render_rate_limit_fallback', $fallback);
+        return $fallback === 'transient' ? 'transient' : 'off';
     }
 
     private static function get_request_ip(): string {

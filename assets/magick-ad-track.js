@@ -5,10 +5,10 @@
         return;
     }
 
-    const hasConsent = config.hasConsent === true;
+    let hasConsent = config.hasConsent === true;
     const requireConsent = config.requireConsent === true;
-    const allowLocalStorage = hasConsent;
-    const allowSessionStorage = hasConsent;
+    let allowLocalStorage = hasConsent;
+    let allowSessionStorage = hasConsent;
 
     const readStorageValue = (storage, key) => {
         if (
@@ -82,6 +82,7 @@
             event,
             sig: element.getAttribute('data-ad-sig') || '',
             sigTs: element.getAttribute('data-ad-sig-ts') || '',
+            sigRev: element.getAttribute('data-ad-sig-rev') || '',
             slot: element.getAttribute('data-ad-slot') || '',
             position: element.getAttribute('data-ad-position') || '',
             container: element.getAttribute('data-ad-container') || '',
@@ -103,6 +104,9 @@
         }
         if (payload.sigTs) {
             item.sig_ts = payload.sigTs;
+        }
+        if (payload.sigRev) {
+            item.sig_rev = payload.sigRev;
         }
         if (payload.slot) {
             item.slot = payload.slot;
@@ -372,6 +376,15 @@
         observeNewAds();
     }
     document.addEventListener('click', handleClick, true);
+    window.addEventListener('magickad:consent', (event) => {
+        const next = event?.detail?.hasConsent;
+        if (next !== true) {
+            return;
+        }
+        hasConsent = true;
+        allowLocalStorage = true;
+        allowSessionStorage = true;
+    });
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
             flushQueue({ useBeacon: true, force: true });

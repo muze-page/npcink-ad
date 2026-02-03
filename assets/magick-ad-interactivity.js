@@ -68,6 +68,13 @@
             if (window.MagickADBehavior) {
                 window.MagickADBehavior.hasConsent = true;
             }
+            window.dispatchEvent(
+                new CustomEvent('magickad:consent', {
+                    detail: {
+                        hasConsent: true,
+                    },
+                })
+            );
             bar.remove();
         });
 
@@ -585,8 +592,10 @@
         const container = args?.container || '';
         const className = args?.class || '';
         const creative = args?.creative || '';
+        const sigRev = candidate?.sig_rev || '';
         return [
             candidate.id,
+            sigRev,
             slot,
             position,
             container,
@@ -599,6 +608,7 @@
         ad_id: candidate.id,
         sig: candidate.sig || '',
         sig_ts: candidate.sig_ts || '',
+        sig_rev: candidate.sig_rev || '',
         slot: args?.slot || '',
         position: args?.position || '',
         class: args?.class || '',

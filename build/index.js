@@ -3324,6 +3324,7 @@ const DEFAULT_SETTINGS = {
   stats_diagnostics_retention_days: 7,
   stats_diagnostics_auto_off_days: 7,
   stats_diagnostics_expires_at: 0,
+  page_cache_detected: false,
   slot_client_resolver: true,
   html_sandbox: false,
   brand_name: 'Magick AD',
@@ -3474,7 +3475,21 @@ const SystemSettingsPanel = ({
       slot_client_resolver: value
     }),
     help: "\u5F00\u542F\u540E\u4EC5\u8F93\u51FA\u5019\u9009 ID\uFF0C\u7531\u524D\u7AEF\u6309\u6743\u91CD\u51B3\u5B9A\u5C55\u793A\uFF0C\u9002\u914D\u5168\u9875\u7F13\u5B58\u573A\u666F\u3002"
-  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+  }), settings.page_cache_detected && !settings.slot_client_resolver && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "warning",
+    isDismissible: false
+  }, "\u68C0\u6D4B\u5230\u53EF\u80FD\u542F\u7528\u4E86\u5168\u9875\u7F13\u5B58\uFF0C\u968F\u673A\u7B56\u7565=\u8BF7\u6C42\u5728\u7F13\u5B58\u9875\u9762\u4F1A\u5931\u6548\u3002 \u5EFA\u8BAE\u542F\u7528\u201C\u7F13\u5B58\u53CB\u597D Slot \u8F6E\u64AD\u201D\u6216\u6539\u7528\u968F\u673A=\u4F1A\u8BDD\u7B56\u7565\u3002", (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    style: {
+      marginTop: 8
+    }
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+    variant: "primary",
+    size: "small",
+    disabled: loading || saving,
+    onClick: () => updateSettings({
+      slot_client_resolver: true
+    })
+  }, "\u4E00\u952E\u542F\u7528\u8F6E\u64AD"))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
     label: "Full HTML \u542F\u7528 iframe \u6C99\u7BB1",
     checked: Boolean(settings.html_sandbox),
     disabled: loading || saving,

@@ -81,6 +81,11 @@ final class System_Settings_Controller {
         );
         $consent_banner_button = get_option('magick_ad_consent_banner_button', '同意');
 
+        $tracking_require_signature = (get_option('magick_ad_track_require_signature', '1') === '1');
+        if (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'production') {
+            $tracking_require_signature = true;
+        }
+
         $settings = array(
             'tracking_strategy' => TrackingStrategy::from_value(
                 get_option('magick_ad_tracking_strategy', 'session')
@@ -88,7 +93,8 @@ final class System_Settings_Controller {
             'tracking_require_consent' => (get_option('magick_ad_tracking_require_consent', '0') === '1'),
             'tracking_dedupe_ttl' => $dedupe_ttl,
             'tracking_dedupe_scope' => $dedupe_scope,
-            'tracking_require_signature' => (get_option('magick_ad_track_require_signature', '1') === '1'),
+            'tracking_require_signature' => $tracking_require_signature,
+            'page_cache_detected' => self::is_page_cache_detected(),
             'stats_diagnostics' => (get_option('magick_ad_stats_diagnostics', '0') === '1'),
             'stats_diagnostics_retention_days' => $retention_days,
             'stats_diagnostics_auto_off_days' => $auto_off_days,
@@ -106,6 +112,20 @@ final class System_Settings_Controller {
         );
 
         return rest_ensure_response($settings);
+    }
+
+    private static function is_page_cache_detected(): bool {
+        if (defined('WP_CACHE') && WP_CACHE) {
+            return true;
+        }
+        if (defined('WPCACHEHOME')) {
+            return true;
+        }
+        $advanced_cache = WP_CONTENT_DIR . '/advanced-cache.php';
+        if (is_readable($advanced_cache)) {
+            return true;
+        }
+        return false;
     }
 
     public static function update(WP_REST_Request $request) {
@@ -128,6 +148,9 @@ final class System_Settings_Controller {
         $tracking_require_signature = !array_key_exists('tracking_require_signature', $params)
             ? (get_option('magick_ad_track_require_signature', '1') === '1')
             : !empty($params['tracking_require_signature']);
+        if (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'production') {
+            $tracking_require_signature = true;
+        }
         $stats_diagnostics = !empty($params['stats_diagnostics']);
         $stats_diagnostics_retention_days = self::sanitize_positive_int(
             $params['stats_diagnostics_retention_days'] ?? get_option('magick_ad_stats_diagnostics_retention_days', 7),

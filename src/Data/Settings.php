@@ -50,9 +50,12 @@ final class Settings {
         }
 
         $rev = (int) get_option(self::RUNTIME_REV_KEY, 0) + 1;
+        $ads_payload = self::maybe_strip_runtime_ads(is_array($ads) ? $ads : array());
         $payload = array(
-            'ads' => self::maybe_strip_runtime_ads(is_array($ads) ? $ads : array()),
+            'ads' => $ads_payload,
             'slots' => is_array($slots) ? $slots : array(),
+            'index' => self::build_runtime_index($ads_payload),
+            'needs_random_cookie' => self::ads_need_random_cookie($ads_payload),
             '_rev' => $rev,
         );
 
@@ -72,6 +75,72 @@ final class Settings {
             unset($settings['_rev']);
         }
         return $settings;
+    }
+
+    private static function build_runtime_index(array $ads): array {
+        $index = array(
+            'ads' => array(),
+            'all' => array(),
+            'hooks' => array(),
+            'placements' => array(),
+        );
+
+        foreach ($ads as $position => $ad) {
+            if (!is_array($ad)) {
+                continue;
+            }
+            $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
+            if ($ad_id === '') {
+                continue;
+            }
+            $index['ads'][$ad_id] = $position;
+            $index['all'][] = $ad_id;
+
+            $options = isset($ad['options']) && is_array($ad['options']) ? $ad['options'] : array();
+            $hook = isset($options['placement_hook']) ? (string) $options['placement_hook'] : '';
+            $pos = isset($options['placement_position']) ? (string) $options['placement_position'] : '';
+            $paragraph = isset($options['placement_paragraph']) ? absint($options['placement_paragraph']) : 0;
+
+            if ($hook === 'content' && $pos === 'paragraph') {
+                if ($paragraph < 1) {
+                    $paragraph = 2;
+                }
+            } else {
+                $pos = $hook === 'content' ? $pos : '';
+                $paragraph = 0;
+            }
+
+            $index['placements'][$ad_id] = array(
+                'hook' => $hook,
+                'position' => $pos,
+                'paragraph' => $paragraph,
+            );
+
+            if ($hook !== '') {
+                if (!isset($index['hooks'][$hook])) {
+                    $index['hooks'][$hook] = array();
+                }
+                $index['hooks'][$hook][] = $ad_id;
+            }
+        }
+
+        return $index;
+    }
+
+    private static function ads_need_random_cookie(array $ads): bool {
+        foreach ($ads as $ad) {
+            if (!is_array($ad)) {
+                continue;
+            }
+            $options = isset($ad['options']) && is_array($ad['options']) ? $ad['options'] : array();
+            if (($options['display_mode'] ?? '') !== 'random') {
+                continue;
+            }
+            if (($options['random_strategy'] ?? '') === 'cookie') {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static function maybe_strip_runtime_ads(array $ads): array {
@@ -510,6 +579,7 @@ final class Settings {
                 'hide'
             ),
             'node_compact' => isset($options['node_compact']) ? (bool) $options['node_compact'] : true,
+            'render_require_consent' => !empty($options['render_require_consent']),
         );
 
         $placement = self::normalize_placement($options);
@@ -550,6 +620,7 @@ final class Settings {
             'video_url' => isset($content['video_url']) ? esc_url_raw($content['video_url']) : '',
             'link' => isset($content['link']) ? esc_url_raw($content['link']) : '',
             'link_target' => !empty($content['link_target']),
+            'link_rel' => isset($content['link_rel']) ? sanitize_text_field($content['link_rel']) : '',
             'cta_text' => isset($content['cta_text']) ? sanitize_text_field($content['cta_text']) : '',
             'custom_html' => $custom_html,
             'custom_css' => $custom_css,
