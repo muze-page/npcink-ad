@@ -1,8 +1,19 @@
 import { create } from 'zustand';
 import apiFetch from '@wordpress/api-fetch';
 import { cleanForSlug } from '@wordpress/url';
+import type {
+    Ad,
+    AdType,
+    AdOptions,
+    AdContent,
+    Slot,
+    StoreState,
+} from './types';
 
-const createAdGroupTemplate = (type = 'global', ads = []) => ({
+const createAdGroupTemplate = (
+    type: AdType = 'global',
+    ads: Ad[] = []
+): Ad => ({
     id: `ad_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     name: type === 'targeted' ? '指定广告' : '全局广告',
     status: 'publish',
@@ -35,6 +46,7 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
         node_index: 1,
         node_fallback: 'hide',
         node_compact: true,
+        render_require_consent: false,
     },
     content: {
         html: '',
@@ -43,6 +55,7 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
         image: { id: 0, url: '', alt: '' },
         link: '',
         link_target: false,
+        link_rel: '',
         cta_text: '',
         custom_html: '',
         custom_css: '',
@@ -91,7 +104,7 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
     },
 });
 
-const createSlotTemplate = (slots = []) => {
+const createSlotTemplate = (slots: Slot[] = []): Slot => {
     const existing = new Set(
         (slots || []).map((slot) => cleanForSlug(slot?.id || ''))
     );
@@ -110,7 +123,11 @@ const createSlotTemplate = (slots = []) => {
     };
 };
 
-const normalizePlacement = (options) => {
+const normalizePlacement = (options: Partial<AdOptions>): {
+    hook: string;
+    position: string;
+    paragraph: number;
+} => {
     const placement = {
         hook: options.placement_hook || 'footer',
         position: options.placement_position || '',
@@ -132,14 +149,16 @@ const normalizePlacement = (options) => {
     return placement;
 };
 
-const normalizeAd = (ad) => {
-    const safeAd = ad && typeof ad === 'object' ? ad : {};
+const normalizeAd = (ad: unknown): Ad => {
+    const safeAd = ad && typeof ad === 'object' ? (ad as Record<string, any>) : {};
     const options =
         safeAd.options && typeof safeAd.options === 'object'
             ? safeAd.options
             : {};
-    const content = safeAd.content && typeof safeAd.content === 'object' ? safeAd.content : {};
-    const image = content.image && typeof content.image === 'object' ? content.image : {};
+    const content =
+        safeAd.content && typeof safeAd.content === 'object' ? safeAd.content : {};
+    const image =
+        content.image && typeof content.image === 'object' ? content.image : {};
     const containerStyle =
         content.container_style && typeof content.container_style === 'object'
             ? content.container_style
@@ -219,8 +238,10 @@ const normalizeAd = (ad) => {
             end_date: options.end_date || '',
             target_type: options.target_type || '',
             target_ids: Array.isArray(options.target_ids)
-                ? options.target_ids.map((id) => Number(id)).filter(Boolean)
+                ? options.target_ids.map((id: number) => Number(id)).filter(Boolean)
                 : [],
+            priority: Number(options.priority || 10),
+            weight: Number(options.weight || 1),
             node_target_type: ['id', 'class'].includes(options.node_target_type)
                 ? options.node_target_type
                 : 'id',
@@ -240,8 +261,8 @@ const normalizeAd = (ad) => {
             node_fallback: ['hide', 'footer'].includes(options.node_fallback)
                 ? options.node_fallback
                 : 'hide',
-            node_compact:
-                options.node_compact === false ? false : true,
+            node_compact: options.node_compact === false ? false : true,
+            render_require_consent: Boolean(options.render_require_consent),
         },
         content: {
             html: content.html || '',
@@ -249,6 +270,7 @@ const normalizeAd = (ad) => {
             video_url: content.video_url || '',
             link: content.link || '',
             link_target: Boolean(content.link_target),
+            link_rel: content.link_rel || '',
             cta_text: content.cta_text || '',
             custom_html: content.custom_html || '',
             custom_css: content.custom_css || '',
@@ -292,26 +314,25 @@ const normalizeAd = (ad) => {
                         ? 'centered'
                         : '',
             },
-        behavior: {
-            animation: ['none', 'fade', 'slide-up', 'zoom'].includes(
-                behavior.animation
-            )
-                ? behavior.animation
-                : 'none',
-            close_button: Boolean(behavior.close_button),
-            close_on_esc:
-                behavior.close_on_esc === false ? false : true,
-            close_on_overlay:
-                behavior.close_on_overlay === false ? false : true,
-            lock_scroll: Boolean(behavior.lock_scroll),
-            frequency_mode: ['none', 'session', 'day', 'count'].includes(
-                behavior.frequency_mode
-            )
-                ? behavior.frequency_mode
-                : 'none',
-            frequency_limit: Number(behavior.frequency_limit || 1),
-            delay: Number(behavior.delay || 0),
-        },
+            behavior: {
+                animation: ['none', 'fade', 'slide-up', 'zoom'].includes(
+                    behavior.animation
+                )
+                    ? behavior.animation
+                    : 'none',
+                close_button: Boolean(behavior.close_button),
+                close_on_esc: behavior.close_on_esc === false ? false : true,
+                close_on_overlay:
+                    behavior.close_on_overlay === false ? false : true,
+                lock_scroll: Boolean(behavior.lock_scroll),
+                frequency_mode: ['none', 'session', 'day', 'count'].includes(
+                    behavior.frequency_mode
+                )
+                    ? behavior.frequency_mode
+                    : 'none',
+                frequency_limit: Number(behavior.frequency_limit || 1),
+                delay: Number(behavior.delay || 0),
+            },
             image_settings: {
                 watermark: Boolean(imageSettings.watermark),
                 radius: Number(imageSettings.radius || 0),
@@ -325,8 +346,8 @@ const normalizeAd = (ad) => {
     };
 };
 
-const normalizeSlot = (slot) => {
-    const safeSlot = slot && typeof slot === 'object' ? slot : {};
+const normalizeSlot = (slot: unknown): Slot => {
+    const safeSlot = slot && typeof slot === 'object' ? (slot as Record<string, any>) : {};
     return {
         id: typeof safeSlot.id === 'string' ? safeSlot.id : '',
         label: typeof safeSlot.label === 'string' ? safeSlot.label : '',
@@ -334,13 +355,13 @@ const normalizeSlot = (slot) => {
             ? safeSlot.ad_ids.filter(Boolean)
             : [],
         weights: Array.isArray(safeSlot.weights)
-            ? safeSlot.weights.map((value) => Number(value) || 1)
+            ? safeSlot.weights.map((value: number) => Number(value) || 1)
             : [],
         limit: Number(safeSlot.limit || 1),
     };
 };
 
-export const useStore = create((set, get) => ({
+export const useStore = create<StoreState>((set, get) => ({
     ads: [],
     slots: [],
     isLoading: false,
@@ -378,7 +399,7 @@ export const useStore = create((set, get) => ({
         set((state) => {
             const next = [...state.slots];
             if (!next[index]) {
-                return {};
+                return state;
             }
             next[index] = { ...next[index], ...updates };
             return { slots: next };
@@ -413,19 +434,19 @@ export const useStore = create((set, get) => ({
                 method: 'GET',
             });
 
-            let ads = [];
-            let slots = [];
+            let ads: Ad[] = [];
+            let slots: Slot[] = [];
             if (Array.isArray(response)) {
-                ads = response;
-            } else if (Array.isArray(response?.ads)) {
-                ads = response.ads;
-                if (Array.isArray(response?.slots)) {
-                    slots = response.slots;
+                ads = response as Ad[];
+            } else if (Array.isArray((response as any)?.ads)) {
+                ads = (response as any).ads;
+                if (Array.isArray((response as any)?.slots)) {
+                    slots = (response as any).slots;
                 }
-            } else if (Array.isArray(response?.saved?.ads)) {
-                ads = response.saved.ads;
-                if (Array.isArray(response?.saved?.slots)) {
-                    slots = response.saved.slots;
+            } else if (Array.isArray((response as any)?.saved?.ads)) {
+                ads = (response as any).saved.ads;
+                if (Array.isArray((response as any)?.saved?.slots)) {
+                    slots = (response as any).saved.slots;
                 }
             }
 

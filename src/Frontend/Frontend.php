@@ -4,6 +4,7 @@ namespace MagickAD\Frontend;
 
 use MagickAD\Data\Ads;
 use MagickAD\Data\Settings;
+use MagickAD\REST\Controllers\Track_Controller;
 use MagickAD\Utils\Capabilities;
 
 if (!defined('ABSPATH')) {
@@ -541,6 +542,27 @@ final class Frontend {
         return !empty($ads) ? $ads[0] : null;
     }
 
+    private static function get_frontend_script_asset(string $handle, string $fallback): array {
+        $asset_path = MAGICK_AD_PATH . 'build/' . $handle . '.asset.php';
+        $script_path = MAGICK_AD_PATH . 'build/' . $handle . '.js';
+        if (file_exists($asset_path) && file_exists($script_path)) {
+            $asset = require $asset_path;
+            return array(
+                'src' => MAGICK_AD_URL . 'build/' . $handle . '.js',
+                'dependencies' => isset($asset['dependencies']) && is_array($asset['dependencies'])
+                    ? $asset['dependencies']
+                    : array(),
+                'version' => isset($asset['version']) ? (string) $asset['version'] : MAGICK_AD_VERSION,
+            );
+        }
+
+        return array(
+            'src' => MAGICK_AD_URL . $fallback,
+            'dependencies' => array(),
+            'version' => MAGICK_AD_VERSION,
+        );
+    }
+
     public static function enqueue_assets(bool $force = false): void {
         if (is_admin()) {
             return;
@@ -642,14 +664,20 @@ final class Frontend {
         $needs_behavior = self::needs_behavior_assets($ads, $container_index);
         $needs_interactivity = $needs_behavior || $slot_resolver_enabled || $consent_banner_enabled;
         if ($needs_interactivity) {
-            $interactivity_deps = wp_script_is('wp-interactivity', 'registered')
-                ? array('wp-interactivity')
-                : array();
+            $interactivity_asset = self::get_frontend_script_asset(
+                'magick-ad-interactivity',
+                'assets/magick-ad-interactivity.js'
+            );
+            $interactivity_deps = $interactivity_asset['dependencies'];
+            if (wp_script_is('wp-interactivity', 'registered')) {
+                $interactivity_deps[] = 'wp-interactivity';
+            }
+            $interactivity_deps = array_values(array_unique($interactivity_deps));
             wp_enqueue_script(
                 'magick-ad-interactivity',
-                MAGICK_AD_URL . 'assets/magick-ad-interactivity.js',
+                $interactivity_asset['src'],
                 $interactivity_deps,
-                MAGICK_AD_VERSION,
+                $interactivity_asset['version'],
                 true
             );
             wp_script_add_data('magick-ad-interactivity', 'strategy', 'defer');
@@ -670,11 +698,15 @@ final class Frontend {
                 )
             );
         }
-        $track_deps = array();
+        $track_asset = self::get_frontend_script_asset(
+            'magick-ad-track',
+            'assets/magick-ad-track.js'
+        );
+        $track_deps = $track_asset['dependencies'];
         $track_config = array(
             'restUrl' => esc_url_raw(rest_url('magick-ad/v1/track')),
             'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
-            'scriptUrl' => esc_url_raw(MAGICK_AD_URL . 'assets/magick-ad-track.js'),
+            'scriptUrl' => esc_url_raw($track_asset['src']),
             'collectPageUrl' => $diagnostics_enabled,
             'hasConsent' => $has_consent,
             'requireConsent' => $requires_consent,
@@ -688,7 +720,7 @@ final class Frontend {
         );
 
         if ($defer) {
-            wp_register_script($track_handle, '', $track_deps, MAGICK_AD_VERSION, true);
+            wp_register_script($track_handle, '', $track_deps, $track_asset['version'], true);
             wp_enqueue_script($track_handle);
             wp_localize_script($track_handle, 'MagickADTrack', $track_config);
             wp_add_inline_script(
@@ -698,9 +730,9 @@ final class Frontend {
         } else {
             wp_enqueue_script(
                 $track_handle,
-                MAGICK_AD_URL . 'assets/magick-ad-track.js',
+                $track_asset['src'],
                 $track_deps,
-                MAGICK_AD_VERSION,
+                $track_asset['version'],
                 true
             );
             wp_localize_script($track_handle, 'MagickADTrack', $track_config);
@@ -1566,6 +1598,16 @@ final class Frontend {
                 'is_tag' => is_tag(),
             ),
             'ads' => array(),
+            'today_failure_stats' => array(
+                'date' => current_time('Y-m-d'),
+                'counts' => Track_Controller::get_failure_stats(),
+                'labels' => array(
+                    'signature_invalid' => '签名无效',
+                    'rate_limited' => '请求过快/被限流',
+                    'deduped' => '去重命中',
+                    'no_consent' => '未同意',
+                ),
+            ),
         );
 
         foreach ($ads as $ad) {

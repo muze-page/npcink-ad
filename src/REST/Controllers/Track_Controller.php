@@ -853,6 +853,25 @@ final class Track_Controller {
         return 'magick_ad_track_fail_' . preg_replace('/[^0-9\-]/', '', $date);
     }
 
+    public static function get_failure_stats(string $date = ''): array {
+        $date = $date !== '' ? $date : current_time('Y-m-d');
+        $key = self::failure_stats_key($date);
+        $stats = get_transient($key);
+        if (!is_array($stats)) {
+            return array();
+        }
+        $normalized = array();
+        foreach ($stats as $reason => $count) {
+            $reason_key = self::normalize_failure_reason((string) $reason);
+            if ($reason_key === '') {
+                continue;
+            }
+            $normalized[$reason_key] = (int) $count;
+        }
+        ksort($normalized);
+        return $normalized;
+    }
+
     private static function normalize_failure_reason(string $reason): string {
         $reason = sanitize_key($reason);
         $allowed = array(
