@@ -251,6 +251,21 @@
     color: #ffffff;
 }
 
+.magick-ad-preview-toolbar__toggle.components-button {
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    min-width: auto;
+}
+
+.magick-ad-preview-toolbar__toggle.is-active {
+    background: #2563eb;
+    color: #ffffff;
+}
+
 .magick-ad-preview-toast {
     display: inline-flex;
     align-items: center;

@@ -46,6 +46,8 @@ const Layout = ({
     preview,
     previewTarget,
     previewLogin = 'auto',
+    previewUsePage = false,
+    onPreviewUsePageChange,
 }) => {
     const iframeRef = useRef(null);
     const editorRef = useRef(null);
@@ -429,18 +431,21 @@ const Layout = ({
         url.searchParams.set('magick_ad_preview_ad', adData.id);
         url.searchParams.set('magick_ad_preview_nonce', previewNonce);
         url.searchParams.set('magick_ad_preview_device', devicePreview);
-        if (baseUrl) {
+        if (baseUrl || previewUsePage) {
             url.searchParams.set('magick_ad_preview_mode', 'page');
         }
         return url.toString();
-    }, [adData?.id, devicePreview, previewTarget]);
+    }, [adData?.id, devicePreview, previewTarget, previewUsePage]);
 
     const isPagePreview = useMemo(() => {
+        if (previewUsePage) {
+            return true;
+        }
         if (!previewTarget || typeof previewTarget !== 'string') {
             return false;
         }
         return previewTarget.trim().length > 0;
-    }, [previewTarget]);
+    }, [previewTarget, previewUsePage]);
 
     const previewFrame = useMemo(() => {
         if (!previewSrc) {
@@ -830,6 +835,23 @@ const Layout = ({
                                                             }
                                                         />
                                                     ))}
+                                                    <Button
+                                                        className={`magick-ad-preview-toolbar__toggle ${
+                                                            previewUsePage
+                                                                ? 'is-active'
+                                                                : ''
+                                                        }`}
+                                                        onClick={() =>
+                                                            onPreviewUsePageChange?.(
+                                                                !previewUsePage
+                                                            )
+                                                        }
+                                                        aria-pressed={
+                                                            previewUsePage
+                                                        }
+                                                    >
+                                                        真实页面
+                                                    </Button>
                                                 </div>
                                                 {previewToast}
                                                 {preview || previewFrame}
@@ -873,9 +895,24 @@ const Layout = ({
                                                               'tablet'
                                                             ? '平板'
                                                             : '手机'
-                                                    }
-                                                />
-                                            ))}
+                                                        }
+                                                    />
+                                                ))}
+                                            <Button
+                                                className={`magick-ad-preview-toolbar__toggle ${
+                                                    previewUsePage
+                                                        ? 'is-active'
+                                                        : ''
+                                                }`}
+                                                onClick={() =>
+                                                    onPreviewUsePageChange?.(
+                                                        !previewUsePage
+                                                    )
+                                                }
+                                                aria-pressed={previewUsePage}
+                                            >
+                                                真实页面
+                                            </Button>
                                         </div>
                                         {previewToast}
                                         {preview || previewFrame}

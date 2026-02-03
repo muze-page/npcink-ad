@@ -87,6 +87,7 @@ const AdsConfig = () => {
     const [previewSelected, setPreviewSelected] = useState('');
     const [previewLoading, setPreviewLoading] = useState(false);
     const [previewLogin, setPreviewLogin] = useState('auto');
+    const [previewUsePage, setPreviewUsePage] = useState(false);
     const [pickerConfirmOpen, setPickerConfirmOpen] = useState(false);
     const [pickerType, setPickerType] = useState('id');
     const [pickerValue, setPickerValue] = useState('');
@@ -1051,6 +1052,17 @@ const AdsConfig = () => {
             setPreviewSelected('');
         }
     }, [previewMode]);
+
+    useEffect(() => {
+        if (
+            previewTarget &&
+            typeof previewTarget === 'string' &&
+            previewTarget.trim().length > 0 &&
+            !previewUsePage
+        ) {
+            setPreviewUsePage(true);
+        }
+    }, [previewTarget, previewUsePage]);
 
     const handlePreviewSelect = (value) => {
         setPreviewSelected(value || '');
@@ -3288,6 +3300,8 @@ const AdsConfig = () => {
                 devicePreview={devicePreview}
                 previewTarget={previewTarget}
                 previewLogin={previewLogin}
+                previewUsePage={previewUsePage}
+                onPreviewUsePageChange={setPreviewUsePage}
                 onCreativeChange={(value) =>
                     selectedAd && handleUpdateOptions({ creative_type: value })
                 }
