@@ -614,6 +614,25 @@
     max-width: 80%;
 }
 
+.magick-ad-preview__unit--popup .magick-ad-html-container,
+.magick-ad-preview__unit--interstitial .magick-ad-html-container {
+    padding: 52px 24px 24px;
+}
+
+.magick-ad-preview__unit--popup .magick-ad-badge,
+.magick-ad-preview__unit--interstitial .magick-ad-badge {
+    top: 16px;
+    left: 16px;
+    right: auto;
+}
+
+.magick-ad-preview__unit--popup .magick-ad-close,
+.magick-ad-preview__unit--interstitial .magick-ad-close {
+    top: 12px;
+    right: 12px;
+    left: auto;
+}
+
 .magick-ad-preview__placement {
     position: absolute;
     left: 12px;
