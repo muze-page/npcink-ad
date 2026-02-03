@@ -49,6 +49,7 @@ final class Frontend {
         if (!self::should_display_ad($ad) && empty($args['force'])) {
             return '';
         }
+        self::enqueue_assets(true);
         $ad = self::apply_render_overrides($ad, $args);
         $position = isset($args['position']) && is_string($args['position'])
             ? $args['position']
@@ -616,10 +617,13 @@ final class Frontend {
         $has_consent = (bool) apply_filters('magick_ad_has_consent', false);
         $requires_consent = (get_option('magick_ad_tracking_require_consent', '0') === '1');
         $requires_consent = (bool) apply_filters('magick_ad_tracking_require_consent', $requires_consent);
+        $interactivity_deps = wp_script_is('wp-interactivity', 'registered')
+            ? array('wp-interactivity')
+            : array();
         wp_enqueue_script(
             'magick-ad-interactivity',
             MAGICK_AD_URL . 'assets/magick-ad-interactivity.js',
-            array('wp-interactivity'),
+            $interactivity_deps,
             MAGICK_AD_VERSION,
             true
         );
@@ -2310,6 +2314,19 @@ final class Frontend {
     private static function build_badge_markup(array $container_style): string {
         if (empty($container_style['badge_enabled'])) {
             return '';
+        }
+        $badge_type = isset($container_style['badge_type']) ? $container_style['badge_type'] : 'text';
+        if ($badge_type === 'image') {
+            $badge_image = isset($container_style['badge_image']) && is_array($container_style['badge_image'])
+                ? $container_style['badge_image']
+                : array();
+            $badge_url = isset($badge_image['url']) ? esc_url($badge_image['url']) : '';
+            if ($badge_url !== '') {
+                $badge_alt = isset($badge_image['alt']) ? $badge_image['alt'] : '';
+                $fallback_text = isset($container_style['badge_text']) ? $container_style['badge_text'] : '广告';
+                $badge_alt = $badge_alt !== '' ? $badge_alt : $fallback_text;
+                return '<span class="magick-ad-badge is-image"><img src="' . esc_url($badge_url) . '" alt="' . esc_attr($badge_alt) . '" /></span>';
+            }
         }
         $badge_text = isset($container_style['badge_text']) ? $container_style['badge_text'] : '广告';
         $badge_color = isset($container_style['badge_color']) ? $container_style['badge_color'] : '#1d2327';

@@ -262,8 +262,10 @@
         const radius = Number(containerStyle.radius || 0);
         const shadow = containerStyle.shadow || 'none';
         const badgeEnabled = !!containerStyle.badge_enabled;
+        const badgeType = containerStyle.badge_type || 'text';
         const badgeText = containerStyle.badge_text || '广告';
         const badgeColor = containerStyle.badge_color || '#1d2327';
+        const badgeImage = containerStyle.badge_image || {};
         const layout = containerStyle.layout || '';
 
         if (maxWidth) {
@@ -299,9 +301,19 @@
         }
 
         const styleAttr = styles.length ? ` style="${styles.join(';')}"` : '';
-        const badgeMarkup = badgeEnabled
-            ? `<span class="magick-ad-badge" style="background:${badgeColor}">${badgeText}</span>`
-            : '';
+        const escapeAttr = (value) =>
+            String(value || '').replace(/"/g, '&quot;');
+        let badgeMarkup = '';
+        if (badgeEnabled) {
+            if (badgeType === 'image' && badgeImage.url) {
+                const alt = badgeImage.alt || badgeText;
+                badgeMarkup = `<span class="magick-ad-badge is-image"><img src="${escapeAttr(
+                    badgeImage.url
+                )}" alt="${escapeAttr(alt)}"/></span>`;
+            } else {
+                badgeMarkup = `<span class="magick-ad-badge" style="background:${badgeColor}">${badgeText}</span>`;
+            }
+        }
         const closeMarkup = content?.behavior?.close_button
             ? '<button type="button" class="magick-ad-close" aria-label="关闭广告">×</button>'
             : '';

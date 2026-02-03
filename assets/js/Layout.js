@@ -118,16 +118,35 @@ const Layout = ({
                         style={wrapperStyle}
                     >
                         {containerStyle.badge_enabled && (
-                            <span
-                                className="magick-ad-badge"
-                                style={{
-                                    background:
-                                        containerStyle.badge_color ||
-                                        '#1d2327',
-                                }}
-                            >
-                                {containerStyle.badge_text || '广告'}
-                            </span>
+                            <>
+                                {containerStyle.badge_type === 'image' &&
+                                containerStyle.badge_image?.url ? (
+                                    <span className="magick-ad-badge is-image">
+                                        <img
+                                            src={
+                                                containerStyle.badge_image.url
+                                            }
+                                            alt={
+                                                containerStyle.badge_image
+                                                    .alt ||
+                                                containerStyle.badge_text ||
+                                                '广告'
+                                            }
+                                        />
+                                    </span>
+                                ) : (
+                                    <span
+                                        className="magick-ad-badge"
+                                        style={{
+                                            background:
+                                                containerStyle.badge_color ||
+                                                '#1d2327',
+                                        }}
+                                    >
+                                        {containerStyle.badge_text || '广告'}
+                                    </span>
+                                )}
+                            </>
                         )}
                         {content.behavior?.close_button && (
                             <span className="magick-ad-close">×</span>

@@ -92,6 +92,20 @@
     z-index: 2;
 }
 
+.magick-ad-badge.is-image {
+    padding: 0;
+    background: transparent;
+}
+
+.magick-ad-badge.is-image img {
+    display: block;
+    height: 28px;
+    width: auto;
+    max-width: 140px;
+    border-radius: 999px;
+    object-fit: contain;
+}
+
 .magick-ad-close {
     position: absolute;
     top: 8px;

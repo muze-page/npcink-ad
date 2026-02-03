@@ -2772,46 +2772,118 @@ const AdsConfig = () => {
                                                                     />
                                                                     {containerStyle.badge_enabled && (
                                                                         <>
-                                                                            <TextControl
-                                                                                label="角标文本"
-                                                                                value={
-                                                                                    containerStyle.badge_text ||
-                                                                                    '广告'
-                                                                                }
-                                                                                onChange={(
-                                                                                    value
-                                                                                ) =>
-                                                                                    handleUpdateContainerStyle(
-                                                                                        {
-                                                                                            badge_text:
-                                                                                                value,
-                                                                                        }
-                                                                                    )
-                                                                                }
-                                                                            />
                                                                             <div className="magick-ad-field">
                                                                                 <p className="magick-ad-field__label">
-                                                                                    角标颜色
+                                                                                    角标类型
                                                                                 </p>
-                                                                                <ColorPicker
-                                                                                    color={
-                                                                                        containerStyle.badge_color ||
-                                                                                        '#1d2327'
-                                                                                    }
-                                                                                    onChangeComplete={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                badge_color:
-                                                                                                    formatColorValue(
-                                                                                                        value
-                                                                                                    ),
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
+                                                                                <ButtonGroup>
+                                                                                    <Button
+                                                                                        variant="secondary"
+                                                                                        isPressed={
+                                                                                            (containerStyle.badge_type ||
+                                                                                                'text') ===
+                                                                                            'text'
+                                                                                        }
+                                                                                        onClick={() =>
+                                                                                            handleUpdateContainerStyle(
+                                                                                                {
+                                                                                                    badge_type:
+                                                                                                        'text',
+                                                                                                }
+                                                                                            )
+                                                                                        }
+                                                                                    >
+                                                                                        文本
+                                                                                    </Button>
+                                                                                    <Button
+                                                                                        variant="secondary"
+                                                                                        isPressed={
+                                                                                            containerStyle.badge_type ===
+                                                                                            'image'
+                                                                                        }
+                                                                                        onClick={() =>
+                                                                                            handleUpdateContainerStyle(
+                                                                                                {
+                                                                                                    badge_type:
+                                                                                                        'image',
+                                                                                                }
+                                                                                            )
+                                                                                        }
+                                                                                    >
+                                                                                        图片
+                                                                                    </Button>
+                                                                                </ButtonGroup>
                                                                             </div>
+                                                                            {(containerStyle.badge_type ||
+                                                                                'text') ===
+                                                                            'text' ? (
+                                                                                <>
+                                                                                    <TextControl
+                                                                                        label="角标文本"
+                                                                                        value={
+                                                                                            containerStyle.badge_text ||
+                                                                                            '广告'
+                                                                                        }
+                                                                                        onChange={(
+                                                                                            value
+                                                                                        ) =>
+                                                                                            handleUpdateContainerStyle(
+                                                                                                {
+                                                                                                    badge_text:
+                                                                                                        value,
+                                                                                                }
+                                                                                            )
+                                                                                        }
+                                                                                    />
+                                                                                    <div className="magick-ad-field">
+                                                                                        <p className="magick-ad-field__label">
+                                                                                            角标颜色
+                                                                                        </p>
+                                                                                        <ColorPicker
+                                                                                            color={
+                                                                                                containerStyle.badge_color ||
+                                                                                                '#1d2327'
+                                                                                            }
+                                                                                            onChangeComplete={(
+                                                                                                value
+                                                                                            ) =>
+                                                                                                handleUpdateContainerStyle(
+                                                                                                    {
+                                                                                                        badge_color:
+                                                                                                            formatColorValue(
+                                                                                                                value
+                                                                                                            ),
+                                                                                                    }
+                                                                                                )
+                                                                                            }
+                                                                                        />
+                                                                                    </div>
+                                                                                </>
+                                                                            ) : (
+                                                                                <div className="magick-ad-field">
+                                                                                    <p className="magick-ad-field__label">
+                                                                                        角标图片
+                                                                                    </p>
+                                                                                    <ImagePicker
+                                                                                        value={
+                                                                                            containerStyle.badge_image ||
+                                                                                            {}
+                                                                                        }
+                                                                                        onChange={(
+                                                                                            value
+                                                                                        ) =>
+                                                                                            handleUpdateContainerStyle(
+                                                                                                {
+                                                                                                    badge_image:
+                                                                                                        value,
+                                                                                                    badge_type:
+                                                                                                        'image',
+                                                                                                }
+                                                                                            )
+                                                                                        }
+                                                                                    />
+                                                                                </div>
+                                                                            )}
                                                                         </>
                                                                     )}
                                                                 </>

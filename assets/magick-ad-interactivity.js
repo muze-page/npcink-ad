@@ -1,5 +1,37 @@
 (() => {
     if (!window.wp || !window.wp.interactivity) {
+        const closeFallback = (ad) => {
+            if (!ad) {
+                return;
+            }
+            ad.classList.add('magick-ad-is-hidden');
+            ad.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('magick-ad-lock-scroll');
+        };
+
+        document.addEventListener(
+            'click',
+            (event) => {
+                const closeButton = event.target.closest('.magick-ad-close');
+                const overlay = event.target.closest('.magick-ad-overlay');
+                if (!closeButton && !overlay) {
+                    return;
+                }
+                const ad = event.target.closest('[data-ad-id]');
+                if (!ad) {
+                    return;
+                }
+                if (
+                    overlay &&
+                    ad.getAttribute('data-ad-close-overlay') !== '1'
+                ) {
+                    return;
+                }
+                closeFallback(ad);
+                event.preventDefault();
+            },
+            true
+        );
         return;
     }
 

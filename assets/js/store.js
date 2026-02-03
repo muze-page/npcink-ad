@@ -59,8 +59,14 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
             radius: 0,
             shadow: 'none',
             badge_enabled: false,
+            badge_type: 'text',
             badge_text: '广告',
             badge_color: '#1d2327',
+            badge_image: {
+                id: 0,
+                url: '',
+                alt: '',
+            },
             layout: '',
         },
         behavior: {
@@ -269,8 +275,18 @@ const normalizeAd = (ad) => {
                     ? containerStyle.shadow
                     : 'none',
                 badge_enabled: Boolean(containerStyle.badge_enabled),
+                badge_type: ['text', 'image'].includes(
+                    containerStyle.badge_type
+                )
+                    ? containerStyle.badge_type
+                    : 'text',
                 badge_text: containerStyle.badge_text || '广告',
                 badge_color: containerStyle.badge_color || '#1d2327',
+                badge_image: {
+                    id: Number(containerStyle.badge_image?.id || 0),
+                    url: containerStyle.badge_image?.url || '',
+                    alt: containerStyle.badge_image?.alt || '',
+                },
                 layout:
                     containerStyle.layout === 'centered'
                         ? 'centered'

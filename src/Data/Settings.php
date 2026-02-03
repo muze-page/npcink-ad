@@ -583,12 +583,20 @@ final class Settings {
                     'none'
                 ),
                 'badge_enabled' => !empty($container_style['badge_enabled']),
-                'badge_text' => self::sanitize_choice(
-                    isset($container_style['badge_text']) ? $container_style['badge_text'] : '广告',
-                    array('广告', '推广'),
-                    '广告'
+                'badge_type' => self::sanitize_choice(
+                    isset($container_style['badge_type']) ? $container_style['badge_type'] : 'text',
+                    array('text', 'image'),
+                    'text'
+                ),
+                'badge_text' => sanitize_text_field(
+                    isset($container_style['badge_text']) ? $container_style['badge_text'] : '广告'
                 ),
                 'badge_color' => self::sanitize_color(isset($container_style['badge_color']) ? $container_style['badge_color'] : '#1d2327'),
+                'badge_image' => array(
+                    'id' => isset($container_style['badge_image']['id']) ? absint($container_style['badge_image']['id']) : 0,
+                    'url' => isset($container_style['badge_image']['url']) ? esc_url_raw($container_style['badge_image']['url']) : '',
+                    'alt' => isset($container_style['badge_image']['alt']) ? sanitize_text_field($container_style['badge_image']['alt']) : '',
+                ),
                 'layout' => self::sanitize_choice(
                     isset($container_style['layout']) ? $container_style['layout'] : '',
                     array('', 'centered'),
