@@ -2882,6 +2882,10 @@ const AdsConfig = () => {
                                                                                             )
                                                                                         }
                                                                                     />
+                                                                                    <p className="magick-ad-field__help">
+                                                                                        推荐尺寸：56×28 或 64×32（2x）；
+                                                                                        格式：PNG/SVG（透明背景），建议 ≤ 100KB。
+                                                                                    </p>
                                                                                 </div>
                                                                             )}
                                                                         </>

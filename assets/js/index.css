@@ -1289,6 +1289,13 @@
     font-weight: 600;
 }
 
+.magick-ad-field__help {
+    margin: 8px 0 0;
+    color: #6b7280;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .magick-ad-node-placement {
     margin-top: 16px;
     padding-top: 12px;
