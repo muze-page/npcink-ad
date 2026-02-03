@@ -410,13 +410,6 @@ const Layout = ({
                 className={`magick-ad-preview-frame magick-ad-preview-frame--${devicePreview}`}
             >
                 <div className="magick-ad-preview-frame__viewport">
-                    <div className="magick-ad-preview-frame__label">
-                        {devicePreview === 'desktop'
-                            ? '桌面'
-                            : devicePreview === 'tablet'
-                            ? '平板'
-                            : '手机'}
-                    </div>
                     <iframe
                         ref={iframeRef}
                         title="Magick AD 预览"

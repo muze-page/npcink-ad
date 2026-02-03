@@ -313,9 +313,7 @@ const Layout = ({
       className: `magick-ad-preview-frame magick-ad-preview-frame--${devicePreview}`
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
       className: "magick-ad-preview-frame__viewport"
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-preview-frame__label"
-    }, devicePreview === 'desktop' ? '桌面' : devicePreview === 'tablet' ? '平板' : '手机'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("iframe", {
+    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("iframe", {
       ref: iframeRef,
       title: "Magick AD \u9884\u89C8",
       src: previewSrc,
