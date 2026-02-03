@@ -16,8 +16,101 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 16px;
+    gap: 24px;
+    margin-bottom: 20px;
+    padding: 16px 20px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    flex-wrap: wrap;
+}
+
+.magick-ad-header__left {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+}
+
+.magick-ad-header__breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.magick-ad-header__crumb {
+    color: #64748b;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.magick-ad-header__crumb:hover {
+    color: #1f2937;
+}
+
+.magick-ad-header__crumb-sep {
+    color: #cbd5f5;
+}
+
+.magick-ad-header__title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.magick-ad-header__title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.magick-ad-header__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.magick-ad-header__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.magick-ad-header__btn.components-button {
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid #cbd5f5;
+    background: #eef2ff;
+    font-weight: 600;
+    color: #1e3a8a;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.magick-ad-header__btn.components-button.is-tertiary {
+    background: #ffffff;
+    color: #475569;
+}
+
+.magick-ad-header.is-collapsed {
+    padding: 10px 16px;
+}
+
+.magick-ad-header.is-collapsed .magick-ad-header__title-row,
+.magick-ad-header.is-collapsed .description {
+    display: none;
 }
 
 .magick-ad-grid {
@@ -51,11 +144,20 @@
 }
 
 .magick-ad-toolbar-toggle.components-button {
-    width: 32px;
-    min-width: 32px;
-    height: 32px;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
     padding: 0;
-    border-radius: 10px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #1f2937;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.magick-ad-toolbar-toggle.components-button:hover {
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
+    transform: translateY(-1px);
 }
 
 .magick-ad-collapse-rail {
@@ -91,9 +193,48 @@
 
 .magick-ad-toolbar {
     display: flex;
-    justify-content: space-between;
-    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
     margin-bottom: 16px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.magick-ad-toolbar .components-toolbar-group,
+.magick-ad-toolbar__group,
+.magick-ad-toolbar__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.magick-ad-toolbar__actions {
+    margin-left: auto;
+}
+
+.magick-ad-toolbar .components-dropdown-menu__toggle,
+.magick-ad-toolbar .components-button {
+    height: 36px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.magick-ad-toolbar .components-dropdown-menu__toggle:hover,
+.magick-ad-toolbar .components-button:hover {
+    border-color: #cbd5f5;
+}
+
+.magick-ad-toolbar .components-toolbar-group:not(:first-child)::before {
+    display: none;
 }
 
 .magick-ad-editor {

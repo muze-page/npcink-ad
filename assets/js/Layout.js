@@ -625,7 +625,7 @@ const Layout = ({
                             className="magick-ad-toolbar"
                             label="编辑工具"
                         >
-                            <ToolbarGroup>
+                            <ToolbarGroup className="magick-ad-toolbar__group">
                                 <ToolbarDropdownMenu
                                     icon={adTypeControls.find(
                                         (item) => item.isActive
@@ -634,14 +634,14 @@ const Layout = ({
                                     controls={adTypeControls}
                                 />
                             </ToolbarGroup>
-                            <ToolbarGroup>
+                            <ToolbarGroup className="magick-ad-toolbar__group">
                                 <ToolbarDropdownMenu
                                     icon={layout}
                                     label="容器类型"
                                     controls={containerControls}
                                 />
                             </ToolbarGroup>
-                            <ToolbarGroup>
+                            <ToolbarGroup className="magick-ad-toolbar__actions">
                                 {toolbarActions}
                                 <Button
                                     className="magick-ad-toolbar-toggle"

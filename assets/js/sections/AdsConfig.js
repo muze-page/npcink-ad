@@ -27,6 +27,7 @@ import {
     chevronDown,
     chevronUp,
     cog,
+    external,
     megaphone,
     moreHorizontal,
 } from '@wordpress/icons';
@@ -84,6 +85,7 @@ const AdsConfig = () => {
     const [saveTemplateCategoryName, setSaveTemplateCategoryName] =
         useState('');
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [headerCollapsed, setHeaderCollapsed] = useState(false);
     const [scheduleOpen, setScheduleOpen] = useState(true);
     const [publishModalOpen, setPublishModalOpen] = useState(false);
     const [placementModalOpen, setPlacementModalOpen] = useState(false);
@@ -1297,13 +1299,6 @@ const AdsConfig = () => {
                                     </MenuGroup>
                                 )}
                             </DropdownMenu>
-                            <Button
-                                className="magick-ad-settings-trigger"
-                                icon={cog}
-                                label="设置"
-                                onClick={() => setSettingsOpen(true)}
-                                variant="tertiary"
-                            />
                         </div>
                     </div>
                     {ads.length === 0 ? (
@@ -3355,10 +3350,77 @@ const AdsConfig = () => {
 
     return (
         <div className="magick-ad-config">
-            <div className="magick-ad-header">
-                <div>
-                    <h1>{branding.name}</h1>
-                    <p className="description">{branding.tagline}</p>
+            <div
+                className={`magick-ad-header ${
+                    headerCollapsed ? 'is-collapsed' : ''
+                }`}
+            >
+                <div className="magick-ad-header__left">
+                    <div className="magick-ad-header__breadcrumb">
+                        <a
+                            className="magick-ad-header__crumb"
+                            href="admin.php?page=magick-ad"
+                        >
+                            {branding.name}
+                        </a>
+                        <span className="magick-ad-header__crumb-sep">/</span>
+                        <a
+                            className="magick-ad-header__crumb"
+                            href="admin.php?page=magick-ad"
+                        >
+                            广告配置
+                        </a>
+                    </div>
+                    {!headerCollapsed && (
+                        <>
+                            <div className="magick-ad-header__title-row">
+                                <h1 className="magick-ad-header__title">
+                                    {branding.name}
+                                </h1>
+                                {window?.MagickAD?.buildVersion && (
+                                    <span className="magick-ad-header__badge">
+                                        v{window.MagickAD.buildVersion}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="description">
+                                {branding.tagline}
+                            </p>
+                        </>
+                    )}
+                </div>
+                <div className="magick-ad-header__actions">
+                    <Button
+                        className="magick-ad-header__btn"
+                        icon={headerCollapsed ? chevronDown : chevronUp}
+                        variant="tertiary"
+                        onClick={() =>
+                            setHeaderCollapsed((prev) => !prev)
+                        }
+                    >
+                        {headerCollapsed ? '展开' : '收起'}
+                    </Button>
+                    <Button
+                        className="magick-ad-header__btn"
+                        icon={external}
+                        variant="secondary"
+                        onClick={() => {
+                            const url = window?.MagickAD?.diagnoseUrl || '';
+                            if (url) {
+                                window.open(url, '_blank', 'noopener');
+                            }
+                        }}
+                    >
+                        调试面板
+                    </Button>
+                    <Button
+                        className="magick-ad-header__btn"
+                        icon={cog}
+                        variant="secondary"
+                        onClick={() => setSettingsOpen(true)}
+                    >
+                        系统设置
+                    </Button>
                 </div>
             </div>
 
