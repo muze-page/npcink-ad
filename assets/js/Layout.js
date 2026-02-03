@@ -53,7 +53,6 @@ const Layout = ({
     const editorRef = useRef(null);
     const resizingRef = useRef(false);
     const [previewReady, setPreviewReady] = useState(false);
-    const [previewStatus, setPreviewStatus] = useState(null);
     const [splitRatio, setSplitRatio] = useState(0.45);
     const [splitLocked, setSplitLocked] = useState(false);
     const [previewCollapsed, setPreviewCollapsed] = useState(false);
@@ -475,34 +474,8 @@ const Layout = ({
         );
     }, [previewBody, previewSrc, devicePreview]);
 
-    const previewToast = useMemo(() => {
-        if (!previewStatus) {
-            return null;
-        }
-        const label = previewStatus.allowed ? '命中' : '未命中';
-        const reason =
-            !previewStatus.allowed && previewStatus.reasonText
-                ? previewStatus.reasonText
-                : '';
-        return (
-            <div
-                className={`magick-ad-preview-toast ${
-                    previewStatus.allowed ? 'is-hit' : 'is-miss'
-                }`}
-            >
-                <span className="magick-ad-preview-toast__label">{label}</span>
-                {reason && (
-                    <span className="magick-ad-preview-toast__reason">
-                        {reason}
-                    </span>
-                )}
-            </div>
-        );
-    }, [previewStatus]);
-
     useEffect(() => {
         setPreviewReady(false);
-        setPreviewStatus(null);
     }, [previewSrc]);
 
     useEffect(() => {
@@ -517,9 +490,6 @@ const Layout = ({
             if (payload.type === 'MAGICK_AD_PREVIEW_READY') {
                 setPreviewReady(true);
                 return;
-            }
-            if (payload.type === 'MAGICK_AD_PREVIEW_STATUS') {
-                setPreviewStatus(payload.payload || null);
             }
         };
         window.addEventListener('message', handleMessage);
@@ -674,36 +644,22 @@ const Layout = ({
                                 <Button
                                     className="magick-ad-toolbar-toggle"
                                     icon={
-                                        leftCollapsed
-                                            ? chevronRight
-                                            : chevronLeft
+                                        leftCollapsed && rightCollapsed
+                                            ? closeSmall
+                                            : fullscreen
                                     }
                                     label={
-                                        leftCollapsed
-                                            ? '展开左侧栏'
-                                            : '折叠左侧栏'
+                                        leftCollapsed && rightCollapsed
+                                            ? '退出全屏'
+                                            : '全屏'
                                     }
                                     variant="tertiary"
-                                    onClick={() =>
-                                        setLeftCollapsed((prev) => !prev)
-                                    }
-                                />
-                                <Button
-                                    className="magick-ad-toolbar-toggle"
-                                    icon={
-                                        rightCollapsed
-                                            ? chevronLeft
-                                            : chevronRight
-                                    }
-                                    label={
-                                        rightCollapsed
-                                            ? '展开右侧栏'
-                                            : '折叠右侧栏'
-                                    }
-                                    variant="tertiary"
-                                    onClick={() =>
-                                        setRightCollapsed((prev) => !prev)
-                                    }
+                                    onClick={() => {
+                                        const collapse =
+                                            !(leftCollapsed && rightCollapsed);
+                                        setLeftCollapsed(collapse);
+                                        setRightCollapsed(collapse);
+                                    }}
                                 />
                             </ToolbarGroup>
                         </Toolbar>
@@ -914,7 +870,6 @@ const Layout = ({
                                                 真实页面
                                             </Button>
                                         </div>
-                                        {previewToast}
                                         {preview || previewFrame}
                                     </div>
                                 )}
