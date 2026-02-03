@@ -7,21 +7,17 @@ import {
     PanelBody,
     SelectControl,
     Toolbar,
-    ToolbarDropdownMenu,
     ToolbarGroup,
 } from '@wordpress/components';
 import {
     desktop,
     tablet,
     mobile,
-    video,
-    image,
-    code,
-    layout,
     fullscreen,
     closeSmall,
     chevronLeft,
     chevronRight,
+    globe,
 } from '@wordpress/icons';
 
 const previewIcons = {
@@ -35,8 +31,6 @@ const Layout = ({
     creativeType = 'image',
     containerType = 'inline',
     devicePreview = 'desktop',
-    onCreativeChange,
-    onContainerChange,
     onDevicePreviewChange,
     onUpdateRule,
     leftSidebar,
@@ -49,6 +43,7 @@ const Layout = ({
     previewUsePage = false,
     onPreviewUsePageChange,
     toolbarActions,
+    toolbarMiddle,
 }) => {
     const iframeRef = useRef(null);
     const editorRef = useRef(null);
@@ -59,66 +54,6 @@ const Layout = ({
     const [previewCollapsed] = useState(false);
     const [leftCollapsed, setLeftCollapsed] = useState(false);
     const [rightCollapsed, setRightCollapsed] = useState(false);
-    const adTypeControls = useMemo(
-        () => [
-            {
-                title: '代码 / HTML',
-                icon: code,
-                onClick: () => onCreativeChange?.('html'),
-                isActive: creativeType === 'html',
-            },
-            {
-                title: '图片',
-                icon: image,
-                onClick: () => onCreativeChange?.('image'),
-                isActive: creativeType === 'image',
-            },
-            {
-                title: '视频',
-                icon: video,
-                onClick: () => onCreativeChange?.('video'),
-                isActive: creativeType === 'video',
-            },
-            {
-                title: '可视化设计 (Block)',
-                onClick: () => onCreativeChange?.('block'),
-                isActive: creativeType === 'block',
-            },
-        ],
-        [creativeType, onCreativeChange]
-    );
-
-    const containerControls = useMemo(
-        () => [
-            {
-                title: '默认嵌入',
-                onClick: () => onContainerChange?.('inline'),
-                isActive: containerType === 'inline',
-            },
-            {
-                title: '弹窗',
-                onClick: () => onContainerChange?.('popup'),
-                isActive: containerType === 'popup',
-            },
-            {
-                title: '吸顶/吸底横栏',
-                onClick: () => onContainerChange?.('banner'),
-                isActive: containerType === 'banner',
-            },
-            {
-                title: '角落悬浮',
-                onClick: () => onContainerChange?.('floating'),
-                isActive: containerType === 'floating',
-            },
-            {
-                title: '全屏插屏',
-                onClick: () => onContainerChange?.('interstitial'),
-                isActive: containerType === 'interstitial',
-            },
-        ],
-        [containerType, onContainerChange]
-    );
-
     const previewBody = useMemo(() => {
         const content = adData?.content || {};
         const options = adData?.options || {};
@@ -625,22 +560,11 @@ const Layout = ({
                             className="magick-ad-toolbar"
                             label="编辑工具"
                         >
-                            <ToolbarGroup className="magick-ad-toolbar__group">
-                                <ToolbarDropdownMenu
-                                    icon={adTypeControls.find(
-                                        (item) => item.isActive
-                                    )?.icon}
-                                    label="素材类型"
-                                    controls={adTypeControls}
-                                />
-                            </ToolbarGroup>
-                            <ToolbarGroup className="magick-ad-toolbar__group">
-                                <ToolbarDropdownMenu
-                                    icon={layout}
-                                    label="容器类型"
-                                    controls={containerControls}
-                                />
-                            </ToolbarGroup>
+                            {toolbarMiddle ? (
+                                <ToolbarGroup className="magick-ad-toolbar__group magick-ad-toolbar__middle">
+                                    {toolbarMiddle}
+                                </ToolbarGroup>
+                            ) : null}
                             <ToolbarGroup className="magick-ad-toolbar__actions">
                                 {toolbarActions}
                                 <Button
@@ -780,6 +704,22 @@ const Layout = ({
                                                                 ? 'is-active'
                                                                 : ''
                                                         }`}
+                                                        icon={globe}
+                                                        label={
+                                                            previewUsePage
+                                                                ? '退出真实页面预览'
+                                                                : '真实页面预览'
+                                                        }
+                                                        aria-label={
+                                                            previewUsePage
+                                                                ? '退出真实页面预览'
+                                                                : '真实页面预览'
+                                                        }
+                                                        title={
+                                                            previewUsePage
+                                                                ? '退出真实页面预览'
+                                                                : '真实页面预览'
+                                                        }
                                                         onClick={() =>
                                                             onPreviewUsePageChange?.(
                                                                 !previewUsePage
@@ -788,9 +728,7 @@ const Layout = ({
                                                         aria-pressed={
                                                             previewUsePage
                                                         }
-                                                    >
-                                                        真实页面
-                                                    </Button>
+                                                    />
                                                 </div>
                                                 {previewToast}
                                                 {preview || previewFrame}
@@ -843,15 +781,29 @@ const Layout = ({
                                                         ? 'is-active'
                                                         : ''
                                                 }`}
+                                                icon={globe}
+                                                label={
+                                                    previewUsePage
+                                                        ? '退出真实页面预览'
+                                                        : '真实页面预览'
+                                                }
+                                                aria-label={
+                                                    previewUsePage
+                                                        ? '退出真实页面预览'
+                                                        : '真实页面预览'
+                                                }
+                                                title={
+                                                    previewUsePage
+                                                        ? '退出真实页面预览'
+                                                        : '真实页面预览'
+                                                }
                                                 onClick={() =>
                                                     onPreviewUsePageChange?.(
                                                         !previewUsePage
                                                     )
                                                 }
                                                 aria-pressed={previewUsePage}
-                                            >
-                                                真实页面
-                                            </Button>
+                                            />
                                         </div>
                                         {preview || previewFrame}
                                     </div>

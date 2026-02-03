@@ -393,13 +393,12 @@
 }
 
 .magick-ad-preview-toolbar__toggle.components-button {
+    width: 32px;
+    min-width: 32px;
     height: 32px;
-    padding: 0 10px;
+    padding: 0;
     border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
     color: #475569;
-    min-width: auto;
 }
 
 .magick-ad-preview-toolbar__toggle.is-active {
@@ -1766,10 +1765,13 @@
     gap: 8px;
 }
 
-.magick-ad-template-actions {
+.magick-ad-template-actions.is-toolbar {
     display: inline-flex;
+    align-items: center;
     gap: 8px;
-    margin: 0;
+    position: static;
+    left: auto;
+    bottom: auto;
 }
 
 

@@ -3302,6 +3302,13 @@ const AdsConfig = () => {
         <>
             <Button
                 className="magick-ad-toolbar-toggle"
+                icon={megaphone}
+                label="投放设置"
+                variant="tertiary"
+                onClick={() => setPlacementModalOpen(true)}
+            />
+            <Button
+                className="magick-ad-toolbar-toggle"
                 icon={calendar}
                 label="发布与排期"
                 variant="tertiary"
@@ -3310,18 +3317,15 @@ const AdsConfig = () => {
                     setPublishModalOpen(true);
                 }}
             />
-            <Button
-                className="magick-ad-toolbar-toggle"
-                icon={megaphone}
-                label="投放设置"
-                variant="tertiary"
-                onClick={() => setPlacementModalOpen(true)}
-            />
-            <TemplateActions
-                onOpen={() => openTemplateLibrary(activeCreativeType)}
-                onSave={() => openSaveTemplate(activeCreativeType)}
-            />
         </>
+    ) : null;
+
+    const toolbarMiddle = selectedAd ? (
+        <TemplateActions
+            variant="toolbar"
+            onOpen={() => openTemplateLibrary(activeCreativeType)}
+            onSave={() => openSaveTemplate(activeCreativeType)}
+        />
     ) : null;
 
     const rightSidebar = selectedAd ? (
@@ -3470,6 +3474,7 @@ const AdsConfig = () => {
                     selectedAd && handleUpdateOptions({ [key]: value })
                 }
                 toolbarActions={toolbarActions}
+                toolbarMiddle={toolbarMiddle}
                 leftSidebar={leftSidebar}
                 rightSidebar={rightSidebar}
                 contentPanels={contentPanels}

@@ -1,8 +1,12 @@
 import { Button } from '@wordpress/components';
 
-const TemplateActions = ({ onOpen, onSave }) => {
+const TemplateActions = ({ onOpen, onSave, variant = 'toolbar' }) => {
     return (
-        <div className="magick-ad-template-actions">
+        <div
+            className={`magick-ad-template-actions ${
+                variant ? `is-${variant}` : ''
+            }`}
+        >
             <Button variant="secondary" onClick={onOpen}>
                 模板库
             </Button>
