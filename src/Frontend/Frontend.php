@@ -1489,6 +1489,7 @@ final class Frontend {
         echo '<div class="magick-ad-diagnose__header">';
         echo '<strong>Magick AD 投放诊断报告</strong>';
         echo '<div class="magick-ad-diagnose__actions">';
+        echo '<button type="button" class="magick-ad-diagnose__btn" data-action="toggle">折叠</button>';
         echo '<button type="button" class="magick-ad-diagnose__btn" data-action="copy">复制报告</button>';
         echo '<button type="button" class="magick-ad-diagnose__btn" data-action="close">关闭</button>';
         echo '</div>';
