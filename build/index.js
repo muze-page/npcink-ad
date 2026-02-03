@@ -3621,6 +3621,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const AdsConfig = () => {
+  const headerStorageKey = 'magick_ad_header_collapsed';
   const ads = (0,_store__WEBPACK_IMPORTED_MODULE_11__.useStore)(state => state.ads);
   const isLoading = (0,_store__WEBPACK_IMPORTED_MODULE_11__.useStore)(state => state.isLoading);
   const isSaving = (0,_store__WEBPACK_IMPORTED_MODULE_11__.useStore)(state => state.isSaving);
@@ -3651,7 +3652,20 @@ const AdsConfig = () => {
   const [saveTemplateCategory, setSaveTemplateCategory] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('');
   const [saveTemplateCategoryName, setSaveTemplateCategoryName] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('');
   const [settingsOpen, setSettingsOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
-  const [headerCollapsed, setHeaderCollapsed] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
+  const [headerCollapsed, setHeaderCollapsed] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+    try {
+      const stored = window.localStorage?.getItem(headerStorageKey);
+      if (stored === null) {
+        return true;
+      }
+      return stored === '1';
+    } catch (err) {
+      return true;
+    }
+  });
   const [scheduleOpen, setScheduleOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(true);
   const [publishModalOpen, setPublishModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [placementModalOpen, setPlacementModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
@@ -3896,6 +3910,16 @@ const AdsConfig = () => {
   (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
     setPlacementTab('placement');
   }, [selectedId, effectiveEditorMode]);
+  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      window.localStorage?.setItem(headerStorageKey, headerCollapsed ? '1' : '0');
+    } catch (err) {
+      // ignore storage errors
+    }
+  }, [headerCollapsed]);
   const {
     targetItems,
     targetSuggestions,

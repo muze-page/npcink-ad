@@ -59,6 +59,7 @@ import { cleanForSlug } from '@wordpress/url';
 import apiFetch from '@wordpress/api-fetch';
 
 const AdsConfig = () => {
+    const headerStorageKey = 'magick_ad_header_collapsed';
     const ads = useStore((state) => state.ads);
     const isLoading = useStore((state) => state.isLoading);
     const isSaving = useStore((state) => state.isSaving);
@@ -87,7 +88,20 @@ const AdsConfig = () => {
     const [saveTemplateCategoryName, setSaveTemplateCategoryName] =
         useState('');
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [headerCollapsed, setHeaderCollapsed] = useState(false);
+    const [headerCollapsed, setHeaderCollapsed] = useState(() => {
+        if (typeof window === 'undefined') {
+            return true;
+        }
+        try {
+            const stored = window.localStorage?.getItem(headerStorageKey);
+            if (stored === null) {
+                return true;
+            }
+            return stored === '1';
+        } catch (err) {
+            return true;
+        }
+    });
     const [scheduleOpen, setScheduleOpen] = useState(true);
     const [publishModalOpen, setPublishModalOpen] = useState(false);
     const [placementModalOpen, setPlacementModalOpen] = useState(false);
@@ -368,6 +382,20 @@ const AdsConfig = () => {
     useEffect(() => {
         setPlacementTab('placement');
     }, [selectedId, effectiveEditorMode]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage?.setItem(
+                headerStorageKey,
+                headerCollapsed ? '1' : '0'
+            );
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [headerCollapsed]);
 
     const { targetItems, targetSuggestions, targetLoading, handleTargetSearch } =
         useTargeting(selectedAd);
