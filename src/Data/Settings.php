@@ -673,6 +673,9 @@ final class Settings {
         if ($timestamp === false) {
             return '';
         }
+        if (preg_match('/\\d{2}:\\d{2}/', $value)) {
+            return date('Y-m-d H:i:s', $timestamp);
+        }
         return date('Y-m-d', $timestamp);
     }
 

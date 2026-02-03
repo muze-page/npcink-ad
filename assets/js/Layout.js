@@ -48,6 +48,7 @@ const Layout = ({
     previewLogin = 'auto',
     previewUsePage = false,
     onPreviewUsePageChange,
+    toolbarActions,
 }) => {
     const iframeRef = useRef(null);
     const editorRef = useRef(null);
@@ -641,6 +642,7 @@ const Layout = ({
                                 />
                             </ToolbarGroup>
                             <ToolbarGroup>
+                                {toolbarActions}
                                 <Button
                                     className="magick-ad-toolbar-toggle"
                                     icon={

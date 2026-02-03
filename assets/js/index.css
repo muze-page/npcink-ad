@@ -649,6 +649,37 @@
     gap: 12px;
 }
 
+.magick-ad-config-modal {
+    width: min(960px, 92vw);
+}
+
+.magick-ad-config-modal .components-modal__content {
+    padding: 0;
+}
+
+.magick-ad-right-subsection {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.magick-ad-right-subsection__title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.02em;
+}
+
+.magick-ad-right-subsection__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 .magick-ad-left-stack {
     display: flex;
     flex-direction: column;

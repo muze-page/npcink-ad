@@ -22,7 +22,14 @@ import {
     TextareaControl,
     ToggleControl,
 } from '@wordpress/components';
-import { chevronDown, chevronUp, cog, moreHorizontal } from '@wordpress/icons';
+import {
+    calendar,
+    chevronDown,
+    chevronUp,
+    cog,
+    megaphone,
+    moreHorizontal,
+} from '@wordpress/icons';
 import { useStore } from '../store';
 import Layout from '../Layout';
 import ImagePicker from '../components/ImagePicker';
@@ -78,6 +85,8 @@ const AdsConfig = () => {
         useState('');
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [scheduleOpen, setScheduleOpen] = useState(true);
+    const [publishModalOpen, setPublishModalOpen] = useState(false);
+    const [placementModalOpen, setPlacementModalOpen] = useState(false);
     const [advancedOpen, setAdvancedOpen] = useState(false);
     const [previewTarget, setPreviewTarget] = useState('');
     const [previewMode, setPreviewMode] = useState('url');
@@ -146,13 +155,20 @@ const AdsConfig = () => {
         return value.length === 16 ? `${value}:00` : value;
     };
 
-    const buildDefaultSchedule = () => {
-        const date = new Date();
-        date.setMinutes(date.getMinutes() + 10);
-        date.setSeconds(0);
+    const formatEndDateTimeLocalInput = (value) => {
+        if (!value) {
+            return '';
+        }
+        const date = parseDateTime(value);
+        if (!date) {
+            return '';
+        }
+        if (!value.includes('T') && !value.includes(':')) {
+            date.setHours(23, 59, 0, 0);
+        }
         return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
             date.getDate()
-        )} ${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+        )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     };
 
     const formatDateFromDate = (date) =>
@@ -1844,322 +1860,1112 @@ const AdsConfig = () => {
         </div>
     );
 
-    const rightSidebar = selectedAd ? (
-        <div className="magick-ad-right-stack">
-            <Card className="magick-ad-right-panel">
-                <CardBody>
-                    <div className="magick-ad-right-section">
-                        <div className="magick-ad-right-section__header">
-                            <div className="magick-ad-right-section__title">
-                                发布与排期
-                            </div>
-                            <div className="magick-ad-right-section__meta">
-                                <Button
-                                    className="magick-ad-save-button"
-                                    variant="primary"
-                                    onClick={handleSave}
-                                    isBusy={isSaving}
-                                    disabled={isSaving || !selectedAd}
-                                >
-                                    {isSaving ? '保存中...' : '保存'}
-                                </Button>
-                                <span
-                                    className={`magick-ad-status-pill ${
-                                        statusMeta(selectedAd).className
-                                    }`}
-                                >
-                                    {statusMeta(selectedAd).label}
-                                </span>
-                                <Button
-                                    className="magick-ad-collapse-toggle"
-                                    icon={
-                                        scheduleOpen ? chevronUp : chevronDown
-                                    }
-                                    label={scheduleOpen ? '折叠' : '展开'}
-                                    variant="tertiary"
-                                    onClick={() =>
-                                        setScheduleOpen((prev) => !prev)
-                                    }
-                                />
-                            </div>
+    const renderPublishSection = () => (
+        <div className="magick-ad-right-section">
+            <div className="magick-ad-right-section__header">
+                <div className="magick-ad-right-section__title">
+                    发布与排期
+                </div>
+                <div className="magick-ad-right-section__meta">
+                    <Button
+                        className="magick-ad-save-button"
+                        variant="primary"
+                        onClick={handleSave}
+                        isBusy={isSaving}
+                        disabled={isSaving || !selectedAd}
+                    >
+                        {isSaving ? '保存中...' : '保存'}
+                    </Button>
+                    <span
+                        className={`magick-ad-status-pill ${
+                            statusMeta(selectedAd).className
+                        }`}
+                    >
+                        {statusMeta(selectedAd).label}
+                    </span>
+                    <Button
+                        className="magick-ad-collapse-toggle"
+                        icon={
+                            scheduleOpen ? chevronUp : chevronDown
+                        }
+                        label={scheduleOpen ? '折叠' : '展开'}
+                        variant="tertiary"
+                        onClick={() =>
+                            setScheduleOpen((prev) => !prev)
+                        }
+                    />
+                </div>
+            </div>
+            {scheduleOpen && (
+                <div className="magick-ad-right-section__body">
+                    <SelectControl
+                        label="发布状态"
+                        value={resolveStatus(selectedAd)}
+                        options={[
+                            { label: '已发布', value: 'publish' },
+                            { label: '待审核', value: 'pending' },
+                            { label: '草稿/停用', value: 'draft' },
+                            ...(resolveStatus(selectedAd) ===
+                            'future'
+                                ? [
+                                      {
+                                          label: '已排期',
+                                          value: 'future',
+                                          disabled: true,
+                                      },
+                                  ]
+                                : []),
+                        ]}
+                        onChange={(value) => {
+                            if (!selectedAd) {
+                                return;
+                            }
+                            if (value === 'draft') {
+                                handleUpdateMeta({
+                                    status: 'draft',
+                                    options: {
+                                        ...selectedAd.options,
+                                        enabled: false,
+                                    },
+                                });
+                                return;
+                            }
+                            if (value === 'pending') {
+                                handleUpdateMeta({
+                                    status: 'pending',
+                                    options: {
+                                        ...selectedAd.options,
+                                        enabled: true,
+                                    },
+                                });
+                                return;
+                            }
+                            const nextDate =
+                                selectedAd.date &&
+                                isFutureDate(selectedAd.date)
+                                    ? formatDateFromDate(new Date())
+                                    : selectedAd.date || '';
+                            handleUpdateMeta({
+                                status: 'publish',
+                                date: nextDate,
+                                options: {
+                                    ...selectedAd.options,
+                                    enabled: true,
+                                },
+                            });
+                        }}
+                    />
+                    <div className="magick-ad-right-subsection">
+                        <div className="magick-ad-right-subsection__title">
+                            投放周期
                         </div>
-                        {scheduleOpen && (
-                            <div className="magick-ad-right-section__body">
-                                <SelectControl
-                                    label="发布状态"
-                                    value={resolveStatus(selectedAd)}
-                                    options={[
-                                        { label: '已发布', value: 'publish' },
-                                        { label: '定时发布', value: 'future' },
-                                        { label: '待审核', value: 'pending' },
-                                        { label: '草稿/停用', value: 'draft' },
-                                    ]}
-                                    onChange={(value) => {
-                                        if (!selectedAd) {
-                                            return;
+                        <div className="magick-ad-right-subsection__body">
+                            <TextControl
+                                label="开始时间"
+                                type="datetime-local"
+                                value={formatDateTimeLocalInput(
+                                    selectedAd.options?.start_date
+                                )}
+                                onChange={(value) =>
+                                    handleUpdateOptions({
+                                        start_date:
+                                            formatDateTimeStorage(
+                                                value
+                                            ),
+                                    })
+                                }
+                                help="开始时间为空表示立即生效。"
+                            />
+                            <TextControl
+                                label="结束时间"
+                                type="datetime-local"
+                                value={formatEndDateTimeLocalInput(
+                                    selectedAd.options?.end_date
+                                )}
+                                onChange={(value) =>
+                                    handleUpdateOptions({
+                                        end_date:
+                                            formatDateTimeStorage(
+                                                value
+                                            ),
+                                    })
+                                }
+                                help="结束时间为空表示长期有效，支持到分钟。"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+
+    );
+
+    const renderPlacementSection = () => (
+        <>
+            <div className="magick-ad-right-section">
+            <div className="magick-ad-right-section__header">
+                <div className="magick-ad-right-section__title">
+                    投放
+                </div>
+            </div>
+            <div className="magick-ad-right-section__body">
+                <div className="magick-ad-mode-switch">
+                    <div className="magick-ad-mode-switch__label">
+                        编辑模式
+                    </div>
+                    <ButtonGroup>
+                        <Button
+                            variant="secondary"
+                            isPressed={
+                                effectiveEditorMode === 'quick'
+                            }
+                            onClick={() =>
+                                handleUpdateOptions({
+                                    editor_mode: 'quick',
+                                })
+                            }
+                        >
+                            快速模式
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            isPressed={
+                                effectiveEditorMode === 'design'
+                            }
+                            onClick={() =>
+                                handleUpdateOptions({
+                                    editor_mode: 'design',
+                                })
+                            }
+                        >
+                            设计模式
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            isPressed={
+                                effectiveEditorMode === 'expert'
+                            }
+                            onClick={() => {
+                                if (!canUnfilteredHtml) {
+                                    showNotice(
+                                        'error',
+                                        '当前账号无 unfiltered_html 权限，无法启用专家模式。',
+                                        3500
+                                    );
+                                    return;
+                                }
+                                handleUpdateOptions({
+                                    editor_mode: 'expert',
+                                });
+                            }}
+                            disabled={!canUnfilteredHtml}
+                        >
+                            专家模式
+                        </Button>
+                    </ButtonGroup>
+                </div>
+                {editorModeRaw === 'expert' &&
+                    !canUnfilteredHtml && (
+                        <Notice
+                            status="warning"
+                            isDismissible={false}
+                        >
+                            专家模式需要 unfiltered_html
+                            权限，已回退为设计模式。
+                        </Notice>
+                    )}
+                {effectiveEditorMode === 'quick' && (
+                    <Panel>
+                        <PanelBody title="快速设置" initialOpen>
+                            {isHeadPlacement && (
+                                <Notice
+                                    status="warning"
+                                    isDismissible={false}
+                                >
+                                    Head
+                                    位置仅允许原始输出，容器样式将被忽略。
+                                </Notice>
+                            )}
+                            <div className="magick-ad-field">
+                                <p className="magick-ad-field__label">
+                                    主色
+                                </p>
+                                {!isHeadPlacement && (
+                                    <ColorPicker
+                                        color={
+                                            selectedAd.content
+                                                ?.container_style
+                                                ?.background ||
+                                            'transparent'
                                         }
-                                        if (value === 'draft') {
-                                            handleUpdateMeta({
-                                                status: 'draft',
-                                                options: {
-                                                    ...selectedAd.options,
-                                                    enabled: false,
-                                                },
-                                            });
-                                            return;
+                                        onChangeComplete={(value) =>
+                                            handleUpdateContainerStyle(
+                                                {
+                                                    background:
+                                                        formatColorValue(
+                                                            value
+                                                        ),
+                                                }
+                                            )
                                         }
-                                        if (value === 'pending') {
-                                            handleUpdateMeta({
-                                                status: 'pending',
-                                                options: {
-                                                    ...selectedAd.options,
-                                                    enabled: true,
-                                                },
-                                            });
-                                            return;
-                                        }
-                                        if (value === 'future') {
-                                            handleUpdateMeta({
-                                                status: 'future',
-                                                date:
-                                                    selectedAd.date ||
-                                                    buildDefaultSchedule(),
-                                                options: {
-                                                    ...selectedAd.options,
-                                                    enabled: true,
-                                                },
-                                            });
-                                            return;
-                                        }
-                                        const nextDate =
-                                            selectedAd.date &&
-                                            isFutureDate(selectedAd.date)
-                                                ? formatDateFromDate(new Date())
-                                                : selectedAd.date || '';
-                                        handleUpdateMeta({
-                                            status: 'publish',
-                                            date: nextDate,
-                                            options: {
-                                                ...selectedAd.options,
-                                                enabled: true,
-                                            },
-                                        });
-                                    }}
-                                />
-                                {resolveStatus(selectedAd) === 'future' && (
-                                    <TextControl
-                                        label="排期时间"
-                                        type="datetime-local"
-                                        value={formatDateTimeLocalInput(
-                                            selectedAd.date
-                                        )}
-                                        onChange={(value) => {
-                                            const nextDate =
-                                                formatDateTimeStorage(value);
-                                            if (!nextDate) {
-                                                handleUpdateMeta({
-                                                    date: '',
-                                                    status: 'draft',
-                                                    options: {
-                                                        ...selectedAd.options,
-                                                        enabled: false,
-                                                    },
-                                                });
-                                                return;
-                                            }
-                                            const nextStatus =
-                                                isFutureDate(nextDate)
-                                                    ? 'future'
-                                                    : 'publish';
-                                            handleUpdateMeta({
-                                                date: nextDate,
-                                                status: nextStatus,
-                                                options: {
-                                                    ...selectedAd.options,
-                                                    enabled: true,
-                                                },
-                                            });
-                                        }}
-                                        help="达到排期时间后，广告会自动发布。"
+                                        enableAlpha
                                     />
                                 )}
                             </div>
-                        )}
-                    </div>
-
-                    <div className="magick-ad-right-section">
-                        <div className="magick-ad-right-section__header">
-                            <div className="magick-ad-right-section__title">
-                                投放
-                            </div>
-                        </div>
-                        <div className="magick-ad-right-section__body">
-                            <div className="magick-ad-mode-switch">
-                                <div className="magick-ad-mode-switch__label">
-                                    编辑模式
-                                </div>
-                                <ButtonGroup>
-                                    <Button
-                                        variant="secondary"
-                                        isPressed={
-                                            effectiveEditorMode === 'quick'
-                                        }
-                                        onClick={() =>
-                                            handleUpdateOptions({
-                                                editor_mode: 'quick',
-                                            })
-                                        }
-                                    >
-                                        快速模式
-                                    </Button>
-                                    <Button
-                                        variant="secondary"
-                                        isPressed={
-                                            effectiveEditorMode === 'design'
-                                        }
-                                        onClick={() =>
-                                            handleUpdateOptions({
-                                                editor_mode: 'design',
-                                            })
-                                        }
-                                    >
-                                        设计模式
-                                    </Button>
-                                    <Button
-                                        variant="secondary"
-                                        isPressed={
-                                            effectiveEditorMode === 'expert'
-                                        }
-                                        onClick={() => {
-                                            if (!canUnfilteredHtml) {
-                                                showNotice(
-                                                    'error',
-                                                    '当前账号无 unfiltered_html 权限，无法启用专家模式。',
-                                                    3500
-                                                );
-                                                return;
-                                            }
-                                            handleUpdateOptions({
-                                                editor_mode: 'expert',
-                                            });
-                                        }}
-                                        disabled={!canUnfilteredHtml}
-                                    >
-                                        专家模式
-                                    </Button>
-                                </ButtonGroup>
-                            </div>
-                            {editorModeRaw === 'expert' &&
-                                !canUnfilteredHtml && (
+                            {!isHeadPlacement && (
+                                <RangeControl
+                                    label="圆角"
+                                    min={0}
+                                    max={50}
+                                    value={
+                                        selectedAd.content
+                                            ?.container_style
+                                            ?.radius ?? 0
+                                    }
+                                    onChange={(value) =>
+                                        handleUpdateContainerStyle({
+                                            radius: Number(value),
+                                        })
+                                    }
+                                />
+                            )}
+                            {selectedAd.options?.creative_type ===
+                                'image' && (
+                                <TextControl
+                                    label="按钮文案"
+                                    value={
+                                        selectedAd.content
+                                            ?.cta_text || ''
+                                    }
+                                    onChange={(value) =>
+                                        handleUpdateContent({
+                                            cta_text: value,
+                                        })
+                                    }
+                                    help="图片广告将展示一个按钮（需设置跳转链接）。"
+                                />
+                            )}
+                        </PanelBody>
+                        <PanelBody title="展示位置" initialOpen>
+                            {showValidation &&
+                                !resolvePlacement(
+                                    selectedAd.options || {}
+                                ).hook && (
                                     <Notice
-                                        status="warning"
+                                        status="error"
                                         isDismissible={false}
                                     >
-                                        专家模式需要 unfiltered_html
-                                        权限，已回退为设计模式。
+                                        请先选择展示位置
                                     </Notice>
                                 )}
-                            {effectiveEditorMode === 'quick' && (
-                                <Panel>
-                                    <PanelBody title="快速设置" initialOpen>
-                                        {isHeadPlacement && (
-                                            <Notice
-                                                status="warning"
-                                                isDismissible={false}
-                                            >
-                                                Head
-                                                位置仅允许原始输出，容器样式将被忽略。
-                                            </Notice>
+                            {selectedAd.options?.ad_type ===
+                                'global' && (
+                                <>
+                                    <SelectControl
+                                        label="展示页面"
+                                        value={
+                                            selectedAd.options
+                                                ?.show_page ||
+                                            'all'
+                                        }
+                                        options={DISPLAY_PAGE_OPTIONS}
+                                        onChange={(value) => {
+                                            const allowedPositions =
+                                                getPositionOptions(
+                                                    value
+                                                ).map(
+                                                    (option) =>
+                                                        option.value
+                                                );
+                                            const currentPlacement =
+                                                resolvePlacement(
+                                                    selectedAd.options ||
+                                                        {}
+                                                );
+                                            const currentValue =
+                                                placementToSlotValue(
+                                                    currentPlacement
+                                                );
+                                            const nextPosition =
+                                                allowedPositions.includes(
+                                                    currentValue
+                                                )
+                                                    ? currentValue
+                                                    : '';
+                                            applyPlacementSelection(
+                                                nextPosition,
+                                                {
+                                                    show_page:
+                                                        value,
+                                                }
+                                            );
+                                        }}
+                                    />
+                                    <SelectControl
+                                        label="展示位置"
+                                        value={placementToSlotValue(
+                                            resolvePlacement(
+                                                selectedAd.options ||
+                                                    {}
+                                            )
                                         )}
-                                        <div className="magick-ad-field">
-                                            <p className="magick-ad-field__label">
-                                                主色
-                                            </p>
-                                            {!isHeadPlacement && (
-                                                <ColorPicker
-                                                    color={
-                                                        selectedAd.content
-                                                            ?.container_style
-                                                            ?.background ||
-                                                        'transparent'
-                                                    }
-                                                    onChangeComplete={(value) =>
-                                                        handleUpdateContainerStyle(
+                                        options={positionOptions}
+                                        onChange={(value) =>
+                                            applyPlacementSelection(
+                                                value
+                                            )
+                                        }
+                                    />
+                                </>
+                            )}
+                            {selectedAd.options?.ad_type ===
+                                'targeted' && (
+                                <>
+                                    <SelectControl
+                                        label="展示类型"
+                                        value={
+                                            selectedAd.options
+                                                ?.target_type ||
+                                            ''
+                                        }
+                                        options={TARGET_TYPE_OPTIONS}
+                                        onChange={(value) =>
+                                            handleUpdateOptions({
+                                                target_type: value,
+                                                target_values: [],
+                                            })
+                                        }
+                                    />
+                                    <FormTokenField
+                                        label="展示页面"
+                                        value={
+                                            selectedAd.options
+                                                ?.target_values ||
+                                            []
+                                        }
+                                        onChange={(value) =>
+                                            handleUpdateOptions({
+                                                target_values:
+                                                    value,
+                                            })
+                                        }
+                                        suggestions={
+                                            selectedAd.options
+                                                ?.target_suggestions ||
+                                            []
+                                        }
+                                        help={
+                                            selectedAd.options
+                                                ?.target_type
+                                                ? '支持输入并搜索添加多个目标'
+                                                : '请先选择展示类型'
+                                        }
+                                        disabled={
+                                            !selectedAd.options
+                                                ?.target_type
+                                        }
+                                    />
+                                </>
+                            )}
+                            {renderNodePlacement()}
+                        </PanelBody>
+                    </Panel>
+                )}
+                {effectiveEditorMode !== 'quick' && (
+                    <TabPanel
+                        className="magick-ad-right-tabs"
+                        tabs={[
+                            { name: 'container', title: '容器' },
+                            { name: 'behavior', title: '交互' },
+                            { name: 'placement', title: '投放' },
+                        ]}
+                        initialTabName="placement"
+                    >
+                        {(tab) => {
+                            const containerStyle =
+                                selectedAd.content?.container_style ||
+                                {};
+                            const behavior =
+                                selectedAd.content?.behavior || {};
+
+                            const isInlineContainer =
+                                (selectedAd.options?.container_type ||
+                                    'inline') === 'inline';
+
+                            if (tab.name === 'container') {
+                                return (
+                                    <Panel>
+                                        <PanelBody
+                                            title="容器外观"
+                                            initialOpen
+                                        >
+                                            {isHeadPlacement && (
+                                                <>
+                                                    <Notice
+                                                        status="warning"
+                                                        isDismissible={
+                                                            false
+                                                        }
+                                                    >
+                                                        Head
+                                                        位置仅允许输出
+                                                        &lt;script&gt;、&lt;style&gt;、&lt;meta&gt;、
+                                                        &lt;link&gt;
+                                                        等标签，已强制切换为“原始输出”模式。
+                                                    </Notice>
+                                                    <SelectControl
+                                                        label="容器模式"
+                                                        value="raw"
+                                                        options={[
                                                             {
-                                                                background:
-                                                                    formatColorValue(
-                                                                        value
-                                                                    ),
-                                                            }
-                                                        )
-                                                    }
-                                                    enableAlpha
-                                                />
+                                                                label: '原始输出',
+                                                                value: 'raw',
+                                                            },
+                                                        ]}
+                                                        disabled
+                                                    />
+                                                </>
                                             )}
-                                        </div>
-                                        {!isHeadPlacement && (
+                                            {!isHeadPlacement && (
+                                                <Notice
+                                                    status="info"
+                                                    isDismissible={
+                                                        false
+                                                    }
+                                                >
+                                                    容器外观仅作用于包裹层（div），不影响图片本体。图片尺寸、
+                                                    圆角与外边距请在“图片配置”里调整。
+                                                </Notice>
+                                            )}
+                                            {!isHeadPlacement && (
+                                                <TabPanel
+                                                    className="magick-ad-sub-tabs"
+                                                    tabs={[
+                                                        {
+                                                            name: 'base',
+                                                            title: '基础',
+                                                        },
+                                                        {
+                                                            name: 'size',
+                                                            title: '尺寸',
+                                                        },
+                                                        {
+                                                            name: 'spacing',
+                                                            title: '间距',
+                                                        },
+                                                        {
+                                                            name: 'appearance',
+                                                            title: '外观',
+                                                        },
+                                                        {
+                                                            name: 'badge',
+                                                            title: '角标',
+                                                        },
+                                                    ]}
+                                                    initialTabName="base"
+                                                >
+                                                    {(subTab) => {
+                                                        if (
+                                                            subTab.name ===
+                                                            'base'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <SelectControl
+                                                                        label="容器类型"
+                                                                        value={
+                                                                            selectedAd
+                                                                                .options
+                                                                                ?.container_type ||
+                                                                            'inline'
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label: '默认嵌入',
+                                                                                value: 'inline',
+                                                                            },
+                                                                            {
+                                                                                label: '弹窗',
+                                                                                value: 'popup',
+                                                                            },
+                                                                            {
+                                                                                label: '吸顶/吸底横栏',
+                                                                                value: 'banner',
+                                                                            },
+                                                                            {
+                                                                                label: '角落悬浮',
+                                                                                value: 'floating',
+                                                                            },
+                                                                            {
+                                                                                label: '全屏插屏',
+                                                                                value: 'interstitial',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(
+                                                                            value
+                                                                        ) => {
+                                                                            if (
+                                                                                value !==
+                                                                                'inline'
+                                                                            ) {
+                                                                                handleUpdateOptions(
+                                                                                    {
+                                                                                        container_type:
+                                                                                            value,
+                                                                                        placement_hook:
+                                                                                            'footer',
+                                                                                        placement_position:
+                                                                                            '',
+                                                                                        placement_paragraph:
+                                                                                            0,
+                                                                                    }
+                                                                                );
+                                                                                return;
+                                                                            }
+                                                                            handleUpdateOptions(
+                                                                                {
+                                                                                    container_type:
+                                                                                        value,
+                                                                                }
+                                                                            );
+                                                                        }}
+                                                                        help="容器决定展示形态，投放位置仍由“投放”页签控制。"
+                                                                    />
+                                                                    <SelectControl
+                                                                        label="容器模式"
+                                                                        value={
+                                                                            containerStyle.mode ||
+                                                                            'boxed'
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label: '包裹容器',
+                                                                                value: 'boxed',
+                                                                            },
+                                                                            {
+                                                                                label: '原始输出',
+                                                                                value: 'raw',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    mode: value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    {containerStyle.mode ===
+                                                                        'raw' && (
+                                                                        <Notice
+                                                                            status="info"
+                                                                            isDismissible={
+                                                                                false
+                                                                            }
+                                                                        >
+                                                                            原始模式不会应用容器样式。
+                                                                        </Notice>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        }
+
+                                                        if (
+                                                            containerStyle.mode ===
+                                                            'raw'
+                                                        ) {
+                                                            return (
+                                                                <Notice
+                                                                    status="info"
+                                                                    isDismissible={
+                                                                        false
+                                                                    }
+                                                                >
+                                                                    当前为原始输出模式，尺寸/外观设置不会生效。
+                                                                </Notice>
+                                                            );
+                                                        }
+
+                                                        if (
+                                                            subTab.name ===
+                                                            'size'
+                                                        ) {
+                                                            return (
+                                                                <div className="magick-ad-field">
+                                                                    <RangeControl
+                                                                        label="最大宽度"
+                                                                        min={
+                                                                            containerStyle.max_width_unit ===
+                                                                            'px'
+                                                                                ? 320
+                                                                                : 50
+                                                                        }
+                                                                        max={
+                                                                            containerStyle.max_width_unit ===
+                                                                            'px'
+                                                                                ? 1200
+                                                                                : 100
+                                                                        }
+                                                                        value={
+                                                                            containerStyle.max_width ??
+                                                                            100
+                                                                        }
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    max_width:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <SelectControl
+                                                                        label="宽度单位"
+                                                                        value={
+                                                                            containerStyle.max_width_unit ||
+                                                                            '%'
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label: '百分比 (%)',
+                                                                                value: '%',
+                                                                            },
+                                                                            {
+                                                                                label: '像素 (px)',
+                                                                                value: 'px',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    max_width_unit:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        if (
+                                                            subTab.name ===
+                                                            'spacing'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <RangeControl
+                                                                        label="上内边距"
+                                                                        min={0}
+                                                                        max={60}
+                                                                        value={
+                                                                            containerStyle.padding_top ??
+                                                                            0
+                                                                        }
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    padding_top:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <RangeControl
+                                                                        label="下内边距"
+                                                                        min={0}
+                                                                        max={60}
+                                                                        value={
+                                                                            containerStyle.padding_bottom ??
+                                                                            0
+                                                                        }
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    padding_bottom:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <RangeControl
+                                                                        label="左内边距"
+                                                                        min={0}
+                                                                        max={60}
+                                                                        value={
+                                                                            containerStyle.padding_left ??
+                                                                            0
+                                                                        }
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    padding_left:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <RangeControl
+                                                                        label="右内边距"
+                                                                        min={0}
+                                                                        max={60}
+                                                                        value={
+                                                                            containerStyle.padding_right ??
+                                                                            0
+                                                                        }
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    padding_right:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </>
+                                                            );
+                                                        }
+
+                                                        if (
+                                                            subTab.name ===
+                                                            'appearance'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <div className="magick-ad-field">
+                                                                        <p className="magick-ad-field__label">
+                                                                            背景色
+                                                                        </p>
+                                                                        <ColorPicker
+                                                                            color={
+                                                                                containerStyle.background ||
+                                                                                'transparent'
+                                                                            }
+                                                                            onChangeComplete={(
+                                                                                value
+                                                                            ) =>
+                                                                                handleUpdateContainerStyle(
+                                                                                    {
+                                                                                        background:
+                                                                                            formatColorValue(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                            enableAlpha
+                                                                        />
+                                                                    </div>
+                                                                    <RangeControl
+                                                                        label="圆角"
+                                                                        min={0}
+                                                                        max={50}
+                                                                        value={
+                                                                            containerStyle.radius ??
+                                                                            0
+                                                                        }
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    radius:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <SelectControl
+                                                                        label="阴影"
+                                                                        value={
+                                                                            containerStyle.shadow ||
+                                                                            'none'
+                                                                        }
+                                                                        options={SHADOW_OPTIONS}
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    shadow:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </>
+                                                            );
+                                                        }
+
+                                                        if (
+                                                            subTab.name ===
+                                                            'badge'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <ToggleControl
+                                                                        label="显示角标"
+                                                                        checked={Boolean(
+                                                                            containerStyle.badge_enabled
+                                                                        )}
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContainerStyle(
+                                                                                {
+                                                                                    badge_enabled:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    {containerStyle.badge_enabled && (
+                                                                        <>
+                                                                            <TextControl
+                                                                                label="角标文本"
+                                                                                value={
+                                                                                    containerStyle.badge_text ||
+                                                                                    '广告'
+                                                                                }
+                                                                                onChange={(
+                                                                                    value
+                                                                                ) =>
+                                                                                    handleUpdateContainerStyle(
+                                                                                        {
+                                                                                            badge_text:
+                                                                                                value,
+                                                                                        }
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                            <div className="magick-ad-field">
+                                                                                <p className="magick-ad-field__label">
+                                                                                    角标颜色
+                                                                                </p>
+                                                                                <ColorPicker
+                                                                                    color={
+                                                                                        containerStyle.badge_color ||
+                                                                                        '#1d2327'
+                                                                                    }
+                                                                                    onChangeComplete={(
+                                                                                        value
+                                                                                    ) =>
+                                                                                        handleUpdateContainerStyle(
+                                                                                            {
+                                                                                                badge_color:
+                                                                                                    formatColorValue(
+                                                                                                        value
+                                                                                                    ),
+                                                                                            }
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </div>
+                                                                        </>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        }
+
+                                                        return null;
+                                                    }}
+                                                </TabPanel>
+                                            )}
+                                        </PanelBody>
+                                    </Panel>
+                                );
+                            }
+
+                            if (tab.name === 'behavior') {
+                                return (
+                                    <Panel>
+                                        <PanelBody
+                                            title="交互行为"
+                                            initialOpen
+                                        >
+                                            <SelectControl
+                                                label="进场动画"
+                                                value={
+                                                    behavior.animation ||
+                                                    'none'
+                                                }
+                                                options={
+                                                    ANIMATION_OPTIONS
+                                                }
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior(
+                                                        {
+                                                            animation:
+                                                                value,
+                                                        }
+                                                    )
+                                                }
+                                            />
+                                            <ToggleControl
+                                                label="显示关闭按钮"
+                                                checked={Boolean(
+                                                    behavior.close_button
+                                                )}
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior(
+                                                        {
+                                                            close_button:
+                                                                value,
+                                                        }
+                                                    )
+                                                }
+                                                help="默认关闭。开启后在广告右上角显示关闭按钮。"
+                                            />
+                                            <ToggleControl
+                                                label="ESC 关闭"
+                                                checked={
+                                                    behavior.close_on_esc !==
+                                                    false
+                                                }
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior(
+                                                        {
+                                                            close_on_esc:
+                                                                value,
+                                                        }
+                                                    )
+                                                }
+                                                help="默认开启。弹窗/横栏可用，按 ESC 关闭。"
+                                            />
+                                            <ToggleControl
+                                                label="点击遮罩关闭"
+                                                checked={
+                                                    behavior.close_on_overlay !==
+                                                    false
+                                                }
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior(
+                                                        {
+                                                            close_on_overlay:
+                                                                value,
+                                                        }
+                                                    )
+                                                }
+                                                help="默认开启。仅弹窗/插屏有效，点击遮罩关闭。"
+                                            />
+                                            <ToggleControl
+                                                label="打开时锁定滚动"
+                                                checked={Boolean(
+                                                    behavior.lock_scroll
+                                                )}
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior(
+                                                        {
+                                                            lock_scroll:
+                                                                value,
+                                                        }
+                                                    )
+                                                }
+                                                help="默认关闭。仅弹窗/插屏可用，打开时锁定页面滚动。"
+                                            />
                                             <RangeControl
-                                                label="圆角"
+                                                label="延迟显示（秒）"
                                                 min={0}
-                                                max={50}
+                                                max={30}
                                                 value={
-                                                    selectedAd.content
-                                                        ?.container_style
-                                                        ?.radius ?? 0
+                                                    behavior.delay ??
+                                                    0
                                                 }
                                                 onChange={(value) =>
-                                                    handleUpdateContainerStyle({
-                                                        radius: Number(value),
-                                                    })
+                                                    handleUpdateBehavior(
+                                                        {
+                                                            delay: Number(
+                                                                value
+                                                            ),
+                                                        }
+                                                    )
                                                 }
+                                                help="默认 0 秒。仅对弹窗/横栏/插屏生效。"
                                             />
-                                        )}
-                                        {selectedAd.options?.creative_type ===
-                                            'image' && (
-                                            <TextControl
-                                                label="按钮文案"
-                                                value={
-                                                    selectedAd.content
-                                                        ?.cta_text || ''
-                                                }
-                                                onChange={(value) =>
-                                                    handleUpdateContent({
-                                                        cta_text: value,
-                                                    })
-                                                }
-                                                help="图片广告将展示一个按钮（需设置跳转链接）。"
-                                            />
-                                        )}
-                                    </PanelBody>
-                                    <PanelBody title="展示位置" initialOpen>
+                                        </PanelBody>
+                                    </Panel>
+                                );
+                            }
+
+                            return (
+                                <Panel>
+                                    {!isInlineContainer && (
+                                        <Notice
+                                            status="info"
+                                            isDismissible={false}
+                                        >
+                                            当前容器为“非嵌入”模式，展示位置将固定在页脚输出。
+                                        </Notice>
+                                    )}
+                                    <PanelBody
+                                        title="展示位置"
+                                        initialOpen
+                                    >
                                         {showValidation &&
                                             !resolvePlacement(
-                                                selectedAd.options || {}
+                                                selectedAd.options ||
+                                                    {}
                                             ).hook && (
                                                 <Notice
                                                     status="error"
-                                                    isDismissible={false}
+                                                    isDismissible={
+                                                        false
+                                                    }
                                                 >
                                                     请先选择展示位置
                                                 </Notice>
                                             )}
-                                        {selectedAd.options?.ad_type ===
+                                        {selectedAd.options
+                                            ?.ad_type ===
                                             'global' && (
                                             <>
                                                 <SelectControl
                                                     label="展示页面"
                                                     value={
-                                                        selectedAd.options
+                                                        selectedAd
+                                                            .options
                                                             ?.show_page ||
                                                         'all'
                                                     }
-                                                    options={DISPLAY_PAGE_OPTIONS}
-                                                    onChange={(value) => {
+                                                    options={
+                                                        DISPLAY_PAGE_OPTIONS
+                                                    }
+                                                    onChange={(
+                                                        value
+                                                    ) => {
                                                         const allowedPositions =
                                                             getPositionOptions(
                                                                 value
                                                             ).map(
-                                                                (option) =>
+                                                                (
+                                                                    option
+                                                                ) =>
                                                                     option.value
                                                             );
                                                         const currentPlacement =
@@ -2194,8 +3000,12 @@ const AdsConfig = () => {
                                                                 {}
                                                         )
                                                     )}
-                                                    options={positionOptions}
-                                                    onChange={(value) =>
+                                                    options={
+                                                        positionOptions
+                                                    }
+                                                    onChange={(
+                                                        value
+                                                    ) =>
                                                         applyPlacementSelection(
                                                             value
                                                         )
@@ -2203,50 +3013,68 @@ const AdsConfig = () => {
                                                 />
                                             </>
                                         )}
-                                        {selectedAd.options?.ad_type ===
+                                        {selectedAd.options
+                                            ?.ad_type ===
                                             'targeted' && (
                                             <>
                                                 <SelectControl
                                                     label="展示类型"
                                                     value={
-                                                        selectedAd.options
+                                                        selectedAd
+                                                            .options
                                                             ?.target_type ||
                                                         ''
                                                     }
-                                                    options={TARGET_TYPE_OPTIONS}
-                                                    onChange={(value) =>
-                                                        handleUpdateOptions({
-                                                            target_type: value,
-                                                            target_values: [],
-                                                        })
+                                                    options={
+                                                        TARGET_TYPE_OPTIONS
+                                                    }
+                                                    onChange={(
+                                                        value
+                                                    ) =>
+                                                        handleUpdateOptions(
+                                                            {
+                                                                target_type:
+                                                                    value,
+                                                                target_values:
+                                                                    [],
+                                                            }
+                                                        )
                                                     }
                                                 />
                                                 <FormTokenField
                                                     label="展示页面"
                                                     value={
-                                                        selectedAd.options
+                                                        selectedAd
+                                                            .options
                                                             ?.target_values ||
                                                         []
                                                     }
-                                                    onChange={(value) =>
-                                                        handleUpdateOptions({
-                                                            target_values:
-                                                                value,
-                                                        })
+                                                    onChange={(
+                                                        value
+                                                    ) =>
+                                                        handleUpdateOptions(
+                                                            {
+                                                                target_values:
+                                                                    value,
+                                                            }
+                                                        )
                                                     }
                                                     suggestions={
-                                                        selectedAd.options
+                                                        selectedAd
+                                                            .options
                                                             ?.target_suggestions ||
                                                         []
                                                     }
                                                     help={
-                                                        selectedAd.options
+                                                        selectedAd
+                                                            .options
                                                             ?.target_type
                                                             ? '支持输入并搜索添加多个目标'
                                                             : '请先选择展示类型'
                                                     }
                                                     disabled={
-                                                        !selectedAd.options
+                                                        !selectedAd
+                                                            .options
                                                             ?.target_type
                                                     }
                                                 />
@@ -2255,1005 +3083,223 @@ const AdsConfig = () => {
                                         {renderNodePlacement()}
                                     </PanelBody>
                                 </Panel>
-                            )}
-                            {effectiveEditorMode !== 'quick' && (
-                                <TabPanel
-                                    className="magick-ad-right-tabs"
-                                    tabs={[
-                                        { name: 'container', title: '容器' },
-                                        { name: 'behavior', title: '交互' },
-                                        { name: 'placement', title: '投放' },
-                                    ]}
-                                    initialTabName="placement"
+                            );
+                        }}
+                    </TabPanel>
+                )}
+            </div>
+        </div>
+
+        <div className="magick-ad-right-section">
+            <div className="magick-ad-right-section__header">
+                <div className="magick-ad-right-section__title">
+                    频控
+                </div>
+            </div>
+            <div className="magick-ad-right-section__body">
+                {renderFrequencyControls(
+                    selectedAd.content?.behavior || {}
+                )}
+            </div>
+        </div>
+
+        <div className="magick-ad-right-section">
+            <div className="magick-ad-right-section__header">
+                <div className="magick-ad-right-section__title">
+                    高级设置
+                </div>
+                <Button
+                    className="magick-ad-collapse-toggle"
+                    icon={advancedOpen ? chevronUp : chevronDown}
+                    label={advancedOpen ? '折叠' : '展开'}
+                    variant="tertiary"
+                    onClick={() =>
+                        setAdvancedOpen((prev) => !prev)
+                    }
+                />
+            </div>
+            {advancedOpen && (
+                <div className="magick-ad-right-section__body">
+                    <TextControl
+                        label="优先级（越大越先展示）"
+                        type="number"
+                        min={1}
+                        value={selectedAd.options?.priority ?? 10}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                priority: Math.max(
+                                    1,
+                                    Number(value) || 1
+                                ),
+                            })
+                        }
+                        help="同一 Slot 内优先级最高的广告优先出场。"
+                    />
+                    <TextControl
+                        label="权重（同优先级下随机）"
+                        type="number"
+                        min={1}
+                        value={selectedAd.options?.weight ?? 1}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                weight: Math.max(
+                                    1,
+                                    Number(value) || 1
+                                ),
+                            })
+                        }
+                        help="仅对同优先级广告生效，权重越大越容易被选中。"
+                    />
+                    <div className="magick-ad-preview-target">
+                        <div className="magick-ad-preview-target__title">
+                            预览页面
+                        </div>
+                        <div className="magick-ad-preview-target__mode">
+                            <ButtonGroup>
+                                <Button
+                                    variant="secondary"
+                                    isPressed={
+                                        previewMode === 'url'
+                                    }
+                                    onClick={() =>
+                                        setPreviewMode('url')
+                                    }
                                 >
-                                    {(tab) => {
-                                        const containerStyle =
-                                            selectedAd.content?.container_style ||
-                                            {};
-                                        const behavior =
-                                            selectedAd.content?.behavior || {};
-
-                                        const isInlineContainer =
-                                            (selectedAd.options?.container_type ||
-                                                'inline') === 'inline';
-
-                                        if (tab.name === 'container') {
-                                            return (
-                                                <Panel>
-                                                    <PanelBody
-                                                        title="容器外观"
-                                                        initialOpen
-                                                    >
-                                                        {isHeadPlacement && (
-                                                            <>
-                                                                <Notice
-                                                                    status="warning"
-                                                                    isDismissible={
-                                                                        false
-                                                                    }
-                                                                >
-                                                                    Head
-                                                                    位置仅允许输出
-                                                                    &lt;script&gt;、&lt;style&gt;、&lt;meta&gt;、
-                                                                    &lt;link&gt;
-                                                                    等标签，已强制切换为“原始输出”模式。
-                                                                </Notice>
-                                                                <SelectControl
-                                                                    label="容器模式"
-                                                                    value="raw"
-                                                                    options={[
-                                                                        {
-                                                                            label: '原始输出',
-                                                                            value: 'raw',
-                                                                        },
-                                                                    ]}
-                                                                    disabled
-                                                                />
-                                                            </>
-                                                        )}
-                                                        {!isHeadPlacement && (
-                                                            <Notice
-                                                                status="info"
-                                                                isDismissible={
-                                                                    false
-                                                                }
-                                                            >
-                                                                容器外观仅作用于包裹层（div），不影响图片本体。图片尺寸、
-                                                                圆角与外边距请在“图片配置”里调整。
-                                                            </Notice>
-                                                        )}
-                                                        {!isHeadPlacement && (
-                                                            <TabPanel
-                                                                className="magick-ad-sub-tabs"
-                                                                tabs={[
-                                                                    {
-                                                                        name: 'base',
-                                                                        title: '基础',
-                                                                    },
-                                                                    {
-                                                                        name: 'size',
-                                                                        title: '尺寸',
-                                                                    },
-                                                                    {
-                                                                        name: 'spacing',
-                                                                        title: '间距',
-                                                                    },
-                                                                    {
-                                                                        name: 'appearance',
-                                                                        title: '外观',
-                                                                    },
-                                                                    {
-                                                                        name: 'badge',
-                                                                        title: '角标',
-                                                                    },
-                                                                ]}
-                                                                initialTabName="base"
-                                                            >
-                                                                {(subTab) => {
-                                                                    if (
-                                                                        subTab.name ===
-                                                                        'base'
-                                                                    ) {
-                                                                        return (
-                                                                            <>
-                                                                                <SelectControl
-                                                                                    label="容器类型"
-                                                                                    value={
-                                                                                        selectedAd
-                                                                                            .options
-                                                                                            ?.container_type ||
-                                                                                        'inline'
-                                                                                    }
-                                                                                    options={[
-                                                                                        {
-                                                                                            label: '默认嵌入',
-                                                                                            value: 'inline',
-                                                                                        },
-                                                                                        {
-                                                                                            label: '弹窗',
-                                                                                            value: 'popup',
-                                                                                        },
-                                                                                        {
-                                                                                            label: '吸顶/吸底横栏',
-                                                                                            value: 'banner',
-                                                                                        },
-                                                                                        {
-                                                                                            label: '角落悬浮',
-                                                                                            value: 'floating',
-                                                                                        },
-                                                                                        {
-                                                                                            label: '全屏插屏',
-                                                                                            value: 'interstitial',
-                                                                                        },
-                                                                                    ]}
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) => {
-                                                                                        if (
-                                                                                            value !==
-                                                                                            'inline'
-                                                                                        ) {
-                                                                                            handleUpdateOptions(
-                                                                                                {
-                                                                                                    container_type:
-                                                                                                        value,
-                                                                                                    placement_hook:
-                                                                                                        'footer',
-                                                                                                    placement_position:
-                                                                                                        '',
-                                                                                                    placement_paragraph:
-                                                                                                        0,
-                                                                                                }
-                                                                                            );
-                                                                                            return;
-                                                                                        }
-                                                                                        handleUpdateOptions(
-                                                                                            {
-                                                                                                container_type:
-                                                                                                    value,
-                                                                                            }
-                                                                                        );
-                                                                                    }}
-                                                                                    help="容器决定展示形态，投放位置仍由“投放”页签控制。"
-                                                                                />
-                                                                                <SelectControl
-                                                                                    label="容器模式"
-                                                                                    value={
-                                                                                        containerStyle.mode ||
-                                                                                        'boxed'
-                                                                                    }
-                                                                                    options={[
-                                                                                        {
-                                                                                            label: '包裹容器',
-                                                                                            value: 'boxed',
-                                                                                        },
-                                                                                        {
-                                                                                            label: '原始输出',
-                                                                                            value: 'raw',
-                                                                                        },
-                                                                                    ]}
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                mode: value,
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
-                                                                                {containerStyle.mode ===
-                                                                                    'raw' && (
-                                                                                    <Notice
-                                                                                        status="info"
-                                                                                        isDismissible={
-                                                                                            false
-                                                                                        }
-                                                                                    >
-                                                                                        原始模式不会应用容器样式。
-                                                                                    </Notice>
-                                                                                )}
-                                                                            </>
-                                                                        );
-                                                                    }
-
-                                                                    if (
-                                                                        containerStyle.mode ===
-                                                                        'raw'
-                                                                    ) {
-                                                                        return (
-                                                                            <Notice
-                                                                                status="info"
-                                                                                isDismissible={
-                                                                                    false
-                                                                                }
-                                                                            >
-                                                                                当前为原始输出模式，尺寸/外观设置不会生效。
-                                                                            </Notice>
-                                                                        );
-                                                                    }
-
-                                                                    if (
-                                                                        subTab.name ===
-                                                                        'size'
-                                                                    ) {
-                                                                        return (
-                                                                            <div className="magick-ad-field">
-                                                                                <RangeControl
-                                                                                    label="最大宽度"
-                                                                                    min={
-                                                                                        containerStyle.max_width_unit ===
-                                                                                        'px'
-                                                                                            ? 320
-                                                                                            : 50
-                                                                                    }
-                                                                                    max={
-                                                                                        containerStyle.max_width_unit ===
-                                                                                        'px'
-                                                                                            ? 1200
-                                                                                            : 100
-                                                                                    }
-                                                                                    value={
-                                                                                        containerStyle.max_width ??
-                                                                                        100
-                                                                                    }
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                max_width:
-                                                                                                    Number(
-                                                                                                        value
-                                                                                                    ),
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
-                                                                                <SelectControl
-                                                                                    label="宽度单位"
-                                                                                    value={
-                                                                                        containerStyle.max_width_unit ||
-                                                                                        '%'
-                                                                                    }
-                                                                                    options={[
-                                                                                        {
-                                                                                            label: '百分比 (%)',
-                                                                                            value: '%',
-                                                                                        },
-                                                                                        {
-                                                                                            label: '像素 (px)',
-                                                                                            value: 'px',
-                                                                                        },
-                                                                                    ]}
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                max_width_unit:
-                                                                                                    value,
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
-                                                                            </div>
-                                                                        );
-                                                                    }
-
-                                                                    if (
-                                                                        subTab.name ===
-                                                                        'spacing'
-                                                                    ) {
-                                                                        return (
-                                                                            <>
-                                                                                <RangeControl
-                                                                                    label="上内边距"
-                                                                                    min={0}
-                                                                                    max={60}
-                                                                                    value={
-                                                                                        containerStyle.padding_top ??
-                                                                                        0
-                                                                                    }
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                padding_top:
-                                                                                                    Number(
-                                                                                                        value
-                                                                                                    ),
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
-                                                                                <RangeControl
-                                                                                    label="下内边距"
-                                                                                    min={0}
-                                                                                    max={60}
-                                                                                    value={
-                                                                                        containerStyle.padding_bottom ??
-                                                                                        0
-                                                                                    }
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                padding_bottom:
-                                                                                                    Number(
-                                                                                                        value
-                                                                                                    ),
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
-                                                                                <RangeControl
-                                                                                    label="左内边距"
-                                                                                    min={0}
-                                                                                    max={60}
-                                                                                    value={
-                                                                                        containerStyle.padding_left ??
-                                                                                        0
-                                                                                    }
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                padding_left:
-                                                                                                    Number(
-                                                                                                        value
-                                                                                                    ),
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
-                                                                                <RangeControl
-                                                                                    label="右内边距"
-                                                                                    min={0}
-                                                                                    max={60}
-                                                                                    value={
-                                                                                        containerStyle.padding_right ??
-                                                                                        0
-                                                                                    }
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                padding_right:
-                                                                                                    Number(
-                                                                                                        value
-                                                                                                    ),
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
-                                                                            </>
-                                                                        );
-                                                                    }
-
-                                                                    if (
-                                                                        subTab.name ===
-                                                                        'appearance'
-                                                                    ) {
-                                                                        return (
-                                                                            <>
-                                                                                <div className="magick-ad-field">
-                                                                                    <p className="magick-ad-field__label">
-                                                                                        背景色
-                                                                                    </p>
-                                                                                    <ColorPicker
-                                                                                        color={
-                                                                                            containerStyle.background ||
-                                                                                            'transparent'
-                                                                                        }
-                                                                                        onChangeComplete={(
-                                                                                            value
-                                                                                        ) =>
-                                                                                            handleUpdateContainerStyle(
-                                                                                                {
-                                                                                                    background:
-                                                                                                        formatColorValue(
-                                                                                                            value
-                                                                                                        ),
-                                                                                                }
-                                                                                            )
-                                                                                        }
-                                                                                        enableAlpha
-                                                                                    />
-                                                                                </div>
-                                                                                <RangeControl
-                                                                                    label="圆角"
-                                                                                    min={0}
-                                                                                    max={50}
-                                                                                    value={
-                                                                                        containerStyle.radius ??
-                                                                                        0
-                                                                                    }
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                radius:
-                                                                                                    Number(
-                                                                                                        value
-                                                                                                    ),
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
-                                                                                <SelectControl
-                                                                                    label="阴影"
-                                                                                    value={
-                                                                                        containerStyle.shadow ||
-                                                                                        'none'
-                                                                                    }
-                                                                                    options={SHADOW_OPTIONS}
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                shadow:
-                                                                                                    value,
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
-                                                                            </>
-                                                                        );
-                                                                    }
-
-                                                                    if (
-                                                                        subTab.name ===
-                                                                        'badge'
-                                                                    ) {
-                                                                        return (
-                                                                            <>
-                                                                                <ToggleControl
-                                                                                    label="显示角标"
-                                                                                    checked={Boolean(
-                                                                                        containerStyle.badge_enabled
-                                                                                    )}
-                                                                                    onChange={(
-                                                                                        value
-                                                                                    ) =>
-                                                                                        handleUpdateContainerStyle(
-                                                                                            {
-                                                                                                badge_enabled:
-                                                                                                    value,
-                                                                                            }
-                                                                                        )
-                                                                                    }
-                                                                                />
-                                                                                {containerStyle.badge_enabled && (
-                                                                                    <>
-                                                                                        <TextControl
-                                                                                            label="角标文本"
-                                                                                            value={
-                                                                                                containerStyle.badge_text ||
-                                                                                                '广告'
-                                                                                            }
-                                                                                            onChange={(
-                                                                                                value
-                                                                                            ) =>
-                                                                                                handleUpdateContainerStyle(
-                                                                                                    {
-                                                                                                        badge_text:
-                                                                                                            value,
-                                                                                                    }
-                                                                                                )
-                                                                                            }
-                                                                                        />
-                                                                                        <div className="magick-ad-field">
-                                                                                            <p className="magick-ad-field__label">
-                                                                                                角标颜色
-                                                                                            </p>
-                                                                                            <ColorPicker
-                                                                                                color={
-                                                                                                    containerStyle.badge_color ||
-                                                                                                    '#1d2327'
-                                                                                                }
-                                                                                                onChangeComplete={(
-                                                                                                    value
-                                                                                                ) =>
-                                                                                                    handleUpdateContainerStyle(
-                                                                                                        {
-                                                                                                            badge_color:
-                                                                                                                formatColorValue(
-                                                                                                                    value
-                                                                                                                ),
-                                                                                                        }
-                                                                                                    )
-                                                                                                }
-                                                                                            />
-                                                                                        </div>
-                                                                                    </>
-                                                                                )}
-                                                                            </>
-                                                                        );
-                                                                    }
-
-                                                                    return null;
-                                                                }}
-                                                            </TabPanel>
-                                                        )}
-                                                    </PanelBody>
-                                                </Panel>
-                                            );
-                                        }
-
-                                        if (tab.name === 'behavior') {
-                                            return (
-                                                <Panel>
-                                                    <PanelBody
-                                                        title="交互行为"
-                                                        initialOpen
-                                                    >
-                                                        <SelectControl
-                                                            label="进场动画"
-                                                            value={
-                                                                behavior.animation ||
-                                                                'none'
-                                                            }
-                                                            options={
-                                                                ANIMATION_OPTIONS
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBehavior(
-                                                                    {
-                                                                        animation:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <ToggleControl
-                                                            label="显示关闭按钮"
-                                                            checked={Boolean(
-                                                                behavior.close_button
-                                                            )}
-                                                            onChange={(value) =>
-                                                                handleUpdateBehavior(
-                                                                    {
-                                                                        close_button:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                            help="默认关闭。开启后在广告右上角显示关闭按钮。"
-                                                        />
-                                                        <ToggleControl
-                                                            label="ESC 关闭"
-                                                            checked={
-                                                                behavior.close_on_esc !==
-                                                                false
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBehavior(
-                                                                    {
-                                                                        close_on_esc:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                            help="默认开启。弹窗/横栏可用，按 ESC 关闭。"
-                                                        />
-                                                        <ToggleControl
-                                                            label="点击遮罩关闭"
-                                                            checked={
-                                                                behavior.close_on_overlay !==
-                                                                false
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBehavior(
-                                                                    {
-                                                                        close_on_overlay:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                            help="默认开启。仅弹窗/插屏有效，点击遮罩关闭。"
-                                                        />
-                                                        <ToggleControl
-                                                            label="打开时锁定滚动"
-                                                            checked={Boolean(
-                                                                behavior.lock_scroll
-                                                            )}
-                                                            onChange={(value) =>
-                                                                handleUpdateBehavior(
-                                                                    {
-                                                                        lock_scroll:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                            help="默认关闭。仅弹窗/插屏可用，打开时锁定页面滚动。"
-                                                        />
-                                                        <RangeControl
-                                                            label="延迟显示（秒）"
-                                                            min={0}
-                                                            max={30}
-                                                            value={
-                                                                behavior.delay ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBehavior(
-                                                                    {
-                                                                        delay: Number(
-                                                                            value
-                                                                        ),
-                                                                    }
-                                                                )
-                                                            }
-                                                            help="默认 0 秒。仅对弹窗/横栏/插屏生效。"
-                                                        />
-                                                    </PanelBody>
-                                                </Panel>
-                                            );
-                                        }
-
-                                        return (
-                                            <Panel>
-                                                {!isInlineContainer && (
-                                                    <Notice
-                                                        status="info"
-                                                        isDismissible={false}
-                                                    >
-                                                        当前容器为“非嵌入”模式，展示位置将固定在页脚输出。
-                                                    </Notice>
-                                                )}
-                                                <PanelBody
-                                                    title="展示位置"
-                                                    initialOpen
-                                                >
-                                                    {showValidation &&
-                                                        !resolvePlacement(
-                                                            selectedAd.options ||
-                                                                {}
-                                                        ).hook && (
-                                                            <Notice
-                                                                status="error"
-                                                                isDismissible={
-                                                                    false
-                                                                }
-                                                            >
-                                                                请先选择展示位置
-                                                            </Notice>
-                                                        )}
-                                                    {selectedAd.options
-                                                        ?.ad_type ===
-                                                        'global' && (
-                                                        <>
-                                                            <SelectControl
-                                                                label="展示页面"
-                                                                value={
-                                                                    selectedAd
-                                                                        .options
-                                                                        ?.show_page ||
-                                                                    'all'
-                                                                }
-                                                                options={
-                                                                    DISPLAY_PAGE_OPTIONS
-                                                                }
-                                                                onChange={(
-                                                                    value
-                                                                ) => {
-                                                                    const allowedPositions =
-                                                                        getPositionOptions(
-                                                                            value
-                                                                        ).map(
-                                                                            (
-                                                                                option
-                                                                            ) =>
-                                                                                option.value
-                                                                        );
-                                                                    const currentPlacement =
-                                                                        resolvePlacement(
-                                                                            selectedAd.options ||
-                                                                                {}
-                                                                        );
-                                                                    const currentValue =
-                                                                        placementToSlotValue(
-                                                                            currentPlacement
-                                                                        );
-                                                                    const nextPosition =
-                                                                        allowedPositions.includes(
-                                                                            currentValue
-                                                                        )
-                                                                            ? currentValue
-                                                                            : '';
-                                                                    applyPlacementSelection(
-                                                                        nextPosition,
-                                                                        {
-                                                                            show_page:
-                                                                                value,
-                                                                        }
-                                                                    );
-                                                                }}
-                                                            />
-                                                            <SelectControl
-                                                                label="展示位置"
-                                                                value={placementToSlotValue(
-                                                                    resolvePlacement(
-                                                                        selectedAd.options ||
-                                                                            {}
-                                                                    )
-                                                                )}
-                                                                options={
-                                                                    positionOptions
-                                                                }
-                                                                onChange={(
-                                                                    value
-                                                                ) =>
-                                                                    applyPlacementSelection(
-                                                                        value
-                                                                    )
-                                                                }
-                                                            />
-                                                        </>
-                                                    )}
-                                                    {selectedAd.options
-                                                        ?.ad_type ===
-                                                        'targeted' && (
-                                                        <>
-                                                            <SelectControl
-                                                                label="展示类型"
-                                                                value={
-                                                                    selectedAd
-                                                                        .options
-                                                                        ?.target_type ||
-                                                                    ''
-                                                                }
-                                                                options={
-                                                                    TARGET_TYPE_OPTIONS
-                                                                }
-                                                                onChange={(
-                                                                    value
-                                                                ) =>
-                                                                    handleUpdateOptions(
-                                                                        {
-                                                                            target_type:
-                                                                                value,
-                                                                            target_values:
-                                                                                [],
-                                                                        }
-                                                                    )
-                                                                }
-                                                            />
-                                                            <FormTokenField
-                                                                label="展示页面"
-                                                                value={
-                                                                    selectedAd
-                                                                        .options
-                                                                        ?.target_values ||
-                                                                    []
-                                                                }
-                                                                onChange={(
-                                                                    value
-                                                                ) =>
-                                                                    handleUpdateOptions(
-                                                                        {
-                                                                            target_values:
-                                                                                value,
-                                                                        }
-                                                                    )
-                                                                }
-                                                                suggestions={
-                                                                    selectedAd
-                                                                        .options
-                                                                        ?.target_suggestions ||
-                                                                    []
-                                                                }
-                                                                help={
-                                                                    selectedAd
-                                                                        .options
-                                                                        ?.target_type
-                                                                        ? '支持输入并搜索添加多个目标'
-                                                                        : '请先选择展示类型'
-                                                                }
-                                                                disabled={
-                                                                    !selectedAd
-                                                                        .options
-                                                                        ?.target_type
-                                                                }
-                                                            />
-                                                        </>
-                                                    )}
-                                                    {renderNodePlacement()}
-                                                </PanelBody>
-                                            </Panel>
-                                        );
-                                    }}
-                                </TabPanel>
-                            )}
+                                    链接
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    isPressed={
+                                        previewMode === 'post'
+                                    }
+                                    onClick={() =>
+                                        setPreviewMode('post')
+                                    }
+                                >
+                                    文章
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    isPressed={
+                                        previewMode === 'page'
+                                    }
+                                    onClick={() =>
+                                        setPreviewMode('page')
+                                    }
+                                >
+                                    页面
+                                </Button>
+                            </ButtonGroup>
                         </div>
-                    </div>
-
-                    <div className="magick-ad-right-section">
-                        <div className="magick-ad-right-section__header">
-                            <div className="magick-ad-right-section__title">
-                                频控
-                            </div>
-                        </div>
-                        <div className="magick-ad-right-section__body">
-                            {renderFrequencyControls(
-                                selectedAd.content?.behavior || {}
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="magick-ad-right-section">
-                        <div className="magick-ad-right-section__header">
-                            <div className="magick-ad-right-section__title">
-                                高级设置
-                            </div>
-                            <Button
-                                className="magick-ad-collapse-toggle"
-                                icon={advancedOpen ? chevronUp : chevronDown}
-                                label={advancedOpen ? '折叠' : '展开'}
-                                variant="tertiary"
-                                onClick={() =>
-                                    setAdvancedOpen((prev) => !prev)
+                        {previewMode === 'url' ? (
+                            <TextControl
+                                label="页面链接（仅支持本站）"
+                                value={previewTarget}
+                                placeholder="https://example.com/your-page"
+                                onChange={(value) =>
+                                    setPreviewTarget(value)
+                                }
+                                help="填写后将使用该页面作为预览环境。"
+                            />
+                        ) : (
+                            <ComboboxControl
+                                label="选择页面"
+                                value={previewSelected}
+                                options={previewOptions}
+                                onChange={handlePreviewSelect}
+                                onFilterValueChange={(value) =>
+                                    setPreviewSearch(value)
+                                }
+                                placeholder={
+                                    previewMode === 'page'
+                                        ? '搜索页面...'
+                                        : '搜索文章...'
+                                }
+                                help={
+                                    previewLoading
+                                        ? '正在加载列表...'
+                                        : '选择后将自动作为预览环境'
                                 }
                             />
-                        </div>
-                        {advancedOpen && (
-                            <div className="magick-ad-right-section__body">
-                                <TextControl
-                                    label="优先级（越大越先展示）"
-                                    type="number"
-                                    min={1}
-                                    value={selectedAd.options?.priority ?? 10}
-                                    onChange={(value) =>
-                                        handleUpdateOptions({
-                                            priority: Math.max(
-                                                1,
-                                                Number(value) || 1
-                                            ),
-                                        })
-                                    }
-                                    help="同一 Slot 内优先级最高的广告优先出场。"
-                                />
-                                <TextControl
-                                    label="权重（同优先级下随机）"
-                                    type="number"
-                                    min={1}
-                                    value={selectedAd.options?.weight ?? 1}
-                                    onChange={(value) =>
-                                        handleUpdateOptions({
-                                            weight: Math.max(
-                                                1,
-                                                Number(value) || 1
-                                            ),
-                                        })
-                                    }
-                                    help="仅对同优先级广告生效，权重越大越容易被选中。"
-                                />
-                                <div className="magick-ad-preview-target">
-                                    <div className="magick-ad-preview-target__title">
-                                        预览页面
-                                    </div>
-                                    <div className="magick-ad-preview-target__mode">
-                                        <ButtonGroup>
-                                            <Button
-                                                variant="secondary"
-                                                isPressed={
-                                                    previewMode === 'url'
-                                                }
-                                                onClick={() =>
-                                                    setPreviewMode('url')
-                                                }
-                                            >
-                                                链接
-                                            </Button>
-                                            <Button
-                                                variant="secondary"
-                                                isPressed={
-                                                    previewMode === 'post'
-                                                }
-                                                onClick={() =>
-                                                    setPreviewMode('post')
-                                                }
-                                            >
-                                                文章
-                                            </Button>
-                                            <Button
-                                                variant="secondary"
-                                                isPressed={
-                                                    previewMode === 'page'
-                                                }
-                                                onClick={() =>
-                                                    setPreviewMode('page')
-                                                }
-                                            >
-                                                页面
-                                            </Button>
-                                        </ButtonGroup>
-                                    </div>
-                                    {previewMode === 'url' ? (
-                                        <TextControl
-                                            label="页面链接（仅支持本站）"
-                                            value={previewTarget}
-                                            placeholder="https://example.com/your-page"
-                                            onChange={(value) =>
-                                                setPreviewTarget(value)
-                                            }
-                                            help="填写后将使用该页面作为预览环境。"
-                                        />
-                                    ) : (
-                                        <ComboboxControl
-                                            label="选择页面"
-                                            value={previewSelected}
-                                            options={previewOptions}
-                                            onChange={handlePreviewSelect}
-                                            onFilterValueChange={(value) =>
-                                                setPreviewSearch(value)
-                                            }
-                                            placeholder={
-                                                previewMode === 'page'
-                                                    ? '搜索页面...'
-                                                    : '搜索文章...'
-                                            }
-                                            help={
-                                                previewLoading
-                                                    ? '正在加载列表...'
-                                                    : '选择后将自动作为预览环境'
-                                            }
-                                        />
-                                    )}
-                                    <div className="magick-ad-preview-target__actions">
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() =>
-                                                setPreviewTarget(
-                                                    window?.MagickAD
-                                                        ?.previewUrl || ''
-                                                )
-                                            }
-                                        >
-                                            使用首页
-                                        </Button>
-                                        <Button
-                                            variant="tertiary"
-                                            onClick={() =>
-                                                setPreviewTarget('')
-                                            }
-                                        >
-                                            清空
-                                        </Button>
-                                    </div>
-                                    <SelectControl
-                                        label="模拟登录态"
-                                        value={previewLogin}
-                                        options={[
-                                            {
-                                                label: '跟随真实状态',
-                                                value: 'auto',
-                                            },
-                                            {
-                                                label: '模拟已登录',
-                                                value: 'logged-in',
-                                            },
-                                            {
-                                                label: '模拟未登录',
-                                                value: 'logged-out',
-                                            },
-                                        ]}
-                                        onChange={(value) =>
-                                            setPreviewLogin(value)
-                                        }
-                                        help="仅影响预览命中判断，不会改变真实登录态。"
-                                    />
-                                </div>
-                            </div>
                         )}
+                        <div className="magick-ad-preview-target__actions">
+                            <Button
+                                variant="secondary"
+                                onClick={() =>
+                                    setPreviewTarget(
+                                        window?.MagickAD
+                                            ?.previewUrl || ''
+                                    )
+                                }
+                            >
+                                使用首页
+                            </Button>
+                            <Button
+                                variant="tertiary"
+                                onClick={() =>
+                                    setPreviewTarget('')
+                                }
+                            >
+                                清空
+                            </Button>
+                        </div>
+                        <SelectControl
+                            label="模拟登录态"
+                            value={previewLogin}
+                            options={[
+                                {
+                                    label: '跟随真实状态',
+                                    value: 'auto',
+                                },
+                                {
+                                    label: '模拟已登录',
+                                    value: 'logged-in',
+                                },
+                                {
+                                    label: '模拟未登录',
+                                    value: 'logged-out',
+                                },
+                            ]}
+                            onChange={(value) =>
+                                setPreviewLogin(value)
+                            }
+                            help="仅影响预览命中判断，不会改变真实登录态。"
+                        />
                     </div>
+                </div>
+            )}
+            </div>
+        </>
+    );
+
+    const toolbarActions = selectedAd ? (
+        <>
+            <Button
+                className="magick-ad-toolbar-toggle"
+                icon={calendar}
+                label="发布与排期"
+                variant="tertiary"
+                onClick={() => {
+                    setScheduleOpen(true);
+                    setPublishModalOpen(true);
+                }}
+            />
+            <Button
+                className="magick-ad-toolbar-toggle"
+                icon={megaphone}
+                label="投放设置"
+                variant="tertiary"
+                onClick={() => setPlacementModalOpen(true)}
+            />
+        </>
+    ) : null;
+
+    const rightSidebar = selectedAd ? (
+        <div className="magick-ad-right-stack">
+            <Card className="magick-ad-right-panel">
+                <CardBody>
+                    {renderPublishSection()}
+                    {renderPlacementSection()}
                 </CardBody>
             </Card>
         </div>
@@ -3327,10 +3373,31 @@ const AdsConfig = () => {
                     selectedAd && handleUpdateOptions({ [key]: value })
                 }
                 contentHeader={contentHeader}
+                toolbarActions={toolbarActions}
                 leftSidebar={leftSidebar}
                 rightSidebar={rightSidebar}
                 contentPanels={contentPanels}
             />
+
+            {publishModalOpen && selectedAd && (
+                <Modal
+                    title="发布与排期"
+                    className="magick-ad-config-modal"
+                    onRequestClose={() => setPublishModalOpen(false)}
+                >
+                    {renderPublishSection()}
+                </Modal>
+            )}
+
+            {placementModalOpen && selectedAd && (
+                <Modal
+                    title="投放设置"
+                    className="magick-ad-config-modal"
+                    onRequestClose={() => setPlacementModalOpen(false)}
+                >
+                    {renderPlacementSection()}
+                </Modal>
+            )}
 
             <TemplateLibraryModal
                 isOpen={templateModalOpen}

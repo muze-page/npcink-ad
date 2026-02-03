@@ -1836,7 +1836,8 @@ final class Frontend {
         if (!$end_date) {
             return false;
         }
-        $timestamp = strtotime($end_date . ' 23:59:59');
+        $has_time = is_string($end_date) && preg_match('/\\d{2}:\\d{2}/', $end_date);
+        $timestamp = strtotime($has_time ? $end_date : ($end_date . ' 23:59:59'));
         if ($timestamp === false) {
             return false;
         }
