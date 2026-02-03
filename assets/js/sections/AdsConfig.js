@@ -60,6 +60,7 @@ import apiFetch from '@wordpress/api-fetch';
 
 const AdsConfig = () => {
     const headerStorageKey = 'magick_ad_header_collapsed';
+    const scheduleStorageKey = 'magick_ad_schedule_collapsed';
     const quickPanelStorageKey = 'magick_ad_panel_quick';
     const containerTabStorageKey = 'magick_ad_container_tab';
     const frequencyPanelStorageKey = 'magick_ad_panel_frequency';
@@ -105,7 +106,20 @@ const AdsConfig = () => {
             return true;
         }
     });
-    const [scheduleOpen, setScheduleOpen] = useState(true);
+    const [scheduleOpen, setScheduleOpen] = useState(() => {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        try {
+            const stored = window.localStorage?.getItem(scheduleStorageKey);
+            if (stored === null) {
+                return false;
+            }
+            return stored !== '1';
+        } catch (err) {
+            return false;
+        }
+    });
     const [publishModalOpen, setPublishModalOpen] = useState(false);
     const [placementModalOpen, setPlacementModalOpen] = useState(false);
     const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -432,6 +446,20 @@ const AdsConfig = () => {
             // ignore storage errors
         }
     }, [headerCollapsed]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage?.setItem(
+                scheduleStorageKey,
+                scheduleOpen ? '0' : '1'
+            );
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [scheduleOpen]);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -3581,7 +3609,6 @@ const AdsConfig = () => {
                 label="发布与排期"
                 variant="tertiary"
                 onClick={() => {
-                    setScheduleOpen(true);
                     setPublishModalOpen(true);
                 }}
             />

@@ -3622,6 +3622,7 @@ __webpack_require__.r(__webpack_exports__);
 
 const AdsConfig = () => {
   const headerStorageKey = 'magick_ad_header_collapsed';
+  const scheduleStorageKey = 'magick_ad_schedule_collapsed';
   const quickPanelStorageKey = 'magick_ad_panel_quick';
   const containerTabStorageKey = 'magick_ad_container_tab';
   const frequencyPanelStorageKey = 'magick_ad_panel_frequency';
@@ -3669,7 +3670,20 @@ const AdsConfig = () => {
       return true;
     }
   });
-  const [scheduleOpen, setScheduleOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(true);
+  const [scheduleOpen, setScheduleOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    try {
+      const stored = window.localStorage?.getItem(scheduleStorageKey);
+      if (stored === null) {
+        return false;
+      }
+      return stored !== '1';
+    } catch (err) {
+      return false;
+    }
+  });
   const [publishModalOpen, setPublishModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [placementModalOpen, setPlacementModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [previewModalOpen, setPreviewModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
@@ -3944,6 +3958,16 @@ const AdsConfig = () => {
       // ignore storage errors
     }
   }, [headerCollapsed]);
+  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      window.localStorage?.setItem(scheduleStorageKey, scheduleOpen ? '0' : '1');
+    } catch (err) {
+      // ignore storage errors
+    }
+  }, [scheduleOpen]);
   (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
     if (typeof window === 'undefined') {
       return;
@@ -5783,7 +5807,6 @@ const AdsConfig = () => {
     label: "\u53D1\u5E03\u4E0E\u6392\u671F",
     variant: "tertiary",
     onClick: () => {
-      setScheduleOpen(true);
       setPublishModalOpen(true);
     }
   }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
