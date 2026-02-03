@@ -1152,7 +1152,9 @@
     align-items: center;
     gap: 8px;
     margin-top: 12px;
+    margin-bottom: 12px;
 }
+
 
 .magick-ad-status {
     display: inline-flex;

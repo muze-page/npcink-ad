@@ -2133,9 +2133,7 @@ const AdsConfig = () => {
                 <Button
                     variant="secondary"
                     onClick={() =>
-                        setPreviewTarget(
-                            window?.MagickAD?.previewUrl || ''
-                        )
+                        setPreviewTarget(window?.MagickAD?.previewUrl || '')
                     }
                 >
                     使用首页
