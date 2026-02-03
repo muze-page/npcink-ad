@@ -56,7 +56,7 @@ const Layout = ({
     const [previewReady, setPreviewReady] = useState(false);
     const [splitRatio, setSplitRatio] = useState(0.45);
     const [splitLocked, setSplitLocked] = useState(false);
-    const [previewCollapsed, setPreviewCollapsed] = useState(false);
+    const [previewCollapsed] = useState(false);
     const [leftCollapsed, setLeftCollapsed] = useState(false);
     const [rightCollapsed, setRightCollapsed] = useState(false);
     const adTypeControls = useMemo(
@@ -682,35 +682,16 @@ const Layout = ({
                             }}
                         >
                             <div className="magick-ad-editor-left">
-                                {contentHeader && (
-                                    <div className="magick-ad-editor-header">
-                                        <div className="magick-ad-editor-title">
-                                            内容配置
-                                        </div>
+                                <div className="magick-ad-editor-header">
+                                    <div className="magick-ad-editor-title">
+                                        内容配置
+                                    </div>
+                                    {contentHeader ? (
                                         <div className="magick-ad-editor-header-actions">
                                             {contentHeader}
-                                            <Button
-                                                className="magick-ad-preview-toggle"
-                                                icon={
-                                                    previewCollapsed
-                                                        ? fullscreen
-                                                        : closeSmall
-                                                }
-                                                variant="tertiary"
-                                                label={
-                                                    previewCollapsed
-                                                        ? '展开预览'
-                                                        : '专注模式'
-                                                }
-                                                onClick={() =>
-                                                    setPreviewCollapsed(
-                                                        (prev) => !prev
-                                                    )
-                                                }
-                                            />
                                         </div>
-                                    </div>
-                                )}
+                                    ) : null}
+                                </div>
                                 {contentPanels || (
                                     <Panel>
                                         <PanelBody title="内容配置" initialOpen>

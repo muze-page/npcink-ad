@@ -1484,15 +1484,6 @@ const AdsConfig = () => {
     const activeCreativeType =
         selectedAd?.options?.creative_type || 'image';
 
-    const contentHeader = selectedAd ? (
-        <div>
-            <TemplateActions
-                onOpen={() => openTemplateLibrary(activeCreativeType)}
-                onSave={() => openSaveTemplate(activeCreativeType)}
-            />
-        </div>
-    ) : null;
-
     const contentPanels = selectedAd ? (
         <TabPanel
             className="magick-ad-sub-tabs"
@@ -3326,6 +3317,10 @@ const AdsConfig = () => {
                 variant="tertiary"
                 onClick={() => setPlacementModalOpen(true)}
             />
+            <TemplateActions
+                onOpen={() => openTemplateLibrary(activeCreativeType)}
+                onSave={() => openSaveTemplate(activeCreativeType)}
+            />
         </>
     ) : null;
 
@@ -3474,7 +3469,6 @@ const AdsConfig = () => {
                 onUpdateRule={(key, value) =>
                     selectedAd && handleUpdateOptions({ [key]: value })
                 }
-                contentHeader={contentHeader}
                 toolbarActions={toolbarActions}
                 leftSidebar={leftSidebar}
                 rightSidebar={rightSidebar}
