@@ -537,6 +537,8 @@ final class Frontend {
             return;
         }
 
+        $diagnose = self::is_diagnose_request() && self::can_view_diagnose();
+
         if (self::is_picker_request()) {
             if (!self::can_view_picker()) {
                 return;
@@ -572,17 +574,39 @@ final class Frontend {
             return;
         }
 
+        if ($diagnose) {
+            if (!wp_style_is('magick-ad-frontend', 'enqueued')) {
+                wp_enqueue_style(
+                    'magick-ad-frontend',
+                    MAGICK_AD_URL . 'assets/magick-ad-frontend.css',
+                    array(),
+                    MAGICK_AD_VERSION
+                );
+            }
+            if (!wp_script_is('magick-ad-diagnose', 'enqueued')) {
+                wp_enqueue_script(
+                    'magick-ad-diagnose',
+                    MAGICK_AD_URL . 'assets/magick-ad-diagnose.js',
+                    array(),
+                    MAGICK_AD_VERSION,
+                    true
+                );
+            }
+        }
+
         $ads = self::get_matching_ads_for('all');
         if (empty($ads) && !$force) {
             return;
         }
 
-        wp_enqueue_style(
-            'magick-ad-frontend',
-            MAGICK_AD_URL . 'assets/magick-ad-frontend.css',
-            array(),
-            MAGICK_AD_VERSION
-        );
+        if (!wp_style_is('magick-ad-frontend', 'enqueued')) {
+            wp_enqueue_style(
+                'magick-ad-frontend',
+                MAGICK_AD_URL . 'assets/magick-ad-frontend.css',
+                array(),
+                MAGICK_AD_VERSION
+            );
+        }
 
         $track_handle = 'magick-ad-track';
         $container_index = self::get_container_index();
@@ -1453,7 +1477,10 @@ final class Frontend {
             );
         }
 
-        $json = wp_json_encode($report, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $json = wp_json_encode(
+            $report,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+        );
         if (!$json) {
             return;
         }
@@ -1470,7 +1497,6 @@ final class Frontend {
         echo '<pre class="magick-ad-diagnose__content" id="magick-ad-diagnose-content">' . esc_html($json) . '</pre>';
         echo '</div>';
         echo '</div>';
-        echo '<script>(function(){var panel=document.getElementById("magick-ad-diagnose");if(!panel){return;}var btnCopy=panel.querySelector("[data-action=\"copy\"]");var btnClose=panel.querySelector("[data-action=\"close\"]");var content=document.getElementById("magick-ad-diagnose-content");var copyText=function(){if(!content){return;}var text=content.textContent||\"\";if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text);}else{var ta=document.createElement(\"textarea\");ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand(\"copy\");}catch(e){}document.body.removeChild(ta);}};if(btnCopy){btnCopy.addEventListener(\"click\",copyText);}if(btnClose){btnClose.addEventListener(\"click\",function(){panel.remove();});}})();</script>';
     }
 
     public static function handle_preview_request(): void {
