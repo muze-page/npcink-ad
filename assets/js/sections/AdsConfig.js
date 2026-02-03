@@ -2187,7 +2187,7 @@ const AdsConfig = () => {
         </div>
     );
 
-    const renderAdvancedControls = () => (
+    const renderAdvancedControls = ({ includePreview = true } = {}) => (
         <>
             <TextControl
                 label="优先级（越大越先展示）"
@@ -2213,7 +2213,7 @@ const AdsConfig = () => {
                 }
                 help="仅对同优先级广告生效，权重越大越容易被选中。"
             />
-            {renderPreviewControls()}
+            {includePreview && renderPreviewControls()}
         </>
     );
 
@@ -2223,7 +2223,7 @@ const AdsConfig = () => {
                 {renderFrequencyControls(behavior)}
             </PanelBody>
             <PanelBody title="高级设置" initialOpen={false}>
-                {renderAdvancedControls()}
+                {renderAdvancedControls({ includePreview: false })}
             </PanelBody>
         </Panel>
     );

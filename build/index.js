@@ -5174,7 +5174,9 @@ const AdsConfig = () => {
     onChange: value => setPreviewLogin(value),
     help: "\u4EC5\u5F71\u54CD\u9884\u89C8\u547D\u4E2D\u5224\u65AD\uFF0C\u4E0D\u4F1A\u6539\u53D8\u771F\u5B9E\u767B\u5F55\u6001\u3002"
   }));
-  const renderAdvancedControls = () => {
+  const renderAdvancedControls = ({
+    includePreview = true
+  } = {}) => {
     var _selectedAd$options$p, _selectedAd$options$w;
     return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
       label: "\u4F18\u5148\u7EA7\uFF08\u8D8A\u5927\u8D8A\u5148\u5C55\u793A\uFF09",
@@ -5194,7 +5196,7 @@ const AdsConfig = () => {
         weight: Math.max(1, Number(value) || 1)
       }),
       help: "\u4EC5\u5BF9\u540C\u4F18\u5148\u7EA7\u5E7F\u544A\u751F\u6548\uFF0C\u6743\u91CD\u8D8A\u5927\u8D8A\u5BB9\u6613\u88AB\u9009\u4E2D\u3002"
-    }), renderPreviewControls());
+    }), includePreview && renderPreviewControls());
   };
   const renderFrequencyAdvancedTab = (behavior = {}) => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u9891\u63A7",
@@ -5202,7 +5204,9 @@ const AdsConfig = () => {
   }, renderFrequencyControls(behavior)), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u9AD8\u7EA7\u8BBE\u7F6E",
     initialOpen: false
-  }, renderAdvancedControls()));
+  }, renderAdvancedControls({
+    includePreview: false
+  })));
   const renderPlacementSection = () => {
     var _selectedAd$content$c;
     return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
