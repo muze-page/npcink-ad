@@ -188,9 +188,12 @@ const AdsConfig = () => {
     const [previewLogin, setPreviewLogin] = useState('auto');
     const [previewUsePage, setPreviewUsePage] = useState(false);
     const [htmlTab, setHtmlTab] = useState('content');
+    const [htmlSettingsTab, setHtmlSettingsTab] = useState('mode');
     const [imageTab, setImageTab] = useState('content');
     const [videoTab, setVideoTab] = useState('content');
+    const [videoSettingsTab, setVideoSettingsTab] = useState('basic');
     const [blockTab, setBlockTab] = useState('content');
+    const [blockSettingsTab, setBlockSettingsTab] = useState('style');
     const [pickerConfirmOpen, setPickerConfirmOpen] = useState(false);
     const [pickerType, setPickerType] = useState('id');
     const [pickerValue, setPickerValue] = useState('');
@@ -2290,336 +2293,422 @@ const AdsConfig = () => {
                                                     )}
                                                 </>
                                             ) : (
-                                                <>
-                                                    {isExpertMode ? (
-                                                        <SelectControl
-                                                            label="HTML 模式"
-                                                            value={
-                                                                selectedAd
-                                                                    .options
-                                                                    ?.html_mode ||
-                                                                'safe'
-                                                            }
-                                                            options={[
-                                                                {
-                                                                    label:
-                                                                        '安全模式（过滤脚本）',
-                                                                    value: 'safe',
-                                                                },
-                                                                {
-                                                                    label:
-                                                                        '完全模式（允许脚本）',
-                                                                    value: 'full',
-                                                                },
-                                                            ]}
-                                                            onChange={(
-                                                                value
-                                                            ) => {
-                                                                if (
-                                                                    value ===
-                                                                        'full' &&
-                                                                    !canUnfilteredHtml
-                                                                ) {
-                                                                    showNotice(
-                                                                        'error',
-                                                                        '当前账号无 unfiltered_html 权限，无法启用完全模式。',
-                                                                        3500
-                                                                    );
-                                                                    handleUpdateOptions(
-                                                                        {
-                                                                            html_mode:
-                                                                                'safe',
-                                                                        }
-                                                                    );
-                                                                    return;
-                                                                }
-                                                                handleUpdateOptions(
-                                                                    {
-                                                                        html_mode:
-                                                                            value,
-                                                                    }
-                                                                );
-                                                            }}
-                                                            help="安全模式会过滤脚本/iframe；需要第三方脚本或 head 投放请切换完全模式（多站点强制安全）。"
-                                                        />
-                                                    ) : !isQuickMode ? (
-                                                        <Notice
-                                                            status="info"
-                                                            isDismissible={
-                                                                false
-                                                            }
-                                                        >
-                                                            当前是“设计模式”：HTML
-                                                            强制使用“安全模式（过滤脚本）”。
-                                                            如需启用脚本，请切换到“专家模式”。
-                                                        </Notice>
-                                                    ) : null}
-                                                    {selectedAd.options
-                                                        ?.html_mode ===
-                                                        'full' && (
-                                                        <Notice
-                                                            status="warning"
-                                                            isDismissible={
-                                                                false
-                                                            }
-                                                        >
-                                                            完全模式将原样输出 HTML，请确保素材与代码来源可信。
-                                                        </Notice>
-                                                    )}
-                                                    {selectedAd.options
-                                                        ?.html_mode ===
-                                                        'safe' &&
-                                                        /<script[\s>]/i.test(
-                                                            selectedAd.content
-                                                                ?.html || ''
-                                                        ) && (
-                                                            <Notice
-                                                                status="warning"
-                                                                isDismissible={
-                                                                    false
-                                                                }
-                                                            >
-                                                                检测到{' '}
-                                                                <code>
-                                                                    &lt;script&gt;
-                                                                </code>{' '}
-                                                                标签。安全模式会移除脚本，请切换到“完全模式”并确保账号具备权限。
-                                                            </Notice>
-                                                        )}
-                                                    {selectedAd.options
-                                                        ?.html_mode ===
-                                                        'full' &&
-                                                        !canUnfilteredHtml && (
-                                                            <Notice
-                                                                status="error"
-                                                                isDismissible={
-                                                                    false
-                                                                }
-                                                            >
-                                                                当前账号无 unfiltered_html 权限，脚本会被过滤并自动回退到安全模式。
-                                                            </Notice>
-                                                        )}
-                                                    <SelectControl
-                                                        label="iframe 沙箱"
-                                                        value={
-                                                            selectedAd.options
-                                                                ?.html_sandbox ||
-                                                            'inherit'
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label:
-                                                                    '跟随系统设置',
-                                                                value: 'inherit',
-                                                            },
-                                                            {
-                                                                label:
-                                                                    '强制启用',
-                                                                value: 'enable',
-                                                            },
-                                                            {
-                                                                label:
-                                                                    '强制关闭',
-                                                                value: 'disable',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateOptions(
-                                                                {
-                                                                    html_sandbox:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="仅对 HTML 完全模式生效；系统级开关在“系统设置”中。"
-                                                    />
-                                                    <TextareaControl
-                                                        label="附加 HTML（可选）"
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.custom_html ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateContent(
-                                                                {
-                                                                    custom_html:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="会追加在广告内容后面。"
-                                                    />
-                                                    <TextareaControl
-                                                        label="自定义 CSS（可选）"
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.custom_css ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateContent(
-                                                                {
-                                                                    custom_css:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="无需写 <style> 标签，系统会自动包裹。"
-                                                    />
-                                                    {isExpertMode ? (
-                                                        <TextareaControl
-                                                            label="自定义 JS（可选）"
-                                                            value={
-                                                                selectedAd
-                                                                    .content
-                                                                    ?.custom_js ||
-                                                                ''
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateContent(
-                                                                    {
-                                                                        custom_js:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                            help="仅专家模式可用，系统会自动包裹 <script>。"
-                                                        />
-                                                    ) : null}
-                                                    {!isQuickMode && (
-                                                        <Notice
-                                                            status="info"
-                                                            isDismissible={
-                                                                false
-                                                            }
-                                                        >
-                                                            沙箱只对“完全模式”生效：启用后 HTML 会在 iframe 中运行；关闭将直接执行页面脚本。
-                                                        </Notice>
-                                                    )}
-                                                    <ToggleControl
-                                                        label="启用变量替换"
-                                                        checked={
-                                                            selectedAd.content
-                                                                ?.html_runtime_vars !==
-                                                            false
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateContent(
-                                                                {
-                                                                    html_runtime_vars:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="支持 {site_url} / {page_url} / {ad_id}"
-                                                    />
-                                                    <SelectControl
-                                                        label="载入方式"
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.html_load_strategy ||
-                                                            'immediate'
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label:
-                                                                    '立即加载',
-                                                                value: 'immediate',
-                                                            },
-                                                            {
-                                                                label:
-                                                                    '延迟加载',
-                                                                value: 'delay',
-                                                            },
-                                                            {
-                                                                label:
-                                                                    '视窗内加载',
-                                                                value: 'viewport',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateContent(
-                                                                {
-                                                                    html_load_strategy:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="延迟与视窗内加载可减少首屏压力。"
-                                                    />
-                                                    {selectedAd.content
-                                                        ?.html_load_strategy ===
-                                                        'delay' && (
-                                                        <TextControl
-                                                            label="延迟时间（毫秒）"
-                                                            type="number"
-                                                            min={0}
-                                                            value={
-                                                                selectedAd
-                                                                    .content
-                                                                    ?.html_load_delay ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateContent(
-                                                                    {
-                                                                        html_load_delay:
-                                                                            Number(
+                                                <TabPanel
+                                                    className="magick-ad-html-settings-tabs"
+                                                    tabs={[
+                                                        {
+                                                            name: 'mode',
+                                                            title:
+                                                                '模式/安全',
+                                                        },
+                                                        {
+                                                            name: 'custom',
+                                                            title: '自定义',
+                                                        },
+                                                        {
+                                                            name: 'runtime',
+                                                            title:
+                                                                '加载/变量',
+                                                        },
+                                                        {
+                                                            name: 'scripts',
+                                                            title: '脚本域名',
+                                                        },
+                                                    ]}
+                                                    initialTabName={
+                                                        htmlSettingsTab
+                                                    }
+                                                    onSelect={(name) =>
+                                                        setHtmlSettingsTab(
+                                                            name
+                                                        )
+                                                    }
+                                                    key={htmlSettingsTab}
+                                                >
+                                                    {(settingsTabView) => {
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'mode'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    {isExpertMode ? (
+                                                                        <SelectControl
+                                                                            label="HTML 模式"
+                                                                            value={
+                                                                                selectedAd
+                                                                                    .options
+                                                                                    ?.html_mode ||
+                                                                                'safe'
+                                                                            }
+                                                                            options={[
+                                                                                {
+                                                                                    label:
+                                                                                        '安全模式（过滤脚本）',
+                                                                                    value: 'safe',
+                                                                                },
+                                                                                {
+                                                                                    label:
+                                                                                        '完全模式（允许脚本）',
+                                                                                    value: 'full',
+                                                                                },
+                                                                            ]}
+                                                                            onChange={(
                                                                                 value
-                                                                            ),
-                                                                    }
-                                                                )
+                                                                            ) => {
+                                                                                if (
+                                                                                    value ===
+                                                                                        'full' &&
+                                                                                    !canUnfilteredHtml
+                                                                                ) {
+                                                                                    showNotice(
+                                                                                        'error',
+                                                                                        '当前账号无 unfiltered_html 权限，无法启用完全模式。',
+                                                                                        3500
+                                                                                    );
+                                                                                    handleUpdateOptions(
+                                                                                        {
+                                                                                            html_mode:
+                                                                                                'safe',
+                                                                                        }
+                                                                                    );
+                                                                                    return;
+                                                                                }
+                                                                                handleUpdateOptions(
+                                                                                    {
+                                                                                        html_mode:
+                                                                                            value,
+                                                                                    }
+                                                                                );
+                                                                            }}
+                                                                            help="安全模式会过滤脚本/iframe；需要第三方脚本或 head 投放请切换完全模式（多站点强制安全）。"
+                                                                        />
+                                                                    ) : !isQuickMode ? (
+                                                                        <Notice
+                                                                            status="info"
+                                                                            isDismissible={
+                                                                                false
+                                                                            }
+                                                                        >
+                                                                            当前是“设计模式”：HTML
+                                                                            强制使用“安全模式（过滤脚本）”。
+                                                                            如需启用脚本，请切换到“专家模式”。
+                                                                        </Notice>
+                                                                    ) : null}
+                                                                    {selectedAd.options
+                                                                        ?.html_mode ===
+                                                                        'full' && (
+                                                                        <Notice
+                                                                            status="warning"
+                                                                            isDismissible={
+                                                                                false
+                                                                            }
+                                                                        >
+                                                                            完全模式将原样输出 HTML，请确保素材与代码来源可信。
+                                                                        </Notice>
+                                                                    )}
+                                                                    {selectedAd.options
+                                                                        ?.html_mode ===
+                                                                        'safe' &&
+                                                                        /<script[\s>]/i.test(
+                                                                            selectedAd
+                                                                                .content
+                                                                                ?.html ||
+                                                                                ''
+                                                                        ) && (
+                                                                            <Notice
+                                                                                status="warning"
+                                                                                isDismissible={
+                                                                                    false
+                                                                                }
+                                                                            >
+                                                                                检测到{' '}
+                                                                                <code>
+                                                                                    &lt;script&gt;
+                                                                                </code>{' '}
+                                                                                标签。安全模式会移除脚本，请切换到“完全模式”并确保账号具备权限。
+                                                                            </Notice>
+                                                                        )}
+                                                                    {selectedAd.options
+                                                                        ?.html_mode ===
+                                                                        'full' &&
+                                                                        !canUnfilteredHtml && (
+                                                                            <Notice
+                                                                                status="error"
+                                                                                isDismissible={
+                                                                                    false
+                                                                                }
+                                                                            >
+                                                                                当前账号无 unfiltered_html 权限，脚本会被过滤并自动回退到安全模式。
+                                                                            </Notice>
+                                                                        )}
+                                                                    <SelectControl
+                                                                        label="iframe 沙箱"
+                                                                        value={
+                                                                            selectedAd
+                                                                                .options
+                                                                                ?.html_sandbox ||
+                                                                            'inherit'
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label:
+                                                                                    '跟随系统设置',
+                                                                                value: 'inherit',
+                                                                            },
+                                                                            {
+                                                                                label:
+                                                                                    '强制启用',
+                                                                                value: 'enable',
+                                                                            },
+                                                                            {
+                                                                                label:
+                                                                                    '强制关闭',
+                                                                                value: 'disable',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(value) =>
+                                                                            handleUpdateOptions(
+                                                                                {
+                                                                                    html_sandbox:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        help="仅对 HTML 完全模式生效；系统级开关在“系统设置”中。"
+                                                                    />
+                                                                    {!isQuickMode && (
+                                                                        <Notice
+                                                                            status="info"
+                                                                            isDismissible={
+                                                                                false
+                                                                            }
+                                                                        >
+                                                                            沙箱只对“完全模式”生效：启用后 HTML 会在 iframe 中运行；关闭将直接执行页面脚本。
+                                                                        </Notice>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        }
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'custom'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <TextareaControl
+                                                                        label="附加 HTML（可选）"
+                                                                        value={
+                                                                            selectedAd
+                                                                                .content
+                                                                                ?.custom_html ||
+                                                                            ''
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateContent(
+                                                                                {
+                                                                                    custom_html:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        help="会追加在广告内容后面。"
+                                                                    />
+                                                                    <TextareaControl
+                                                                        label="自定义 CSS（可选）"
+                                                                        value={
+                                                                            selectedAd
+                                                                                .content
+                                                                                ?.custom_css ||
+                                                                            ''
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateContent(
+                                                                                {
+                                                                                    custom_css:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        help="无需写 <style> 标签，系统会自动包裹。"
+                                                                    />
+                                                                    {isExpertMode ? (
+                                                                        <TextareaControl
+                                                                            label="自定义 JS（可选）"
+                                                                            value={
+                                                                                selectedAd
+                                                                                    .content
+                                                                                    ?.custom_js ||
+                                                                                ''
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateContent(
+                                                                                    {
+                                                                                        custom_js:
+                                                                                            value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                            help="仅专家模式可用，系统会自动包裹 <script>。"
+                                                                        />
+                                                                    ) : null}
+                                                                </>
+                                                            );
+                                                        }
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'runtime'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <ToggleControl
+                                                                        label="启用变量替换"
+                                                                        checked={
+                                                                            selectedAd
+                                                                                .content
+                                                                                ?.html_runtime_vars !==
+                                                                            false
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateContent(
+                                                                                {
+                                                                                    html_runtime_vars:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        help="支持 {site_url} / {page_url} / {ad_id}"
+                                                                    />
+                                                                    <SelectControl
+                                                                        label="载入方式"
+                                                                        value={
+                                                                            selectedAd
+                                                                                .content
+                                                                                ?.html_load_strategy ||
+                                                                            'immediate'
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label:
+                                                                                    '立即加载',
+                                                                                value: 'immediate',
+                                                                            },
+                                                                            {
+                                                                                label:
+                                                                                    '延迟加载',
+                                                                                value: 'delay',
+                                                                            },
+                                                                            {
+                                                                                label:
+                                                                                    '视窗内加载',
+                                                                                value: 'viewport',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(value) =>
+                                                                            handleUpdateContent(
+                                                                                {
+                                                                                    html_load_strategy:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        help="延迟与视窗内加载可减少首屏压力。"
+                                                                    />
+                                                                    {selectedAd
+                                                                        .content
+                                                                        ?.html_load_strategy ===
+                                                                        'delay' && (
+                                                                        <TextControl
+                                                                            label="延迟时间（毫秒）"
+                                                                            type="number"
+                                                                            min={0}
+                                                                            value={
+                                                                                selectedAd
+                                                                                    .content
+                                                                                    ?.html_load_delay ??
+                                                                                0
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateContent(
+                                                                                    {
+                                                                                        html_load_delay:
+                                                                                            Number(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        }
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'scripts'
+                                                        ) {
+                                                            if (isQuickMode) {
+                                                                return (
+                                                                    <Notice
+                                                                        status="info"
+                                                                        isDismissible={
+                                                                            false
+                                                                        }
+                                                                    >
+                                                                        快速模式已隐藏脚本域名配置，请切换到“设计模式/专家模式”查看。
+                                                                    </Notice>
+                                                                );
                                                             }
-                                                        />
-                                                    )}
-                                                    {!isQuickMode && (
-                                                        <>
-                                                            <TextareaControl
-                                                                label="脚本白名单（追加域名）"
-                                                                value={formatDomainList(
-                                                                    selectedAd
-                                                                        .content
-                                                                        ?.html_script_allowlist
-                                                                )}
-                                                                onChange={(
-                                                                    value
-                                                                ) =>
-                                                                    handleUpdateContent(
-                                                                        {
-                                                                            html_script_allowlist:
-                                                                                parseDomainList(
-                                                                                    value
-                                                                                ),
+                                                            return (
+                                                                <>
+                                                                    <TextareaControl
+                                                                        label="脚本白名单（追加域名）"
+                                                                        value={formatDomainList(
+                                                                            selectedAd
+                                                                                .content
+                                                                                ?.html_script_allowlist
+                                                                        )}
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContent(
+                                                                                {
+                                                                                    html_script_allowlist:
+                                                                                        parseDomainList(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
                                                                         }
-                                                                    )
-                                                                }
-                                                                help="系统默认仅允许当前站点域名，此处为追加白名单。每行一个域名或用逗号分隔。"
-                                                            />
-                                                            <TextareaControl
-                                                                label="脚本黑名单（追加域名）"
-                                                                value={formatDomainList(
-                                                                    selectedAd
-                                                                        .content
-                                                                        ?.html_script_blocklist
-                                                                )}
-                                                                onChange={(
-                                                                    value
-                                                                ) =>
-                                                                    handleUpdateContent(
-                                                                        {
-                                                                            html_script_blocklist:
-                                                                                parseDomainList(
-                                                                                    value
-                                                                                ),
+                                                                        help="系统默认仅允许当前站点域名，此处为追加白名单。每行一个域名或用逗号分隔。"
+                                                                    />
+                                                                    <TextareaControl
+                                                                        label="脚本黑名单（追加域名）"
+                                                                        value={formatDomainList(
+                                                                            selectedAd
+                                                                                .content
+                                                                                ?.html_script_blocklist
+                                                                        )}
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateContent(
+                                                                                {
+                                                                                    html_script_blocklist:
+                                                                                        parseDomainList(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
                                                                         }
-                                                                    )
-                                                                }
-                                                                help="系统级黑名单优先生效，此处为追加黑名单。命中即移除。"
-                                                            />
-                                                        </>
-                                                    )}
-                                                </>
+                                                                        help="系统级黑名单优先生效，此处为追加黑名单。命中即移除。"
+                                                                    />
+                                                                </>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    }}
+                                                </TabPanel>
                                             )
                                         }
                                     </TabPanel>
@@ -2679,317 +2768,393 @@ const AdsConfig = () => {
                                                     )}
                                                 </>
                                             ) : (
-                                                <>
-                                                    <SelectControl
-                                                        label="视频类型"
-                                                        value={
-                                                            videoSettings.type ||
-                                                            'mp4'
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label: 'MP4',
-                                                                value: 'mp4',
-                                                            },
-                                                            {
-                                                                label: '嵌入（iframe）',
-                                                                value: 'embed',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    type: value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <SelectControl
-                                                        label="比例"
-                                                        value={
-                                                            videoSettings.aspect_ratio ||
-                                                            '16:9'
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label: '自适应',
-                                                                value: 'auto',
-                                                            },
-                                                            {
-                                                                label: '16:9',
-                                                                value: '16:9',
-                                                            },
-                                                            {
-                                                                label: '4:3',
-                                                                value: '4:3',
-                                                            },
-                                                            {
-                                                                label: '1:1',
-                                                                value: '1:1',
-                                                            },
-                                                            {
-                                                                label: '9:16',
-                                                                value: '9:16',
-                                                            },
-                                                            {
-                                                                label: '自定义',
-                                                                value: 'custom',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    aspect_ratio:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    {videoSettings.aspect_ratio ===
-                                                        'custom' && (
-                                                        <TextControl
-                                                            label="自定义比例（如 3:2）"
-                                                            value={
-                                                                videoSettings.aspect_ratio_custom ||
-                                                                ''
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateVideoSettings(
-                                                                    {
-                                                                        aspect_ratio_custom:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                            help="格式如 3:2、21:9。"
-                                                        />
-                                                    )}
-                                                    <SelectControl
-                                                        label="预加载"
-                                                        value={
-                                                            videoSettings.preload ||
-                                                            'metadata'
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label: 'metadata',
-                                                                value: 'metadata',
-                                                            },
-                                                            {
-                                                                label: 'auto',
-                                                                value: 'auto',
-                                                            },
-                                                            {
-                                                                label: 'none',
-                                                                value: 'none',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    preload:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    {!isEmbed && (
-                                                        <>
-                                                            <SelectControl
-                                                                label="封面策略"
-                                                                value={
-                                                                    videoSettings.poster_mode ||
-                                                                    'manual'
-                                                                }
-                                                                options={[
-                                                                    {
-                                                                        label:
-                                                                            '使用封面图',
-                                                                        value: 'manual',
-                                                                    },
-                                                                    {
-                                                                        label:
-                                                                            '无封面时取首帧',
-                                                                        value: 'auto',
-                                                                    },
-                                                                ]}
-                                                                onChange={(
-                                                                    value
-                                                                ) =>
-                                                                    handleUpdateVideoSettings(
-                                                                        {
-                                                                            poster_mode:
-                                                                                value,
-                                                                        }
-                                                                    )
-                                                                }
-                                                            />
-                                                            {videoSettings.poster_mode !==
-                                                                'auto' && (
-                                                                <div className="magick-ad-field">
-                                                                    <p className="magick-ad-field__label">
-                                                                        封面图
-                                                                    </p>
-                                                                    <ImagePicker
+                                                <TabPanel
+                                                    className="magick-ad-video-settings-tabs"
+                                                    tabs={[
+                                                        {
+                                                            name: 'basic',
+                                                            title: '基础',
+                                                        },
+                                                        {
+                                                            name: 'cover',
+                                                            title: '封面',
+                                                        },
+                                                        {
+                                                            name: 'playback',
+                                                            title: '播放',
+                                                        },
+                                                        {
+                                                            name: 'track',
+                                                            title: '追踪',
+                                                        },
+                                                    ]}
+                                                    initialTabName={
+                                                        videoSettingsTab
+                                                    }
+                                                    onSelect={(name) =>
+                                                        setVideoSettingsTab(
+                                                            name
+                                                        )
+                                                    }
+                                                    key={videoSettingsTab}
+                                                >
+                                                    {(settingsTabView) => {
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'basic'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <SelectControl
+                                                                        label="视频类型"
                                                                         value={
-                                                                            videoSettings.poster ||
-                                                                            {}
+                                                                            videoSettings.type ||
+                                                                            'mp4'
                                                                         }
-                                                                        onChange={(
-                                                                            value
-                                                                        ) =>
+                                                                        options={[
+                                                                            {
+                                                                                label: 'MP4',
+                                                                                value: 'mp4',
+                                                                            },
+                                                                            {
+                                                                                label: '嵌入（iframe）',
+                                                                                value: 'embed',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(value) =>
                                                                             handleUpdateVideoSettings(
                                                                                 {
-                                                                                    poster:
+                                                                                    type: value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <SelectControl
+                                                                        label="比例"
+                                                                        value={
+                                                                            videoSettings.aspect_ratio ||
+                                                                            '16:9'
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label: '自适应',
+                                                                                value: 'auto',
+                                                                            },
+                                                                            {
+                                                                                label: '16:9',
+                                                                                value: '16:9',
+                                                                            },
+                                                                            {
+                                                                                label: '4:3',
+                                                                                value: '4:3',
+                                                                            },
+                                                                            {
+                                                                                label: '1:1',
+                                                                                value: '1:1',
+                                                                            },
+                                                                            {
+                                                                                label: '9:16',
+                                                                                value: '9:16',
+                                                                            },
+                                                                            {
+                                                                                label: '自定义',
+                                                                                value: 'custom',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(value) =>
+                                                                            handleUpdateVideoSettings(
+                                                                                {
+                                                                                    aspect_ratio:
                                                                                         value,
                                                                                 }
                                                                             )
                                                                         }
                                                                     />
-                                                                </div>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                    <div className="magick-ad-image-grid">
-                                                        <ToggleControl
-                                                            label="自动播放"
-                                                            checked={Boolean(
-                                                                videoSettings.autoplay
-                                                            )}
-                                                            onChange={(value) =>
-                                                                handleUpdateVideoSettings(
-                                                                    {
-                                                                        autoplay:
-                                                                            value,
-                                                                        muted:
+                                                                    {videoSettings.aspect_ratio ===
+                                                                        'custom' && (
+                                                                        <TextControl
+                                                                            label="自定义比例（如 3:2）"
+                                                                            value={
+                                                                                videoSettings.aspect_ratio_custom ||
+                                                                                ''
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateVideoSettings(
+                                                                                    {
+                                                                                        aspect_ratio_custom:
+                                                                                            value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                            help="格式如 3:2、21:9。"
+                                                                        />
+                                                                    )}
+                                                                    <SelectControl
+                                                                        label="预加载"
+                                                                        value={
+                                                                            videoSettings.preload ||
+                                                                            'metadata'
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label: 'metadata',
+                                                                                value: 'metadata',
+                                                                            },
+                                                                            {
+                                                                                label: 'auto',
+                                                                                value: 'auto',
+                                                                            },
+                                                                            {
+                                                                                label: 'none',
+                                                                                value: 'none',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(value) =>
+                                                                            handleUpdateVideoSettings(
+                                                                                {
+                                                                                    preload:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </>
+                                                            );
+                                                        }
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'cover'
+                                                        ) {
+                                                            if (isEmbed) {
+                                                                return (
+                                                                    <Notice
+                                                                        status="info"
+                                                                        isDismissible={
+                                                                            false
+                                                                        }
+                                                                    >
+                                                                        嵌入视频由第三方播放器控制，封面设置不可用。
+                                                                    </Notice>
+                                                                );
+                                                            }
+                                                            return (
+                                                                <>
+                                                                    <SelectControl
+                                                                        label="封面策略"
+                                                                        value={
+                                                                            videoSettings.poster_mode ||
+                                                                            'manual'
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label:
+                                                                                    '使用封面图',
+                                                                                value: 'manual',
+                                                                            },
+                                                                            {
+                                                                                label:
+                                                                                    '无封面时取首帧',
+                                                                                value: 'auto',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(
                                                                             value
-                                                                                ? true
-                                                                                : Boolean(
-                                                                                      videoSettings.muted
-                                                                                  ),
-                                                                }
-                                                            )
+                                                                        ) =>
+                                                                            handleUpdateVideoSettings(
+                                                                                {
+                                                                                    poster_mode:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    {videoSettings.poster_mode !==
+                                                                        'auto' && (
+                                                                        <div className="magick-ad-field">
+                                                                            <p className="magick-ad-field__label">
+                                                                                封面图
+                                                                            </p>
+                                                                            <ImagePicker
+                                                                                value={
+                                                                                    videoSettings.poster ||
+                                                                                    {}
+                                                                                }
+                                                                                onChange={(
+                                                                                    value
+                                                                                ) =>
+                                                                                    handleUpdateVideoSettings(
+                                                                                        {
+                                                                                            poster:
+                                                                                                value,
+                                                                                        }
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            );
                                                         }
-                                                        help="自动播放通常需要静音。"
-                                                    />
-                                                    <ToggleControl
-                                                        label="首次展示自动播放"
-                                                        checked={Boolean(
-                                                            videoSettings.autoplay_first
-                                                        )}
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    autoplay_first:
-                                                                        value,
-                                                                }
-                                                            )
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'playback'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <div className="magick-ad-image-grid">
+                                                                        <ToggleControl
+                                                                            label="自动播放"
+                                                                            checked={Boolean(
+                                                                                videoSettings.autoplay
+                                                                            )}
+                                                                            onChange={(value) =>
+                                                                                handleUpdateVideoSettings(
+                                                                                    {
+                                                                                        autoplay:
+                                                                                            value,
+                                                                                        muted:
+                                                                                            value
+                                                                                                ? true
+                                                                                                : Boolean(
+                                                                                                      videoSettings.muted
+                                                                                                  ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                            help="自动播放通常需要静音。"
+                                                                        />
+                                                                        <ToggleControl
+                                                                            label="首次展示自动播放"
+                                                                            checked={Boolean(
+                                                                                videoSettings.autoplay_first
+                                                                            )}
+                                                                            onChange={(value) =>
+                                                                                handleUpdateVideoSettings(
+                                                                                    {
+                                                                                        autoplay_first:
+                                                                                            value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                            help="仅首次展示时尝试自动播放（会强制静音）。"
+                                                                        />
+                                                                        <ToggleControl
+                                                                            label="静音"
+                                                                            checked={Boolean(
+                                                                                videoSettings.muted
+                                                                            )}
+                                                                            onChange={(value) =>
+                                                                                handleUpdateVideoSettings(
+                                                                                    {
+                                                                                        muted: value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <ToggleControl
+                                                                            label="二次展示强制静音"
+                                                                            checked={Boolean(
+                                                                                videoSettings.repeat_muted
+                                                                            )}
+                                                                            onChange={(value) =>
+                                                                                handleUpdateVideoSettings(
+                                                                                    {
+                                                                                        repeat_muted:
+                                                                                            value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <ToggleControl
+                                                                            label="循环"
+                                                                            checked={Boolean(
+                                                                                videoSettings.loop
+                                                                            )}
+                                                                            onChange={(value) =>
+                                                                                handleUpdateVideoSettings(
+                                                                                    {
+                                                                                        loop: value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <ToggleControl
+                                                                            label="显示控制条"
+                                                                            checked={
+                                                                                videoSettings.controls !==
+                                                                                false
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateVideoSettings(
+                                                                                    {
+                                                                                        controls:
+                                                                                            value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <ToggleControl
+                                                                            label="移动端内嵌播放"
+                                                                            checked={
+                                                                                videoSettings.playsinline !==
+                                                                                false
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateVideoSettings(
+                                                                                    {
+                                                                                        playsinline:
+                                                                                            value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </div>
+                                                                </>
+                                                            );
                                                         }
-                                                        help="仅首次展示时尝试自动播放（会强制静音）。"
-                                                    />
-                                                    <ToggleControl
-                                                        label="静音"
-                                                        checked={Boolean(
-                                                            videoSettings.muted
-                                                        )}
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    muted: value,
-                                                                }
-                                                            )
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'track'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <ToggleControl
+                                                                        label="追踪播放/暂停/完成"
+                                                                        checked={Boolean(
+                                                                            videoSettings.track_events
+                                                                        )}
+                                                                        onChange={(value) =>
+                                                                            handleUpdateVideoSettings(
+                                                                                {
+                                                                                    track_events:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        help="会向统计接口上报播放事件。"
+                                                                    />
+                                                                    <TextControl
+                                                                        label="备用提示文案"
+                                                                        value={
+                                                                            videoSettings.fallback_text ||
+                                                                            ''
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateVideoSettings(
+                                                                                {
+                                                                                    fallback_text:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        help="浏览器不支持视频时显示。"
+                                                                    />
+                                                                </>
+                                                            );
                                                         }
-                                                    />
-                                                    <ToggleControl
-                                                        label="二次展示强制静音"
-                                                        checked={Boolean(
-                                                            videoSettings.repeat_muted
-                                                        )}
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    repeat_muted:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <ToggleControl
-                                                        label="循环"
-                                                        checked={Boolean(
-                                                            videoSettings.loop
-                                                        )}
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    loop: value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <ToggleControl
-                                                        label="显示控制条"
-                                                        checked={
-                                                            videoSettings.controls !==
-                                                            false
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    controls:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <ToggleControl
-                                                        label="移动端内嵌播放"
-                                                        checked={
-                                                            videoSettings.playsinline !==
-                                                            false
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    playsinline:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    </div>
-                                                    <ToggleControl
-                                                        label="追踪播放/暂停/完成"
-                                                        checked={Boolean(
-                                                            videoSettings.track_events
-                                                        )}
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    track_events:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="会向统计接口上报播放事件。"
-                                                    />
-                                                    <TextControl
-                                                        label="备用提示文案"
-                                                        value={
-                                                            videoSettings.fallback_text ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateVideoSettings(
-                                                                {
-                                                                    fallback_text:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="浏览器不支持视频时显示。"
-                                                    />
-                                                </>
+                                                        return null;
+                                                    }}
+                                                </TabPanel>
                                             );
                                         }}
                                     </TabPanel>

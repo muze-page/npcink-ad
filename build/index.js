@@ -3928,9 +3928,12 @@ const AdsConfig = () => {
   const [previewLogin, setPreviewLogin] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('auto');
   const [previewUsePage, setPreviewUsePage] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [htmlTab, setHtmlTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('content');
+  const [htmlSettingsTab, setHtmlSettingsTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('mode');
   const [imageTab, setImageTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('content');
   const [videoTab, setVideoTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('content');
+  const [videoSettingsTab, setVideoSettingsTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('basic');
   const [blockTab, setBlockTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('content');
+  const [blockSettingsTab, setBlockSettingsTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('style');
   const [pickerConfirmOpen, setPickerConfirmOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [pickerType, setPickerType] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('id');
   const [pickerValue, setPickerValue] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('');
@@ -5479,138 +5482,174 @@ const AdsConfig = () => {
       initialTabName: htmlTab,
       onSelect: name => setHtmlTab(name),
       key: htmlTab
-    }, htmlTabView => {
-      var _selectedAd$content$h;
-      return htmlTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ClassicEditor__WEBPACK_IMPORTED_MODULE_16__["default"], {
-        value: selectedAd.content?.html || '',
-        active: activeContentType === 'html',
-        onChange: value => handleUpdateContent({
-          html: value
-        })
-      }), renderVariantSection('html')) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, isExpertMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "HTML \u6A21\u5F0F",
-        value: selectedAd.options?.html_mode || 'safe',
-        options: [{
-          label: '安全模式（过滤脚本）',
-          value: 'safe'
-        }, {
-          label: '完全模式（允许脚本）',
-          value: 'full'
-        }],
-        onChange: value => {
-          if (value === 'full' && !canUnfilteredHtml) {
-            showNotice('error', '当前账号无 unfiltered_html 权限，无法启用完全模式。', 3500);
+    }, htmlTabView => htmlTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ClassicEditor__WEBPACK_IMPORTED_MODULE_16__["default"], {
+      value: selectedAd.content?.html || '',
+      active: activeContentType === 'html',
+      onChange: value => handleUpdateContent({
+        html: value
+      })
+    }), renderVariantSection('html')) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
+      className: "magick-ad-html-settings-tabs",
+      tabs: [{
+        name: 'mode',
+        title: '模式/安全'
+      }, {
+        name: 'custom',
+        title: '自定义'
+      }, {
+        name: 'runtime',
+        title: '加载/变量'
+      }, {
+        name: 'scripts',
+        title: '脚本域名'
+      }],
+      initialTabName: htmlSettingsTab,
+      onSelect: name => setHtmlSettingsTab(name),
+      key: htmlSettingsTab
+    }, settingsTabView => {
+      if (settingsTabView.name === 'mode') {
+        return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, isExpertMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+          label: "HTML \u6A21\u5F0F",
+          value: selectedAd.options?.html_mode || 'safe',
+          options: [{
+            label: '安全模式（过滤脚本）',
+            value: 'safe'
+          }, {
+            label: '完全模式（允许脚本）',
+            value: 'full'
+          }],
+          onChange: value => {
+            if (value === 'full' && !canUnfilteredHtml) {
+              showNotice('error', '当前账号无 unfiltered_html 权限，无法启用完全模式。', 3500);
+              handleUpdateOptions({
+                html_mode: 'safe'
+              });
+              return;
+            }
             handleUpdateOptions({
-              html_mode: 'safe'
+              html_mode: value
             });
-            return;
-          }
-          handleUpdateOptions({
-            html_mode: value
-          });
-        },
-        help: "\u5B89\u5168\u6A21\u5F0F\u4F1A\u8FC7\u6EE4\u811A\u672C/iframe\uFF1B\u9700\u8981\u7B2C\u4E09\u65B9\u811A\u672C\u6216 head \u6295\u653E\u8BF7\u5207\u6362\u5B8C\u5168\u6A21\u5F0F\uFF08\u591A\u7AD9\u70B9\u5F3A\u5236\u5B89\u5168\uFF09\u3002"
-      }) : !isQuickMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-        status: "info",
-        isDismissible: false
-      }, "\u5F53\u524D\u662F\u201C\u8BBE\u8BA1\u6A21\u5F0F\u201D\uFF1AHTML \u5F3A\u5236\u4F7F\u7528\u201C\u5B89\u5168\u6A21\u5F0F\uFF08\u8FC7\u6EE4\u811A\u672C\uFF09\u201D\u3002 \u5982\u9700\u542F\u7528\u811A\u672C\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u4E13\u5BB6\u6A21\u5F0F\u201D\u3002") : null, selectedAd.options?.html_mode === 'full' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-        status: "warning",
-        isDismissible: false
-      }, "\u5B8C\u5168\u6A21\u5F0F\u5C06\u539F\u6837\u8F93\u51FA HTML\uFF0C\u8BF7\u786E\u4FDD\u7D20\u6750\u4E0E\u4EE3\u7801\u6765\u6E90\u53EF\u4FE1\u3002"), selectedAd.options?.html_mode === 'safe' && /<script[\s>]/i.test(selectedAd.content?.html || '') && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-        status: "warning",
-        isDismissible: false
-      }, "\u68C0\u6D4B\u5230", ' ', (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("code", null, "<script>"), ' ', "\u6807\u7B7E\u3002\u5B89\u5168\u6A21\u5F0F\u4F1A\u79FB\u9664\u811A\u672C\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u5B8C\u5168\u6A21\u5F0F\u201D\u5E76\u786E\u4FDD\u8D26\u53F7\u5177\u5907\u6743\u9650\u3002"), selectedAd.options?.html_mode === 'full' && !canUnfilteredHtml && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-        status: "error",
-        isDismissible: false
-      }, "\u5F53\u524D\u8D26\u53F7\u65E0 unfiltered_html \u6743\u9650\uFF0C\u811A\u672C\u4F1A\u88AB\u8FC7\u6EE4\u5E76\u81EA\u52A8\u56DE\u9000\u5230\u5B89\u5168\u6A21\u5F0F\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "iframe \u6C99\u7BB1",
-        value: selectedAd.options?.html_sandbox || 'inherit',
-        options: [{
-          label: '跟随系统设置',
-          value: 'inherit'
-        }, {
-          label: '强制启用',
-          value: 'enable'
-        }, {
-          label: '强制关闭',
-          value: 'disable'
-        }],
-        onChange: value => handleUpdateOptions({
-          html_sandbox: value
-        }),
-        help: "\u4EC5\u5BF9 HTML \u5B8C\u5168\u6A21\u5F0F\u751F\u6548\uFF1B\u7CFB\u7EDF\u7EA7\u5F00\u5173\u5728\u201C\u7CFB\u7EDF\u8BBE\u7F6E\u201D\u4E2D\u3002"
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
-        label: "\u9644\u52A0 HTML\uFF08\u53EF\u9009\uFF09",
-        value: selectedAd.content?.custom_html || '',
-        onChange: value => handleUpdateContent({
-          custom_html: value
-        }),
-        help: "\u4F1A\u8FFD\u52A0\u5728\u5E7F\u544A\u5185\u5BB9\u540E\u9762\u3002"
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
-        label: "\u81EA\u5B9A\u4E49 CSS\uFF08\u53EF\u9009\uFF09",
-        value: selectedAd.content?.custom_css || '',
-        onChange: value => handleUpdateContent({
-          custom_css: value
-        }),
-        help: "\u65E0\u9700\u5199 <style> \u6807\u7B7E\uFF0C\u7CFB\u7EDF\u4F1A\u81EA\u52A8\u5305\u88F9\u3002"
-      }), isExpertMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
-        label: "\u81EA\u5B9A\u4E49 JS\uFF08\u53EF\u9009\uFF09",
-        value: selectedAd.content?.custom_js || '',
-        onChange: value => handleUpdateContent({
-          custom_js: value
-        }),
-        help: "\u4EC5\u4E13\u5BB6\u6A21\u5F0F\u53EF\u7528\uFF0C\u7CFB\u7EDF\u4F1A\u81EA\u52A8\u5305\u88F9 <script>\u3002"
-      }) : null, !isQuickMode && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-        status: "info",
-        isDismissible: false
-      }, "\u6C99\u7BB1\u53EA\u5BF9\u201C\u5B8C\u5168\u6A21\u5F0F\u201D\u751F\u6548\uFF1A\u542F\u7528\u540E HTML \u4F1A\u5728 iframe \u4E2D\u8FD0\u884C\uFF1B\u5173\u95ED\u5C06\u76F4\u63A5\u6267\u884C\u9875\u9762\u811A\u672C\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-        label: "\u542F\u7528\u53D8\u91CF\u66FF\u6362",
-        checked: selectedAd.content?.html_runtime_vars !== false,
-        onChange: value => handleUpdateContent({
-          html_runtime_vars: value
-        }),
-        help: "\u652F\u6301 {site_url} / {page_url} / {ad_id}"
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u8F7D\u5165\u65B9\u5F0F",
-        value: selectedAd.content?.html_load_strategy || 'immediate',
-        options: [{
-          label: '立即加载',
-          value: 'immediate'
-        }, {
-          label: '延迟加载',
-          value: 'delay'
-        }, {
-          label: '视窗内加载',
-          value: 'viewport'
-        }],
-        onChange: value => handleUpdateContent({
-          html_load_strategy: value
-        }),
-        help: "\u5EF6\u8FDF\u4E0E\u89C6\u7A97\u5185\u52A0\u8F7D\u53EF\u51CF\u5C11\u9996\u5C4F\u538B\u529B\u3002"
-      }), selectedAd.content?.html_load_strategy === 'delay' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-        label: "\u5EF6\u8FDF\u65F6\u95F4\uFF08\u6BEB\u79D2\uFF09",
-        type: "number",
-        min: 0,
-        value: (_selectedAd$content$h = selectedAd.content?.html_load_delay) !== null && _selectedAd$content$h !== void 0 ? _selectedAd$content$h : 0,
-        onChange: value => handleUpdateContent({
-          html_load_delay: Number(value)
-        })
-      }), !isQuickMode && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
-        label: "\u811A\u672C\u767D\u540D\u5355\uFF08\u8FFD\u52A0\u57DF\u540D\uFF09",
-        value: formatDomainList(selectedAd.content?.html_script_allowlist),
-        onChange: value => handleUpdateContent({
-          html_script_allowlist: parseDomainList(value)
-        }),
-        help: "\u7CFB\u7EDF\u9ED8\u8BA4\u4EC5\u5141\u8BB8\u5F53\u524D\u7AD9\u70B9\u57DF\u540D\uFF0C\u6B64\u5904\u4E3A\u8FFD\u52A0\u767D\u540D\u5355\u3002\u6BCF\u884C\u4E00\u4E2A\u57DF\u540D\u6216\u7528\u9017\u53F7\u5206\u9694\u3002"
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
-        label: "\u811A\u672C\u9ED1\u540D\u5355\uFF08\u8FFD\u52A0\u57DF\u540D\uFF09",
-        value: formatDomainList(selectedAd.content?.html_script_blocklist),
-        onChange: value => handleUpdateContent({
-          html_script_blocklist: parseDomainList(value)
-        }),
-        help: "\u7CFB\u7EDF\u7EA7\u9ED1\u540D\u5355\u4F18\u5148\u751F\u6548\uFF0C\u6B64\u5904\u4E3A\u8FFD\u52A0\u9ED1\u540D\u5355\u3002\u547D\u4E2D\u5373\u79FB\u9664\u3002"
-      })));
-    })))), activeContentType === 'video' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+          },
+          help: "\u5B89\u5168\u6A21\u5F0F\u4F1A\u8FC7\u6EE4\u811A\u672C/iframe\uFF1B\u9700\u8981\u7B2C\u4E09\u65B9\u811A\u672C\u6216 head \u6295\u653E\u8BF7\u5207\u6362\u5B8C\u5168\u6A21\u5F0F\uFF08\u591A\u7AD9\u70B9\u5F3A\u5236\u5B89\u5168\uFF09\u3002"
+        }) : !isQuickMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+          status: "info",
+          isDismissible: false
+        }, "\u5F53\u524D\u662F\u201C\u8BBE\u8BA1\u6A21\u5F0F\u201D\uFF1AHTML \u5F3A\u5236\u4F7F\u7528\u201C\u5B89\u5168\u6A21\u5F0F\uFF08\u8FC7\u6EE4\u811A\u672C\uFF09\u201D\u3002 \u5982\u9700\u542F\u7528\u811A\u672C\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u4E13\u5BB6\u6A21\u5F0F\u201D\u3002") : null, selectedAd.options?.html_mode === 'full' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+          status: "warning",
+          isDismissible: false
+        }, "\u5B8C\u5168\u6A21\u5F0F\u5C06\u539F\u6837\u8F93\u51FA HTML\uFF0C\u8BF7\u786E\u4FDD\u7D20\u6750\u4E0E\u4EE3\u7801\u6765\u6E90\u53EF\u4FE1\u3002"), selectedAd.options?.html_mode === 'safe' && /<script[\s>]/i.test(selectedAd.content?.html || '') && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+          status: "warning",
+          isDismissible: false
+        }, "\u68C0\u6D4B\u5230", ' ', (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("code", null, "<script>"), ' ', "\u6807\u7B7E\u3002\u5B89\u5168\u6A21\u5F0F\u4F1A\u79FB\u9664\u811A\u672C\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u5B8C\u5168\u6A21\u5F0F\u201D\u5E76\u786E\u4FDD\u8D26\u53F7\u5177\u5907\u6743\u9650\u3002"), selectedAd.options?.html_mode === 'full' && !canUnfilteredHtml && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+          status: "error",
+          isDismissible: false
+        }, "\u5F53\u524D\u8D26\u53F7\u65E0 unfiltered_html \u6743\u9650\uFF0C\u811A\u672C\u4F1A\u88AB\u8FC7\u6EE4\u5E76\u81EA\u52A8\u56DE\u9000\u5230\u5B89\u5168\u6A21\u5F0F\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+          label: "iframe \u6C99\u7BB1",
+          value: selectedAd.options?.html_sandbox || 'inherit',
+          options: [{
+            label: '跟随系统设置',
+            value: 'inherit'
+          }, {
+            label: '强制启用',
+            value: 'enable'
+          }, {
+            label: '强制关闭',
+            value: 'disable'
+          }],
+          onChange: value => handleUpdateOptions({
+            html_sandbox: value
+          }),
+          help: "\u4EC5\u5BF9 HTML \u5B8C\u5168\u6A21\u5F0F\u751F\u6548\uFF1B\u7CFB\u7EDF\u7EA7\u5F00\u5173\u5728\u201C\u7CFB\u7EDF\u8BBE\u7F6E\u201D\u4E2D\u3002"
+        }), !isQuickMode && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+          status: "info",
+          isDismissible: false
+        }, "\u6C99\u7BB1\u53EA\u5BF9\u201C\u5B8C\u5168\u6A21\u5F0F\u201D\u751F\u6548\uFF1A\u542F\u7528\u540E HTML \u4F1A\u5728 iframe \u4E2D\u8FD0\u884C\uFF1B\u5173\u95ED\u5C06\u76F4\u63A5\u6267\u884C\u9875\u9762\u811A\u672C\u3002"));
+      }
+      if (settingsTabView.name === 'custom') {
+        return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+          label: "\u9644\u52A0 HTML\uFF08\u53EF\u9009\uFF09",
+          value: selectedAd.content?.custom_html || '',
+          onChange: value => handleUpdateContent({
+            custom_html: value
+          }),
+          help: "\u4F1A\u8FFD\u52A0\u5728\u5E7F\u544A\u5185\u5BB9\u540E\u9762\u3002"
+        }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+          label: "\u81EA\u5B9A\u4E49 CSS\uFF08\u53EF\u9009\uFF09",
+          value: selectedAd.content?.custom_css || '',
+          onChange: value => handleUpdateContent({
+            custom_css: value
+          }),
+          help: "\u65E0\u9700\u5199 <style> \u6807\u7B7E\uFF0C\u7CFB\u7EDF\u4F1A\u81EA\u52A8\u5305\u88F9\u3002"
+        }), isExpertMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+          label: "\u81EA\u5B9A\u4E49 JS\uFF08\u53EF\u9009\uFF09",
+          value: selectedAd.content?.custom_js || '',
+          onChange: value => handleUpdateContent({
+            custom_js: value
+          }),
+          help: "\u4EC5\u4E13\u5BB6\u6A21\u5F0F\u53EF\u7528\uFF0C\u7CFB\u7EDF\u4F1A\u81EA\u52A8\u5305\u88F9 <script>\u3002"
+        }) : null);
+      }
+      if (settingsTabView.name === 'runtime') {
+        var _selectedAd$content$h;
+        return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+          label: "\u542F\u7528\u53D8\u91CF\u66FF\u6362",
+          checked: selectedAd.content?.html_runtime_vars !== false,
+          onChange: value => handleUpdateContent({
+            html_runtime_vars: value
+          }),
+          help: "\u652F\u6301 {site_url} / {page_url} / {ad_id}"
+        }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+          label: "\u8F7D\u5165\u65B9\u5F0F",
+          value: selectedAd.content?.html_load_strategy || 'immediate',
+          options: [{
+            label: '立即加载',
+            value: 'immediate'
+          }, {
+            label: '延迟加载',
+            value: 'delay'
+          }, {
+            label: '视窗内加载',
+            value: 'viewport'
+          }],
+          onChange: value => handleUpdateContent({
+            html_load_strategy: value
+          }),
+          help: "\u5EF6\u8FDF\u4E0E\u89C6\u7A97\u5185\u52A0\u8F7D\u53EF\u51CF\u5C11\u9996\u5C4F\u538B\u529B\u3002"
+        }), selectedAd.content?.html_load_strategy === 'delay' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+          label: "\u5EF6\u8FDF\u65F6\u95F4\uFF08\u6BEB\u79D2\uFF09",
+          type: "number",
+          min: 0,
+          value: (_selectedAd$content$h = selectedAd.content?.html_load_delay) !== null && _selectedAd$content$h !== void 0 ? _selectedAd$content$h : 0,
+          onChange: value => handleUpdateContent({
+            html_load_delay: Number(value)
+          })
+        }));
+      }
+      if (settingsTabView.name === 'scripts') {
+        if (isQuickMode) {
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+            status: "info",
+            isDismissible: false
+          }, "\u5FEB\u901F\u6A21\u5F0F\u5DF2\u9690\u85CF\u811A\u672C\u57DF\u540D\u914D\u7F6E\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u8BBE\u8BA1\u6A21\u5F0F/\u4E13\u5BB6\u6A21\u5F0F\u201D\u67E5\u770B\u3002");
+        }
+        return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+          label: "\u811A\u672C\u767D\u540D\u5355\uFF08\u8FFD\u52A0\u57DF\u540D\uFF09",
+          value: formatDomainList(selectedAd.content?.html_script_allowlist),
+          onChange: value => handleUpdateContent({
+            html_script_allowlist: parseDomainList(value)
+          }),
+          help: "\u7CFB\u7EDF\u9ED8\u8BA4\u4EC5\u5141\u8BB8\u5F53\u524D\u7AD9\u70B9\u57DF\u540D\uFF0C\u6B64\u5904\u4E3A\u8FFD\u52A0\u767D\u540D\u5355\u3002\u6BCF\u884C\u4E00\u4E2A\u57DF\u540D\u6216\u7528\u9017\u53F7\u5206\u9694\u3002"
+        }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+          label: "\u811A\u672C\u9ED1\u540D\u5355\uFF08\u8FFD\u52A0\u57DF\u540D\uFF09",
+          value: formatDomainList(selectedAd.content?.html_script_blocklist),
+          onChange: value => handleUpdateContent({
+            html_script_blocklist: parseDomainList(value)
+          }),
+          help: "\u7CFB\u7EDF\u7EA7\u9ED1\u540D\u5355\u4F18\u5148\u751F\u6548\uFF0C\u6B64\u5904\u4E3A\u8FFD\u52A0\u9ED1\u540D\u5355\u3002\u547D\u4E2D\u5373\u79FB\u9664\u3002"
+        }));
+      }
+      return null;
+    }))))), activeContentType === 'video' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
       title: "\u5185\u5BB9\u914D\u7F6E",
       initialOpen: true
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
@@ -5635,151 +5674,189 @@ const AdsConfig = () => {
           video_url: value
         }),
         help: isEmbed ? '支持 YouTube/Bilibili 等嵌入链接' : '支持 MP4 链接'
-      }), renderVariantSection('video')) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u89C6\u9891\u7C7B\u578B",
-        value: videoSettings.type || 'mp4',
-        options: [{
-          label: 'MP4',
-          value: 'mp4'
+      }), renderVariantSection('video')) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
+        className: "magick-ad-video-settings-tabs",
+        tabs: [{
+          name: 'basic',
+          title: '基础'
         }, {
-          label: '嵌入（iframe）',
-          value: 'embed'
+          name: 'cover',
+          title: '封面'
+        }, {
+          name: 'playback',
+          title: '播放'
+        }, {
+          name: 'track',
+          title: '追踪'
         }],
-        onChange: value => handleUpdateVideoSettings({
-          type: value
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u6BD4\u4F8B",
-        value: videoSettings.aspect_ratio || '16:9',
-        options: [{
-          label: '自适应',
-          value: 'auto'
-        }, {
-          label: '16:9',
-          value: '16:9'
-        }, {
-          label: '4:3',
-          value: '4:3'
-        }, {
-          label: '1:1',
-          value: '1:1'
-        }, {
-          label: '9:16',
-          value: '9:16'
-        }, {
-          label: '自定义',
-          value: 'custom'
-        }],
-        onChange: value => handleUpdateVideoSettings({
-          aspect_ratio: value
-        })
-      }), videoSettings.aspect_ratio === 'custom' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-        label: "\u81EA\u5B9A\u4E49\u6BD4\u4F8B\uFF08\u5982 3:2\uFF09",
-        value: videoSettings.aspect_ratio_custom || '',
-        onChange: value => handleUpdateVideoSettings({
-          aspect_ratio_custom: value
-        }),
-        help: "\u683C\u5F0F\u5982 3:2\u300121:9\u3002"
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u9884\u52A0\u8F7D",
-        value: videoSettings.preload || 'metadata',
-        options: [{
-          label: 'metadata',
-          value: 'metadata'
-        }, {
-          label: 'auto',
-          value: 'auto'
-        }, {
-          label: 'none',
-          value: 'none'
-        }],
-        onChange: value => handleUpdateVideoSettings({
-          preload: value
-        })
-      }), !isEmbed && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u5C01\u9762\u7B56\u7565",
-        value: videoSettings.poster_mode || 'manual',
-        options: [{
-          label: '使用封面图',
-          value: 'manual'
-        }, {
-          label: '无封面时取首帧',
-          value: 'auto'
-        }],
-        onChange: value => handleUpdateVideoSettings({
-          poster_mode: value
-        })
-      }), videoSettings.poster_mode !== 'auto' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-field"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-        className: "magick-ad-field__label"
-      }, "\u5C01\u9762\u56FE"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
-        value: videoSettings.poster || {},
-        onChange: value => handleUpdateVideoSettings({
-          poster: value
-        })
-      }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-image-grid"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-        label: "\u81EA\u52A8\u64AD\u653E",
-        checked: Boolean(videoSettings.autoplay),
-        onChange: value => handleUpdateVideoSettings({
-          autoplay: value,
-          muted: value ? true : Boolean(videoSettings.muted)
-        }),
-        help: "\u81EA\u52A8\u64AD\u653E\u901A\u5E38\u9700\u8981\u9759\u97F3\u3002"
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-        label: "\u9996\u6B21\u5C55\u793A\u81EA\u52A8\u64AD\u653E",
-        checked: Boolean(videoSettings.autoplay_first),
-        onChange: value => handleUpdateVideoSettings({
-          autoplay_first: value
-        }),
-        help: "\u4EC5\u9996\u6B21\u5C55\u793A\u65F6\u5C1D\u8BD5\u81EA\u52A8\u64AD\u653E\uFF08\u4F1A\u5F3A\u5236\u9759\u97F3\uFF09\u3002"
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-        label: "\u9759\u97F3",
-        checked: Boolean(videoSettings.muted),
-        onChange: value => handleUpdateVideoSettings({
-          muted: value
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-        label: "\u4E8C\u6B21\u5C55\u793A\u5F3A\u5236\u9759\u97F3",
-        checked: Boolean(videoSettings.repeat_muted),
-        onChange: value => handleUpdateVideoSettings({
-          repeat_muted: value
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-        label: "\u5FAA\u73AF",
-        checked: Boolean(videoSettings.loop),
-        onChange: value => handleUpdateVideoSettings({
-          loop: value
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-        label: "\u663E\u793A\u63A7\u5236\u6761",
-        checked: videoSettings.controls !== false,
-        onChange: value => handleUpdateVideoSettings({
-          controls: value
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-        label: "\u79FB\u52A8\u7AEF\u5185\u5D4C\u64AD\u653E",
-        checked: videoSettings.playsinline !== false,
-        onChange: value => handleUpdateVideoSettings({
-          playsinline: value
-        })
-      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-        label: "\u8FFD\u8E2A\u64AD\u653E/\u6682\u505C/\u5B8C\u6210",
-        checked: Boolean(videoSettings.track_events),
-        onChange: value => handleUpdateVideoSettings({
-          track_events: value
-        }),
-        help: "\u4F1A\u5411\u7EDF\u8BA1\u63A5\u53E3\u4E0A\u62A5\u64AD\u653E\u4E8B\u4EF6\u3002"
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-        label: "\u5907\u7528\u63D0\u793A\u6587\u6848",
-        value: videoSettings.fallback_text || '',
-        onChange: value => handleUpdateVideoSettings({
-          fallback_text: value
-        }),
-        help: "\u6D4F\u89C8\u5668\u4E0D\u652F\u6301\u89C6\u9891\u65F6\u663E\u793A\u3002"
-      }));
+        initialTabName: videoSettingsTab,
+        onSelect: name => setVideoSettingsTab(name),
+        key: videoSettingsTab
+      }, settingsTabView => {
+        if (settingsTabView.name === 'basic') {
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u89C6\u9891\u7C7B\u578B",
+            value: videoSettings.type || 'mp4',
+            options: [{
+              label: 'MP4',
+              value: 'mp4'
+            }, {
+              label: '嵌入（iframe）',
+              value: 'embed'
+            }],
+            onChange: value => handleUpdateVideoSettings({
+              type: value
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u6BD4\u4F8B",
+            value: videoSettings.aspect_ratio || '16:9',
+            options: [{
+              label: '自适应',
+              value: 'auto'
+            }, {
+              label: '16:9',
+              value: '16:9'
+            }, {
+              label: '4:3',
+              value: '4:3'
+            }, {
+              label: '1:1',
+              value: '1:1'
+            }, {
+              label: '9:16',
+              value: '9:16'
+            }, {
+              label: '自定义',
+              value: 'custom'
+            }],
+            onChange: value => handleUpdateVideoSettings({
+              aspect_ratio: value
+            })
+          }), videoSettings.aspect_ratio === 'custom' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+            label: "\u81EA\u5B9A\u4E49\u6BD4\u4F8B\uFF08\u5982 3:2\uFF09",
+            value: videoSettings.aspect_ratio_custom || '',
+            onChange: value => handleUpdateVideoSettings({
+              aspect_ratio_custom: value
+            }),
+            help: "\u683C\u5F0F\u5982 3:2\u300121:9\u3002"
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u9884\u52A0\u8F7D",
+            value: videoSettings.preload || 'metadata',
+            options: [{
+              label: 'metadata',
+              value: 'metadata'
+            }, {
+              label: 'auto',
+              value: 'auto'
+            }, {
+              label: 'none',
+              value: 'none'
+            }],
+            onChange: value => handleUpdateVideoSettings({
+              preload: value
+            })
+          }));
+        }
+        if (settingsTabView.name === 'cover') {
+          if (isEmbed) {
+            return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+              status: "info",
+              isDismissible: false
+            }, "\u5D4C\u5165\u89C6\u9891\u7531\u7B2C\u4E09\u65B9\u64AD\u653E\u5668\u63A7\u5236\uFF0C\u5C01\u9762\u8BBE\u7F6E\u4E0D\u53EF\u7528\u3002");
+          }
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u5C01\u9762\u7B56\u7565",
+            value: videoSettings.poster_mode || 'manual',
+            options: [{
+              label: '使用封面图',
+              value: 'manual'
+            }, {
+              label: '无封面时取首帧',
+              value: 'auto'
+            }],
+            onChange: value => handleUpdateVideoSettings({
+              poster_mode: value
+            })
+          }), videoSettings.poster_mode !== 'auto' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u5C01\u9762\u56FE"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
+            value: videoSettings.poster || {},
+            onChange: value => handleUpdateVideoSettings({
+              poster: value
+            })
+          })));
+        }
+        if (settingsTabView.name === 'playback') {
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-image-grid"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+            label: "\u81EA\u52A8\u64AD\u653E",
+            checked: Boolean(videoSettings.autoplay),
+            onChange: value => handleUpdateVideoSettings({
+              autoplay: value,
+              muted: value ? true : Boolean(videoSettings.muted)
+            }),
+            help: "\u81EA\u52A8\u64AD\u653E\u901A\u5E38\u9700\u8981\u9759\u97F3\u3002"
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+            label: "\u9996\u6B21\u5C55\u793A\u81EA\u52A8\u64AD\u653E",
+            checked: Boolean(videoSettings.autoplay_first),
+            onChange: value => handleUpdateVideoSettings({
+              autoplay_first: value
+            }),
+            help: "\u4EC5\u9996\u6B21\u5C55\u793A\u65F6\u5C1D\u8BD5\u81EA\u52A8\u64AD\u653E\uFF08\u4F1A\u5F3A\u5236\u9759\u97F3\uFF09\u3002"
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+            label: "\u9759\u97F3",
+            checked: Boolean(videoSettings.muted),
+            onChange: value => handleUpdateVideoSettings({
+              muted: value
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+            label: "\u4E8C\u6B21\u5C55\u793A\u5F3A\u5236\u9759\u97F3",
+            checked: Boolean(videoSettings.repeat_muted),
+            onChange: value => handleUpdateVideoSettings({
+              repeat_muted: value
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+            label: "\u5FAA\u73AF",
+            checked: Boolean(videoSettings.loop),
+            onChange: value => handleUpdateVideoSettings({
+              loop: value
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+            label: "\u663E\u793A\u63A7\u5236\u6761",
+            checked: videoSettings.controls !== false,
+            onChange: value => handleUpdateVideoSettings({
+              controls: value
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+            label: "\u79FB\u52A8\u7AEF\u5185\u5D4C\u64AD\u653E",
+            checked: videoSettings.playsinline !== false,
+            onChange: value => handleUpdateVideoSettings({
+              playsinline: value
+            })
+          })));
+        }
+        if (settingsTabView.name === 'track') {
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+            label: "\u8FFD\u8E2A\u64AD\u653E/\u6682\u505C/\u5B8C\u6210",
+            checked: Boolean(videoSettings.track_events),
+            onChange: value => handleUpdateVideoSettings({
+              track_events: value
+            }),
+            help: "\u4F1A\u5411\u7EDF\u8BA1\u63A5\u53E3\u4E0A\u62A5\u64AD\u653E\u4E8B\u4EF6\u3002"
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+            label: "\u5907\u7528\u63D0\u793A\u6587\u6848",
+            value: videoSettings.fallback_text || '',
+            onChange: value => handleUpdateVideoSettings({
+              fallback_text: value
+            }),
+            help: "\u6D4F\u89C8\u5668\u4E0D\u652F\u6301\u89C6\u9891\u65F6\u663E\u793A\u3002"
+          }));
+        }
+        return null;
+      });
     }))), activeContentType === 'block' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
       title: "\u5185\u5BB9\u914D\u7F6E",
       initialOpen: true
