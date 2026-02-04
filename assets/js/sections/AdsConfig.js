@@ -4209,11 +4209,6 @@ const AdsConfig = () => {
     const renderPlacementSection = () => (
         <>
             <div className="magick-ad-right-section">
-            <div className="magick-ad-right-section__header">
-                <div className="magick-ad-right-section__title">
-                    投放
-                </div>
-            </div>
             <div className="magick-ad-right-section__body">
                 <div className="magick-ad-mode-switch">
                     <div className="magick-ad-mode-switch__label">
