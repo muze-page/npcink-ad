@@ -1556,10 +1556,48 @@
     display: block;
 }
 
+.magick-ad-video-preview video {
+    width: 100%;
+    max-height: 240px;
+    border-radius: 4px;
+    border: 1px solid #dcdcde;
+    display: block;
+    background: #0f172a;
+}
+
 .magick-ad-image-actions {
     display: flex;
     gap: 8px;
     margin-top: 8px;
+}
+
+.magick-ad-video-input {
+    margin-top: 8px;
+}
+
+.magick-ad-video-input-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+    margin: 0;
+}
+
+.magick-ad-video-input-row .components-base-control {
+    flex: 1 1 280px;
+    margin-bottom: 0;
+}
+
+.magick-ad-video-input-row .magick-ad-video-picker.is-compact {
+    display: flex;
+    align-items: flex-end;
+    margin-top: 0;
+}
+
+.magick-ad-video-input-row
+    .magick-ad-video-picker.is-compact
+    .components-button {
+    white-space: nowrap;
 }
 
 .magick-ad-field {

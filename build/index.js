@@ -1934,6 +1934,100 @@ const TemplateLibraryModal = ({
 
 /***/ },
 
+/***/ "./assets/js/components/VideoPicker.js"
+/*!*********************************************!*\
+  !*** ./assets/js/components/VideoPicker.js ***!
+  \*********************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @wordpress/element */ "@wordpress/element");
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_wordpress_element__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _wordpress_components__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @wordpress/components */ "@wordpress/components");
+/* harmony import */ var _wordpress_components__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__);
+
+
+
+const VideoPicker = ({
+  value,
+  onChange,
+  compact = false
+}) => {
+  const frameRef = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useRef)(null);
+  const handleOpen = () => {
+    if (!window.wp?.media) {
+      // eslint-disable-next-line no-console
+      console.error('wp.media is not available.');
+      return;
+    }
+    if (frameRef.current) {
+      frameRef.current.open();
+      return;
+    }
+    const frame = window.wp.media({
+      title: '选择视频',
+      button: {
+        text: '使用此视频'
+      },
+      library: {
+        type: 'video'
+      },
+      multiple: false
+    });
+    frame.on('select', () => {
+      const attachment = frame.state().get('selection').first().toJSON();
+      onChange(attachment.url || '');
+    });
+    frameRef.current = frame;
+    frame.open();
+  };
+  if (compact) {
+    return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+      className: "magick-ad-video-picker is-compact"
+    }, value ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+      className: "magick-ad-image-actions"
+    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+      onClick: handleOpen,
+      variant: "secondary"
+    }, "\u66F4\u6362\u89C6\u9891"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+      onClick: () => onChange(''),
+      variant: "tertiary",
+      isDestructive: true
+    }, "\u79FB\u9664")) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+      onClick: handleOpen,
+      variant: "secondary"
+    }, "\u9009\u62E9\u89C6\u9891"));
+  }
+  return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-video-picker"
+  }, value ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-video-preview"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("video", {
+    src: value,
+    controls: true
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-image-actions"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+    onClick: handleOpen,
+    variant: "secondary"
+  }, "\u66F4\u6362\u89C6\u9891"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+    onClick: () => onChange(''),
+    variant: "tertiary",
+    isDestructive: true
+  }, "\u79FB\u9664"))) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+    onClick: handleOpen,
+    variant: "secondary"
+  }, "\u9009\u62E9\u89C6\u9891"));
+};
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (VideoPicker);
+
+/***/ },
+
 /***/ "./assets/js/constants/options.js"
 /*!****************************************!*\
   !*** ./assets/js/constants/options.js ***!
@@ -3763,24 +3857,26 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _store__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../store */ "./assets/js/store.ts");
 /* harmony import */ var _Layout__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../Layout */ "./assets/js/Layout.js");
 /* harmony import */ var _components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../components/ImagePicker */ "./assets/js/components/ImagePicker.js");
-/* harmony import */ var _components_LinkPicker__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../components/LinkPicker */ "./assets/js/components/LinkPicker.js");
-/* harmony import */ var _components_ClassicEditor__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../components/ClassicEditor */ "./assets/js/components/ClassicEditor.js");
-/* harmony import */ var _components_BlockEditor__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../components/BlockEditor */ "./assets/js/components/BlockEditor.js");
-/* harmony import */ var _components_TemplateLibraryModal__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ../components/TemplateLibraryModal */ "./assets/js/components/TemplateLibraryModal.js");
-/* harmony import */ var _components_TemplateActions__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ../components/TemplateActions */ "./assets/js/components/TemplateActions.js");
-/* harmony import */ var _components_BuildProbe__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ../components/BuildProbe */ "./assets/js/components/BuildProbe.js");
-/* harmony import */ var _panels_DebugPanel__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ../panels/DebugPanel */ "./assets/js/panels/DebugPanel.js");
-/* harmony import */ var _panels_SystemSettingsPanel__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ../panels/SystemSettingsPanel */ "./assets/js/panels/SystemSettingsPanel.js");
-/* harmony import */ var _panels_ConsentPanel__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ../panels/ConsentPanel */ "./assets/js/panels/ConsentPanel.js");
-/* harmony import */ var _panels_SlotsPanel__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ../panels/SlotsPanel */ "./assets/js/panels/SlotsPanel.js");
-/* harmony import */ var _hooks_useNotice__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ../hooks/useNotice */ "./assets/js/hooks/useNotice.js");
-/* harmony import */ var _hooks_useTemplateLibrary__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ../hooks/useTemplateLibrary */ "./assets/js/hooks/useTemplateLibrary.js");
-/* harmony import */ var _hooks_useTargeting__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ../hooks/useTargeting */ "./assets/js/hooks/useTargeting.js");
-/* harmony import */ var _constants_options__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ../constants/options */ "./assets/js/constants/options.js");
-/* harmony import */ var _wordpress_url__WEBPACK_IMPORTED_MODULE_29__ = __webpack_require__(/*! @wordpress/url */ "@wordpress/url");
-/* harmony import */ var _wordpress_url__WEBPACK_IMPORTED_MODULE_29___default = /*#__PURE__*/__webpack_require__.n(_wordpress_url__WEBPACK_IMPORTED_MODULE_29__);
-/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_30__ = __webpack_require__(/*! @wordpress/api-fetch */ "@wordpress/api-fetch");
-/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_30___default = /*#__PURE__*/__webpack_require__.n(_wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_30__);
+/* harmony import */ var _components_VideoPicker__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../components/VideoPicker */ "./assets/js/components/VideoPicker.js");
+/* harmony import */ var _components_LinkPicker__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../components/LinkPicker */ "./assets/js/components/LinkPicker.js");
+/* harmony import */ var _components_ClassicEditor__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../components/ClassicEditor */ "./assets/js/components/ClassicEditor.js");
+/* harmony import */ var _components_BlockEditor__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ../components/BlockEditor */ "./assets/js/components/BlockEditor.js");
+/* harmony import */ var _components_TemplateLibraryModal__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ../components/TemplateLibraryModal */ "./assets/js/components/TemplateLibraryModal.js");
+/* harmony import */ var _components_TemplateActions__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ../components/TemplateActions */ "./assets/js/components/TemplateActions.js");
+/* harmony import */ var _components_BuildProbe__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ../components/BuildProbe */ "./assets/js/components/BuildProbe.js");
+/* harmony import */ var _panels_DebugPanel__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ../panels/DebugPanel */ "./assets/js/panels/DebugPanel.js");
+/* harmony import */ var _panels_SystemSettingsPanel__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ../panels/SystemSettingsPanel */ "./assets/js/panels/SystemSettingsPanel.js");
+/* harmony import */ var _panels_ConsentPanel__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ../panels/ConsentPanel */ "./assets/js/panels/ConsentPanel.js");
+/* harmony import */ var _panels_SlotsPanel__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ../panels/SlotsPanel */ "./assets/js/panels/SlotsPanel.js");
+/* harmony import */ var _hooks_useNotice__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ../hooks/useNotice */ "./assets/js/hooks/useNotice.js");
+/* harmony import */ var _hooks_useTemplateLibrary__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ../hooks/useTemplateLibrary */ "./assets/js/hooks/useTemplateLibrary.js");
+/* harmony import */ var _hooks_useTargeting__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ../hooks/useTargeting */ "./assets/js/hooks/useTargeting.js");
+/* harmony import */ var _constants_options__WEBPACK_IMPORTED_MODULE_29__ = __webpack_require__(/*! ../constants/options */ "./assets/js/constants/options.js");
+/* harmony import */ var _wordpress_url__WEBPACK_IMPORTED_MODULE_30__ = __webpack_require__(/*! @wordpress/url */ "@wordpress/url");
+/* harmony import */ var _wordpress_url__WEBPACK_IMPORTED_MODULE_30___default = /*#__PURE__*/__webpack_require__.n(_wordpress_url__WEBPACK_IMPORTED_MODULE_30__);
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31__ = __webpack_require__(/*! @wordpress/api-fetch */ "@wordpress/api-fetch");
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31___default = /*#__PURE__*/__webpack_require__.n(_wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31__);
+
 
 
 
@@ -3831,7 +3927,7 @@ const AdsConfig = () => {
     notice,
     showNotice,
     clearNotice
-  } = (0,_hooks_useNotice__WEBPACK_IMPORTED_MODULE_25__["default"])();
+  } = (0,_hooks_useNotice__WEBPACK_IMPORTED_MODULE_26__["default"])();
   const [deleteTarget, setDeleteTarget] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
   const [renameTarget, setRenameTarget] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
   const [renameValue, setRenameValue] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('');
@@ -4112,7 +4208,7 @@ const AdsConfig = () => {
   }, [selectedAd?.id, selectedAd?.options?.placement_hook, selectedAd?.options?.placement_position, selectedAd?.options?.placement_paragraph]);
   (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
     let isMounted = true;
-    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_30___default()({
+    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31___default()({
       path: '/magick-ad/v1/debug'
     }).then(response => {
       if (!isMounted) {
@@ -4206,13 +4302,13 @@ const AdsConfig = () => {
     targetSuggestions,
     targetLoading,
     handleTargetSearch
-  } = (0,_hooks_useTargeting__WEBPACK_IMPORTED_MODULE_27__["default"])(selectedAd);
+  } = (0,_hooks_useTargeting__WEBPACK_IMPORTED_MODULE_28__["default"])(selectedAd);
   const positionOptions = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => {
     const page = selectedAd?.options?.show_page || 'all';
     return [{
       label: '请选择展示位置',
       value: ''
-    }, ...(0,_constants_options__WEBPACK_IMPORTED_MODULE_28__.getPositionOptions)(page)];
+    }, ...(0,_constants_options__WEBPACK_IMPORTED_MODULE_29__.getPositionOptions)(page)];
   }, [selectedAd?.options?.show_page]);
   const targetPositionOptions = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => {
     const targetType = selectedAd?.options?.target_type || '';
@@ -4225,7 +4321,7 @@ const AdsConfig = () => {
     return [{
       label: '请选择展示位置',
       value: ''
-    }, ...(0,_constants_options__WEBPACK_IMPORTED_MODULE_28__.getPositionOptions)(targetType)];
+    }, ...(0,_constants_options__WEBPACK_IMPORTED_MODULE_29__.getPositionOptions)(targetType)];
   }, [selectedAd?.options?.target_type]);
   const resolvePlacement = options => {
     const placement = {
@@ -4253,7 +4349,7 @@ const AdsConfig = () => {
     const used = new Set();
     let fixed = 0;
     slots.forEach((slot, index) => {
-      const raw = (0,_wordpress_url__WEBPACK_IMPORTED_MODULE_29__.cleanForSlug)(slot?.id || '');
+      const raw = (0,_wordpress_url__WEBPACK_IMPORTED_MODULE_30__.cleanForSlug)(slot?.id || '');
       if (!raw) {
         return;
       }
@@ -4866,7 +4962,9 @@ const AdsConfig = () => {
           html: value
         }
       })
-    }), type === 'video' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+    }), type === 'video' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+      className: "magick-ad-video-input-row"
+    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
       label: "\u89C6\u9891\u5730\u5740",
       value: variant.content?.video_url || '',
       onChange: value => updateVariant(index, {
@@ -4874,7 +4972,15 @@ const AdsConfig = () => {
           video_url: value
         }
       })
-    }), type === 'block' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+    }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_VideoPicker__WEBPACK_IMPORTED_MODULE_15__["default"], {
+      value: variant.content?.video_url || '',
+      onChange: value => updateVariant(index, {
+        content: {
+          video_url: value
+        }
+      }),
+      compact: true
+    }))), type === 'block' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
       label: "\u533A\u5757\u5185\u5BB9",
       value: variant.content?.blocks || '',
       onChange: value => updateVariant(index, {
@@ -5029,7 +5135,7 @@ const AdsConfig = () => {
     handleExportTemplates,
     handleImportTemplates,
     handleFileChange
-  } = (0,_hooks_useTemplateLibrary__WEBPACK_IMPORTED_MODULE_26__["default"])({
+  } = (0,_hooks_useTemplateLibrary__WEBPACK_IMPORTED_MODULE_27__["default"])({
     selectedAd,
     getCreativeTemplateData,
     onApplyTemplate: applyTemplate,
@@ -5067,7 +5173,7 @@ const AdsConfig = () => {
         params.set('search', previewSearch.trim());
       }
       setPreviewLoading(true);
-      _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_30___default()({
+      _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31___default()({
         path: `/wp/v2/${endpoint}?${params.toString()}`,
         signal: controller.signal
       }).then(items => {
@@ -5292,7 +5398,7 @@ const AdsConfig = () => {
       setDeleteTarget(ad);
       onClose();
     }
-  }, "\u5220\u9664"))))))))))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_SlotsPanel__WEBPACK_IMPORTED_MODULE_24__["default"], {
+  }, "\u5220\u9664"))))))))))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_SlotsPanel__WEBPACK_IMPORTED_MODULE_25__["default"], {
     slots: slots,
     ads: ads,
     onAddSlot: addSlot,
@@ -5341,7 +5447,7 @@ const AdsConfig = () => {
       key: imageTab
     }, imageTabView => {
       var _selectedAd$content$i, _selectedAd$content$i2, _selectedAd$content$i3, _selectedAd$content$i4, _selectedAd$content$i5, _selectedAd$content$i6;
-      return imageTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_LinkPicker__WEBPACK_IMPORTED_MODULE_15__["default"], {
+      return imageTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_LinkPicker__WEBPACK_IMPORTED_MODULE_16__["default"], {
         value: selectedAd.content?.link || '',
         target: selectedAd.content?.link_target,
         onChange: ({
@@ -5448,7 +5554,7 @@ const AdsConfig = () => {
       initialTabName: htmlTab,
       onSelect: name => setHtmlTab(name),
       key: htmlTab
-    }, htmlTabView => htmlTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ClassicEditor__WEBPACK_IMPORTED_MODULE_16__["default"], {
+    }, htmlTabView => htmlTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ClassicEditor__WEBPACK_IMPORTED_MODULE_17__["default"], {
       value: selectedAd.content?.html || '',
       active: activeContentType === 'html',
       onChange: value => handleUpdateContent({
@@ -5632,14 +5738,30 @@ const AdsConfig = () => {
     }, videoTabView => {
       const videoSettings = selectedAd.content?.video_settings || {};
       const isEmbed = videoSettings.type === 'embed';
-      return videoTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+      return videoTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: "magick-ad-video-input"
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: "magick-ad-video-input-row"
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
         label: isEmbed ? '嵌入地址' : '视频地址',
         value: selectedAd.content?.video_url || '',
         onChange: value => handleUpdateContent({
           video_url: value
+        })
+      }), !isEmbed && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_VideoPicker__WEBPACK_IMPORTED_MODULE_15__["default"], {
+        value: selectedAd.content?.video_url || '',
+        onChange: value => handleUpdateContent({
+          video_url: value
         }),
-        help: isEmbed ? '支持 YouTube/Bilibili 等嵌入链接' : '支持 MP4 链接'
-      }), renderVariantSection('video')) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
+        compact: true
+      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+        className: "magick-ad-field__help"
+      }, isEmbed ? '支持 YouTube/Bilibili 等嵌入链接' : '支持 MP4 链接')), !isEmbed && selectedAd.content?.video_url && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: "magick-ad-video-preview"
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("video", {
+        src: selectedAd.content?.video_url || '',
+        controls: true
+      })), renderVariantSection('video')) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
         className: "magick-ad-video-settings-tabs",
         tabs: [{
           name: 'basic',
@@ -5838,7 +5960,7 @@ const AdsConfig = () => {
       key: blockTab
     }, blockTabView => {
       const blockSettings = selectedAd.content?.block_settings || {};
-      return blockTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_BlockEditor__WEBPACK_IMPORTED_MODULE_17__["default"], {
+      return blockTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_BlockEditor__WEBPACK_IMPORTED_MODULE_18__["default"], {
         value: selectedAd.content?.blocks || '',
         onChange: value => handleUpdateContent({
           blocks: value
@@ -5954,7 +6076,7 @@ const AdsConfig = () => {
           })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
             label: "\u9634\u5F71",
             value: blockSettings.shadow || 'none',
-            options: _constants_options__WEBPACK_IMPORTED_MODULE_28__.SHADOW_OPTIONS,
+            options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.SHADOW_OPTIONS,
             onChange: value => handleUpdateBlockSettings({
               shadow: value
             })
@@ -6117,7 +6239,7 @@ const AdsConfig = () => {
             onChange: value => handleUpdateBlockSettings({
               cta_text: value
             })
-          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_LinkPicker__WEBPACK_IMPORTED_MODULE_15__["default"], {
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_LinkPicker__WEBPACK_IMPORTED_MODULE_16__["default"], {
             value: blockSettings.cta_link || '',
             target: blockSettings.cta_target,
             onChange: ({
@@ -6422,9 +6544,9 @@ const AdsConfig = () => {
     }, "\u8BF7\u5148\u9009\u62E9\u5C55\u793A\u4F4D\u7F6E"), selectedAd.options?.ad_type === 'global' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
       label: "\u5C55\u793A\u9875\u9762",
       value: selectedAd.options?.show_page || 'all',
-      options: _constants_options__WEBPACK_IMPORTED_MODULE_28__.DISPLAY_PAGE_OPTIONS,
+      options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.DISPLAY_PAGE_OPTIONS,
       onChange: value => {
-        const allowedPositions = (0,_constants_options__WEBPACK_IMPORTED_MODULE_28__.getPositionOptions)(value).map(option => option.value);
+        const allowedPositions = (0,_constants_options__WEBPACK_IMPORTED_MODULE_29__.getPositionOptions)(value).map(option => option.value);
         const currentPlacement = resolvePlacement(selectedAd.options || {});
         const currentValue = placementToSlotValue(currentPlacement);
         const nextPosition = allowedPositions.includes(currentValue) ? currentValue : '';
@@ -6440,7 +6562,7 @@ const AdsConfig = () => {
     })), selectedAd.options?.ad_type === 'targeted' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
       label: "\u5C55\u793A\u7C7B\u578B",
       value: selectedAd.options?.target_type || '',
-      options: _constants_options__WEBPACK_IMPORTED_MODULE_28__.TARGET_TYPE_OPTIONS,
+      options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.TARGET_TYPE_OPTIONS,
       onChange: value => handleUpdateOptions({
         target_type: value,
         target_values: []
@@ -6699,7 +6821,7 @@ const AdsConfig = () => {
             }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
               label: "\u9634\u5F71",
               value: containerStyle.shadow || 'none',
-              options: _constants_options__WEBPACK_IMPORTED_MODULE_28__.SHADOW_OPTIONS,
+              options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.SHADOW_OPTIONS,
               onChange: value => handleUpdateContainerStyle({
                 shadow: value
               })
@@ -6768,7 +6890,7 @@ const AdsConfig = () => {
         }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
           label: "\u8FDB\u573A\u52A8\u753B",
           value: behavior.animation || 'none',
-          options: _constants_options__WEBPACK_IMPORTED_MODULE_28__.ANIMATION_OPTIONS,
+          options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.ANIMATION_OPTIONS,
           onChange: value => handleUpdateBehavior({
             animation: value
           })
@@ -6823,9 +6945,9 @@ const AdsConfig = () => {
       }, "\u8BF7\u5148\u9009\u62E9\u5C55\u793A\u4F4D\u7F6E"), selectedAd.options?.ad_type === 'global' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
         label: "\u5C55\u793A\u9875\u9762",
         value: selectedAd.options?.show_page || 'all',
-        options: _constants_options__WEBPACK_IMPORTED_MODULE_28__.DISPLAY_PAGE_OPTIONS,
+        options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.DISPLAY_PAGE_OPTIONS,
         onChange: value => {
-          const allowedPositions = (0,_constants_options__WEBPACK_IMPORTED_MODULE_28__.getPositionOptions)(value).map(option => option.value);
+          const allowedPositions = (0,_constants_options__WEBPACK_IMPORTED_MODULE_29__.getPositionOptions)(value).map(option => option.value);
           const currentPlacement = resolvePlacement(selectedAd.options || {});
           const currentValue = placementToSlotValue(currentPlacement);
           const nextPosition = allowedPositions.includes(currentValue) ? currentValue : '';
@@ -6841,7 +6963,7 @@ const AdsConfig = () => {
       })), selectedAd.options?.ad_type === 'targeted' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
         label: "\u5C55\u793A\u7C7B\u578B",
         value: selectedAd.options?.target_type || '',
-        options: _constants_options__WEBPACK_IMPORTED_MODULE_28__.TARGET_TYPE_OPTIONS,
+        options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.TARGET_TYPE_OPTIONS,
         onChange: value => handleUpdateOptions({
           target_type: value,
           target_values: []
@@ -6901,7 +7023,7 @@ const AdsConfig = () => {
     variant: "tertiary",
     onClick: () => setPreviewModalOpen(true)
   })) : null;
-  const toolbarMiddle = selectedAd ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_TemplateActions__WEBPACK_IMPORTED_MODULE_19__["default"], {
+  const toolbarMiddle = selectedAd ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_TemplateActions__WEBPACK_IMPORTED_MODULE_20__["default"], {
     variant: "toolbar",
     onOpen: () => openTemplateLibrary(activeCreativeType),
     onSave: () => openSaveTemplate(activeCreativeType)
@@ -7019,7 +7141,7 @@ const AdsConfig = () => {
     title: "\u9884\u89C8\u8BBE\u7F6E",
     className: "magick-ad-modal magick-ad-config-modal",
     onRequestClose: () => setPreviewModalOpen(false)
-  }, renderPreviewControls()), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_TemplateLibraryModal__WEBPACK_IMPORTED_MODULE_18__["default"], {
+  }, renderPreviewControls()), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_TemplateLibraryModal__WEBPACK_IMPORTED_MODULE_19__["default"], {
     isOpen: templateModalOpen,
     type: templateType,
     templates: templateLibrary,
@@ -7042,7 +7164,7 @@ const AdsConfig = () => {
     onImport: handleImportTemplates,
     onExport: handleExportTemplates,
     onClose: () => setTemplateModalOpen(false)
-  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_BuildProbe__WEBPACK_IMPORTED_MODULE_20__["default"], null), saveTemplateOpen && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_BuildProbe__WEBPACK_IMPORTED_MODULE_21__["default"], null), saveTemplateOpen && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
     title: "\u5B58\u4E3A\u6A21\u677F",
     onRequestClose: () => setSaveTemplateOpen(false),
     className: "magick-ad-modal magick-ad-rename-modal"
@@ -7200,11 +7322,11 @@ const AdsConfig = () => {
     initialTabName: "system"
   }, tab => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-settings-body"
-  }, tab.name === 'system' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_SystemSettingsPanel__WEBPACK_IMPORTED_MODULE_22__["default"], {
+  }, tab.name === 'system' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_SystemSettingsPanel__WEBPACK_IMPORTED_MODULE_23__["default"], {
     onNotice: showNotice
-  }) : tab.name === 'consent' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_ConsentPanel__WEBPACK_IMPORTED_MODULE_23__["default"], {
+  }) : tab.name === 'consent' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_ConsentPanel__WEBPACK_IMPORTED_MODULE_24__["default"], {
     onNotice: showNotice
-  }) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_DebugPanel__WEBPACK_IMPORTED_MODULE_21__["default"], {
+  }) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_DebugPanel__WEBPACK_IMPORTED_MODULE_22__["default"], {
     onNotice: showNotice
   })))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
     ref: fileInputRef,

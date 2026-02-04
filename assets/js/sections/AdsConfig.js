@@ -37,6 +37,7 @@ import {
 import { useStore } from '../store';
 import Layout from '../Layout';
 import ImagePicker from '../components/ImagePicker';
+import VideoPicker from '../components/VideoPicker';
 import LinkPicker from '../components/LinkPicker';
 import ClassicEditor from '../components/ClassicEditor';
 import BlockEditor from '../components/BlockEditor';
@@ -1307,19 +1308,40 @@ const AdsConfig = () => {
                                         />
                                     )}
                                     {type === 'video' && (
-                                        <TextControl
-                                            label="视频地址"
-                                            value={
-                                                variant.content?.video_url || ''
-                                            }
-                                            onChange={(value) =>
-                                                updateVariant(index, {
-                                                    content: {
-                                                        video_url: value,
-                                                    },
-                                                })
-                                            }
-                                        />
+                                        <>
+                                            <div className="magick-ad-video-input-row">
+                                                <TextControl
+                                                    label="视频地址"
+                                                    value={
+                                                        variant.content
+                                                            ?.video_url || ''
+                                                    }
+                                                    onChange={(value) =>
+                                                        updateVariant(index, {
+                                                            content: {
+                                                                video_url:
+                                                                    value,
+                                                            },
+                                                        })
+                                                    }
+                                                />
+                                                <VideoPicker
+                                                    value={
+                                                        variant.content
+                                                            ?.video_url || ''
+                                                    }
+                                                    onChange={(value) =>
+                                                        updateVariant(index, {
+                                                            content: {
+                                                                video_url:
+                                                                    value,
+                                                            },
+                                                        })
+                                                    }
+                                                    compact
+                                                />
+                                            </div>
+                                        </>
                                     )}
                                     {type === 'block' && (
                                         <TextareaControl
@@ -2711,29 +2733,74 @@ const AdsConfig = () => {
                                             return videoTabView.name ===
                                                 'content' ? (
                                                 <>
-                                                    <TextControl
-                                                        label={
-                                                            isEmbed
-                                                                ? '嵌入地址'
-                                                                : '视频地址'
-                                                        }
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.video_url ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateContent({
-                                                                video_url:
-                                                                    value,
-                                                            })
-                                                        }
-                                                        help={
-                                                            isEmbed
+                                                    <div className="magick-ad-video-input">
+                                                        <div className="magick-ad-video-input-row">
+                                                            <TextControl
+                                                                label={
+                                                                    isEmbed
+                                                                        ? '嵌入地址'
+                                                                        : '视频地址'
+                                                                }
+                                                                value={
+                                                                    selectedAd
+                                                                        .content
+                                                                        ?.video_url ||
+                                                                    ''
+                                                                }
+                                                                onChange={(
+                                                                    value
+                                                                ) =>
+                                                                    handleUpdateContent(
+                                                                        {
+                                                                            video_url:
+                                                                                value,
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                            {!isEmbed && (
+                                                                <VideoPicker
+                                                                    value={
+                                                                        selectedAd
+                                                                            .content
+                                                                            ?.video_url ||
+                                                                        ''
+                                                                    }
+                                                                    onChange={(
+                                                                        value
+                                                                    ) =>
+                                                                        handleUpdateContent(
+                                                                            {
+                                                                                video_url:
+                                                                                    value,
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                    compact
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <p className="magick-ad-field__help">
+                                                            {isEmbed
                                                                 ? '支持 YouTube/Bilibili 等嵌入链接'
-                                                                : '支持 MP4 链接'
-                                                        }
-                                                    />
+                                                                : '支持 MP4 链接'}
+                                                        </p>
+                                                    </div>
+                                                    {!isEmbed &&
+                                                        selectedAd.content
+                                                            ?.video_url && (
+                                                            <div className="magick-ad-video-preview">
+                                                                <video
+                                                                    src={
+                                                                        selectedAd
+                                                                            .content
+                                                                            ?.video_url ||
+                                                                        ''
+                                                                    }
+                                                                    controls
+                                                                />
+                                                            </div>
+                                                        )}
                                                     {renderVariantSection(
                                                         'video'
                                                     )}
