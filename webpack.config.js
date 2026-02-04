@@ -7,6 +7,10 @@ const frontendEntries = {
         __dirname,
         'assets/js/frontend/magick-ad-interactivity.ts'
     ),
+    'magick-ad-slot-resolver': path.resolve(
+        __dirname,
+        'assets/js/frontend/magick-ad-slot-resolver.ts'
+    ),
     'magick-ad-track': path.resolve(
         __dirname,
         'assets/js/frontend/magick-ad-track.ts'

@@ -13,6 +13,7 @@ import {
 import apiFetch from '@wordpress/api-fetch';
 
 const DEFAULT_SETTINGS = {
+    tracking_enabled: true,
     tracking_strategy: 'session',
     tracking_require_consent: false,
     tracking_dedupe_ttl: 86400,
@@ -110,6 +111,20 @@ const SystemSettingsPanel = ({ onNotice }) => {
                         {error && (
                             <Notice status="error" isDismissible>
                                 {error.message || '系统设置加载失败'}
+                            </Notice>
+                        )}
+                        <ToggleControl
+                            label="启用前台统计"
+                            checked={Boolean(settings.tracking_enabled)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({ tracking_enabled: value })
+                            }
+                            help="关闭后不加载统计脚本，前台不再上报数据。"
+                        />
+                        {!settings.tracking_enabled && (
+                            <Notice status="warning" isDismissible={false}>
+                                统计已关闭，报表将暂停更新（不影响广告展示）。
                             </Notice>
                         )}
                         <SelectControl

@@ -30,6 +30,7 @@ final class Frontend {
     private static bool $content_insert_used = false;
     private static int $content_insert_index = 0;
     private static ?array $content_insert_map = null;
+    private static ?array $behavior_config_cache = null;
 
     public function register(): void {
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_assets'));
@@ -383,6 +384,8 @@ final class Frontend {
             $attrs .= ' data-magick-ad-args="' . esc_attr($args_json) . '"';
         }
 
+        self::enqueue_slot_resolver_assets();
+
         return '<div class="magick-ad-slot-resolver"' . $attrs . '></div>';
     }
 
@@ -542,6 +545,78 @@ final class Frontend {
         return !empty($ads) ? $ads[0] : null;
     }
 
+    private static function get_behavior_config(): array {
+        if (self::$behavior_config_cache !== null) {
+            return self::$behavior_config_cache;
+        }
+
+        $has_consent = (bool) apply_filters('magick_ad_has_consent', false);
+        $requires_consent = (get_option('magick_ad_tracking_require_consent', '0') === '1');
+        $requires_consent = (bool) apply_filters('magick_ad_tracking_require_consent', $requires_consent);
+        $consent_guard_enabled = (get_option('magick_ad_consent_guard_enabled', '0') === '1');
+        $consent_guard_enabled = (bool) apply_filters('magick_ad_consent_guard_enabled', $consent_guard_enabled);
+        $requires_consent = $consent_guard_enabled ? $requires_consent : false;
+        $consent_banner_enabled = $consent_guard_enabled && (get_option('magick_ad_consent_banner_enabled', '1') === '1');
+        $consent_banner_text = get_option(
+            'magick_ad_consent_banner_text',
+            '为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。'
+        );
+        $consent_banner_button = get_option('magick_ad_consent_banner_button', '同意');
+
+        $config = array(
+            'hasConsent' => $has_consent || !$requires_consent,
+            'requireConsent' => $requires_consent,
+            'consentGuardEnabled' => $consent_guard_enabled,
+            'consentBannerEnabled' => $consent_banner_enabled,
+            'consentBannerText' => $consent_banner_text,
+            'consentBannerButton' => $consent_banner_button,
+            'renderUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ad')),
+            'renderBatchUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ads')),
+            'observeMutations' => (bool) apply_filters('magick_ad_behavior_observe_mutations', false),
+            'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
+        );
+
+        self::$behavior_config_cache = $config;
+        return $config;
+    }
+
+    private static function enqueue_slot_resolver_assets(): void {
+        if (wp_script_is('magick-ad-slot-resolver', 'enqueued')) {
+            return;
+        }
+        $slot_resolver_enabled = (get_option('magick_ad_slot_client_resolver', '1') === '1');
+        if (!$slot_resolver_enabled) {
+            return;
+        }
+
+        $resolver_asset = self::get_frontend_script_asset(
+            'magick-ad-slot-resolver',
+            'assets/magick-ad-slot-resolver.js'
+        );
+        wp_enqueue_script(
+            'magick-ad-slot-resolver',
+            $resolver_asset['src'],
+            $resolver_asset['dependencies'],
+            $resolver_asset['version'],
+            true
+        );
+        wp_script_add_data('magick-ad-slot-resolver', 'strategy', 'defer');
+        wp_localize_script(
+            'magick-ad-slot-resolver',
+            'MagickADBehavior',
+            self::get_behavior_config()
+        );
+    }
+
+    private static function is_tracking_enabled(): bool {
+        $strategy = (string) get_option('magick_ad_tracking_strategy', 'session');
+        $enabled = (get_option('magick_ad_tracking_enabled', '1') === '1');
+        if ($strategy === 'none') {
+            $enabled = false;
+        }
+        return (bool) apply_filters('magick_ad_tracking_enabled', $enabled, $strategy);
+    }
+
     private static function get_frontend_script_asset(string $handle, string $fallback): array {
         $asset_path = MAGICK_AD_PATH . 'build/' . $handle . '.asset.php';
         $script_path = MAGICK_AD_PATH . 'build/' . $handle . '.js';
@@ -648,22 +723,10 @@ final class Frontend {
         $defer = self::has_deferred_ads($ads, $container_index);
         $diagnostics_enabled = (get_option('magick_ad_stats_diagnostics', '0') === '1');
         $diagnostics_enabled = (bool) apply_filters('magick_ad_stats_diagnostics_enabled', $diagnostics_enabled);
-        $has_consent = (bool) apply_filters('magick_ad_has_consent', false);
-        $requires_consent = (get_option('magick_ad_tracking_require_consent', '0') === '1');
-        $requires_consent = (bool) apply_filters('magick_ad_tracking_require_consent', $requires_consent);
-        $consent_guard_enabled = (get_option('magick_ad_consent_guard_enabled', '0') === '1');
-        $consent_guard_enabled = (bool) apply_filters('magick_ad_consent_guard_enabled', $consent_guard_enabled);
-        $requires_consent = $consent_guard_enabled ? $requires_consent : false;
-        $consent_banner_enabled = $consent_guard_enabled && (get_option('magick_ad_consent_banner_enabled', '1') === '1');
-        $consent_banner_text = get_option(
-            'magick_ad_consent_banner_text',
-            '为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。'
-        );
-        $consent_banner_button = get_option('magick_ad_consent_banner_button', '同意');
-        $slot_resolver_enabled = (get_option('magick_ad_slot_client_resolver', '1') === '1');
-        $needs_behavior = self::needs_behavior_assets($ads, $container_index);
-        $needs_interactivity = $needs_behavior || $slot_resolver_enabled || $consent_banner_enabled;
-        if ($needs_interactivity) {
+        $behavior_config = self::get_behavior_config();
+        $consent_banner_enabled = !empty($behavior_config['consentBannerEnabled']);
+        $needs_behavior = self::needs_behavior_assets($ads, $container_index) || $consent_banner_enabled;
+        if ($needs_behavior) {
             $interactivity_asset = self::get_frontend_script_asset(
                 'magick-ad-interactivity',
                 'assets/magick-ad-interactivity.js'
@@ -684,20 +747,14 @@ final class Frontend {
             wp_localize_script(
                 'magick-ad-interactivity',
                 'MagickADBehavior',
-                array(
-                    'hasConsent' => $has_consent || !$requires_consent,
-                    'requireConsent' => $requires_consent,
-                    'consentGuardEnabled' => $consent_guard_enabled,
-                    'consentBannerEnabled' => $consent_banner_enabled,
-                    'consentBannerText' => $consent_banner_text,
-                    'consentBannerButton' => $consent_banner_button,
-                    'renderUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ad')),
-                    'renderBatchUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ads')),
-                    'observeMutations' => (bool) apply_filters('magick_ad_behavior_observe_mutations', false),
-                    'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
-                )
+                $behavior_config
             );
         }
+
+        if (!self::is_tracking_enabled()) {
+            return;
+        }
+
         $track_asset = self::get_frontend_script_asset(
             'magick-ad-track',
             'assets/magick-ad-track.js'
@@ -708,8 +765,8 @@ final class Frontend {
             'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
             'scriptUrl' => esc_url_raw($track_asset['src']),
             'collectPageUrl' => $diagnostics_enabled,
-            'hasConsent' => $has_consent,
-            'requireConsent' => $requires_consent,
+            'hasConsent' => !empty($behavior_config['hasConsent']),
+            'requireConsent' => !empty($behavior_config['requireConsent']),
             'batchSize' => (int) apply_filters('magick_ad_track_batch_size', 10),
             'batchInterval' => (int) apply_filters('magick_ad_track_batch_interval', 2000),
             'observeMutations' => (bool) apply_filters('magick_ad_track_observe_mutations', false),
@@ -725,7 +782,7 @@ final class Frontend {
             wp_localize_script($track_handle, 'MagickADTrack', $track_config);
             wp_add_inline_script(
                 $track_handle,
-                '(function(){var cfg=window.MagickADTrack||{};var loaded=false;var load=function(){if(loaded){return;}loaded=true;window.MagickADTrackLoaded=true;var s=document.createElement("script");s.src=cfg.scriptUrl;s.defer=true;document.head.appendChild(s);cleanup();};var events=["scroll","mousemove","touchstart","keydown","pointerdown"];var onEvent=function(){load();};var cleanup=function(){events.forEach(function(ev){window.removeEventListener(ev,onEvent,{passive:true});});};events.forEach(function(ev){window.addEventListener(ev,onEvent,{passive:true});});if("requestIdleCallback" in window){requestIdleCallback(load,{timeout:1500});}else{setTimeout(load,800);} })();'
+                '(function(){var cfg=window.MagickADTrack||{};var loaded=false;var load=function(){if(loaded){return;}loaded=true;window.MagickADTrackLoaded=true;var s=document.createElement("script");s.src=cfg.scriptUrl;s.defer=true;document.head.appendChild(s);cleanup();};var events=["scroll","mousemove","touchstart","keydown","pointerdown"];var onEvent=function(){load();};var cleanup=function(){events.forEach(function(ev){window.removeEventListener(ev,onEvent,{passive:true});});};events.forEach(function(ev){window.addEventListener(ev,onEvent,{passive:true});});if(\"requestIdleCallback\" in window){requestIdleCallback(load,{timeout:1500});}else{setTimeout(load,800);} })();'
             );
         } else {
             wp_enqueue_script(

@@ -12,6 +12,11 @@ declare global {
             initAll: () => void;
             isActive: boolean;
         };
+        MagickADSlotResolver?: {
+            resolve: (element: HTMLElement | null) => void;
+            resolveAll: (root?: Document | HTMLElement) => void;
+            isActive: boolean;
+        };
         wp?: {
             interactivity?: unknown;
         };

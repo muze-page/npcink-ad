@@ -80,6 +80,7 @@ final class System_Settings_Controller {
             '为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。'
         );
         $consent_banner_button = get_option('magick_ad_consent_banner_button', '同意');
+        $tracking_enabled = (get_option('magick_ad_tracking_enabled', '1') === '1');
 
         $tracking_require_signature = (get_option('magick_ad_track_require_signature', '1') === '1');
         if (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'production') {
@@ -87,6 +88,7 @@ final class System_Settings_Controller {
         }
 
         $settings = array(
+            'tracking_enabled' => $tracking_enabled,
             'tracking_strategy' => TrackingStrategy::from_value(
                 get_option('magick_ad_tracking_strategy', 'session')
             )->value,
@@ -135,6 +137,9 @@ final class System_Settings_Controller {
         $tracking_strategy = self::sanitize_tracking_strategy(
             $params['tracking_strategy'] ?? get_option('magick_ad_tracking_strategy', 'session')
         );
+        $tracking_enabled = !array_key_exists('tracking_enabled', $params)
+            ? (get_option('magick_ad_tracking_enabled', '1') === '1')
+            : !empty($params['tracking_enabled']);
         $tracking_require_consent = !empty($params['tracking_require_consent']);
         $tracking_dedupe_ttl = self::sanitize_positive_int(
             $params['tracking_dedupe_ttl'] ?? get_option('magick_ad_track_dedupe_ttl', DAY_IN_SECONDS),
@@ -201,6 +206,7 @@ final class System_Settings_Controller {
         );
 
         update_option('magick_ad_tracking_strategy', $tracking_strategy);
+        update_option('magick_ad_tracking_enabled', $tracking_enabled ? '1' : '0');
         update_option('magick_ad_tracking_require_consent', $tracking_require_consent ? '1' : '0');
         update_option('magick_ad_track_dedupe_ttl', $tracking_dedupe_ttl);
         update_option('magick_ad_track_dedupe_scope', $tracking_dedupe_scope);
@@ -227,6 +233,7 @@ final class System_Settings_Controller {
         Stats_Dim_Cron::reschedule();
 
         return rest_ensure_response(array(
+            'tracking_enabled' => $tracking_enabled,
             'tracking_strategy' => $tracking_strategy,
             'tracking_require_consent' => $tracking_require_consent,
             'tracking_dedupe_ttl' => $tracking_dedupe_ttl,

@@ -3315,6 +3315,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const DEFAULT_SETTINGS = {
+  tracking_enabled: true,
   tracking_strategy: 'session',
   tracking_require_consent: false,
   tracking_dedupe_ttl: 86400,
@@ -3411,7 +3412,18 @@ const SystemSettingsPanel = ({
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("strong", null, "\u8BCA\u65AD\u5230\u671F\u65F6\u95F4\uFF1A"), diagnosticsExpiryLabel ? diagnosticsExpiryLabel : '未启用'), error && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
     status: "error",
     isDismissible: true
-  }, error.message || '系统设置加载失败'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+  }, error.message || '系统设置加载失败'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+    label: "\u542F\u7528\u524D\u53F0\u7EDF\u8BA1",
+    checked: Boolean(settings.tracking_enabled),
+    disabled: loading || saving,
+    onChange: value => updateSettings({
+      tracking_enabled: value
+    }),
+    help: "\u5173\u95ED\u540E\u4E0D\u52A0\u8F7D\u7EDF\u8BA1\u811A\u672C\uFF0C\u524D\u53F0\u4E0D\u518D\u4E0A\u62A5\u6570\u636E\u3002"
+  }), !settings.tracking_enabled && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "warning",
+    isDismissible: false
+  }, "\u7EDF\u8BA1\u5DF2\u5173\u95ED\uFF0C\u62A5\u8868\u5C06\u6682\u505C\u66F4\u65B0\uFF08\u4E0D\u5F71\u54CD\u5E7F\u544A\u5C55\u793A\uFF09\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
     label: "\u7EDF\u8BA1\u53BB\u91CD\u7B56\u7565",
     value: settings.tracking_strategy,
     disabled: loading || saving,
