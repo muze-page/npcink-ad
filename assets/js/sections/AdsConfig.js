@@ -1989,7 +1989,7 @@ const AdsConfig = () => {
                 { name: 'block', title: '可视化设计' },
             ]}
             initialTabName={selectedAd.options?.creative_type || 'image'}
-            key={activeCreativeType}
+            key={selectedAd?.id || 'content'}
             onSelect={(name) =>
                 handleUpdateOptions({
                     creative_type: name,
@@ -2263,11 +2263,16 @@ const AdsConfig = () => {
                                         ]}
                                         initialTabName={htmlTab}
                                         onSelect={(name) => setHtmlTab(name)}
-                                        key={htmlTab}
                                     >
-                                        {(htmlTabView) =>
-                                            htmlTabView.name === 'content' ? (
-                                                <>
+                                        {() => (
+                                            <>
+                                                <div
+                                                    className={`magick-ad-html-tab ${
+                                                        htmlTab === 'content'
+                                                            ? ''
+                                                            : 'is-hidden'
+                                                    }`}
+                                                >
                                                     <ClassicEditor
                                                         value={
                                                             selectedAd.content
@@ -2286,41 +2291,47 @@ const AdsConfig = () => {
                                                     {renderVariantSection(
                                                         'html'
                                                     )}
-                                                </>
-                                            ) : (
-                                                <TabPanel
-                                                    className="magick-ad-html-settings-tabs"
-                                                    tabs={[
-                                                        {
-                                                            name: 'mode',
-                                                            title:
-                                                                '模式/安全',
-                                                        },
-                                                        {
-                                                            name: 'custom',
-                                                            title: '自定义',
-                                                        },
-                                                        {
-                                                            name: 'runtime',
-                                                            title:
-                                                                '加载/变量',
-                                                        },
-                                                        {
-                                                            name: 'scripts',
-                                                            title: '脚本域名',
-                                                        },
-                                                    ]}
-                                                    initialTabName={
-                                                        htmlSettingsTab
-                                                    }
-                                                    onSelect={(name) =>
-                                                        setHtmlSettingsTab(
-                                                            name
-                                                        )
-                                                    }
-                                                    key={htmlSettingsTab}
+                                                </div>
+                                                <div
+                                                    className={`magick-ad-html-tab ${
+                                                        htmlTab === 'settings'
+                                                            ? ''
+                                                            : 'is-hidden'
+                                                    }`}
                                                 >
-                                                    {(settingsTabView) => {
+                                                    <TabPanel
+                                                        className="magick-ad-html-settings-tabs"
+                                                        tabs={[
+                                                            {
+                                                                name: 'mode',
+                                                                title:
+                                                                    '模式/安全',
+                                                            },
+                                                            {
+                                                                name: 'custom',
+                                                                title: '自定义',
+                                                            },
+                                                            {
+                                                                name: 'runtime',
+                                                                title:
+                                                                    '加载/变量',
+                                                            },
+                                                            {
+                                                                name: 'scripts',
+                                                                title: '脚本域名',
+                                                            },
+                                                        ]}
+                                                        initialTabName={
+                                                            htmlSettingsTab
+                                                        }
+                                                        onSelect={(name) =>
+                                                            setHtmlSettingsTab(
+                                                                name
+                                                            )
+                                                        }
+                                                        key={htmlSettingsTab}
+                                                    >
+                                                        {(settingsTabView) => {
                                                         if (
                                                             settingsTabView.name ===
                                                             'mode'
@@ -2703,9 +2714,10 @@ const AdsConfig = () => {
                                                         }
                                                         return null;
                                                     }}
-                                                </TabPanel>
-                                            )
-                                        }
+                                                    </TabPanel>
+                                                </div>
+                                            </>
+                                        )}
                                     </TabPanel>
                                 </PanelBody>
                             </Panel>

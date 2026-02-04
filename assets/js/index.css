@@ -735,10 +735,32 @@
     border-radius: 6px;
     background: #fff;
     padding: 12px;
+    position: relative;
 }
 
 .magick-ad-block-editor .block-editor-block-list__layout {
     min-height: 220px;
+}
+
+.magick-ad-block-editor__empty {
+    position: absolute;
+    inset: 12px;
+    border: 1px dashed #d6dde8;
+    border-radius: 10px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+    color: #6b7280;
+    z-index: 1;
+}
+
+.magick-ad-block-editor__empty p {
+    margin: 0;
+    font-size: 13px;
 }
 
 .magick-ad-section-divider {
@@ -1561,10 +1583,27 @@
     border-radius: 6px;
     background: #fff;
     padding: 8px;
+    min-height: 240px;
 }
 
 .magick-ad-classic-host.is-hidden {
-    display: none;
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.magick-ad-classic-host .wp-editor-area {
+    min-height: 220px;
+    width: 100%;
+}
+
+.magick-ad-classic-host .mce-edit-area iframe {
+    min-height: 220px;
 }
 
 .magick-ad-image-preview img {
@@ -1692,11 +1731,25 @@
 }
 
 .magick-ad-tab-panel.is-hidden {
-    display: none;
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .magick-ad-html-tab.is-hidden {
-    display: none;
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .magick-ad-template-grid {

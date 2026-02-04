@@ -27,6 +27,11 @@ final class Admin {
         $asset = $this->get_admin_asset();
         $handle = 'magick-ad-admin';
 
+        wp_enqueue_style('wp-block-library');
+        wp_enqueue_style('wp-block-library-theme');
+        wp_enqueue_style('wp-block-editor');
+        wp_enqueue_style('wp-edit-blocks');
+
         wp_enqueue_style(
             $handle,
             MAGICK_AD_URL . 'build/index.css',

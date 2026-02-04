@@ -5,6 +5,7 @@ const CLASSIC_EDITOR_HOST_ID = 'magick-ad-classic-editor-host';
 
 const ClassicEditor = ({ value, onChange, active }) => {
     const containerRef = useRef(null);
+    const hostRef = useRef(null);
     const initializedRef = useRef(false);
     const editorRef = useRef(null);
 
@@ -16,25 +17,64 @@ const ClassicEditor = ({ value, onChange, active }) => {
         if (!host) {
             return;
         }
+        hostRef.current = host;
         while (host.firstChild) {
             containerRef.current.appendChild(host.firstChild);
         }
         initializedRef.current = true;
+        return () => {
+            if (!hostRef.current || !containerRef.current) {
+                return;
+            }
+            while (containerRef.current.firstChild) {
+                hostRef.current.appendChild(
+                    containerRef.current.firstChild
+                );
+            }
+        };
     }, []);
 
     useEffect(() => {
         if (!active) {
             return;
         }
-        const editor = window.tinymce?.get(CLASSIC_EDITOR_ID);
-        if (editor && value !== editor.getContent()) {
-            editor.setContent(value || '');
-            editor.save();
-        }
-        const textarea = document.getElementById(CLASSIC_EDITOR_ID);
-        if (textarea && textarea.value !== (value || '')) {
-            textarea.value = value || '';
-        }
+        const ensureEditor = () => {
+            let editor = window.tinymce?.get(CLASSIC_EDITOR_ID);
+            if (!editor && window.tinymce?.execCommand) {
+                try {
+                    window.tinymce.execCommand(
+                        'mceAddEditor',
+                        true,
+                        CLASSIC_EDITOR_ID
+                    );
+                } catch (err) {
+                    editor = null;
+                }
+                editor = window.tinymce?.get(CLASSIC_EDITOR_ID);
+            }
+            if (editor) {
+                editor.show();
+                editor.fire('ResizeEditor');
+                const container = editor.getContainer?.();
+                if (container) {
+                    container.style.minHeight = '220px';
+                }
+                if (editor.iframeElement) {
+                    editor.iframeElement.style.minHeight = '220px';
+                }
+                if (value !== editor.getContent()) {
+                    editor.setContent(value || '');
+                    editor.save();
+                }
+            }
+            const textarea = document.getElementById(CLASSIC_EDITOR_ID);
+            if (textarea && textarea.value !== (value || '')) {
+                textarea.value = value || '';
+            }
+        };
+        ensureEditor();
+        const timer = window.setTimeout(ensureEditor, 80);
+        return () => window.clearTimeout(timer);
     }, [active, value]);
 
     useEffect(() => {
