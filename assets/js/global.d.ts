@@ -5,6 +5,9 @@ declare global {
         MagickADBehavior?: BehaviorConfig;
         MagickADTrack?: TrackConfig;
         MagickADTrackLoaded?: boolean;
+        magickAdTrack?: {
+            track: (event: string, options?: Record<string, unknown>) => boolean;
+        };
         MagickADInteractivity?: {
             open: (ad: HTMLElement | null) => void;
             close: (ad: HTMLElement | null) => void;

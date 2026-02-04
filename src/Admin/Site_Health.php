@@ -151,7 +151,7 @@ final class Site_Health {
                 ),
                 'html_sandbox' => array(
                     'label' => __('Full HTML 沙箱', 'magick-ad'),
-                    'value' => (get_option('magick_ad_html_sandbox', '0') === '1') ? 'yes' : 'no',
+                    'value' => (get_option('magick_ad_html_sandbox', '1') === '1') ? 'yes' : 'no',
                 ),
                 'stats_table' => array(
                     'label' => __('统计主表', 'magick-ad'),

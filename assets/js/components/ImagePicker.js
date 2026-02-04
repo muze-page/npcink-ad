@@ -33,6 +33,8 @@ const ImagePicker = ({ value, onChange }) => {
                 id: attachment.id,
                 url: attachment.url,
                 alt: attachment.alt,
+                width: attachment.width,
+                height: attachment.height,
             });
         });
 
@@ -50,7 +52,15 @@ const ImagePicker = ({ value, onChange }) => {
                             更换图片
                         </Button>
                         <Button
-                            onClick={() => onChange({ id: null, url: '', alt: '' })}
+                            onClick={() =>
+                                onChange({
+                                    id: null,
+                                    url: '',
+                                    alt: '',
+                                    width: 0,
+                                    height: 0,
+                                })
+                            }
                             variant="tertiary"
                             isDestructive
                         >

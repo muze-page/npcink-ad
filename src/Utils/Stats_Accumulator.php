@@ -12,8 +12,12 @@ final class Stats_Accumulator {
     private const CACHE_GROUP = 'magick_ad_stats';
     private const STATS_INDEX_KEY = 'magick_ad_stats_index';
     private const DIM_INDEX_KEY = 'magick_ad_stats_dim_index';
+    private const VAR_INDEX_KEY = 'magick_ad_stats_variant_index';
+    private const EVENT_INDEX_KEY = 'magick_ad_stats_event_index';
     private const STATS_PREFIX = 'magick_ad_stats:';
     private const DIM_PREFIX = 'magick_ad_stats_dim:';
+    private const VAR_PREFIX = 'magick_ad_stats_variant:';
+    private const EVENT_PREFIX = 'magick_ad_stats_event:';
     private const FLUSH_LOCK_KEY = 'magick_ad_stats_flush_lock';
 
     public static function enabled(): bool {
@@ -22,11 +26,14 @@ final class Stats_Accumulator {
         return (bool) apply_filters('magick_ad_track_use_cache_accumulator', $use);
     }
 
-    public static function record_stats(string $ad_id, string $event, string $date): bool {
+    public static function record_stats(string $ad_id, string $event, string $date, int $delta = 1): bool {
         if (!self::enabled()) {
             return false;
         }
         if ($ad_id === '' || $event === '' || $date === '') {
+            return false;
+        }
+        if ($delta < 1) {
             return false;
         }
 
@@ -35,7 +42,7 @@ final class Stats_Accumulator {
         self::register_index(self::STATS_INDEX_KEY, $hash, array($date, $ad_id));
 
         $counter_key = $base_key . ($event === 'click' ? ':c' : ':i');
-        return self::incr_counter($counter_key);
+        return self::incr_counter($counter_key, $delta);
     }
 
     public static function record_dimension(
@@ -44,12 +51,16 @@ final class Stats_Accumulator {
         string $date,
         string $slot,
         string $position,
-        string $container
+        string $container,
+        int $delta = 1
     ): bool {
         if (!self::enabled()) {
             return false;
         }
         if ($ad_id === '' || $event === '' || $date === '') {
+            return false;
+        }
+        if ($delta < 1) {
             return false;
         }
         if ($slot === '' && $position === '' && $container === '') {
@@ -61,7 +72,60 @@ final class Stats_Accumulator {
         self::register_index(self::DIM_INDEX_KEY, $hash, array($date, $ad_id, $slot, $position, $container));
 
         $counter_key = $base_key . ($event === 'click' ? ':c' : ':i');
-        return self::incr_counter($counter_key);
+        return self::incr_counter($counter_key, $delta);
+    }
+
+    public static function record_variant(
+        string $ad_id,
+        string $variant_id,
+        string $event,
+        string $date,
+        int $delta = 1
+    ): bool {
+        if (!self::enabled()) {
+            return false;
+        }
+        if ($ad_id === '' || $variant_id === '' || $event === '' || $date === '') {
+            return false;
+        }
+        if ($delta < 1) {
+            return false;
+        }
+
+        $hash = self::hash_parts(array($date, $ad_id, $variant_id));
+        $base_key = self::VAR_PREFIX . $hash;
+        self::register_index(self::VAR_INDEX_KEY, $hash, array($date, $ad_id, $variant_id));
+
+        $counter_key = $base_key . ($event === 'click' ? ':c' : ':i');
+        return self::incr_counter($counter_key, $delta);
+    }
+
+    public static function record_event(
+        string $ad_id,
+        string $event,
+        string $date,
+        string $variant_id = '',
+        int $delta = 1
+    ): bool {
+        if (!self::enabled()) {
+            return false;
+        }
+        if ($ad_id === '' || $event === '' || $date === '') {
+            return false;
+        }
+        if ($delta < 1) {
+            return false;
+        }
+
+        $hash = self::hash_parts(array($date, $ad_id, $event, $variant_id));
+        $base_key = self::EVENT_PREFIX . $hash;
+        self::register_index(
+            self::EVENT_INDEX_KEY,
+            $hash,
+            array($date, $ad_id, $event, $variant_id)
+        );
+
+        return self::incr_counter($base_key, $delta);
     }
 
     public static function flush(): void {
@@ -81,6 +145,12 @@ final class Stats_Accumulator {
         self::flush_stats();
         if (!empty($status['dim'])) {
             self::flush_dimensions();
+        }
+        if (!empty($status['variant'])) {
+            self::flush_variants();
+        }
+        if (!empty($status['event'])) {
+            self::flush_events();
         }
 
         self::release_lock();
@@ -204,12 +274,130 @@ final class Stats_Accumulator {
         wp_cache_set(self::DIM_INDEX_KEY, $index, self::CACHE_GROUP, self::cache_ttl());
     }
 
-    private static function incr_counter(string $key): bool {
+    private static function flush_variants(): void {
+        global $wpdb;
+        $index = wp_cache_get(self::VAR_INDEX_KEY, self::CACHE_GROUP);
+        if (!is_array($index) || empty($index)) {
+            return;
+        }
+
+        $limit = self::flush_limit();
+        $batch = array_slice($index, 0, $limit, true);
+        if (empty($batch)) {
+            return;
+        }
+
+        $table = $wpdb->prefix . 'magick_ad_stats_variant';
+        foreach ($batch as $hash => $parts) {
+            $parts = is_array($parts) ? $parts : array();
+            $date = isset($parts[0]) ? (string) $parts[0] : '';
+            $ad_id = isset($parts[1]) ? (string) $parts[1] : '';
+            $variant_id = isset($parts[2]) ? (string) $parts[2] : '';
+            if ($date === '' || $ad_id === '' || $variant_id === '') {
+                unset($index[$hash]);
+                continue;
+            }
+
+            $base_key = self::VAR_PREFIX . $hash;
+            $impressions = (int) wp_cache_get($base_key . ':i', self::CACHE_GROUP);
+            $clicks = (int) wp_cache_get($base_key . ':c', self::CACHE_GROUP);
+            if ($impressions === 0 && $clicks === 0) {
+                self::cleanup_counters($base_key);
+                unset($index[$hash]);
+                continue;
+            }
+
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table} (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
+                 VALUES (%s, %s, %s, %d, %d)
+                 ON DUPLICATE KEY UPDATE
+                    impressions = impressions + VALUES(impressions),
+                    clicks = clicks + VALUES(clicks)",
+                $date,
+                $ad_id,
+                $variant_id,
+                $impressions,
+                $clicks
+            );
+
+            $result = $wpdb->query($sql);
+            if ($result === false) {
+                continue;
+            }
+
+            self::cleanup_counters($base_key);
+            unset($index[$hash]);
+        }
+
+        wp_cache_set(self::VAR_INDEX_KEY, $index, self::CACHE_GROUP, self::cache_ttl());
+    }
+
+    private static function flush_events(): void {
+        global $wpdb;
+        $index = wp_cache_get(self::EVENT_INDEX_KEY, self::CACHE_GROUP);
+        if (!is_array($index) || empty($index)) {
+            return;
+        }
+
+        $limit = self::flush_limit();
+        $batch = array_slice($index, 0, $limit, true);
+        if (empty($batch)) {
+            return;
+        }
+
+        $table = $wpdb->prefix . 'magick_ad_stats_event';
+        foreach ($batch as $hash => $parts) {
+            $parts = is_array($parts) ? $parts : array();
+            $date = isset($parts[0]) ? (string) $parts[0] : '';
+            $ad_id = isset($parts[1]) ? (string) $parts[1] : '';
+            $event = isset($parts[2]) ? (string) $parts[2] : '';
+            $variant_id = isset($parts[3]) ? (string) $parts[3] : '';
+            if ($date === '' || $ad_id === '' || $event === '') {
+                unset($index[$hash]);
+                continue;
+            }
+
+            $base_key = self::EVENT_PREFIX . $hash;
+            $count = (int) wp_cache_get($base_key, self::CACHE_GROUP);
+            if ($count < 1) {
+                self::cleanup_event_counter($base_key);
+                unset($index[$hash]);
+                continue;
+            }
+
+            $sql = $wpdb->prepare(
+                "INSERT INTO {$table} (`date`, `ad_id`, `event`, `variant_id`, `count`)
+                 VALUES (%s, %s, %s, %s, %d)
+                 ON DUPLICATE KEY UPDATE
+                    count = count + VALUES(count)",
+                $date,
+                $ad_id,
+                $event,
+                $variant_id,
+                $count
+            );
+
+            $result = $wpdb->query($sql);
+            if ($result === false) {
+                continue;
+            }
+
+            self::cleanup_event_counter($base_key);
+            unset($index[$hash]);
+        }
+
+        wp_cache_set(self::EVENT_INDEX_KEY, $index, self::CACHE_GROUP, self::cache_ttl());
+    }
+
+    private static function incr_counter(string $key, int $delta = 1): bool {
+        if ($delta < 1) {
+            return false;
+        }
         $ttl = self::cache_ttl();
-        $value = wp_cache_incr($key, 1, self::CACHE_GROUP);
+        $value = wp_cache_incr($key, $delta, self::CACHE_GROUP);
         if ($value === false) {
             wp_cache_add($key, 0, self::CACHE_GROUP, $ttl);
-            $value = wp_cache_incr($key, 1, self::CACHE_GROUP);
+            $value = wp_cache_incr($key, $delta, self::CACHE_GROUP);
         }
         return $value !== false;
     }
@@ -229,6 +417,10 @@ final class Stats_Accumulator {
     private static function cleanup_counters(string $base_key): void {
         wp_cache_delete($base_key . ':i', self::CACHE_GROUP);
         wp_cache_delete($base_key . ':c', self::CACHE_GROUP);
+    }
+
+    private static function cleanup_event_counter(string $base_key): void {
+        wp_cache_delete($base_key, self::CACHE_GROUP);
     }
 
     private static function cache_ttl(): int {

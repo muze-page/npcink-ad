@@ -9,6 +9,7 @@ use MagickAD\Blocks\Bindings;
 use MagickAD\Blocks\Blocks;
 use MagickAD\Blocks\Patterns;
 use MagickAD\CLI\Smoke_Command;
+use MagickAD\CLI\Magick_Command;
 use MagickAD\Data\Ads;
 use MagickAD\Data\Ads_Migrator;
 use MagickAD\Data\Placement_Migrator;
@@ -70,6 +71,7 @@ final class Plugin {
 
         if (defined('WP_CLI') && WP_CLI) {
             (new Smoke_Command())->register();
+            (new Magick_Command())->register();
         }
     }
 

@@ -1126,6 +1126,48 @@ const AdsConfig = () => {
     const formatDomainList = (list) =>
         Array.isArray(list) ? list.join('\n') : '';
 
+    const extractScriptDomains = (html = '') => {
+        if (!html || typeof html !== 'string') {
+            return [];
+        }
+        const baseUrl =
+            typeof window !== 'undefined' && window.location
+                ? window.location.href
+                : 'http://localhost';
+        const domains = new Set();
+        const addDomain = (src) => {
+            if (!src) {
+                return;
+            }
+            try {
+                const url = new URL(src, baseUrl);
+                if (url.hostname) {
+                    domains.add(url.hostname.toLowerCase());
+                }
+            } catch (err) {
+                // ignore invalid URL
+            }
+        };
+        if (typeof DOMParser !== 'undefined') {
+            try {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                doc.querySelectorAll('script[src]').forEach((script) => {
+                    addDomain(script.getAttribute('src'));
+                });
+            } catch (err) {
+                // ignore parse errors
+            }
+        } else {
+            const matches = html.matchAll(
+                /<script[^>]+src=["']([^"']+)["'][^>]*>/gi
+            );
+            for (const match of matches) {
+                addDomain(match[1]);
+            }
+        }
+        return Array.from(domains);
+    };
+
     const updateVariants = (nextVariants) => {
         if (!selectedAd) {
             return;
@@ -1538,7 +1580,13 @@ const AdsConfig = () => {
         const content = ad?.content || {};
         if (type === 'image') {
             return {
-                image: content.image || { id: 0, url: '', alt: '' },
+                image: content.image || {
+                    id: 0,
+                    url: '',
+                    alt: '',
+                    width: 0,
+                    height: 0,
+                },
                 link: content.link || '',
                 link_target: Boolean(content.link_target),
                 image_settings: content.image_settings || {},
@@ -2051,6 +2099,15 @@ const AdsConfig = () => {
     const isBlockEditorEnabled = Boolean(
         systemSettings.block_editor_enabled
     );
+    const detectedScriptDomains = useMemo(() => {
+        if (!selectedAd) {
+            return [];
+        }
+        const html = `${selectedAd.content?.html || ''}\n${
+            selectedAd.content?.custom_html || ''
+        }`;
+        return extractScriptDomains(html);
+    }, [selectedAd?.content?.html, selectedAd?.content?.custom_html]);
     const creativeTabs = [
         { name: 'html', title: '代码/HTML' },
         { name: 'image', title: '图片' },
@@ -2445,7 +2502,7 @@ const AdsConfig = () => {
                                                                             options={[
                                                                                 {
                                                                                     label:
-                                                                                        '安全模式（过滤脚本）',
+                                                                                        '安全模式（默认，过滤脚本）',
                                                                                     value: 'safe',
                                                                                 },
                                                                                 {
@@ -2500,12 +2557,12 @@ const AdsConfig = () => {
                                                                         ?.html_mode ===
                                                                         'full' && (
                                                                         <Notice
-                                                                            status="warning"
+                                                                            status="error"
                                                                             isDismissible={
                                                                                 false
                                                                             }
                                                                         >
-                                                                            完全模式将原样输出 HTML，请确保素材与代码来源可信。
+                                                                            完全模式会执行第三方脚本与内联代码，存在安全风险。请仅使用可信来源，并结合脚本白名单/沙箱策略。
                                                                         </Notice>
                                                                     )}
                                                                     {selectedAd.options
@@ -2760,8 +2817,164 @@ const AdsConfig = () => {
                                                                     </Notice>
                                                                 );
                                                             }
+                                                            const allowlist =
+                                                                Array.isArray(
+                                                                    selectedAd
+                                                                        .content
+                                                                        ?.html_script_allowlist
+                                                                )
+                                                                    ? selectedAd
+                                                                          .content
+                                                                          ?.html_script_allowlist
+                                                                    : [];
+                                                            const blocklist =
+                                                                Array.isArray(
+                                                                    selectedAd
+                                                                        .content
+                                                                        ?.html_script_blocklist
+                                                                )
+                                                                    ? selectedAd
+                                                                          .content
+                                                                          ?.html_script_blocklist
+                                                                    : [];
+                                                            const addDomain =
+                                                                (
+                                                                    domain,
+                                                                    listKey
+                                                                ) => {
+                                                                    const nextAllow =
+                                                                        listKey ===
+                                                                        'allow'
+                                                                            ? Array.from(
+                                                                                  new Set(
+                                                                                      [
+                                                                                          ...allowlist,
+                                                                                          domain,
+                                                                                      ]
+                                                                                  )
+                                                                              )
+                                                                            : allowlist.filter(
+                                                                                  (
+                                                                                      item
+                                                                                  ) =>
+                                                                                      item !==
+                                                                                      domain
+                                                                              );
+                                                                    const nextBlock =
+                                                                        listKey ===
+                                                                        'block'
+                                                                            ? Array.from(
+                                                                                  new Set(
+                                                                                      [
+                                                                                          ...blocklist,
+                                                                                          domain,
+                                                                                      ]
+                                                                                  )
+                                                                              )
+                                                                            : blocklist.filter(
+                                                                                  (
+                                                                                      item
+                                                                                  ) =>
+                                                                                      item !==
+                                                                                      domain
+                                                                              );
+                                                                    handleUpdateContent(
+                                                                        {
+                                                                            html_script_allowlist:
+                                                                                nextAllow,
+                                                                            html_script_blocklist:
+                                                                                nextBlock,
+                                                                        }
+                                                                    );
+                                                                };
                                                             return (
                                                                 <>
+                                                                    {detectedScriptDomains
+                                                                        ?.length >
+                                                                        0 && (
+                                                                        <div className="magick-ad-script-domains">
+                                                                            <div className="magick-ad-script-domains__title">
+                                                                                检测到脚本域名
+                                                                            </div>
+                                                                            <div className="magick-ad-script-domains__list">
+                                                                                {detectedScriptDomains.map(
+                                                                                    (
+                                                                                        domain
+                                                                                    ) => {
+                                                                                        const isAllowed =
+                                                                                            allowlist.includes(
+                                                                                                domain
+                                                                                            );
+                                                                                        const isBlocked =
+                                                                                            blocklist.includes(
+                                                                                                domain
+                                                                                            );
+                                                                                        return (
+                                                                                            <div
+                                                                                                key={
+                                                                                                    domain
+                                                                                                }
+                                                                                                className="magick-ad-script-domains__item"
+                                                                                            >
+                                                                                                <span className="magick-ad-script-domains__domain">
+                                                                                                    {
+                                                                                                        domain
+                                                                                                    }
+                                                                                                </span>
+                                                                                                <div className="magick-ad-script-domains__actions">
+                                                                                                    <Button
+                                                                                                        variant={
+                                                                                                            isAllowed
+                                                                                                                ? 'secondary'
+                                                                                                                : 'primary'
+                                                                                                        }
+                                                                                                        size="small"
+                                                                                                        disabled={
+                                                                                                            isAllowed
+                                                                                                        }
+                                                                                                        onClick={() =>
+                                                                                                            addDomain(
+                                                                                                                domain,
+                                                                                                                'allow'
+                                                                                                            )
+                                                                                                        }
+                                                                                                    >
+                                                                                                        {isAllowed
+                                                                                                            ? '已在白名单'
+                                                                                                            : '加入白名单'}
+                                                                                                    </Button>
+                                                                                                    <Button
+                                                                                                        variant={
+                                                                                                            isBlocked
+                                                                                                                ? 'secondary'
+                                                                                                                : 'tertiary'
+                                                                                                        }
+                                                                                                        size="small"
+                                                                                                        disabled={
+                                                                                                            isBlocked
+                                                                                                        }
+                                                                                                        onClick={() =>
+                                                                                                            addDomain(
+                                                                                                                domain,
+                                                                                                                'block'
+                                                                                                            )
+                                                                                                        }
+                                                                                                    >
+                                                                                                        {isBlocked
+                                                                                                            ? '已在黑名单'
+                                                                                                            : '加入黑名单'}
+                                                                                                    </Button>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="magick-ad-script-domains__help">
+                                                                                系统默认仅允许本站域名。将外部域名加入白名单后，脚本才会保留。
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                     <TextareaControl
                                                                         label="脚本白名单（追加域名）"
                                                                         value={formatDomainList(

@@ -4,6 +4,8 @@
     if (!trackUrl) {
         return;
     }
+    const allowBeacon = config.allowBeacon !== false;
+    const requestCredentials = config.credentials || 'omit';
 
     let hasConsent = config.hasConsent === true;
     const requireConsent = config.requireConsent === true;
@@ -69,6 +71,31 @@
     };
     const pageHash = hashString(window.location.href);
 
+    const normalizeEventName = (event) => {
+        if (typeof event !== 'string') {
+            return '';
+        }
+        const normalized = event.trim().toLowerCase();
+        if (!normalized) {
+            return '';
+        }
+        const known = new Set([
+            'impression',
+            'click',
+            'video_play',
+            'video_pause',
+            'video_complete',
+            'conversion',
+        ]);
+        if (known.has(normalized)) {
+            return normalized;
+        }
+        if (!/^[a-z][a-z0-9_-]{0,31}$/.test(normalized)) {
+            return '';
+        }
+        return normalized;
+    };
+
     const buildTrackPayload = (element, event) => {
         if (!element) {
             return null;
@@ -83,10 +110,81 @@
             sig: element.getAttribute('data-ad-sig') || '',
             sigTs: element.getAttribute('data-ad-sig-ts') || '',
             sigRev: element.getAttribute('data-ad-sig-rev') || '',
+            variantId: element.getAttribute('data-ad-variant') || '',
             slot: element.getAttribute('data-ad-slot') || '',
             position: element.getAttribute('data-ad-position') || '',
             container: element.getAttribute('data-ad-container') || '',
         };
+    };
+
+    const escapeSelector = (value) => {
+        if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+            return CSS.escape(value);
+        }
+        return value.replace(/["\\]/g, '\\$&');
+    };
+
+    const resolveAdElement = (options) => {
+        if (options?.element instanceof Element) {
+            return options.element;
+        }
+        const adId = typeof options?.adId === 'string' ? options.adId : '';
+        if (!adId) {
+            return null;
+        }
+        const selector = `[data-ad-id="${escapeSelector(adId)}"]`;
+        return document.querySelector(selector);
+    };
+
+    const buildCustomPayload = (event, options) => {
+        const element = resolveAdElement(options);
+        let payload = buildTrackPayload(element, event);
+        const adId = typeof options?.adId === 'string' ? options.adId : '';
+        if (!payload && adId) {
+            payload = {
+                adId,
+                event,
+                sig: typeof options?.sig === 'string' ? options.sig : '',
+                sigTs: typeof options?.sigTs === 'string' ? options.sigTs : '',
+                sigRev: typeof options?.sigRev === 'string' ? options.sigRev : '',
+                variantId:
+                    typeof options?.variantId === 'string' ? options.variantId : '',
+                slot: typeof options?.slot === 'string' ? options.slot : '',
+                position:
+                    typeof options?.position === 'string'
+                        ? options.position
+                        : '',
+                container:
+                    typeof options?.container === 'string'
+                        ? options.container
+                        : '',
+            };
+        }
+        if (!payload) {
+            return null;
+        }
+        if (typeof options?.sig === 'string') {
+            payload.sig = options.sig;
+        }
+        if (typeof options?.sigTs === 'string') {
+            payload.sigTs = options.sigTs;
+        }
+        if (typeof options?.sigRev === 'string') {
+            payload.sigRev = options.sigRev;
+        }
+        if (typeof options?.variantId === 'string') {
+            payload.variantId = options.variantId;
+        }
+        if (typeof options?.slot === 'string') {
+            payload.slot = options.slot;
+        }
+        if (typeof options?.position === 'string') {
+            payload.position = options.position;
+        }
+        if (typeof options?.container === 'string') {
+            payload.container = options.container;
+        }
+        return payload;
     };
 
     const batchSize = Number.parseInt(config.batchSize, 10) || 10;
@@ -107,6 +205,9 @@
         }
         if (payload.sigRev) {
             item.sig_rev = payload.sigRev;
+        }
+        if (payload.variantId) {
+            item.variant_id = payload.variantId;
         }
         if (payload.slot) {
             item.slot = payload.slot;
@@ -138,7 +239,7 @@
         }
         const body = JSON.stringify(buildBatchPayload(items));
 
-        if (useBeacon && navigator.sendBeacon) {
+        if (useBeacon && allowBeacon && navigator.sendBeacon) {
             const blob = new Blob([body], { type: 'application/json' });
             navigator.sendBeacon(trackUrl, blob);
             return;
@@ -148,10 +249,10 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(config.nonce ? { 'X-WP-Nonce': config.nonce } : {}),
             },
             body,
             keepalive: true,
+            credentials: requestCredentials,
         }).catch(() => undefined);
     };
 
@@ -204,6 +305,28 @@
         }
         scheduleFlush();
     };
+
+    const trackCustomEvent = (event, options = {}) => {
+        const normalized = normalizeEventName(event);
+        if (!normalized) {
+            return false;
+        }
+        if (requireConsent && !hasConsent) {
+            return false;
+        }
+        const payload = buildCustomPayload(normalized, options);
+        if (!payload) {
+            return false;
+        }
+        const useBeacon = options.useBeacon === true;
+        const force = options.force === true;
+        enqueueTrack(payload, { useBeacon, force });
+        return true;
+    };
+
+    const api = window.magickAdTrack || {};
+    api.track = trackCustomEvent;
+    window.magickAdTrack = api;
 
     const observed = new Map();
     const pendingImpressions = new Set();

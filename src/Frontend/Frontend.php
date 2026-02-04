@@ -377,6 +377,10 @@ final class Frontend {
         $attrs = ' data-magick-ad-slot-resolver="1"';
         $attrs .= ' data-magick-ad-slot="' . esc_attr($slot) . '"';
         $attrs .= ' data-magick-ad-limit="' . esc_attr((string) $limit) . '"';
+        $placeholder_ratio = self::get_slot_placeholder_ratio($candidates);
+        if ($placeholder_ratio !== '') {
+            $attrs .= ' style="aspect-ratio:' . esc_attr($placeholder_ratio) . ';"';
+        }
         if ($candidates_json) {
             $attrs .= ' data-magick-ad-candidates="' . esc_attr($candidates_json) . '"';
         }
@@ -573,7 +577,7 @@ final class Frontend {
             'renderUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ad')),
             'renderBatchUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ads')),
             'observeMutations' => (bool) apply_filters('magick_ad_behavior_observe_mutations', false),
-            'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
+            'credentials' => 'omit',
         );
 
         self::$behavior_config_cache = $config;
@@ -762,7 +766,6 @@ final class Frontend {
         $track_deps = $track_asset['dependencies'];
         $track_config = array(
             'restUrl' => esc_url_raw(rest_url('magick-ad/v1/track')),
-            'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '',
             'scriptUrl' => esc_url_raw($track_asset['src']),
             'collectPageUrl' => $diagnostics_enabled,
             'hasConsent' => !empty($behavior_config['hasConsent']),
@@ -774,6 +777,8 @@ final class Frontend {
                 'magick_ad_track_dedupe_scope',
                 get_option('magick_ad_track_dedupe_scope', 'ad')
             ),
+            'credentials' => 'omit',
+            'allowBeacon' => !is_user_logged_in(),
         );
 
         if ($defer) {
@@ -2262,7 +2267,7 @@ final class Frontend {
         $data_attrs = self::build_data_attributes($ad, $options, $content, $position, $container_type);
         $data_attrs .= ' data-wp-interactive="magick-ad"';
         $unit_class = self::build_unit_class($ad, $options, $position, $container_type);
-        $inner_style = self::build_inner_style($content);
+        $inner_style = self::build_inner_style($content, $content_type);
 
         return '<div class="' . esc_attr($unit_class) . '"' . $data_attrs . '><div class="magick-ad-unit__inner"' . $inner_style . '>' . $body . '</div></div>';
     }
@@ -2529,13 +2534,16 @@ final class Frontend {
             : array();
         $styles = array();
         $background = isset($block_settings['background']) ? (string) $block_settings['background'] : '';
+        $background = self::sanitize_css_inline_value($background);
         $background_gradient = isset($block_settings['background_gradient']) ? (string) $block_settings['background_gradient'] : '';
+        $background_gradient = self::sanitize_css_gradient($background_gradient);
         if ($background_gradient !== '') {
             $styles[] = 'background-image:' . esc_attr($background_gradient);
         } elseif ($background !== '' && $background !== 'transparent') {
             $styles[] = 'background:' . esc_attr($background);
         }
         $text_color = isset($block_settings['text_color']) ? (string) $block_settings['text_color'] : '';
+        $text_color = self::sanitize_css_inline_value($text_color);
         if ($text_color !== '' && $text_color !== 'transparent') {
             $styles[] = 'color:' . esc_attr($text_color);
         }
@@ -2549,6 +2557,7 @@ final class Frontend {
         }
         $border_width = isset($block_settings['border_width']) ? absint($block_settings['border_width']) : 0;
         $border_color = isset($block_settings['border_color']) ? (string) $block_settings['border_color'] : '';
+        $border_color = self::sanitize_css_inline_value($border_color);
         if ($border_width > 0) {
             $color = $border_color !== '' ? esc_attr($border_color) : '#d0d7e2';
             $styles[] = 'border:' . $border_width . 'px solid ' . $color;
@@ -2568,6 +2577,7 @@ final class Frontend {
             $styles[] = 'font-size:' . $font_size . 'px';
         }
         $font_family = isset($block_settings['font_family']) ? (string) $block_settings['font_family'] : '';
+        $font_family = self::sanitize_css_font_family($font_family);
         if ($font_family !== '') {
             $styles[] = 'font-family:' . esc_attr($font_family);
         }
@@ -2625,6 +2635,7 @@ final class Frontend {
             $heading_style[] = 'line-height:' . $heading_line;
         }
         $heading_weight = isset($block_settings['heading_weight']) ? (string) $block_settings['heading_weight'] : '';
+        $heading_weight = self::sanitize_css_font_weight($heading_weight);
         if ($heading_weight !== '') {
             $heading_style[] = 'font-weight:' . esc_attr($heading_weight);
         }
@@ -2638,6 +2649,7 @@ final class Frontend {
             $subheading_style[] = 'line-height:' . $subheading_line;
         }
         $subheading_weight = isset($block_settings['subheading_weight']) ? (string) $block_settings['subheading_weight'] : '';
+        $subheading_weight = self::sanitize_css_font_weight($subheading_weight);
         if ($subheading_weight !== '') {
             $subheading_style[] = 'font-weight:' . esc_attr($subheading_weight);
         }
@@ -2652,7 +2664,9 @@ final class Frontend {
         $cta_link = isset($block_settings['cta_link']) ? (string) $block_settings['cta_link'] : '';
         $cta_target = !empty($block_settings['cta_target']);
         $cta_text_color = isset($block_settings['cta_text_color']) ? (string) $block_settings['cta_text_color'] : '';
+        $cta_text_color = self::sanitize_css_inline_value($cta_text_color);
         $cta_background = isset($block_settings['cta_background']) ? (string) $block_settings['cta_background'] : '';
+        $cta_background = self::sanitize_css_inline_value($cta_background);
         $cta_radius = isset($block_settings['cta_radius']) ? absint($block_settings['cta_radius']) : 0;
         $cta_style = array();
         if ($cta_text_color !== '' && $cta_text_color !== 'transparent') {
@@ -2685,6 +2699,61 @@ final class Frontend {
         }
 
         return '<div class="magick-ad-block-content"' . $style_attr . '><div class="' . esc_attr($layout_class) . '">' . $inner . '</div></div>';
+    }
+
+    private static function sanitize_css_inline_value(string $value): string {
+        $value = trim(wp_strip_all_tags($value));
+        if ($value === '') {
+            return '';
+        }
+        $value = preg_replace('/\\s+/', ' ', $value);
+        $value = preg_replace('/[;{}<>]/', '', $value);
+        $value = preg_replace('/[\\r\\n\\t]/', ' ', $value);
+        $value = trim($value);
+
+        return $value;
+    }
+
+    private static function sanitize_css_gradient(string $value): string {
+        $value = trim(wp_strip_all_tags($value));
+        if ($value === '') {
+            return '';
+        }
+        if (preg_match('/[;{}<>\\r\\n]/', $value)) {
+            return '';
+        }
+        if (!preg_match('/^(linear-gradient|radial-gradient)\\((.+)\\)$/i', $value)) {
+            return '';
+        }
+
+        return $value;
+    }
+
+    private static function sanitize_css_font_family(string $value): string {
+        $value = trim(wp_strip_all_tags($value));
+        if ($value === '') {
+            return '';
+        }
+        if (!preg_match('/^[a-zA-Z0-9\\s,"\'\\-]+$/', $value)) {
+            return '';
+        }
+
+        return $value;
+    }
+
+    private static function sanitize_css_font_weight(string $value): string {
+        $value = strtolower(trim(wp_strip_all_tags($value)));
+        if ($value === '') {
+            return '';
+        }
+        if (in_array($value, array('normal', 'bold', 'bolder', 'lighter'), true)) {
+            return $value;
+        }
+        if (preg_match('/^[1-9]00$/', $value)) {
+            return $value;
+        }
+
+        return '';
     }
 
     private static function build_html_body(array $content, array $options, array $ad): string {
@@ -2744,7 +2813,7 @@ final class Frontend {
         if ($override === 'disable') {
             return false;
         }
-        $enabled = (get_option('magick_ad_html_sandbox', '0') === '1');
+        $enabled = (get_option('magick_ad_html_sandbox', '1') === '1');
         $enabled = (bool) apply_filters('magick_ad_html_sandbox_enabled', $enabled, $options);
         if (!$enabled) {
             return false;
@@ -2959,7 +3028,11 @@ final class Frontend {
 
         if ($img_tag === '' && $image_url !== '') {
             $dimension_attr = '';
-            if ($image_id > 0) {
+            $width = isset($image['width']) ? absint($image['width']) : 0;
+            $height = isset($image['height']) ? absint($image['height']) : 0;
+            if ($width > 0 && $height > 0) {
+                $dimension_attr = ' width="' . $width . '" height="' . $height . '"';
+            } elseif ($image_id > 0) {
                 $size = wp_get_attachment_image_src($image_id, 'full');
                 if (is_array($size) && isset($size[1], $size[2])) {
                     $width = absint($size[1]);
@@ -3370,13 +3443,29 @@ final class Frontend {
         return $unit_class;
     }
 
-    private static function build_inner_style(array $content): string {
+    private static function build_inner_style(array $content, string $content_type): string {
         $container_style = isset($content['container_style']) ? $content['container_style'] : array();
         $reserve_height = isset($container_style['reserve_height']) ? absint($container_style['reserve_height']) : 0;
-        if ($reserve_height <= 0) {
+        $styles = array();
+        if ($reserve_height > 0) {
+            $styles[] = 'min-height:' . $reserve_height . 'px';
+        } else {
+            $ratio = '';
+            if ($content_type === 'image') {
+                $ratio = self::get_image_aspect_ratio($content);
+            } elseif ($content_type === 'video') {
+                $ratio = self::get_video_aspect_ratio($content);
+            } elseif ($content_type === 'html') {
+                $ratio = self::get_html_placeholder_ratio($content);
+            }
+            if ($ratio !== '') {
+                $styles[] = 'aspect-ratio:' . esc_attr($ratio);
+            }
+        }
+        if (empty($styles)) {
             return '';
         }
-        return ' style="min-height:' . esc_attr($reserve_height) . 'px"';
+        return ' style="' . esc_attr(implode(';', $styles)) . '"';
     }
 
     private static function wrap_zone_markup($markup, $zone) {
@@ -3384,6 +3473,96 @@ final class Frontend {
             return '';
         }
         return '<div class="magick-ad-zone magick-ad-zone--' . esc_attr($zone) . '">' . $markup . '</div>';
+    }
+
+    private static function get_slot_placeholder_ratio(array $candidates): string {
+        if (empty($candidates)) {
+            return '';
+        }
+        $ratio = '';
+        foreach ($candidates as $candidate) {
+            if (!is_array($candidate)) {
+                return '';
+            }
+            $options = isset($candidate['options']) && is_array($candidate['options'])
+                ? $candidate['options']
+                : array();
+            $content = isset($candidate['content']) && is_array($candidate['content'])
+                ? $candidate['content']
+                : array();
+            $creative_type = isset($options['creative_type']) ? (string) $options['creative_type'] : '';
+            $candidate_ratio = '';
+            if ($creative_type === 'image') {
+                $candidate_ratio = self::get_image_aspect_ratio($content);
+            } elseif ($creative_type === 'video') {
+                $candidate_ratio = self::get_video_aspect_ratio($content);
+            } elseif ($creative_type === 'html') {
+                $candidate_ratio = self::get_html_placeholder_ratio($content);
+            }
+            if ($candidate_ratio === '') {
+                return '';
+            }
+            if ($ratio === '') {
+                $ratio = $candidate_ratio;
+                continue;
+            }
+            if ($ratio !== $candidate_ratio) {
+                return '';
+            }
+        }
+        return $ratio;
+    }
+
+    private static function get_image_aspect_ratio(array $content): string {
+        $image = isset($content['image']) && is_array($content['image']) ? $content['image'] : array();
+        $width = isset($image['width']) ? absint($image['width']) : 0;
+        $height = isset($image['height']) ? absint($image['height']) : 0;
+        if ($width > 0 && $height > 0) {
+            return $width . ' / ' . $height;
+        }
+
+        $image_id = isset($image['id']) ? absint($image['id']) : 0;
+        if ($image_id > 0) {
+            $size = wp_get_attachment_image_src($image_id, 'full');
+            if (is_array($size) && isset($size[1], $size[2])) {
+                $width = absint($size[1]);
+                $height = absint($size[2]);
+                if ($width > 0 && $height > 0) {
+                    return $width . ' / ' . $height;
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private static function get_video_aspect_ratio(array $content): string {
+        $settings = isset($content['video_settings']) && is_array($content['video_settings'])
+            ? $content['video_settings']
+            : array();
+        $aspect = isset($settings['aspect_ratio']) ? (string) $settings['aspect_ratio'] : '16:9';
+        if ($aspect === 'custom') {
+            $custom_ratio = isset($settings['aspect_ratio_custom']) ? (string) $settings['aspect_ratio_custom'] : '';
+            if (preg_match('/^\\d{1,3}:\\d{1,3}$/', $custom_ratio)) {
+                $aspect = $custom_ratio;
+            } else {
+                $aspect = '';
+            }
+        }
+        if ($aspect === '' || $aspect === 'auto') {
+            return '';
+        }
+        return str_replace(':', ' / ', $aspect);
+    }
+
+    private static function get_html_placeholder_ratio(array $content): string {
+        $placeholder = isset($content['html_placeholder_ratio'])
+            ? sanitize_text_field((string) $content['html_placeholder_ratio'])
+            : '';
+        if ($placeholder !== '' && preg_match('/^\\d{1,3}:\\d{1,3}$/', $placeholder)) {
+            return str_replace(':', ' / ', $placeholder);
+        }
+        return '';
     }
 
 }

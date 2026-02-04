@@ -64,7 +64,8 @@ final class Render_Controller {
             return new WP_Error('magick_ad_invalid_signature', 'Invalid signature', array('status' => 403));
         }
 
-        $cached = self::get_cached_markup($ad_id, $sig_ts, $args);
+        $cache_context = self::get_cache_context($ad_id, $args);
+        $cached = self::get_cached_markup($ad_id, $sig_ts, $args, $cache_context);
         if (is_string($cached)) {
             return rest_ensure_response(array(
                 'success' => $cached !== '',
@@ -73,7 +74,7 @@ final class Render_Controller {
         }
 
         $markup = Frontend::render_ad_by_id($ad_id, $args);
-        self::set_cached_markup($ad_id, $sig_ts, $args, $markup);
+        self::set_cached_markup($ad_id, $sig_ts, $args, $markup, $cache_context);
 
         return rest_ensure_response(array(
             'success' => $markup !== '',
@@ -154,7 +155,8 @@ final class Render_Controller {
                 continue;
             }
 
-            $cached = self::get_cached_markup($ad_id, $sig_ts, $args);
+            $cache_context = self::get_cache_context($ad_id, $args);
+            $cached = self::get_cached_markup($ad_id, $sig_ts, $args, $cache_context);
             if (is_string($cached)) {
                 $response_items[] = array(
                     'success' => $cached !== '',
@@ -165,7 +167,7 @@ final class Render_Controller {
             }
 
             $markup = Frontend::render_ad_by_id($ad_id, $args);
-            self::set_cached_markup($ad_id, $sig_ts, $args, $markup);
+            self::set_cached_markup($ad_id, $sig_ts, $args, $markup, $cache_context);
             $response_items[] = array(
                 'success' => $markup !== '',
                 'ad_id' => $ad_id,
@@ -336,27 +338,38 @@ final class Render_Controller {
         return $args;
     }
 
-    private static function get_cached_markup(string $ad_id, string $sig_ts, array $args): ?string {
-        if (!self::should_cache()) {
+    private static function get_cached_markup(
+        string $ad_id,
+        string $sig_ts,
+        array $args,
+        array $cache_context = array()
+    ): ?string {
+        if (!self::should_cache() || empty($cache_context['cacheable'])) {
             return null;
         }
 
-        $key = self::build_cache_key($ad_id, $sig_ts, $args);
+        $key = self::build_cache_key($ad_id, $sig_ts, $args, $cache_context);
         $cached = wp_cache_get($key, self::CACHE_GROUP);
         return is_string($cached) ? $cached : null;
     }
 
-    private static function set_cached_markup(string $ad_id, string $sig_ts, array $args, string $markup): void {
-        if ($markup === '' || !self::should_cache()) {
+    private static function set_cached_markup(
+        string $ad_id,
+        string $sig_ts,
+        array $args,
+        string $markup,
+        array $cache_context = array()
+    ): void {
+        if ($markup === '' || !self::should_cache() || empty($cache_context['cacheable'])) {
             return;
         }
 
-        $ttl = self::get_cache_ttl($sig_ts, $ad_id, $args);
+        $ttl = self::get_cache_ttl($sig_ts, $ad_id, $args, $cache_context);
         if ($ttl <= 0) {
             return;
         }
 
-        $key = self::build_cache_key($ad_id, $sig_ts, $args);
+        $key = self::build_cache_key($ad_id, $sig_ts, $args, $cache_context);
         wp_cache_set($key, $markup, self::CACHE_GROUP, $ttl);
     }
 
@@ -365,15 +378,32 @@ final class Render_Controller {
         return (bool) apply_filters('magick_ad_render_cache_enabled', $enabled);
     }
 
-    private static function get_cache_ttl(string $sig_ts, string $ad_id, array $args): int {
-        $window_days = Tracking_Signature::get_signature_window_days();
-        $default_ttl = max(HOUR_IN_SECONDS, ($window_days * DAY_IN_SECONDS) + 6 * HOUR_IN_SECONDS);
-        $ttl = (int) apply_filters('magick_ad_render_cache_ttl', $default_ttl, $sig_ts, $ad_id, $args);
+    private static function get_cache_ttl(
+        string $sig_ts,
+        string $ad_id,
+        array $args,
+        array $cache_context = array()
+    ): int {
+        $default_ttl = 60;
+        $ttl = (int) apply_filters(
+            'magick_ad_render_cache_ttl',
+            $default_ttl,
+            $sig_ts,
+            $ad_id,
+            $args,
+            $cache_context
+        );
         return max(0, $ttl);
     }
 
-    private static function build_cache_key(string $ad_id, string $sig_ts, array $args): string {
+    private static function build_cache_key(
+        string $ad_id,
+        string $sig_ts,
+        array $args,
+        array $cache_context = array()
+    ): string {
         $rev = (int) get_option(Settings::RUNTIME_REV_KEY, 0);
+        $variant = isset($cache_context['variant']) ? (string) $cache_context['variant'] : '';
         $parts = array(
             $ad_id,
             $sig_ts,
@@ -383,9 +413,74 @@ final class Render_Controller {
             isset($args['container']) ? (string) $args['container'] : '',
             isset($args['class']) ? (string) $args['class'] : '',
             isset($args['creative']) ? (string) $args['creative'] : '',
+            $variant,
         );
 
         return 'magick_ad_render_' . md5(implode('|', $parts));
+    }
+
+    private static function get_cache_context(string $ad_id, array $args): array {
+        $context = array(
+            'cacheable' => true,
+            'variant' => '',
+        );
+
+        $settings = Settings::get_runtime_settings();
+        $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        $ad = null;
+        foreach ($ads as $candidate) {
+            if (!is_array($candidate)) {
+                continue;
+            }
+            if (isset($candidate['id']) && (string) $candidate['id'] === $ad_id) {
+                $ad = $candidate;
+                break;
+            }
+        }
+
+        if (!is_array($ad)) {
+            return $context;
+        }
+
+        $content = isset($ad['content']) && is_array($ad['content']) ? $ad['content'] : array();
+        if (empty($content['variants_enabled'])) {
+            return (array) apply_filters('magick_ad_render_cache_context', $context, $ad, $args);
+        }
+
+        $strategy = ($content['variants_strategy'] ?? '') === 'session' ? 'session' : 'request';
+        if ($strategy !== 'session') {
+            $context['cacheable'] = false;
+            return (array) apply_filters('magick_ad_render_cache_context', $context, $ad, $args);
+        }
+
+        $variant = self::get_variant_cookie_value($ad_id);
+        if ($variant === '') {
+            $context['cacheable'] = false;
+            return (array) apply_filters('magick_ad_render_cache_context', $context, $ad, $args);
+        }
+
+        $context['variant'] = $variant;
+        return (array) apply_filters('magick_ad_render_cache_context', $context, $ad, $args);
+    }
+
+    private static function get_variant_cookie_value(string $ad_id): string {
+        $cookie_key = self::build_variant_cookie_key($ad_id);
+        if ($cookie_key === '') {
+            return '';
+        }
+        $value = isset($_COOKIE[$cookie_key]) ? sanitize_text_field(wp_unslash($_COOKIE[$cookie_key])) : '';
+        if ($value === '') {
+            return '';
+        }
+        return substr($value, 0, 64);
+    }
+
+    private static function build_variant_cookie_key(string $ad_id): string {
+        $safe = preg_replace('/[^a-zA-Z0-9_]/', '_', $ad_id);
+        if (!is_string($safe) || $safe === '') {
+            return '';
+        }
+        return 'magick_ad_variant_' . $safe;
     }
 
     private static function apply_rate_limit(): ?WP_Error {
@@ -428,13 +523,13 @@ final class Render_Controller {
     private static function get_request_ip(): string {
         $ip = '';
         $trust_proxy = (bool) apply_filters('magick_ad_render_trust_proxy', false, $_SERVER);
-        if ($trust_proxy && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $parts = explode(',', sanitize_text_field(wp_unslash($_SERVER['HTTP_X_FORWARDED_FOR'])));
-            $ip = trim($parts[0]);
-        }
-        if ($ip === '' && !empty($_SERVER['REMOTE_ADDR'])) {
-            $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR']));
-        }
+        $trusted = get_option('magick_ad_trusted_proxies', array());
+        $trusted = \MagickAD\Utils\Ip::normalize_list($trusted);
+        $trusted = apply_filters('magick_ad_trusted_proxies', $trusted, $_SERVER);
+        $ip = \MagickAD\Utils\Ip::extract_client_ip(
+            $_SERVER,
+            $trust_proxy ? $trusted : array()
+        );
         $ip = apply_filters('magick_ad_render_client_ip', $ip);
         $ip = is_string($ip) ? $ip : '';
         return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '';

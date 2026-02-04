@@ -4,8 +4,10 @@ namespace MagickAD\REST\Controllers;
 
 use WP_REST_Request;
 use MagickAD\Utils\TrackingStrategy;
+use MagickAD\Utils\Tracking_Signature;
 use MagickAD\Utils\Diagnostics_Cron;
 use MagickAD\Utils\Stats_Dim_Cron;
+use MagickAD\Utils\Ip;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -110,7 +112,7 @@ final class System_Settings_Controller {
         $stats_dim_retention_days = (int) get_option('magick_ad_stats_dim_retention_days', 30);
         $stats_dim_retention_days = self::sanitize_optional_int($stats_dim_retention_days, 30, 365);
         $slot_client_resolver = (get_option('magick_ad_slot_client_resolver', '1') === '1');
-        $html_sandbox = (get_option('magick_ad_html_sandbox', '0') === '1');
+        $html_sandbox = (get_option('magick_ad_html_sandbox', '1') === '1');
         $raw_allowlist = get_option('magick_ad_html_script_allowlist', null);
         $raw_blocklist = get_option('magick_ad_html_script_blocklist', array());
         $html_script_allowlist = self::sanitize_domain_list($raw_allowlist);
@@ -135,6 +137,11 @@ final class System_Settings_Controller {
         if (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'production') {
             $tracking_require_signature = true;
         }
+        $tracking_secret_rotated_at = (int) get_option('magick_ad_track_secret_rotated_at', 0);
+        $tracking_secret_has_prev = (get_option('magick_ad_track_secret_prev', '') !== '');
+        $tracking_secret_grace_seconds = Tracking_Signature::get_rotation_grace_seconds();
+
+        $trusted_proxies = Ip::normalize_list(get_option('magick_ad_trusted_proxies', array()));
 
         $settings = array(
             'tracking_enabled' => $tracking_enabled,
@@ -145,6 +152,9 @@ final class System_Settings_Controller {
             'tracking_dedupe_ttl' => $dedupe_ttl,
             'tracking_dedupe_scope' => $dedupe_scope,
             'tracking_require_signature' => $tracking_require_signature,
+            'tracking_secret_rotated_at' => $tracking_secret_rotated_at,
+            'tracking_secret_has_prev' => $tracking_secret_has_prev,
+            'tracking_secret_grace_seconds' => $tracking_secret_grace_seconds,
             'page_cache_detected' => self::is_page_cache_detected(),
             'stats_diagnostics' => (get_option('magick_ad_stats_diagnostics', '0') === '1'),
             'stats_diagnostics_retention_days' => $retention_days,
@@ -159,6 +169,7 @@ final class System_Settings_Controller {
             'consent_banner_enabled' => $consent_banner_enabled,
             'consent_banner_text' => $consent_banner_text,
             'consent_banner_button' => $consent_banner_button,
+            'trusted_proxies' => $trusted_proxies,
             'block_editor_enabled' => $block_editor_enabled,
             'brand_name' => get_option('magick_ad_brand_name', 'Magick AD'),
             'brand_tagline' => get_option('magick_ad_brand_tagline', '广告配置与投放规则管理'),
@@ -208,6 +219,9 @@ final class System_Settings_Controller {
         if (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'production') {
             $tracking_require_signature = true;
         }
+        if (!empty($params['rotate_track_secret'])) {
+            Tracking_Signature::rotate_secret();
+        }
         $stats_diagnostics = !empty($params['stats_diagnostics']);
         $stats_diagnostics_retention_days = self::sanitize_positive_int(
             $params['stats_diagnostics_retention_days'] ?? get_option('magick_ad_stats_diagnostics_retention_days', 7),
@@ -245,13 +259,16 @@ final class System_Settings_Controller {
             ? (get_option('magick_ad_slot_client_resolver', '1') === '1')
             : !empty($params['slot_client_resolver']);
         $html_sandbox = !array_key_exists('html_sandbox', $params)
-            ? (get_option('magick_ad_html_sandbox', '0') === '1')
+            ? (get_option('magick_ad_html_sandbox', '1') === '1')
             : !empty($params['html_sandbox']);
         $html_script_allowlist = self::sanitize_domain_list(
             $params['html_script_allowlist'] ?? get_option('magick_ad_html_script_allowlist', array())
         );
         $html_script_blocklist = self::sanitize_domain_list(
             $params['html_script_blocklist'] ?? get_option('magick_ad_html_script_blocklist', array())
+        );
+        $trusted_proxies = Ip::normalize_list(
+            $params['trusted_proxies'] ?? get_option('magick_ad_trusted_proxies', array())
         );
         $block_editor_enabled = !array_key_exists('block_editor_enabled', $params)
             ? (get_option('magick_ad_block_editor_enabled', '0') === '1')
@@ -280,6 +297,7 @@ final class System_Settings_Controller {
         update_option('magick_ad_html_sandbox', $html_sandbox ? '1' : '0');
         update_option('magick_ad_html_script_allowlist', $html_script_allowlist);
         update_option('magick_ad_html_script_blocklist', $html_script_blocklist);
+        update_option('magick_ad_trusted_proxies', $trusted_proxies);
         update_option('magick_ad_block_editor_enabled', $block_editor_enabled ? '1' : '0');
         update_option('magick_ad_consent_guard_enabled', $consent_guard_enabled ? '1' : '0');
         update_option('magick_ad_consent_banner_enabled', $consent_banner_enabled ? '1' : '0');
@@ -288,6 +306,10 @@ final class System_Settings_Controller {
         update_option('magick_ad_brand_name', $brand_name);
         update_option('magick_ad_brand_tagline', $brand_tagline);
         update_option('magick_ad_manage_capability', $manage_capability);
+
+        $tracking_secret_rotated_at = (int) get_option('magick_ad_track_secret_rotated_at', 0);
+        $tracking_secret_has_prev = (get_option('magick_ad_track_secret_prev', '') !== '');
+        $tracking_secret_grace_seconds = Tracking_Signature::get_rotation_grace_seconds();
 
         $expires_at = $stats_diagnostics
             ? current_time('timestamp') + $stats_diagnostics_auto_off_days * DAY_IN_SECONDS
@@ -303,6 +325,9 @@ final class System_Settings_Controller {
             'tracking_dedupe_ttl' => $tracking_dedupe_ttl,
             'tracking_dedupe_scope' => $tracking_dedupe_scope,
             'tracking_require_signature' => $tracking_require_signature,
+            'tracking_secret_rotated_at' => $tracking_secret_rotated_at,
+            'tracking_secret_has_prev' => $tracking_secret_has_prev,
+            'tracking_secret_grace_seconds' => $tracking_secret_grace_seconds,
             'stats_diagnostics' => $stats_diagnostics,
             'stats_diagnostics_retention_days' => $stats_diagnostics_retention_days,
             'stats_diagnostics_auto_off_days' => $stats_diagnostics_auto_off_days,
@@ -312,6 +337,7 @@ final class System_Settings_Controller {
             'html_sandbox' => $html_sandbox,
             'html_script_allowlist' => $html_script_allowlist,
             'html_script_blocklist' => $html_script_blocklist,
+            'trusted_proxies' => $trusted_proxies,
             'block_editor_enabled' => $block_editor_enabled,
             'consent_guard_enabled' => $consent_guard_enabled,
             'consent_banner_enabled' => $consent_banner_enabled,

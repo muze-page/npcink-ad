@@ -30,7 +30,12 @@ final class Settings {
 
         $stored = get_option(self::RUNTIME_OPTION_KEY, array());
         if (is_array($stored) && isset($stored['_rev']) && (int) $stored['_rev'] === $rev) {
-            wp_cache_set($cache_key, $stored, self::RUNTIME_CACHE_GROUP);
+            wp_cache_set(
+                $cache_key,
+                $stored,
+                self::RUNTIME_CACHE_GROUP,
+                self::get_runtime_cache_ttl()
+            );
             return self::strip_runtime_meta($stored);
         }
 
@@ -49,7 +54,8 @@ final class Settings {
             $slots = isset($settings['slots']) && is_array($settings['slots']) ? $settings['slots'] : array();
         }
 
-        $rev = (int) get_option(self::RUNTIME_REV_KEY, 0) + 1;
+        $prev_rev = (int) get_option(self::RUNTIME_REV_KEY, 0);
+        $rev = $prev_rev + 1;
         $ads_payload = self::maybe_strip_runtime_ads(is_array($ads) ? $ads : array());
         $payload = array(
             'ads' => $ads_payload,
@@ -63,7 +69,15 @@ final class Settings {
         update_option(self::RUNTIME_REV_KEY, $rev, false);
 
         $cache_key = self::RUNTIME_CACHE_PREFIX . $rev;
-        wp_cache_set($cache_key, $payload, self::RUNTIME_CACHE_GROUP);
+        wp_cache_set(
+            $cache_key,
+            $payload,
+            self::RUNTIME_CACHE_GROUP,
+            self::get_runtime_cache_ttl()
+        );
+        if ($prev_rev > 0) {
+            wp_cache_delete(self::RUNTIME_CACHE_PREFIX . $prev_rev, self::RUNTIME_CACHE_GROUP);
+        }
 
         self::release_runtime_lock();
 
@@ -200,6 +214,11 @@ final class Settings {
         delete_transient(self::RUNTIME_LOCK_KEY);
     }
 
+    private static function get_runtime_cache_ttl(): int {
+        $ttl = (int) apply_filters('magick_ad_runtime_cache_ttl', DAY_IN_SECONDS);
+        return max(60, $ttl);
+    }
+
     public static function sanitize_settings($settings): array {
         $ads = array();
         if (isset($settings['ads']) && is_array($settings['ads'])) {
@@ -221,7 +240,31 @@ final class Settings {
 
     public static function validate_settings(array $settings) {
         $ads = isset($settings['ads']) && is_array($settings['ads']) ? $settings['ads'] : array();
+        $seen_ids = array();
         foreach ($ads as $ad) {
+            $ad_id = isset($ad['id']) ? sanitize_text_field($ad['id']) : '';
+            if ($ad_id === '') {
+                return new WP_Error(
+                    'magick_ad_missing_ad_id',
+                    'ad_id is required for each ad.',
+                    array('status' => 400)
+                );
+            }
+            if (!preg_match('/^[a-z0-9_]+$/', $ad_id)) {
+                return new WP_Error(
+                    'magick_ad_invalid_ad_id',
+                    'ad_id must match [a-z0-9_]+.',
+                    array('status' => 400, 'ad_id' => $ad_id)
+                );
+            }
+            if (isset($seen_ids[$ad_id])) {
+                return new WP_Error(
+                    'magick_ad_duplicate_ad_id',
+                    'ad_id must be unique.',
+                    array('status' => 400, 'ad_id' => $ad_id)
+                );
+            }
+            $seen_ids[$ad_id] = true;
             $options = isset($ad['options']) ? $ad['options'] : array();
             if (empty($options['placement_hook'])) {
                 return new WP_Error(
@@ -640,6 +683,12 @@ final class Settings {
         if ($html_load_delay > 120000) {
             $html_load_delay = 120000;
         }
+        $html_placeholder_ratio = isset($content['html_placeholder_ratio'])
+            ? sanitize_text_field((string) $content['html_placeholder_ratio'])
+            : '';
+        if (!preg_match('/^\\d{1,3}:\\d{1,3}$/', $html_placeholder_ratio)) {
+            $html_placeholder_ratio = '';
+        }
 
         $variants_enabled = !empty($content['variants_enabled']);
         $variants_strategy = self::sanitize_choice(
@@ -699,14 +748,11 @@ final class Settings {
             'html_runtime_vars' => $html_runtime_vars,
             'html_load_strategy' => $html_load_strategy,
             'html_load_delay' => $html_load_delay,
+            'html_placeholder_ratio' => $html_placeholder_ratio,
             'variants_enabled' => $variants_enabled,
             'variants_strategy' => $variants_strategy,
             'variants' => $variants,
-            'image' => array(
-                'id' => isset($image['id']) ? absint($image['id']) : 0,
-                'url' => isset($image['url']) ? esc_url_raw($image['url']) : '',
-                'alt' => isset($image['alt']) ? sanitize_text_field($image['alt']) : '',
-            ),
+            'image' => self::sanitize_image_asset($image),
             'video_settings' => array(
                 'type' => self::sanitize_choice(
                     isset($video_settings['type']) ? $video_settings['type'] : 'mp4',
@@ -728,11 +774,7 @@ final class Settings {
                 'aspect_ratio' => $video_aspect,
                 'aspect_ratio_custom' => $video_aspect_custom,
                 'poster_mode' => $video_poster_mode,
-                'poster' => array(
-                    'id' => isset($video_settings['poster']['id']) ? absint($video_settings['poster']['id']) : 0,
-                    'url' => isset($video_settings['poster']['url']) ? esc_url_raw($video_settings['poster']['url']) : '',
-                    'alt' => isset($video_settings['poster']['alt']) ? sanitize_text_field($video_settings['poster']['alt']) : '',
-                ),
+                'poster' => self::sanitize_image_asset($video_settings['poster'] ?? array()),
                 'fallback_text' => isset($video_settings['fallback_text'])
                     ? sanitize_text_field($video_settings['fallback_text'])
                     : '',
@@ -752,21 +794,13 @@ final class Settings {
                     array('', 'center'),
                     ''
                 ),
-                'background_image' => array(
-                    'id' => isset($block_settings['background_image']['id']) ? absint($block_settings['background_image']['id']) : 0,
-                    'url' => isset($block_settings['background_image']['url']) ? esc_url_raw($block_settings['background_image']['url']) : '',
-                    'alt' => isset($block_settings['background_image']['alt']) ? sanitize_text_field($block_settings['background_image']['alt']) : '',
-                ),
+                'background_image' => self::sanitize_image_asset($block_settings['background_image'] ?? array()),
                 'layout' => self::sanitize_choice(
                     isset($block_settings['layout']) ? $block_settings['layout'] : 'content',
                     array('content', 'stack', 'split', 'split-reverse'),
                     'content'
                 ),
-                'media_image' => array(
-                    'id' => isset($block_settings['media_image']['id']) ? absint($block_settings['media_image']['id']) : 0,
-                    'url' => isset($block_settings['media_image']['url']) ? esc_url_raw($block_settings['media_image']['url']) : '',
-                    'alt' => isset($block_settings['media_image']['alt']) ? sanitize_text_field($block_settings['media_image']['alt']) : '',
-                ),
+                'media_image' => self::sanitize_image_asset($block_settings['media_image'] ?? array()),
                 'heading' => isset($block_settings['heading']) ? sanitize_text_field($block_settings['heading']) : '',
                 'subheading' => isset($block_settings['subheading']) ? sanitize_text_field($block_settings['subheading']) : '',
                 'heading_size' => isset($block_settings['heading_size']) ? absint($block_settings['heading_size']) : 0,
@@ -835,11 +869,7 @@ final class Settings {
                     isset($container_style['badge_text']) ? $container_style['badge_text'] : '广告'
                 ),
                 'badge_color' => self::sanitize_color(isset($container_style['badge_color']) ? $container_style['badge_color'] : '#1d2327'),
-                'badge_image' => array(
-                    'id' => isset($container_style['badge_image']['id']) ? absint($container_style['badge_image']['id']) : 0,
-                    'url' => isset($container_style['badge_image']['url']) ? esc_url_raw($container_style['badge_image']['url']) : '',
-                    'alt' => isset($container_style['badge_image']['alt']) ? sanitize_text_field($container_style['badge_image']['alt']) : '',
-                ),
+                'badge_image' => self::sanitize_image_asset($container_style['badge_image'] ?? array()),
                 'layout' => self::sanitize_choice(
                     isset($container_style['layout']) ? $container_style['layout'] : '',
                     array('', 'centered'),
@@ -901,6 +931,17 @@ final class Settings {
             return $value;
         }
         return 'transparent';
+    }
+
+    private static function sanitize_image_asset($image): array {
+        $image = is_array($image) ? $image : array();
+        return array(
+            'id' => isset($image['id']) ? absint($image['id']) : 0,
+            'url' => isset($image['url']) ? esc_url_raw($image['url']) : '',
+            'alt' => isset($image['alt']) ? sanitize_text_field($image['alt']) : '',
+            'width' => isset($image['width']) ? absint($image['width']) : 0,
+            'height' => isset($image['height']) ? absint($image['height']) : 0,
+        );
     }
 
     private static function sanitize_ratio($value): string {

@@ -8,6 +8,9 @@ if (!defined('ABSPATH')) {
 
 final class Tracking_Signature {
     private const OPTION_TRACK_SECRET = 'magick_ad_track_secret';
+    private const OPTION_TRACK_SECRET_PREV = 'magick_ad_track_secret_prev';
+    private const OPTION_TRACK_SECRET_ROTATED_AT = 'magick_ad_track_secret_rotated_at';
+    private const OPTION_TRACK_SECRET_GRACE = 'magick_ad_track_secret_grace_seconds';
     private const OPTION_TRACK_SIGNATURE_DAYS = 'magick_ad_track_signature_days';
     private const OPTION_TRACK_SIGNATURE_MODE = 'magick_ad_track_signature_mode';
     private const POSITION_ALLOWLIST = array(
@@ -41,19 +44,15 @@ final class Tracking_Signature {
         string $container = '',
         string $rev = ''
     ): string {
-        $payload = array(
+        return self::build_with_secret(
+            self::get_secret(),
             $ad_id,
             $sig_ts,
-            self::normalize_slot($slot),
-            self::normalize_position($position),
-            self::normalize_container($container),
+            $slot,
+            $position,
+            $container,
+            $rev
         );
-        $rev = self::normalize_rev($rev);
-        if ($rev !== '') {
-            $payload[] = $rev;
-        }
-        $payload = implode('|', $payload);
-        return hash_hmac('sha256', $payload, self::get_secret());
     }
 
     public static function is_valid(
@@ -69,11 +68,6 @@ final class Tracking_Signature {
             return false;
         }
 
-        $expected = self::build($ad_id, $sig_ts, $slot, $position, $container, $rev);
-        if (!hash_equals($expected, $sig)) {
-            return false;
-        }
-
         $timestamp = self::parse_sig_ts($sig_ts);
         if ($timestamp === null) {
             return false;
@@ -86,7 +80,47 @@ final class Tracking_Signature {
         }
 
         $window_days = self::get_signature_window_days();
-        return $age_days < $window_days;
+        if ($age_days >= $window_days) {
+            return false;
+        }
+
+        $expected = self::build_with_secret(
+            self::get_secret(),
+            $ad_id,
+            $sig_ts,
+            $slot,
+            $position,
+            $container,
+            $rev
+        );
+        if (hash_equals($expected, $sig)) {
+            return true;
+        }
+
+        $prev_secret = self::get_previous_secret();
+        if ($prev_secret === '') {
+            return false;
+        }
+
+        $rotated_at = (int) get_option(self::OPTION_TRACK_SECRET_ROTATED_AT, 0);
+        if ($rotated_at <= 0) {
+            return false;
+        }
+        $grace_seconds = self::get_rotation_grace_seconds();
+        if ((current_time('timestamp') - $rotated_at) > $grace_seconds) {
+            return false;
+        }
+
+        $expected_prev = self::build_with_secret(
+            $prev_secret,
+            $ad_id,
+            $sig_ts,
+            $slot,
+            $position,
+            $container,
+            $rev
+        );
+        return hash_equals($expected_prev, $sig);
     }
 
     public static function current_sig_ts(): string {
@@ -102,6 +136,21 @@ final class Tracking_Signature {
         $days = max(1, min($days, 90));
         $days = (int) apply_filters('magick_ad_track_signature_window_days', $days);
         return max(1, min($days, 90));
+    }
+
+    public static function get_rotation_grace_seconds(): int {
+        $seconds = (int) get_option(self::OPTION_TRACK_SECRET_GRACE, HOUR_IN_SECONDS);
+        $seconds = max(300, min($seconds, WEEK_IN_SECONDS));
+        $seconds = (int) apply_filters('magick_ad_track_secret_grace_seconds', $seconds);
+        return max(300, min($seconds, WEEK_IN_SECONDS));
+    }
+
+    public static function rotate_secret(): void {
+        $current = self::get_secret();
+        $new_secret = wp_generate_password(32, true, true);
+        update_option(self::OPTION_TRACK_SECRET_PREV, $current, false);
+        update_option(self::OPTION_TRACK_SECRET, $new_secret, false);
+        update_option(self::OPTION_TRACK_SECRET_ROTATED_AT, current_time('timestamp'), false);
     }
 
     private static function parse_sig_ts(string $sig_ts): ?int {
@@ -187,5 +236,34 @@ final class Tracking_Signature {
             update_option(self::OPTION_TRACK_SECRET, $secret, false);
         }
         return (string) $secret;
+    }
+
+    private static function get_previous_secret(): string {
+        $secret = get_option(self::OPTION_TRACK_SECRET_PREV, '');
+        return is_string($secret) ? $secret : '';
+    }
+
+    private static function build_with_secret(
+        string $secret,
+        string $ad_id,
+        string $sig_ts,
+        string $slot = '',
+        string $position = '',
+        string $container = '',
+        string $rev = ''
+    ): string {
+        $payload = array(
+            $ad_id,
+            $sig_ts,
+            self::normalize_slot($slot),
+            self::normalize_position($position),
+            self::normalize_container($container),
+        );
+        $rev = self::normalize_rev($rev);
+        if ($rev !== '') {
+            $payload[] = $rev;
+        }
+        $payload = implode('|', $payload);
+        return hash_hmac('sha256', $payload, $secret);
     }
 }

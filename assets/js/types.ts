@@ -3,7 +3,9 @@ export type TrackEvent =
     | 'click'
     | 'video_play'
     | 'video_pause'
-    | 'video_complete';
+    | 'video_complete'
+    | 'conversion'
+    | (string & {});
 
 export interface TrackPayload {
     adId: string;
@@ -11,6 +13,7 @@ export interface TrackPayload {
     sig?: string;
     sigTs?: string;
     sigRev?: string;
+    variantId?: string;
     slot?: string;
     position?: string;
     container?: string;
@@ -22,6 +25,7 @@ export interface TrackBatchItem {
     sig?: string;
     sig_ts?: string;
     sig_rev?: string;
+    variant_id?: string;
     slot?: string;
     position?: string;
     container?: string;
@@ -38,6 +42,8 @@ export interface TrackConfig {
     batchInterval?: number;
     observeMutations?: boolean;
     dedupeScope?: 'ad' | 'placement';
+    allowBeacon?: boolean;
+    credentials?: RequestCredentials;
 }
 
 export interface RenderCandidate {
@@ -127,6 +133,8 @@ export interface ImageAsset {
     id: number;
     url: string;
     alt: string;
+    width?: number;
+    height?: number;
 }
 
 export interface ContainerStyle {
@@ -249,6 +257,7 @@ export interface AdContent {
     html_runtime_vars: boolean;
     html_load_strategy: HtmlLoadStrategy;
     html_load_delay: number;
+    html_placeholder_ratio?: string;
     variants_enabled: boolean;
     variants_strategy: VariantStrategy;
     variants: ContentVariant[];

@@ -1105,7 +1105,9 @@ const ImagePicker = ({
       onChange({
         id: attachment.id,
         url: attachment.url,
-        alt: attachment.alt
+        alt: attachment.alt,
+        width: attachment.width,
+        height: attachment.height
       });
     });
     frameRef.current = frame;
@@ -1127,7 +1129,9 @@ const ImagePicker = ({
     onClick: () => onChange({
       id: null,
       url: '',
-      alt: ''
+      alt: '',
+      width: 0,
+      height: 0
     }),
     variant: "tertiary",
     isDestructive: true
@@ -3691,15 +3695,19 @@ const DEFAULT_SETTINGS = {
   tracking_dedupe_ttl: 86400,
   tracking_dedupe_scope: 'ad',
   tracking_require_signature: true,
+  tracking_secret_rotated_at: 0,
+  tracking_secret_has_prev: false,
+  tracking_secret_grace_seconds: 3600,
   stats_diagnostics: false,
   stats_diagnostics_retention_days: 7,
   stats_diagnostics_auto_off_days: 7,
   stats_diagnostics_expires_at: 0,
   page_cache_detected: false,
   slot_client_resolver: true,
-  html_sandbox: false,
+  html_sandbox: true,
   html_script_allowlist: [],
   html_script_blocklist: [],
+  trusted_proxies: [],
   brand_name: 'Magick AD',
   brand_tagline: '广告配置与投放规则管理',
   manage_capability: 'manage_options'
@@ -3723,6 +3731,27 @@ const SystemSettingsPanel = ({
       return '';
     }
     return date.toLocaleString();
+  })();
+  const secretRotatedLabel = (() => {
+    if (!settings.tracking_secret_rotated_at) {
+      return '';
+    }
+    const date = new Date(settings.tracking_secret_rotated_at * 1000);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    return date.toLocaleString();
+  })();
+  const secretGraceLabel = (() => {
+    const seconds = Number(settings.tracking_secret_grace_seconds || 0);
+    if (!seconds) {
+      return '';
+    }
+    if (seconds < 3600) {
+      return `${Math.round(seconds / 60)} 分钟`;
+    }
+    const hours = seconds / 3600;
+    return hours % 1 === 0 ? `${hours} 小时` : `${hours.toFixed(1)} 小时`;
   })();
   (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
     let mounted = true;
@@ -3781,6 +3810,31 @@ const SystemSettingsPanel = ({
   };
   const handleToggleSection = key => {
     setOpenSection(current => current === key ? null : key);
+  };
+  const rotateSecret = () => {
+    if (!window.confirm('将立即轮换签名密钥。旧密钥仅在兼容窗口内有效，确认继续？')) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_3___default()({
+      path: '/magick-ad/v1/system-settings',
+      method: 'POST',
+      data: {
+        rotate_track_secret: true
+      }
+    }).then(response => {
+      setSettings({
+        ...DEFAULT_SETTINGS,
+        ...response
+      });
+      setSaving(false);
+      onNotice?.('success', '签名密钥已轮换');
+    }).catch(err => {
+      setSaving(false);
+      setError(err);
+      onNotice?.('error', err?.message || '签名密钥轮换失败');
+    });
   };
   return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Card, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.CardBody, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-field__label"
@@ -3862,7 +3916,20 @@ const SystemSettingsPanel = ({
       tracking_require_signature: value
     }),
     help: "\u5173\u95ED\u540E\u53EF\u63A5\u53D7\u65E0\u7B7E\u540D\u7684 /track \u8BF7\u6C42\uFF08\u98CE\u9669\u66F4\u9AD8\uFF09\u3002"
-  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-settings-secret"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-settings-secret__meta"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("strong", null, "\u7B7E\u540D\u5BC6\u94A5\u8F6E\u6362\uFF1A"), secretRotatedLabel ? secretRotatedLabel : '未轮换', secretGraceLabel && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
+    className: "magick-ad-settings-secret__hint"
+  }, "\uFF08\u517C\u5BB9\u7A97\u53E3 ", secretGraceLabel, "\uFF09")), settings.tracking_secret_has_prev && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "info",
+    isDismissible: false
+  }, "\u65E7\u5BC6\u94A5\u5728\u517C\u5BB9\u7A97\u53E3\u5185\u4ECD\u53EF\u9A8C\u8BC1\uFF0C\u907F\u514D\u5DF2\u6E32\u67D3\u9875\u9762\u7ACB\u5373\u5931\u6548\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+    variant: "secondary",
+    disabled: loading || saving,
+    onClick: rotateSecret
+  }, "\u8F6E\u6362\u7B7E\u540D\u5BC6\u94A5")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
     label: "\u542F\u7528\u7F13\u5B58\u53CB\u597D Slot \u8F6E\u64AD\uFF08\u5BA2\u6237\u7AEF\u9009\u62E9\uFF09",
     checked: Boolean(settings.slot_client_resolver),
     disabled: loading || saving,
@@ -3891,8 +3958,11 @@ const SystemSettingsPanel = ({
     onChange: value => updateSettings({
       html_sandbox: value
     }),
-    help: "\u4EC5\u5BF9 Full HTML \u751F\u6548\uFF0C\u9ED8\u8BA4\u5173\u95ED\uFF1B\u5F00\u542F\u540E\u5C06\u9694\u79BB\u7B2C\u4E09\u65B9\u811A\u672C\u3002"
-  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+    help: "\u4EC5\u5BF9 Full HTML \u751F\u6548\uFF0C\u5EFA\u8BAE\u4FDD\u6301\u5F00\u542F\u4EE5\u9694\u79BB\u7B2C\u4E09\u65B9\u811A\u672C\u3002"
+  }), !settings.html_sandbox && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "warning",
+    isDismissible: false
+  }, "\u5DF2\u5173\u95ED\u6C99\u7BB1\uFF1AFull HTML \u5C06\u76F4\u63A5\u5728\u9875\u9762\u6267\u884C\u811A\u672C\uFF0C\u98CE\u9669\u8F83\u9AD8\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
     label: "\u811A\u672C\u767D\u540D\u5355\uFF08\u7CFB\u7EDF\u7EA7\uFF09",
     value: formatDomainList(settings.html_script_allowlist),
     disabled: loading || saving,
@@ -3908,6 +3978,14 @@ const SystemSettingsPanel = ({
       html_script_blocklist: parseDomainList(value)
     }),
     help: "\u7CFB\u7EDF\u7EA7\u9ED1\u540D\u5355\u4F18\u5148\u751F\u6548\uFF0C\u547D\u4E2D\u5373\u79FB\u9664\u811A\u672C\u3002"
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+    label: "\u53EF\u4FE1\u4EE3\u7406\u767D\u540D\u5355",
+    value: formatDomainList(settings.trusted_proxies),
+    disabled: loading || saving,
+    onChange: value => updateSettings({
+      trusted_proxies: parseDomainList(value)
+    }),
+    help: "\u4EC5\u5F53 REMOTE_ADDR \u5728\u6B64\u5217\u8868\u5185\uFF0C\u624D\u4FE1\u4EFB X-Forwarded-For/CF-Connecting-IP\u3002\u652F\u6301 CIDR\uFF0C\u6BCF\u884C\u4E00\u4E2A\u3002"
   })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u8BCA\u65AD\u65E5\u5FD7",
     opened: openSection === 'diagnostics',
@@ -4973,6 +5051,42 @@ const AdsConfig = () => {
   };
   const parseDomainList = (value = '') => value.split(/[\s,;]+/).map(item => item.trim()).filter(Boolean);
   const formatDomainList = list => Array.isArray(list) ? list.join('\n') : '';
+  const extractScriptDomains = (html = '') => {
+    if (!html || typeof html !== 'string') {
+      return [];
+    }
+    const baseUrl = typeof window !== 'undefined' && window.location ? window.location.href : 'http://localhost';
+    const domains = new Set();
+    const addDomain = src => {
+      if (!src) {
+        return;
+      }
+      try {
+        const url = new URL(src, baseUrl);
+        if (url.hostname) {
+          domains.add(url.hostname.toLowerCase());
+        }
+      } catch (err) {
+        // ignore invalid URL
+      }
+    };
+    if (typeof DOMParser !== 'undefined') {
+      try {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        doc.querySelectorAll('script[src]').forEach(script => {
+          addDomain(script.getAttribute('src'));
+        });
+      } catch (err) {
+        // ignore parse errors
+      }
+    } else {
+      const matches = html.matchAll(/<script[^>]+src=["']([^"']+)["'][^>]*>/gi);
+      for (const match of matches) {
+        addDomain(match[1]);
+      }
+    }
+    return Array.from(domains);
+  };
   const updateVariants = nextVariants => {
     if (!selectedAd) {
       return;
@@ -5275,7 +5389,9 @@ const AdsConfig = () => {
         image: content.image || {
           id: 0,
           url: '',
-          alt: ''
+          alt: '',
+          width: 0,
+          height: 0
         },
         link: content.link || '',
         link_target: Boolean(content.link_target),
@@ -5612,6 +5728,13 @@ const AdsConfig = () => {
   }));
   const activeCreativeType = selectedAd?.options?.creative_type || 'image';
   const isBlockEditorEnabled = Boolean(systemSettings.block_editor_enabled);
+  const detectedScriptDomains = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => {
+    if (!selectedAd) {
+      return [];
+    }
+    const html = `${selectedAd.content?.html || ''}\n${selectedAd.content?.custom_html || ''}`;
+    return extractScriptDomains(html);
+  }, [selectedAd?.content?.html, selectedAd?.content?.custom_html]);
   const creativeTabs = [{
     name: 'html',
     title: '代码/HTML'
@@ -5799,7 +5922,7 @@ const AdsConfig = () => {
           label: "HTML \u6A21\u5F0F",
           value: selectedAd.options?.html_mode || 'safe',
           options: [{
-            label: '安全模式（过滤脚本）',
+            label: '安全模式（默认，过滤脚本）',
             value: 'safe'
           }, {
             label: '完全模式（允许脚本）',
@@ -5822,9 +5945,9 @@ const AdsConfig = () => {
           status: "info",
           isDismissible: false
         }, "\u5F53\u524D\u662F\u201C\u8BBE\u8BA1\u6A21\u5F0F\u201D\uFF1AHTML \u5F3A\u5236\u4F7F\u7528\u201C\u5B89\u5168\u6A21\u5F0F\uFF08\u8FC7\u6EE4\u811A\u672C\uFF09\u201D\u3002 \u5982\u9700\u542F\u7528\u811A\u672C\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u4E13\u5BB6\u6A21\u5F0F\u201D\u3002") : null, selectedAd.options?.html_mode === 'full' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-          status: "warning",
+          status: "error",
           isDismissible: false
-        }, "\u5B8C\u5168\u6A21\u5F0F\u5C06\u539F\u6837\u8F93\u51FA HTML\uFF0C\u8BF7\u786E\u4FDD\u7D20\u6750\u4E0E\u4EE3\u7801\u6765\u6E90\u53EF\u4FE1\u3002"), selectedAd.options?.html_mode === 'safe' && /<script[\s>]/i.test(selectedAd.content?.html || '') && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+        }, "\u5B8C\u5168\u6A21\u5F0F\u4F1A\u6267\u884C\u7B2C\u4E09\u65B9\u811A\u672C\u4E0E\u5185\u8054\u4EE3\u7801\uFF0C\u5B58\u5728\u5B89\u5168\u98CE\u9669\u3002\u8BF7\u4EC5\u4F7F\u7528\u53EF\u4FE1\u6765\u6E90\uFF0C\u5E76\u7ED3\u5408\u811A\u672C\u767D\u540D\u5355/\u6C99\u7BB1\u7B56\u7565\u3002"), selectedAd.options?.html_mode === 'safe' && /<script[\s>]/i.test(selectedAd.content?.html || '') && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
           status: "warning",
           isDismissible: false
         }, "\u68C0\u6D4B\u5230", ' ', (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("code", null, "<script>"), ' ', "\u6807\u7B7E\u3002\u5B89\u5168\u6A21\u5F0F\u4F1A\u79FB\u9664\u811A\u672C\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u5B8C\u5168\u6A21\u5F0F\u201D\u5E76\u786E\u4FDD\u8D26\u53F7\u5177\u5907\u6743\u9650\u3002"), selectedAd.options?.html_mode === 'full' && !canUnfilteredHtml && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
@@ -5919,7 +6042,46 @@ const AdsConfig = () => {
             isDismissible: false
           }, "\u5FEB\u901F\u6A21\u5F0F\u5DF2\u9690\u85CF\u811A\u672C\u57DF\u540D\u914D\u7F6E\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u8BBE\u8BA1\u6A21\u5F0F/\u4E13\u5BB6\u6A21\u5F0F\u201D\u67E5\u770B\u3002");
         }
-        return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+        const allowlist = Array.isArray(selectedAd.content?.html_script_allowlist) ? selectedAd.content?.html_script_allowlist : [];
+        const blocklist = Array.isArray(selectedAd.content?.html_script_blocklist) ? selectedAd.content?.html_script_blocklist : [];
+        const addDomain = (domain, listKey) => {
+          const nextAllow = listKey === 'allow' ? Array.from(new Set([...allowlist, domain])) : allowlist.filter(item => item !== domain);
+          const nextBlock = listKey === 'block' ? Array.from(new Set([...blocklist, domain])) : blocklist.filter(item => item !== domain);
+          handleUpdateContent({
+            html_script_allowlist: nextAllow,
+            html_script_blocklist: nextBlock
+          });
+        };
+        return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, detectedScriptDomains?.length > 0 && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+          className: "magick-ad-script-domains"
+        }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+          className: "magick-ad-script-domains__title"
+        }, "\u68C0\u6D4B\u5230\u811A\u672C\u57DF\u540D"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+          className: "magick-ad-script-domains__list"
+        }, detectedScriptDomains.map(domain => {
+          const isAllowed = allowlist.includes(domain);
+          const isBlocked = blocklist.includes(domain);
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            key: domain,
+            className: "magick-ad-script-domains__item"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
+            className: "magick-ad-script-domains__domain"
+          }, domain), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-script-domains__actions"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+            variant: isAllowed ? 'secondary' : 'primary',
+            size: "small",
+            disabled: isAllowed,
+            onClick: () => addDomain(domain, 'allow')
+          }, isAllowed ? '已在白名单' : '加入白名单'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+            variant: isBlocked ? 'secondary' : 'tertiary',
+            size: "small",
+            disabled: isBlocked,
+            onClick: () => addDomain(domain, 'block')
+          }, isBlocked ? '已在黑名单' : '加入黑名单')));
+        })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+          className: "magick-ad-script-domains__help"
+        }, "\u7CFB\u7EDF\u9ED8\u8BA4\u4EC5\u5141\u8BB8\u672C\u7AD9\u57DF\u540D\u3002\u5C06\u5916\u90E8\u57DF\u540D\u52A0\u5165\u767D\u540D\u5355\u540E\uFF0C\u811A\u672C\u624D\u4F1A\u4FDD\u7559\u3002")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
           label: "\u811A\u672C\u767D\u540D\u5355\uFF08\u8FFD\u52A0\u57DF\u540D\uFF09",
           value: formatDomainList(selectedAd.content?.html_script_allowlist),
           onChange: value => handleUpdateContent({
@@ -7665,7 +7827,9 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
     image: {
       id: 0,
       url: '',
-      alt: ''
+      alt: '',
+      width: 0,
+      height: 0
     },
     link: '',
     link_target: false,
@@ -7679,6 +7843,7 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
     html_runtime_vars: true,
     html_load_strategy: 'immediate',
     html_load_delay: 0,
+    html_placeholder_ratio: '',
     variants_enabled: false,
     variants_strategy: 'request',
     variants: [],
@@ -7698,7 +7863,9 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
       poster: {
         id: 0,
         url: '',
-        alt: ''
+        alt: '',
+        width: 0,
+        height: 0
       },
       fallback_text: '',
       track_events: false
@@ -7716,13 +7883,17 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
       background_image: {
         id: 0,
         url: '',
-        alt: ''
+        alt: '',
+        width: 0,
+        height: 0
       },
       layout: 'content',
       media_image: {
         id: 0,
         url: '',
-        alt: ''
+        alt: '',
+        width: 0,
+        height: 0
       },
       heading: '',
       subheading: '',
@@ -7888,6 +8059,7 @@ const normalizeAd = ad => {
       html_runtime_vars: content.html_runtime_vars !== false,
       html_load_strategy: ['immediate', 'delay', 'viewport'].includes(content.html_load_strategy) ? content.html_load_strategy : 'immediate',
       html_load_delay: Number(content.html_load_delay || 0),
+      html_placeholder_ratio: content.html_placeholder_ratio || '',
       variants_enabled: Boolean(content.variants_enabled),
       variants_strategy: content.variants_strategy === 'session' ? 'session' : 'request',
       variants: variantsRaw.map(variant => {

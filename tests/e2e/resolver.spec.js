@@ -1,12 +1,19 @@
 const { test, expect } = require('@playwright/test');
+const {
+    previewPath,
+    resolverSelector,
+    adSelector,
+} = require('./helpers');
+const expectResolver =
+    process.env.MAGICK_AD_E2E_EXPECT_RESOLVER;
 
-const previewPath = process.env.MAGICK_AD_E2E_PREVIEW_PATH;
-const resolverSelector =
-    process.env.MAGICK_AD_E2E_RESOLVER_SELECTOR ||
-    '[data-magick-ad-slot-resolver="1"]';
-
-test('resolver hydrates ad markup', async ({ page }) => {
+test('resolver hydrates ad markup (when enabled)', async ({
+    page,
+}) => {
     test.skip(!previewPath, 'Set MAGICK_AD_E2E_PREVIEW_PATH');
+    if (expectResolver === '0') {
+        test.skip(true, 'Resolver expected to be disabled');
+    }
 
     await page.goto(previewPath, { waitUntil: 'networkidle' });
     const resolver = await page.$(resolverSelector);
@@ -17,4 +24,20 @@ test('resolver hydrates ad markup', async ({ page }) => {
         { timeout: 10000 }
     );
     expect(resolved).toBeTruthy();
+});
+
+test('slot renders directly when resolver disabled (optional)', async ({
+    page,
+}) => {
+    test.skip(!previewPath, 'Set MAGICK_AD_E2E_PREVIEW_PATH');
+    if (expectResolver !== '0') {
+        test.skip(true, 'Resolver expected to be enabled');
+    }
+
+    await page.goto(previewPath, { waitUntil: 'networkidle' });
+    const resolver = await page.$(resolverSelector);
+    expect(resolver).toBeNull();
+
+    const ad = await page.$(adSelector);
+    expect(ad).toBeTruthy();
 });

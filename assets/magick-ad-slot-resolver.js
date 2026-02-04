@@ -2,7 +2,7 @@
     const behaviorConfig = window.MagickADBehavior || {};
     const renderUrl = behaviorConfig.renderUrl || '';
     const renderBatchUrl = behaviorConfig.renderBatchUrl || '';
-    const requestNonce = behaviorConfig.nonce || '';
+    const requestCredentials = behaviorConfig.credentials || 'omit';
 
     if (!renderUrl && !renderBatchUrl) {
         return;
@@ -12,6 +12,33 @@
     const resolverQueue = new Map();
     let resolverFlushTimer = null;
     const resolverBatchDelay = 20;
+    const resolverRootMargin =
+        typeof behaviorConfig.slotResolverRootMargin === 'string'
+            ? behaviorConfig.slotResolverRootMargin
+            : '200% 0px';
+    const resolverThreshold =
+        typeof behaviorConfig.slotResolverThreshold === 'number'
+            ? behaviorConfig.slotResolverThreshold
+            : 0;
+    const resolverObserver =
+        'IntersectionObserver' in window
+            ? new IntersectionObserver(
+                  (entries) => {
+                      entries.forEach((entry) => {
+                          if (!entry.isIntersecting) {
+                              return;
+                          }
+                          const target = entry.target;
+                          resolverObserver.unobserve(target);
+                          resolveSlotPlaceholder(target);
+                      });
+                  },
+                  {
+                      rootMargin: resolverRootMargin,
+                      threshold: resolverThreshold,
+                  }
+              )
+            : null;
 
     const scheduleResolverFlush = () => {
         if (resolverFlushTimer) {
@@ -146,12 +173,9 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...(requestNonce
-                            ? { 'X-WP-Nonce': requestNonce }
-                            : {}),
                     },
                     body: JSON.stringify(payload),
-                    credentials: 'same-origin',
+                    credentials: requestCredentials,
                     keepalive: true,
                 });
                 const data = await response.json();
@@ -197,12 +221,9 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            ...(requestNonce
-                                ? { 'X-WP-Nonce': requestNonce }
-                                : {}),
                         },
                         body: JSON.stringify({ items: payloadItems }),
-                        credentials: 'same-origin',
+                        credentials: requestCredentials,
                         keepalive: true,
                     });
                     const data = await response.json();
@@ -321,17 +342,32 @@
         scheduleResolverFlush();
     };
 
+    const observeSlotPlaceholder = (element) => {
+        if (!element || element.dataset.slotResolved === '1') {
+            return;
+        }
+        if (!resolverObserver) {
+            resolveSlotPlaceholder(element);
+            return;
+        }
+        if (element.dataset.slotObserved === '1') {
+            return;
+        }
+        element.dataset.slotObserved = '1';
+        resolverObserver.observe(element);
+    };
+
     const resolveSlotPlaceholders = (root = document) => {
         if (!root) {
             return;
         }
         if (root.matches?.('[data-magick-ad-slot-resolver="1"]')) {
-            resolveSlotPlaceholder(root);
+            observeSlotPlaceholder(root);
         }
         if (root.querySelectorAll) {
             root.querySelectorAll('[data-magick-ad-slot-resolver="1"]').forEach(
                 (element) => {
-                    resolveSlotPlaceholder(element);
+                    observeSlotPlaceholder(element);
                 }
             );
         }
@@ -358,13 +394,13 @@
                         return;
                     }
                     if (node.matches?.('[data-magick-ad-slot-resolver="1"]')) {
-                        resolveSlotPlaceholder(node);
+                        observeSlotPlaceholder(node);
                     }
                     if (node.querySelectorAll) {
                         node.querySelectorAll(
                             '[data-magick-ad-slot-resolver="1"]'
                         ).forEach((element) => {
-                            resolveSlotPlaceholder(element);
+                            observeSlotPlaceholder(element);
                         });
                     }
                 });

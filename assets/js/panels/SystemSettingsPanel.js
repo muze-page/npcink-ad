@@ -20,15 +20,19 @@ const DEFAULT_SETTINGS = {
     tracking_dedupe_ttl: 86400,
     tracking_dedupe_scope: 'ad',
     tracking_require_signature: true,
+    tracking_secret_rotated_at: 0,
+    tracking_secret_has_prev: false,
+    tracking_secret_grace_seconds: 3600,
     stats_diagnostics: false,
     stats_diagnostics_retention_days: 7,
     stats_diagnostics_auto_off_days: 7,
     stats_diagnostics_expires_at: 0,
     page_cache_detected: false,
     slot_client_resolver: true,
-    html_sandbox: false,
+    html_sandbox: true,
     html_script_allowlist: [],
     html_script_blocklist: [],
+    trusted_proxies: [],
     brand_name: 'Magick AD',
     brand_tagline: '广告配置与投放规则管理',
     manage_capability: 'manage_options',
@@ -59,6 +63,29 @@ const SystemSettingsPanel = ({ onNotice }) => {
             return '';
         }
         return date.toLocaleString();
+    })();
+
+    const secretRotatedLabel = (() => {
+        if (!settings.tracking_secret_rotated_at) {
+            return '';
+        }
+        const date = new Date(settings.tracking_secret_rotated_at * 1000);
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+        return date.toLocaleString();
+    })();
+
+    const secretGraceLabel = (() => {
+        const seconds = Number(settings.tracking_secret_grace_seconds || 0);
+        if (!seconds) {
+            return '';
+        }
+        if (seconds < 3600) {
+            return `${Math.round(seconds / 60)} 分钟`;
+        }
+        const hours = seconds / 3600;
+        return hours % 1 === 0 ? `${hours} 小时` : `${hours.toFixed(1)} 小时`;
     })();
 
     useEffect(() => {
@@ -114,6 +141,33 @@ const SystemSettingsPanel = ({ onNotice }) => {
 
     const handleToggleSection = (key) => {
         setOpenSection((current) => (current === key ? null : key));
+    };
+
+    const rotateSecret = () => {
+        if (
+            !window.confirm(
+                '将立即轮换签名密钥。旧密钥仅在兼容窗口内有效，确认继续？'
+            )
+        ) {
+            return;
+        }
+        setSaving(true);
+        setError(null);
+        apiFetch({
+            path: '/magick-ad/v1/system-settings',
+            method: 'POST',
+            data: { rotate_track_secret: true },
+        })
+            .then((response) => {
+                setSettings({ ...DEFAULT_SETTINGS, ...response });
+                setSaving(false);
+                onNotice?.('success', '签名密钥已轮换');
+            })
+            .catch((err) => {
+                setSaving(false);
+                setError(err);
+                onNotice?.('error', err?.message || '签名密钥轮换失败');
+            });
     };
 
     return (
@@ -216,6 +270,29 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             }
                             help="关闭后可接受无签名的 /track 请求（风险更高）。"
                         />
+                        <div className="magick-ad-settings-secret">
+                            <div className="magick-ad-settings-secret__meta">
+                                <strong>签名密钥轮换：</strong>
+                                {secretRotatedLabel ? secretRotatedLabel : '未轮换'}
+                                {secretGraceLabel && (
+                                    <span className="magick-ad-settings-secret__hint">
+                                        （兼容窗口 {secretGraceLabel}）
+                                    </span>
+                                )}
+                            </div>
+                            {settings.tracking_secret_has_prev && (
+                                <Notice status="info" isDismissible={false}>
+                                    旧密钥在兼容窗口内仍可验证，避免已渲染页面立即失效。
+                                </Notice>
+                            )}
+                            <Button
+                                variant="secondary"
+                                disabled={loading || saving}
+                                onClick={rotateSecret}
+                            >
+                                轮换签名密钥
+                            </Button>
+                        </div>
                         <ToggleControl
                             label="启用缓存友好 Slot 轮播（客户端选择）"
                             checked={Boolean(settings.slot_client_resolver)}
@@ -257,8 +334,13 @@ const SystemSettingsPanel = ({ onNotice }) => {
                                     html_sandbox: value,
                                 })
                             }
-                            help="仅对 Full HTML 生效，默认关闭；开启后将隔离第三方脚本。"
+                            help="仅对 Full HTML 生效，建议保持开启以隔离第三方脚本。"
                         />
+                        {!settings.html_sandbox && (
+                            <Notice status="warning" isDismissible={false}>
+                                已关闭沙箱：Full HTML 将直接在页面执行脚本，风险较高。
+                            </Notice>
+                        )}
                         <TextareaControl
                             label="脚本白名单（系统级）"
                             value={formatDomainList(
@@ -286,6 +368,17 @@ const SystemSettingsPanel = ({ onNotice }) => {
                                 })
                             }
                             help="系统级黑名单优先生效，命中即移除脚本。"
+                        />
+                        <TextareaControl
+                            label="可信代理白名单"
+                            value={formatDomainList(settings.trusted_proxies)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    trusted_proxies: parseDomainList(value),
+                                })
+                            }
+                            help="仅当 REMOTE_ADDR 在此列表内，才信任 X-Forwarded-For/CF-Connecting-IP。支持 CIDR，每行一个。"
                         />
                     </PanelBody>
                     <PanelBody

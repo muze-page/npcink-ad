@@ -20,10 +20,12 @@ final class Track_Controller {
     private const KNOWN_ADS_CACHE_KEY = 'magick_ad_known_ads';
     private const KNOWN_ADS_CACHE_TTL = 120;
     private const MAX_AD_ID_LENGTH = 64;
+    private const MAX_EVENT_LENGTH = 32;
     private const MAX_SIG_LENGTH = 64;
     private const MAX_SIG_TS_LENGTH = 16;
     private const MAX_SIG_REV_LENGTH = 16;
     private const MAX_SESSION_ID_LENGTH = 64;
+    private const MAX_VARIANT_ID_LENGTH = 64;
     private const MAX_PAGE_URL_LENGTH = 255;
     private const MAX_PAGE_HASH_LENGTH = 128;
 
@@ -34,6 +36,8 @@ final class Track_Controller {
     private const OPTION_STATS_READY = 'magick_ad_stats_ready';
     private const OPTION_LOG_READY = 'magick_ad_stats_log_ready';
     private const OPTION_DIM_READY = 'magick_ad_stats_dim_ready';
+    private const OPTION_VARIANT_READY = 'magick_ad_stats_variant_ready';
+    private const OPTION_EVENT_READY = 'magick_ad_stats_event_ready';
     private const OPTION_DIAGNOSTICS_ENABLED = 'magick_ad_stats_diagnostics';
     private const OPTION_DIAGNOSTICS_EXPIRES = 'magick_ad_stats_diagnostics_expires_at';
     private const OPTION_DIAGNOSTICS_RETENTION = 'magick_ad_stats_diagnostics_retention_days';
@@ -126,6 +130,9 @@ final class Track_Controller {
         $slot = isset($payload['slot']) ? self::sanitize_slot($payload['slot']) : '';
         $position = isset($payload['position']) ? self::sanitize_position($payload['position']) : '';
         $container = isset($payload['container']) ? self::sanitize_container($payload['container']) : '';
+        $variant_id = isset($payload['variant_id'])
+            ? self::sanitize_short_text((string) $payload['variant_id'], self::MAX_VARIANT_ID_LENGTH)
+            : '';
 
         return array(
             'ad_id' => $ad_id,
@@ -139,6 +146,7 @@ final class Track_Controller {
             'slot' => $slot,
             'position' => $position,
             'container' => $container,
+            'variant_id' => $variant_id,
             'date' => current_time('Y-m-d'),
             'user_id' => get_current_user_id(),
         );
@@ -203,6 +211,8 @@ final class Track_Controller {
         $errors = 0;
         $stats_agg = array();
         $dim_agg = array();
+        $variant_agg = array();
+        $event_agg = array();
         $log_rows = array();
 
         foreach ($items as $item) {
@@ -217,7 +227,7 @@ final class Track_Controller {
                 continue;
             }
 
-            $result = self::collect_item($parsed, $stats_agg, $dim_agg, $log_rows);
+            $result = self::collect_item($parsed, $stats_agg, $dim_agg, $variant_agg, $event_agg, $log_rows);
             if (is_wp_error($result)) {
                 $errors += 1;
                 $status = $result->get_error_data()['status'] ?? 500;
@@ -254,6 +264,16 @@ final class Track_Controller {
             return $dim_written;
         }
 
+        $variant_written = self::write_variant_stats_bulk($variant_agg);
+        if (is_wp_error($variant_written)) {
+            return $variant_written;
+        }
+
+        $event_written = self::write_event_stats_bulk($event_agg);
+        if (is_wp_error($event_written)) {
+            return $event_written;
+        }
+
         if (self::diagnostics_enabled()) {
             self::write_logs_bulk($log_rows);
         }
@@ -266,7 +286,14 @@ final class Track_Controller {
         ));
     }
 
-    private static function collect_item(array $payload, array &$stats_agg, array &$dim_agg, array &$log_rows): array|WP_Error {
+    private static function collect_item(
+        array $payload,
+        array &$stats_agg,
+        array &$dim_agg,
+        array &$variant_agg,
+        array &$event_agg,
+        array &$log_rows
+    ): array|WP_Error {
         $signature_error = self::validate_signature(
             $payload['ad_id'],
             $payload['sig'],
@@ -372,6 +399,47 @@ final class Track_Controller {
                     $dim_agg[$dim_key]['impressions'] += 1;
                 }
             }
+
+            if (!empty($payload['variant_id'])) {
+                $variant_key = implode('|', array(
+                    $payload['date'],
+                    $payload['ad_id'],
+                    $payload['variant_id'],
+                ));
+                if (!isset($variant_agg[$variant_key])) {
+                    $variant_agg[$variant_key] = array(
+                        'date' => $payload['date'],
+                        'ad_id' => $payload['ad_id'],
+                        'variant_id' => $payload['variant_id'],
+                        'impressions' => 0,
+                        'clicks' => 0,
+                    );
+                }
+                if ($payload['event'] === 'click') {
+                    $variant_agg[$variant_key]['clicks'] += 1;
+                } else {
+                    $variant_agg[$variant_key]['impressions'] += 1;
+                }
+            }
+        }
+
+        if (self::should_record_event($payload['event'])) {
+            $event_key = implode('|', array(
+                $payload['date'],
+                $payload['ad_id'],
+                $payload['event'],
+                $payload['variant_id'] ?: '',
+            ));
+            if (!isset($event_agg[$event_key])) {
+                $event_agg[$event_key] = array(
+                    'date' => $payload['date'],
+                    'ad_id' => $payload['ad_id'],
+                    'event' => $payload['event'],
+                    'variant_id' => $payload['variant_id'] ?: '',
+                    'count' => 0,
+                );
+            }
+            $event_agg[$event_key]['count'] += 1;
         }
 
         if (self::diagnostics_enabled()) {
@@ -472,6 +540,30 @@ final class Track_Controller {
             if (is_wp_error($dim_written)) {
                 return $dim_written;
             }
+
+            if (!empty($payload['variant_id'])) {
+                $variant_written = self::write_variant_stats(
+                    $payload['ad_id'],
+                    $payload['variant_id'],
+                    $payload['event'],
+                    $payload['date']
+                );
+                if (is_wp_error($variant_written)) {
+                    return $variant_written;
+                }
+            }
+        }
+
+        if (self::should_record_event($payload['event'])) {
+            $event_written = self::write_event_stats(
+                $payload['ad_id'],
+                $payload['event'],
+                $payload['date'],
+                $payload['variant_id']
+            );
+            if (is_wp_error($event_written)) {
+                return $event_written;
+            }
         }
 
         if (self::diagnostics_enabled()) {
@@ -487,19 +579,41 @@ final class Track_Controller {
     }
 
     private static function normalize_event(string $event): ?string {
-        $event = sanitize_text_field($event);
-        return match ($event) {
+        $event = sanitize_key($event);
+        if ($event === '') {
+            return null;
+        }
+        if (self::MAX_EVENT_LENGTH > 0 && strlen($event) > self::MAX_EVENT_LENGTH) {
+            return null;
+        }
+        $known = array(
             'impression',
             'click',
             'video_play',
             'video_pause',
-            'video_complete' => $event,
-            default => null,
-        };
+            'video_complete',
+            'conversion',
+        );
+        if (in_array($event, $known, true)) {
+            return $event;
+        }
+        if (!preg_match('/^[a-z][a-z0-9_-]{0,31}$/', $event)) {
+            return null;
+        }
+        return $event;
     }
 
     private static function is_countable_event(string $event): bool {
         return in_array($event, array('impression', 'click'), true);
+    }
+
+    private static function is_video_event(string $event): bool {
+        return in_array($event, array('video_play', 'video_pause', 'video_complete'), true);
+    }
+
+    private static function should_record_event(string $event): bool {
+        $should = !self::is_countable_event($event) && !self::is_video_event($event);
+        return (bool) apply_filters('magick_ad_track_record_event', $should, $event);
     }
 
     private static function sanitize_dimension(mixed $value): string {
@@ -658,13 +772,13 @@ final class Track_Controller {
     private static function get_request_ip(): string {
         $ip = '';
         $trust_proxy = (bool) apply_filters('magick_ad_track_trust_proxy', false, $_SERVER);
-        if ($trust_proxy && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $parts = explode(',', sanitize_text_field(wp_unslash($_SERVER['HTTP_X_FORWARDED_FOR'])));
-            $ip = trim($parts[0]);
-        }
-        if ($ip === '' && !empty($_SERVER['REMOTE_ADDR'])) {
-            $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR']));
-        }
+        $trusted = get_option('magick_ad_trusted_proxies', array());
+        $trusted = \MagickAD\Utils\Ip::normalize_list($trusted);
+        $trusted = apply_filters('magick_ad_trusted_proxies', $trusted, $_SERVER);
+        $ip = \MagickAD\Utils\Ip::extract_client_ip(
+            $_SERVER,
+            $trust_proxy ? $trusted : array()
+        );
         $ip = apply_filters('magick_ad_track_client_ip', $ip);
         $ip = is_string($ip) ? $ip : '';
         return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '';
@@ -940,6 +1054,32 @@ final class Track_Controller {
         return true;
     }
 
+    private static function ensure_variant_ready(): bool {
+        $variant_ready = (string) get_option(self::OPTION_VARIANT_READY, '0');
+        if ($variant_ready === (string) MAGICK_AD_DB_VERSION) {
+            return true;
+        }
+        $status = Schema::get_table_status();
+        if (empty($status['variant'])) {
+            return false;
+        }
+        update_option(self::OPTION_VARIANT_READY, (string) MAGICK_AD_DB_VERSION, false);
+        return true;
+    }
+
+    private static function ensure_event_ready(): bool {
+        $event_ready = (string) get_option(self::OPTION_EVENT_READY, '0');
+        if ($event_ready === (string) MAGICK_AD_DB_VERSION) {
+            return true;
+        }
+        $status = Schema::get_table_status();
+        if (empty($status['event'])) {
+            return false;
+        }
+        update_option(self::OPTION_EVENT_READY, (string) MAGICK_AD_DB_VERSION, false);
+        return true;
+    }
+
     private static function write_stats(string $ad_id, string $event, string $date): WP_Error|true {
         if (Stats_Accumulator::record_stats($ad_id, $event, $date)) {
             return true;
@@ -970,6 +1110,87 @@ final class Track_Controller {
         return true;
     }
 
+    private static function write_variant_stats(
+        string $ad_id,
+        string $variant_id,
+        string $event,
+        string $date
+    ): WP_Error|true {
+        if (!self::ensure_variant_ready()) {
+            return true;
+        }
+        if ($variant_id === '') {
+            return true;
+        }
+        if (Stats_Accumulator::record_variant($ad_id, $variant_id, $event, $date)) {
+            return true;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'magick_ad_stats_variant';
+        $impressions = $event === 'impression' ? 1 : 0;
+        $clicks = $event === 'click' ? 1 : 0;
+
+        $sql = $wpdb->prepare(
+            "INSERT INTO {$table} (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
+             VALUES (%s, %s, %s, %d, %d)
+             ON DUPLICATE KEY UPDATE
+                impressions = impressions + VALUES(impressions),
+                clicks = clicks + VALUES(clicks)",
+            $date,
+            $ad_id,
+            $variant_id,
+            $impressions,
+            $clicks
+        );
+
+        $result = $wpdb->query($sql);
+        if ($result === false) {
+            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+        }
+
+        return true;
+    }
+
+    private static function write_event_stats(
+        string $ad_id,
+        string $event,
+        string $date,
+        string $variant_id = ''
+    ): WP_Error|true {
+        if (!self::ensure_event_ready()) {
+            return true;
+        }
+        if ($ad_id === '' || $event === '' || $date === '') {
+            return true;
+        }
+        if (Stats_Accumulator::record_event($ad_id, $event, $date, $variant_id ?: '', 1)) {
+            return true;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'magick_ad_stats_event';
+
+        $sql = $wpdb->prepare(
+            "INSERT INTO {$table} (`date`, `ad_id`, `event`, `variant_id`, `count`)
+             VALUES (%s, %s, %s, %s, %d)
+             ON DUPLICATE KEY UPDATE
+                count = count + VALUES(count)",
+            $date,
+            $ad_id,
+            $event,
+            $variant_id ?: '',
+            1
+        );
+
+        $result = $wpdb->query($sql);
+        if ($result === false) {
+            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+        }
+
+        return true;
+    }
+
     private static function write_stats_bulk(array $stats_agg): WP_Error|true {
         if (empty($stats_agg)) {
             return true;
@@ -985,11 +1206,11 @@ final class Track_Controller {
                 if ($date === '' || $ad_id === '') {
                     continue;
                 }
-                for ($i = 0; $i < $impressions; $i += 1) {
-                    Stats_Accumulator::record_stats($ad_id, 'impression', $date);
+                if ($impressions > 0) {
+                    Stats_Accumulator::record_stats($ad_id, 'impression', $date, $impressions);
                 }
-                for ($i = 0; $i < $clicks; $i += 1) {
-                    Stats_Accumulator::record_stats($ad_id, 'click', $date);
+                if ($clicks > 0) {
+                    Stats_Accumulator::record_stats($ad_id, 'click', $date, $clicks);
                 }
             }
             return true;
@@ -1020,6 +1241,146 @@ final class Track_Controller {
         $sql = "INSERT INTO {$table} (`date`, `ad_id`, `impressions`, `clicks`) VALUES ";
         $sql .= implode(', ', $placeholders);
         $sql .= " ON DUPLICATE KEY UPDATE impressions = impressions + VALUES(impressions), clicks = clicks + VALUES(clicks)";
+
+        $prepared = $wpdb->prepare($sql, $values);
+        $result = $wpdb->query($prepared);
+        if ($result === false) {
+            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+        }
+
+        return true;
+    }
+
+    private static function write_variant_stats_bulk(array $variant_agg): WP_Error|true {
+        if (empty($variant_agg)) {
+            return true;
+        }
+        if (!self::ensure_variant_ready()) {
+            return true;
+        }
+
+        if (Stats_Accumulator::enabled()) {
+            foreach ($variant_agg as $row) {
+                $row = is_array($row) ? $row : array();
+                $date = isset($row['date']) ? (string) $row['date'] : '';
+                $ad_id = isset($row['ad_id']) ? (string) $row['ad_id'] : '';
+                $variant_id = isset($row['variant_id']) ? (string) $row['variant_id'] : '';
+                $impressions = (int) ($row['impressions'] ?? 0);
+                $clicks = (int) ($row['clicks'] ?? 0);
+                if ($date === '' || $ad_id === '' || $variant_id === '') {
+                    continue;
+                }
+                if ($impressions > 0) {
+                    Stats_Accumulator::record_variant(
+                        $ad_id,
+                        $variant_id,
+                        'impression',
+                        $date,
+                        $impressions
+                    );
+                }
+                if ($clicks > 0) {
+                    Stats_Accumulator::record_variant(
+                        $ad_id,
+                        $variant_id,
+                        'click',
+                        $date,
+                        $clicks
+                    );
+                }
+            }
+            return true;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'magick_ad_stats_variant';
+        $values = array();
+        $placeholders = array();
+
+        foreach ($variant_agg as $row) {
+            $row = is_array($row) ? $row : array();
+            $date = isset($row['date']) ? (string) $row['date'] : '';
+            $ad_id = isset($row['ad_id']) ? (string) $row['ad_id'] : '';
+            $variant_id = isset($row['variant_id']) ? (string) $row['variant_id'] : '';
+            $impressions = (int) ($row['impressions'] ?? 0);
+            $clicks = (int) ($row['clicks'] ?? 0);
+            if ($date === '' || $ad_id === '' || $variant_id === '') {
+                continue;
+            }
+            if ($impressions === 0 && $clicks === 0) {
+                continue;
+            }
+            $placeholders[] = '(%s, %s, %s, %d, %d)';
+            array_push($values, $date, $ad_id, $variant_id, $impressions, $clicks);
+        }
+
+        if (empty($placeholders)) {
+            return true;
+        }
+
+        $sql = "INSERT INTO {$table} (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`) VALUES ";
+        $sql .= implode(', ', $placeholders);
+        $sql .= " ON DUPLICATE KEY UPDATE impressions = impressions + VALUES(impressions), clicks = clicks + VALUES(clicks)";
+
+        $prepared = $wpdb->prepare($sql, $values);
+        $result = $wpdb->query($prepared);
+        if ($result === false) {
+            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+        }
+
+        return true;
+    }
+
+    private static function write_event_stats_bulk(array $event_agg): WP_Error|true {
+        if (empty($event_agg)) {
+            return true;
+        }
+        if (!self::ensure_event_ready()) {
+            return true;
+        }
+
+        if (Stats_Accumulator::enabled()) {
+            foreach ($event_agg as $row) {
+                $row = is_array($row) ? $row : array();
+                $date = isset($row['date']) ? (string) $row['date'] : '';
+                $ad_id = isset($row['ad_id']) ? (string) $row['ad_id'] : '';
+                $event = isset($row['event']) ? (string) $row['event'] : '';
+                $variant_id = isset($row['variant_id']) ? (string) $row['variant_id'] : '';
+                $count = (int) ($row['count'] ?? 0);
+                if ($date === '' || $ad_id === '' || $event === '' || $count < 1) {
+                    continue;
+                }
+                Stats_Accumulator::record_event($ad_id, $event, $date, $variant_id, $count);
+            }
+            return true;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'magick_ad_stats_event';
+        $values = array();
+        $placeholders = array();
+
+        foreach ($event_agg as $row) {
+            $row = is_array($row) ? $row : array();
+            $date = isset($row['date']) ? (string) $row['date'] : '';
+            $ad_id = isset($row['ad_id']) ? (string) $row['ad_id'] : '';
+            $event = isset($row['event']) ? (string) $row['event'] : '';
+            $variant_id = isset($row['variant_id']) ? (string) $row['variant_id'] : '';
+            $count = (int) ($row['count'] ?? 0);
+            if ($date === '' || $ad_id === '' || $event === '' || $count < 1) {
+                continue;
+            }
+            $placeholders[] = '(%s, %s, %s, %s, %d)';
+            array_push($values, $date, $ad_id, $event, $variant_id, $count);
+        }
+
+        if (empty($placeholders)) {
+            return true;
+        }
+
+        $sql = "INSERT INTO {$table} (`date`, `ad_id`, `event`, `variant_id`, `count`) VALUES ";
+        $sql .= implode(', ', $placeholders);
+        $sql .= " ON DUPLICATE KEY UPDATE count = count + VALUES(count)";
 
         $prepared = $wpdb->prepare($sql, $values);
         $result = $wpdb->query($prepared);
@@ -1097,11 +1458,27 @@ final class Track_Controller {
                 if ($slot === '' && $position === '' && $container === '') {
                     continue;
                 }
-                for ($i = 0; $i < $impressions; $i += 1) {
-                    Stats_Accumulator::record_dimension($ad_id, 'impression', $date, $slot, $position, $container);
+                if ($impressions > 0) {
+                    Stats_Accumulator::record_dimension(
+                        $ad_id,
+                        'impression',
+                        $date,
+                        $slot,
+                        $position,
+                        $container,
+                        $impressions
+                    );
                 }
-                for ($i = 0; $i < $clicks; $i += 1) {
-                    Stats_Accumulator::record_dimension($ad_id, 'click', $date, $slot, $position, $container);
+                if ($clicks > 0) {
+                    Stats_Accumulator::record_dimension(
+                        $ad_id,
+                        'click',
+                        $date,
+                        $slot,
+                        $position,
+                        $container,
+                        $clicks
+                    );
                 }
             }
             return true;
