@@ -1370,6 +1370,36 @@
     line-height: 1.5;
 }
 
+.magick-ad-panel-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+}
+
+.magick-ad-panel-note__trigger.components-button {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 8px;
+    color: #667085;
+}
+
+.magick-ad-panel-note__content {
+    min-width: 260px;
+    max-width: 360px;
+    padding: 12px;
+    font-size: 12px;
+    color: #1f2937;
+    line-height: 1.6;
+}
+
+.magick-ad-panel-note__content p {
+    margin: 0 0 8px;
+}
+
 .magick-ad-node-placement {
     margin-top: 16px;
     padding-top: 12px;

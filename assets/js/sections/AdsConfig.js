@@ -7,6 +7,7 @@ import {
     ColorPicker,
     ComboboxControl,
     DropdownMenu,
+    Dropdown,
     FormTokenField,
     Modal,
     MenuGroup,
@@ -29,6 +30,7 @@ import {
     cog,
     external,
     globe,
+    info,
     megaphone,
     moreHorizontal,
 } from '@wordpress/icons';
@@ -185,6 +187,7 @@ const AdsConfig = () => {
     const [previewLoading, setPreviewLoading] = useState(false);
     const [previewLogin, setPreviewLogin] = useState('auto');
     const [previewUsePage, setPreviewUsePage] = useState(false);
+    const [imageTab, setImageTab] = useState('content');
     const [pickerConfirmOpen, setPickerConfirmOpen] = useState(false);
     const [pickerType, setPickerType] = useState('id');
     const [pickerValue, setPickerValue] = useState('');
@@ -776,6 +779,11 @@ const AdsConfig = () => {
                 ...updates,
             },
         });
+    };
+
+    const jumpToImageSettings = () => {
+        handleUpdateOptions({ creative_type: 'image' });
+        setImageTab('settings');
     };
 
     const updateEditorMode = (mode) => {
@@ -1757,9 +1765,14 @@ const AdsConfig = () => {
                                             { name: 'content', title: '内容' },
                                             { name: 'settings', title: '配置' },
                                         ]}
+                                        initialTabName={imageTab}
+                                        onSelect={(name) =>
+                                            setImageTab(name)
+                                        }
+                                        key={imageTab}
                                     >
-                                        {(imageTab) =>
-                                            imageTab.name === 'content' ? (
+                                        {(imageTabView) =>
+                                            imageTabView.name === 'content' ? (
                                                 <>
                                                     <LinkPicker
                                                         value={
@@ -2035,14 +2048,9 @@ const AdsConfig = () => {
                                             status="info"
                                             isDismissible={false}
                                         >
-                                            当前为设计模式，HTML 默认为安全模式。
+                                            当前是“设计模式”：HTML 强制使用
+                                            “安全模式（过滤脚本）”。
                                             如需启用脚本，请切换到“专家模式”。
-                                            当前模式：
-                                            {selectedAd.options?.html_mode ===
-                                            'full'
-                                                ? ' 完全模式'
-                                                : ' 安全模式'}
-                                            。
                                         </Notice>
                                     ) : null}
                                     {selectedAd.options?.html_mode ===
@@ -2747,7 +2755,55 @@ const AdsConfig = () => {
                                 return (
                                     <Panel>
                                         <PanelBody
-                                            title="容器外观"
+                                            title={
+                                                <div className="magick-ad-panel-title">
+                                                    <span>容器外观</span>
+                                                    {!isHeadPlacement && (
+                                                        <Dropdown
+                                                            className="magick-ad-panel-note"
+                                                            position="bottom right"
+                                                            renderToggle={({
+                                                                isOpen,
+                                                                onToggle,
+                                                            }) => (
+                                                                <Button
+                                                                    className="magick-ad-panel-note__trigger"
+                                                                    icon={info}
+                                                                    label="说明"
+                                                                    variant="tertiary"
+                                                                    size="small"
+                                                                    aria-expanded={isOpen}
+                                                                    onClick={(event) => {
+                                                                        event.stopPropagation();
+                                                                        onToggle();
+                                                                    }}
+                                                                />
+                                                            )}
+                                                            renderContent={({
+                                                                onClose,
+                                                            }) => (
+                                                                <div className="magick-ad-panel-note__content">
+                                                                    <p>
+                                                                        容器外观仅作用于包裹层（div），不会影响图片本体。
+                                                                        图片尺寸、圆角与外边距请在“图片配置”里调整。
+                                                                    </p>
+                                                                    <Button
+                                                                        variant="secondary"
+                                                                        size="small"
+                                                                        onClick={(event) => {
+                                                                            event.stopPropagation();
+                                                                            jumpToImageSettings();
+                                                                            onClose();
+                                                                        }}
+                                                                    >
+                                                                        去图片配置
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+                                                        />
+                                                    )}
+                                                </div>
+                                            }
                                             initialOpen
                                         >
                                             {isHeadPlacement && (
@@ -2779,13 +2835,6 @@ const AdsConfig = () => {
                                             )}
                                             {!isHeadPlacement && (
                                                 <>
-                                                    <Notice
-                                                        status="info"
-                                                        isDismissible={false}
-                                                    >
-                                                        容器外观仅作用于包裹层（div），不影响图片本体。图片尺寸、
-                                                        圆角与外边距请在“图片配置”里调整。
-                                                    </Notice>
                                                     <TabPanel
                                                         className="magick-ad-sub-tabs"
                                                         tabs={[
