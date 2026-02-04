@@ -35,7 +35,6 @@ const Layout = ({
     onUpdateRule,
     leftSidebar,
     rightSidebar,
-    contentHeader,
     contentPanels,
     preview,
     previewTarget,
@@ -823,16 +822,6 @@ const Layout = ({
                             }}
                         >
                             <div className="magick-ad-editor-left">
-                                <div className="magick-ad-editor-header">
-                                    <div className="magick-ad-editor-title">
-                                        内容配置
-                                    </div>
-                                    {contentHeader ? (
-                                        <div className="magick-ad-editor-header-actions">
-                                            {contentHeader}
-                                        </div>
-                                    ) : null}
-                                </div>
                                 {contentPanels || (
                                     <Panel>
                                         <PanelBody title="内容配置" initialOpen>

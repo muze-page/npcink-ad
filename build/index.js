@@ -44,7 +44,6 @@ const Layout = ({
   onUpdateRule,
   leftSidebar,
   rightSidebar,
-  contentHeader,
   contentPanels,
   preview,
   previewTarget,
@@ -577,13 +576,7 @@ const Layout = ({
     }
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-editor-left"
-  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-    className: "magick-ad-editor-header"
-  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-    className: "magick-ad-editor-title"
-  }, "\u5185\u5BB9\u914D\u7F6E"), contentHeader ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-    className: "magick-ad-editor-header-actions"
-  }, contentHeader) : null), contentPanels || (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+  }, contentPanels || (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u5185\u5BB9\u914D\u7F6E",
     initialOpen: true
   }, "\u5185\u5BB9\u914D\u7F6E\u533A\u57DF"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
@@ -5358,7 +5351,6 @@ const AdsConfig = () => {
     return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
       className: `magick-ad-tab-panel ${activeContentType === 'image' ? '' : 'is-hidden'}`
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-      title: "\u5185\u5BB9\u914D\u7F6E",
       initialOpen: true
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
       className: "magick-ad-image-tabs",
@@ -5468,7 +5460,6 @@ const AdsConfig = () => {
     })))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
       className: `magick-ad-tab-panel ${activeContentType === 'html' ? '' : 'is-hidden'}`
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-      title: "\u5185\u5BB9\u914D\u7F6E",
       initialOpen: true
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
       className: "magick-ad-html-tabs",
@@ -5650,7 +5641,6 @@ const AdsConfig = () => {
       }
       return null;
     }))))), activeContentType === 'video' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-      title: "\u5185\u5BB9\u914D\u7F6E",
       initialOpen: true
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
       className: "magick-ad-video-tabs",
@@ -5858,7 +5848,6 @@ const AdsConfig = () => {
         return null;
       });
     }))), activeContentType === 'block' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-      title: "\u5185\u5BB9\u914D\u7F6E",
       initialOpen: true
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
       className: "magick-ad-block-tabs",
@@ -5873,298 +5862,328 @@ const AdsConfig = () => {
       onSelect: name => setBlockTab(name),
       key: blockTab
     }, blockTabView => {
-      var _blockSettings$paddin, _blockSettings$radius, _blockSettings$border, _blockSettings$max_wi, _blockSettings$font_s, _blockSettings$headin, _blockSettings$headin2, _blockSettings$subhea, _blockSettings$subhea2, _blockSettings$cta_ra;
       const blockSettings = selectedAd.content?.block_settings || {};
       return blockTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_BlockEditor__WEBPACK_IMPORTED_MODULE_17__["default"], {
         value: selectedAd.content?.blocks || '',
         onChange: value => handleUpdateContent({
           blocks: value
         })
-      }), renderVariantSection('block')) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-field"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-        className: "magick-ad-field__label"
-      }, "\u80CC\u666F\u56FE"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
-        value: blockSettings.background_image || {},
-        onChange: value => handleUpdateBlockSettings({
-          background_image: value
-        })
-      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-field"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-        className: "magick-ad-field__label"
-      }, "\u80CC\u666F\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
-        color: blockSettings.background || 'transparent',
-        onChangeComplete: value => handleUpdateBlockSettings({
-          background: formatColorValue(value)
-        }),
-        enableAlpha: true
-      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-        label: "\u80CC\u666F\u6E10\u53D8\uFF08\u53EF\u9009\uFF09",
-        value: blockSettings.background_gradient || '',
-        onChange: value => handleUpdateBlockSettings({
-          background_gradient: value
-        }),
-        help: "\u4F8B\u5982\uFF1Alinear-gradient(135deg,#60a5fa,#a78bfa)"
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-field"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-        className: "magick-ad-field__label"
-      }, "\u6587\u5B57\u989C\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
-        color: blockSettings.text_color || '#1d2327',
-        onChangeComplete: value => handleUpdateBlockSettings({
-          text_color: formatColorValue(value)
-        }),
-        enableAlpha: true
-      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u5E03\u5C40",
-        value: blockSettings.layout || 'content',
-        options: [{
-          label: '仅内容',
-          value: 'content'
+      }), renderVariantSection('block')) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
+        className: "magick-ad-block-settings-tabs",
+        tabs: [{
+          name: 'style',
+          title: '外观'
         }, {
-          label: '上图下文',
-          value: 'stack'
+          name: 'layout',
+          title: '布局'
         }, {
-          label: '左图右文',
-          value: 'split'
+          name: 'text',
+          title: '标题/副标题'
         }, {
-          label: '右图左文',
-          value: 'split-reverse'
+          name: 'cta',
+          title: 'CTA'
         }],
-        onChange: value => handleUpdateBlockSettings({
-          layout: value
-        })
-      }), blockSettings.layout && blockSettings.layout !== 'content' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-field"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-        className: "magick-ad-field__label"
-      }, "\u5185\u5BB9\u914D\u56FE"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
-        value: blockSettings.media_image || {},
-        onChange: value => handleUpdateBlockSettings({
-          media_image: value
-        })
-      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-image-grid"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-        label: "\u5185\u8FB9\u8DDD",
-        min: 0,
-        max: 80,
-        value: (_blockSettings$paddin = blockSettings.padding) !== null && _blockSettings$paddin !== void 0 ? _blockSettings$paddin : 0,
-        onChange: value => handleUpdateBlockSettings({
-          padding: Number(value)
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-        label: "\u5706\u89D2",
-        min: 0,
-        max: 50,
-        value: (_blockSettings$radius = blockSettings.radius) !== null && _blockSettings$radius !== void 0 ? _blockSettings$radius : 0,
-        onChange: value => handleUpdateBlockSettings({
-          radius: Number(value)
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-        label: "\u8FB9\u6846",
-        min: 0,
-        max: 12,
-        value: (_blockSettings$border = blockSettings.border_width) !== null && _blockSettings$border !== void 0 ? _blockSettings$border : 0,
-        onChange: value => handleUpdateBlockSettings({
-          border_width: Number(value)
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-        label: "\u6700\u5927\u5BBD\u5EA6",
-        min: 0,
-        max: 1400,
-        value: (_blockSettings$max_wi = blockSettings.max_width) !== null && _blockSettings$max_wi !== void 0 ? _blockSettings$max_wi : 0,
-        onChange: value => handleUpdateBlockSettings({
-          max_width: Number(value)
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-        label: "\u5B57\u4F53\u5927\u5C0F",
-        min: 10,
-        max: 48,
-        value: (_blockSettings$font_s = blockSettings.font_size) !== null && _blockSettings$font_s !== void 0 ? _blockSettings$font_s : 0,
-        onChange: value => handleUpdateBlockSettings({
-          font_size: Number(value)
-        })
-      })), blockSettings.border_width > 0 && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-field"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-        className: "magick-ad-field__label"
-      }, "\u8FB9\u6846\u989C\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
-        color: blockSettings.border_color || '#d0d7e2',
-        onChangeComplete: value => handleUpdateBlockSettings({
-          border_color: formatColorValue(value)
-        })
-      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u9634\u5F71",
-        value: blockSettings.shadow || 'none',
-        options: _constants_options__WEBPACK_IMPORTED_MODULE_28__.SHADOW_OPTIONS,
-        onChange: value => handleUpdateBlockSettings({
-          shadow: value
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-        label: "\u5B57\u4F53\uFF08\u53EF\u9009\uFF09",
-        value: blockSettings.font_family || '',
-        onChange: value => handleUpdateBlockSettings({
-          font_family: value
-        }),
-        help: "\u4F8B\u5982\uFF1APingFang SC, Arial, sans-serif"
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u5BF9\u9F50\u65B9\u5F0F",
-        value: blockSettings.align || '',
-        options: [{
-          label: '默认',
-          value: ''
-        }, {
-          label: '居中',
-          value: 'center'
-        }],
-        onChange: value => handleUpdateBlockSettings({
-          align: value
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-section-divider"
-      }, "\u6807\u9898/\u526F\u6807\u9898"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-        label: "\u6807\u9898",
-        value: blockSettings.heading || '',
-        onChange: value => handleUpdateBlockSettings({
-          heading: value
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-        label: "\u526F\u6807\u9898",
-        value: blockSettings.subheading || '',
-        onChange: value => handleUpdateBlockSettings({
-          subheading: value
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-image-grid"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-        label: "\u6807\u9898\u5B57\u53F7",
-        min: 12,
-        max: 48,
-        value: (_blockSettings$headin = blockSettings.heading_size) !== null && _blockSettings$headin !== void 0 ? _blockSettings$headin : 0,
-        onChange: value => handleUpdateBlockSettings({
-          heading_size: Number(value)
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-        label: "\u6807\u9898\u884C\u9AD8",
-        min: 1,
-        max: 2.4,
-        step: 0.1,
-        value: (_blockSettings$headin2 = blockSettings.heading_line_height) !== null && _blockSettings$headin2 !== void 0 ? _blockSettings$headin2 : 0,
-        onChange: value => handleUpdateBlockSettings({
-          heading_line_height: Number(value)
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u6807\u9898\u5B57\u91CD",
-        value: blockSettings.heading_weight || 'semibold',
-        options: [{
-          label: 'Normal',
-          value: 'normal'
-        }, {
-          label: 'Medium',
-          value: 'medium'
-        }, {
-          label: 'Semibold',
-          value: 'semibold'
-        }, {
-          label: 'Bold',
-          value: 'bold'
-        }, {
-          label: 'Black',
-          value: 'black'
-        }],
-        onChange: value => handleUpdateBlockSettings({
-          heading_weight: value
-        })
-      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-image-grid"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-        label: "\u526F\u6807\u9898\u5B57\u53F7",
-        min: 10,
-        max: 32,
-        value: (_blockSettings$subhea = blockSettings.subheading_size) !== null && _blockSettings$subhea !== void 0 ? _blockSettings$subhea : 0,
-        onChange: value => handleUpdateBlockSettings({
-          subheading_size: Number(value)
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-        label: "\u526F\u6807\u9898\u884C\u9AD8",
-        min: 1,
-        max: 2.4,
-        step: 0.1,
-        value: (_blockSettings$subhea2 = blockSettings.subheading_line_height) !== null && _blockSettings$subhea2 !== void 0 ? _blockSettings$subhea2 : 0,
-        onChange: value => handleUpdateBlockSettings({
-          subheading_line_height: Number(value)
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u526F\u6807\u9898\u5B57\u91CD",
-        value: blockSettings.subheading_weight || 'normal',
-        options: [{
-          label: 'Normal',
-          value: 'normal'
-        }, {
-          label: 'Medium',
-          value: 'medium'
-        }, {
-          label: 'Semibold',
-          value: 'semibold'
-        }, {
-          label: 'Bold',
-          value: 'bold'
-        }, {
-          label: 'Black',
-          value: 'black'
-        }],
-        onChange: value => handleUpdateBlockSettings({
-          subheading_weight: value
-        })
-      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-section-divider"
-      }, "CTA \u6309\u94AE"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-        label: "\u6309\u94AE\u6587\u6848",
-        value: blockSettings.cta_text || '',
-        onChange: value => handleUpdateBlockSettings({
-          cta_text: value
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_LinkPicker__WEBPACK_IMPORTED_MODULE_15__["default"], {
-        value: blockSettings.cta_link || '',
-        target: blockSettings.cta_target,
-        onChange: ({
-          url,
-          target
-        }) => handleUpdateBlockSettings({
-          cta_link: url,
-          cta_target: Boolean(target)
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-image-grid"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-field"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-        className: "magick-ad-field__label"
-      }, "\u6309\u94AE\u80CC\u666F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
-        color: blockSettings.cta_background || '#2563eb',
-        onChangeComplete: value => handleUpdateBlockSettings({
-          cta_background: formatColorValue(value)
-        })
-      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-        className: "magick-ad-field"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-        className: "magick-ad-field__label"
-      }, "\u6309\u94AE\u6587\u5B57"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
-        color: blockSettings.cta_text_color || '#ffffff',
-        onChangeComplete: value => handleUpdateBlockSettings({
-          cta_text_color: formatColorValue(value)
-        })
-      }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-        label: "\u6309\u94AE\u5706\u89D2",
-        min: 0,
-        max: 999,
-        value: (_blockSettings$cta_ra = blockSettings.cta_radius) !== null && _blockSettings$cta_ra !== void 0 ? _blockSettings$cta_ra : 0,
-        onChange: value => handleUpdateBlockSettings({
-          cta_radius: Number(value)
-        })
-      }));
+        initialTabName: blockSettingsTab,
+        onSelect: name => setBlockSettingsTab(name),
+        key: blockSettingsTab
+      }, settingsTabView => {
+        if (settingsTabView.name === 'style') {
+          var _blockSettings$paddin, _blockSettings$radius, _blockSettings$border, _blockSettings$max_wi, _blockSettings$font_s;
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u80CC\u666F\u56FE"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
+            value: blockSettings.background_image || {},
+            onChange: value => handleUpdateBlockSettings({
+              background_image: value
+            })
+          })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u80CC\u666F\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
+            color: blockSettings.background || 'transparent',
+            onChangeComplete: value => handleUpdateBlockSettings({
+              background: formatColorValue(value)
+            }),
+            enableAlpha: true
+          })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+            label: "\u80CC\u666F\u6E10\u53D8\uFF08\u53EF\u9009\uFF09",
+            value: blockSettings.background_gradient || '',
+            onChange: value => handleUpdateBlockSettings({
+              background_gradient: value
+            }),
+            help: "\u4F8B\u5982\uFF1Alinear-gradient(135deg,#60a5fa,#a78bfa)"
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u6587\u5B57\u989C\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
+            color: blockSettings.text_color || '#1d2327',
+            onChangeComplete: value => handleUpdateBlockSettings({
+              text_color: formatColorValue(value)
+            }),
+            enableAlpha: true
+          })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-image-grid"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u5185\u8FB9\u8DDD",
+            min: 0,
+            max: 80,
+            value: (_blockSettings$paddin = blockSettings.padding) !== null && _blockSettings$paddin !== void 0 ? _blockSettings$paddin : 0,
+            onChange: value => handleUpdateBlockSettings({
+              padding: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u5706\u89D2",
+            min: 0,
+            max: 50,
+            value: (_blockSettings$radius = blockSettings.radius) !== null && _blockSettings$radius !== void 0 ? _blockSettings$radius : 0,
+            onChange: value => handleUpdateBlockSettings({
+              radius: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u8FB9\u6846",
+            min: 0,
+            max: 12,
+            value: (_blockSettings$border = blockSettings.border_width) !== null && _blockSettings$border !== void 0 ? _blockSettings$border : 0,
+            onChange: value => handleUpdateBlockSettings({
+              border_width: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u6700\u5927\u5BBD\u5EA6",
+            min: 0,
+            max: 1400,
+            value: (_blockSettings$max_wi = blockSettings.max_width) !== null && _blockSettings$max_wi !== void 0 ? _blockSettings$max_wi : 0,
+            onChange: value => handleUpdateBlockSettings({
+              max_width: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u5B57\u4F53\u5927\u5C0F",
+            min: 10,
+            max: 48,
+            value: (_blockSettings$font_s = blockSettings.font_size) !== null && _blockSettings$font_s !== void 0 ? _blockSettings$font_s : 0,
+            onChange: value => handleUpdateBlockSettings({
+              font_size: Number(value)
+            })
+          })), blockSettings.border_width > 0 && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u8FB9\u6846\u989C\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
+            color: blockSettings.border_color || '#d0d7e2',
+            onChangeComplete: value => handleUpdateBlockSettings({
+              border_color: formatColorValue(value)
+            })
+          })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u9634\u5F71",
+            value: blockSettings.shadow || 'none',
+            options: _constants_options__WEBPACK_IMPORTED_MODULE_28__.SHADOW_OPTIONS,
+            onChange: value => handleUpdateBlockSettings({
+              shadow: value
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+            label: "\u5B57\u4F53\uFF08\u53EF\u9009\uFF09",
+            value: blockSettings.font_family || '',
+            onChange: value => handleUpdateBlockSettings({
+              font_family: value
+            }),
+            help: "\u4F8B\u5982\uFF1APingFang SC, Arial, sans-serif"
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u5BF9\u9F50\u65B9\u5F0F",
+            value: blockSettings.align || '',
+            options: [{
+              label: '默认',
+              value: ''
+            }, {
+              label: '居中',
+              value: 'center'
+            }],
+            onChange: value => handleUpdateBlockSettings({
+              align: value
+            })
+          }));
+        }
+        if (settingsTabView.name === 'layout') {
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u5E03\u5C40",
+            value: blockSettings.layout || 'content',
+            options: [{
+              label: '仅内容',
+              value: 'content'
+            }, {
+              label: '上图下文',
+              value: 'stack'
+            }, {
+              label: '左图右文',
+              value: 'split'
+            }, {
+              label: '右图左文',
+              value: 'split-reverse'
+            }],
+            onChange: value => handleUpdateBlockSettings({
+              layout: value
+            })
+          }), blockSettings.layout && blockSettings.layout !== 'content' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u5185\u5BB9\u914D\u56FE"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
+            value: blockSettings.media_image || {},
+            onChange: value => handleUpdateBlockSettings({
+              media_image: value
+            })
+          })));
+        }
+        if (settingsTabView.name === 'text') {
+          var _blockSettings$headin, _blockSettings$headin2, _blockSettings$subhea, _blockSettings$subhea2;
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+            label: "\u6807\u9898",
+            value: blockSettings.heading || '',
+            onChange: value => handleUpdateBlockSettings({
+              heading: value
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+            label: "\u526F\u6807\u9898",
+            value: blockSettings.subheading || '',
+            onChange: value => handleUpdateBlockSettings({
+              subheading: value
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-image-grid"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u6807\u9898\u5B57\u53F7",
+            min: 12,
+            max: 48,
+            value: (_blockSettings$headin = blockSettings.heading_size) !== null && _blockSettings$headin !== void 0 ? _blockSettings$headin : 0,
+            onChange: value => handleUpdateBlockSettings({
+              heading_size: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u6807\u9898\u884C\u9AD8",
+            min: 1,
+            max: 2.4,
+            step: 0.1,
+            value: (_blockSettings$headin2 = blockSettings.heading_line_height) !== null && _blockSettings$headin2 !== void 0 ? _blockSettings$headin2 : 0,
+            onChange: value => handleUpdateBlockSettings({
+              heading_line_height: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u6807\u9898\u5B57\u91CD",
+            value: blockSettings.heading_weight || 'semibold',
+            options: [{
+              label: 'Normal',
+              value: 'normal'
+            }, {
+              label: 'Medium',
+              value: 'medium'
+            }, {
+              label: 'Semibold',
+              value: 'semibold'
+            }, {
+              label: 'Bold',
+              value: 'bold'
+            }, {
+              label: 'Black',
+              value: 'black'
+            }],
+            onChange: value => handleUpdateBlockSettings({
+              heading_weight: value
+            })
+          })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-image-grid"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u526F\u6807\u9898\u5B57\u53F7",
+            min: 10,
+            max: 32,
+            value: (_blockSettings$subhea = blockSettings.subheading_size) !== null && _blockSettings$subhea !== void 0 ? _blockSettings$subhea : 0,
+            onChange: value => handleUpdateBlockSettings({
+              subheading_size: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u526F\u6807\u9898\u884C\u9AD8",
+            min: 1,
+            max: 2.4,
+            step: 0.1,
+            value: (_blockSettings$subhea2 = blockSettings.subheading_line_height) !== null && _blockSettings$subhea2 !== void 0 ? _blockSettings$subhea2 : 0,
+            onChange: value => handleUpdateBlockSettings({
+              subheading_line_height: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u526F\u6807\u9898\u5B57\u91CD",
+            value: blockSettings.subheading_weight || 'normal',
+            options: [{
+              label: 'Normal',
+              value: 'normal'
+            }, {
+              label: 'Medium',
+              value: 'medium'
+            }, {
+              label: 'Semibold',
+              value: 'semibold'
+            }, {
+              label: 'Bold',
+              value: 'bold'
+            }, {
+              label: 'Black',
+              value: 'black'
+            }],
+            onChange: value => handleUpdateBlockSettings({
+              subheading_weight: value
+            })
+          })));
+        }
+        if (settingsTabView.name === 'cta') {
+          var _blockSettings$cta_ra;
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+            label: "\u6309\u94AE\u6587\u6848",
+            value: blockSettings.cta_text || '',
+            onChange: value => handleUpdateBlockSettings({
+              cta_text: value
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_LinkPicker__WEBPACK_IMPORTED_MODULE_15__["default"], {
+            value: blockSettings.cta_link || '',
+            target: blockSettings.cta_target,
+            onChange: ({
+              url,
+              target
+            }) => handleUpdateBlockSettings({
+              cta_link: url,
+              cta_target: Boolean(target)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-image-grid"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u6309\u94AE\u80CC\u666F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
+            color: blockSettings.cta_background || '#2563eb',
+            onChangeComplete: value => handleUpdateBlockSettings({
+              cta_background: formatColorValue(value)
+            })
+          })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u6309\u94AE\u6587\u5B57"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
+            color: blockSettings.cta_text_color || '#ffffff',
+            onChangeComplete: value => handleUpdateBlockSettings({
+              cta_text_color: formatColorValue(value)
+            })
+          }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u6309\u94AE\u5706\u89D2",
+            min: 0,
+            max: 999,
+            value: (_blockSettings$cta_ra = blockSettings.cta_radius) !== null && _blockSettings$cta_ra !== void 0 ? _blockSettings$cta_ra : 0,
+            onChange: value => handleUpdateBlockSettings({
+              cta_radius: Number(value)
+            })
+          }));
+        }
+        return null;
+      });
     }))));
   }) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-empty"

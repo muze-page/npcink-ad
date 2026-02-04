@@ -1587,6 +1587,13 @@
     border-bottom: 1px solid #dcdcde;
 }
 
+.magick-ad-html-settings-tabs .components-tab-panel__tabs,
+.magick-ad-video-settings-tabs .components-tab-panel__tabs,
+.magick-ad-block-settings-tabs .components-tab-panel__tabs {
+    margin: 4px 0 12px;
+    border-bottom: 1px solid #e3e8f0;
+}
+
 .magick-ad-tab-panel.is-hidden {
     display: none;
 }
@@ -1990,27 +1997,6 @@
         transform: scale(1);
         box-shadow: 0 8px 18px rgba(17, 24, 39, 0.12);
     }
-}
-
-.magick-ad-editor-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 4px 4px 8px;
-    border-bottom: 1px solid #eef1f5;
-}
-
-.magick-ad-editor-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1d2327;
-}
-
-.magick-ad-editor-header-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .magick-ad-template-actions.is-toolbar {

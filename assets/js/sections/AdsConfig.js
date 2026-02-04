@@ -2015,7 +2015,7 @@ const AdsConfig = () => {
                             }`}
                         >
                             <Panel>
-                                <PanelBody title="内容配置" initialOpen>
+                                <PanelBody initialOpen>
                                     <TabPanel
                                         className="magick-ad-image-tabs"
                                         tabs={[
@@ -2259,7 +2259,7 @@ const AdsConfig = () => {
                             }`}
                         >
                             <Panel>
-                                <PanelBody title="内容配置" initialOpen>
+                                <PanelBody initialOpen>
                                     <TabPanel
                                         className="magick-ad-html-tabs"
                                         tabs={[
@@ -2718,7 +2718,7 @@ const AdsConfig = () => {
 
                         {activeContentType === 'video' && (
                             <Panel>
-                                <PanelBody title="内容配置" initialOpen>
+                                <PanelBody initialOpen>
                                     <TabPanel
                                         className="magick-ad-video-tabs"
                                         tabs={[
@@ -3164,7 +3164,7 @@ const AdsConfig = () => {
 
                         {activeContentType === 'block' && (
                             <Panel>
-                                <PanelBody title="内容配置" initialOpen>
+                                <PanelBody initialOpen>
                                     <TabPanel
                                         className="magick-ad-block-tabs"
                                         tabs={[
@@ -3204,640 +3204,705 @@ const AdsConfig = () => {
                                                     )}
                                                 </>
                                             ) : (
-                                                <>
-                                                    <div className="magick-ad-field">
-                                                        <p className="magick-ad-field__label">
-                                                            背景图
-                                                        </p>
-                                                        <ImagePicker
-                                                            value={
-                                                                blockSettings.background_image ||
-                                                                {}
-                                                            }
-                                                            onChange={(
-                                                                value
-                                                            ) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        background_image:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <div className="magick-ad-field">
-                                                        <p className="magick-ad-field__label">
-                                                            背景色
-                                                        </p>
-                                                        <ColorPicker
-                                                            color={
-                                                                blockSettings.background ||
-                                                                'transparent'
-                                                            }
-                                                            onChangeComplete={(
-                                                                value
-                                                            ) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        background:
-                                                                            formatColorValue(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                            enableAlpha
-                                                        />
-                                                    </div>
-                                                    <TextControl
-                                                        label="背景渐变（可选）"
-                                                        value={
-                                                            blockSettings.background_gradient ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateBlockSettings(
-                                                                {
-                                                                    background_gradient:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="例如：linear-gradient(135deg,#60a5fa,#a78bfa)"
-                                                    />
-                                                    <div className="magick-ad-field">
-                                                        <p className="magick-ad-field__label">
-                                                            文字颜色
-                                                        </p>
-                                                        <ColorPicker
-                                                            color={
-                                                                blockSettings.text_color ||
-                                                                '#1d2327'
-                                                            }
-                                                            onChangeComplete={(
-                                                                value
-                                                            ) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        text_color:
-                                                                            formatColorValue(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                            enableAlpha
-                                                        />
-                                                    </div>
-                                                    <SelectControl
-                                                        label="布局"
-                                                        value={
-                                                            blockSettings.layout ||
-                                                            'content'
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label:
-                                                                    '仅内容',
-                                                                value: 'content',
-                                                            },
-                                                            {
-                                                                label:
-                                                                    '上图下文',
-                                                                value: 'stack',
-                                                            },
-                                                            {
-                                                                label:
-                                                                    '左图右文',
-                                                                value: 'split',
-                                                            },
-                                                            {
-                                                                label:
-                                                                    '右图左文',
-                                                                value: 'split-reverse',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateBlockSettings(
-                                                                {
-                                                                    layout: value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    {blockSettings.layout &&
-                                                        blockSettings.layout !==
-                                                            'content' && (
-                                                            <div className="magick-ad-field">
-                                                                <p className="magick-ad-field__label">
-                                                                    内容配图
-                                                                </p>
-                                                                <ImagePicker
-                                                                    value={
-                                                                        blockSettings.media_image ||
-                                                                        {}
-                                                                    }
-                                                                    onChange={(
-                                                                        value
-                                                                    ) =>
-                                                                        handleUpdateBlockSettings(
-                                                                            {
-                                                                                media_image:
-                                                                                    value,
+                                                <TabPanel
+                                                    className="magick-ad-block-settings-tabs"
+                                                    tabs={[
+                                                        {
+                                                            name: 'style',
+                                                            title: '外观',
+                                                        },
+                                                        {
+                                                            name: 'layout',
+                                                            title: '布局',
+                                                        },
+                                                        {
+                                                            name: 'text',
+                                                            title:
+                                                                '标题/副标题',
+                                                        },
+                                                        {
+                                                            name: 'cta',
+                                                            title: 'CTA',
+                                                        },
+                                                    ]}
+                                                    initialTabName={
+                                                        blockSettingsTab
+                                                    }
+                                                    onSelect={(name) =>
+                                                        setBlockSettingsTab(
+                                                            name
+                                                        )
+                                                    }
+                                                    key={blockSettingsTab}
+                                                >
+                                                    {(settingsTabView) => {
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'style'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <div className="magick-ad-field">
+                                                                        <p className="magick-ad-field__label">
+                                                                            背景图
+                                                                        </p>
+                                                                        <ImagePicker
+                                                                            value={
+                                                                                blockSettings.background_image ||
+                                                                                {}
                                                                             }
-                                                                        )
-                                                                    }
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    <div className="magick-ad-image-grid">
-                                                        <RangeControl
-                                                            label="内边距"
-                                                            min={0}
-                                                            max={80}
-                                                            value={
-                                                                blockSettings.padding ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        padding:
-                                                                            Number(
+                                                                            onChange={(
                                                                                 value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <RangeControl
-                                                            label="圆角"
-                                                            min={0}
-                                                            max={50}
-                                                            value={
-                                                                blockSettings.radius ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        radius:
-                                                                            Number(
+                                                                            ) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        background_image:
+                                                                                            value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </div>
+                                                                    <div className="magick-ad-field">
+                                                                        <p className="magick-ad-field__label">
+                                                                            背景色
+                                                                        </p>
+                                                                        <ColorPicker
+                                                                            color={
+                                                                                blockSettings.background ||
+                                                                                'transparent'
+                                                                            }
+                                                                            onChangeComplete={(
                                                                                 value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <RangeControl
-                                                            label="边框"
-                                                            min={0}
-                                                            max={12}
-                                                            value={
-                                                                blockSettings.border_width ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        border_width:
-                                                                            Number(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <RangeControl
-                                                            label="最大宽度"
-                                                            min={0}
-                                                            max={1400}
-                                                            value={
-                                                                blockSettings.max_width ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        max_width:
-                                                                            Number(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <RangeControl
-                                                            label="字体大小"
-                                                            min={10}
-                                                            max={48}
-                                                            value={
-                                                                blockSettings.font_size ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        font_size:
-                                                                            Number(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                    </div>
-                                                    {blockSettings.border_width >
-                                                        0 && (
-                                                        <div className="magick-ad-field">
-                                                            <p className="magick-ad-field__label">
-                                                                边框颜色
-                                                            </p>
-                                                            <ColorPicker
-                                                                color={
-                                                                    blockSettings.border_color ||
-                                                                    '#d0d7e2'
-                                                                }
-                                                                onChangeComplete={(
-                                                                    value
-                                                                ) =>
-                                                                    handleUpdateBlockSettings(
-                                                                        {
-                                                                            border_color:
-                                                                                formatColorValue(
-                                                                                    value
-                                                                                ),
+                                                                            ) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        background:
+                                                                                            formatColorValue(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                            enableAlpha
+                                                                        />
+                                                                    </div>
+                                                                    <TextControl
+                                                                        label="背景渐变（可选）"
+                                                                        value={
+                                                                            blockSettings.background_gradient ||
+                                                                            ''
                                                                         }
-                                                                    )
-                                                                }
-                                                            />
-                                                        </div>
-                                                    )}
-                                                    <SelectControl
-                                                        label="阴影"
-                                                        value={
-                                                            blockSettings.shadow ||
-                                                            'none'
-                                                        }
-                                                        options={SHADOW_OPTIONS}
-                                                        onChange={(value) =>
-                                                            handleUpdateBlockSettings(
-                                                                {
-                                                                    shadow: value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <TextControl
-                                                        label="字体（可选）"
-                                                        value={
-                                                            blockSettings.font_family ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateBlockSettings(
-                                                                {
-                                                                    font_family:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                        help="例如：PingFang SC, Arial, sans-serif"
-                                                    />
-                                                    <SelectControl
-                                                        label="对齐方式"
-                                                        value={
-                                                            blockSettings.align ||
-                                                            ''
-                                                        }
-                                                        options={[
-                                                            {
-                                                                label: '默认',
-                                                                value: '',
-                                                            },
-                                                            {
-                                                                label: '居中',
-                                                                value: 'center',
-                                                            },
-                                                        ]}
-                                                        onChange={(value) =>
-                                                            handleUpdateBlockSettings(
-                                                                {
-                                                                    align: value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <div className="magick-ad-section-divider">
-                                                        标题/副标题
-                                                    </div>
-                                                    <TextControl
-                                                        label="标题"
-                                                        value={
-                                                            blockSettings.heading ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateBlockSettings(
-                                                                {
-                                                                    heading:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <TextControl
-                                                        label="副标题"
-                                                        value={
-                                                            blockSettings.subheading ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateBlockSettings(
-                                                                {
-                                                                    subheading:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <div className="magick-ad-image-grid">
-                                                        <RangeControl
-                                                            label="标题字号"
-                                                            min={12}
-                                                            max={48}
-                                                            value={
-                                                                blockSettings.heading_size ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        heading_size:
-                                                                            Number(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <RangeControl
-                                                            label="标题行高"
-                                                            min={1}
-                                                            max={2.4}
-                                                            step={0.1}
-                                                            value={
-                                                                blockSettings.heading_line_height ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        heading_line_height:
-                                                                            Number(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <SelectControl
-                                                            label="标题字重"
-                                                            value={
-                                                                blockSettings.heading_weight ||
-                                                                'semibold'
-                                                            }
-                                                            options={[
-                                                                {
-                                                                    label:
-                                                                        'Normal',
-                                                                    value: 'normal',
-                                                                },
-                                                                {
-                                                                    label:
-                                                                        'Medium',
-                                                                    value: 'medium',
-                                                                },
-                                                                {
-                                                                    label:
-                                                                        'Semibold',
-                                                                    value: 'semibold',
-                                                                },
-                                                                {
-                                                                    label:
-                                                                        'Bold',
-                                                                    value: 'bold',
-                                                                },
-                                                                {
-                                                                    label:
-                                                                        'Black',
-                                                                    value: 'black',
-                                                                },
-                                                            ]}
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        heading_weight:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <div className="magick-ad-image-grid">
-                                                        <RangeControl
-                                                            label="副标题字号"
-                                                            min={10}
-                                                            max={32}
-                                                            value={
-                                                                blockSettings.subheading_size ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        subheading_size:
-                                                                            Number(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <RangeControl
-                                                            label="副标题行高"
-                                                            min={1}
-                                                            max={2.4}
-                                                            step={0.1}
-                                                            value={
-                                                                blockSettings.subheading_line_height ??
-                                                                0
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        subheading_line_height:
-                                                                            Number(
-                                                                                value
-                                                                            ),
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <SelectControl
-                                                            label="副标题字重"
-                                                            value={
-                                                                blockSettings.subheading_weight ||
-                                                                'normal'
-                                                            }
-                                                            options={[
-                                                                {
-                                                                    label:
-                                                                        'Normal',
-                                                                    value: 'normal',
-                                                                },
-                                                                {
-                                                                    label:
-                                                                        'Medium',
-                                                                    value: 'medium',
-                                                                },
-                                                                {
-                                                                    label:
-                                                                        'Semibold',
-                                                                    value: 'semibold',
-                                                                },
-                                                                {
-                                                                    label:
-                                                                        'Bold',
-                                                                    value: 'bold',
-                                                                },
-                                                                {
-                                                                    label:
-                                                                        'Black',
-                                                                    value: 'black',
-                                                                },
-                                                            ]}
-                                                            onChange={(value) =>
-                                                                handleUpdateBlockSettings(
-                                                                    {
-                                                                        subheading_weight:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <div className="magick-ad-section-divider">
-                                                        CTA 按钮
-                                                    </div>
-                                                    <TextControl
-                                                        label="按钮文案"
-                                                        value={
-                                                            blockSettings.cta_text ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateBlockSettings(
-                                                                {
-                                                                    cta_text:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <LinkPicker
-                                                        value={
-                                                            blockSettings.cta_link ||
-                                                            ''
-                                                        }
-                                                        target={
-                                                            blockSettings.cta_target
-                                                        }
-                                                        onChange={({
-                                                            url,
-                                                            target,
-                                                        }) =>
-                                                            handleUpdateBlockSettings(
-                                                                {
-                                                                    cta_link:
-                                                                        url,
-                                                                    cta_target:
-                                                                        Boolean(
-                                                                            target
-                                                                        ),
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                    <div className="magick-ad-image-grid">
-                                                        <div className="magick-ad-field">
-                                                            <p className="magick-ad-field__label">
-                                                                按钮背景
-                                                            </p>
-                                                            <ColorPicker
-                                                                color={
-                                                                    blockSettings.cta_background ||
-                                                                    '#2563eb'
-                                                                }
-                                                                onChangeComplete={(
-                                                                    value
-                                                                ) =>
-                                                                    handleUpdateBlockSettings(
-                                                                        {
-                                                                            cta_background:
-                                                                                formatColorValue(
-                                                                                    value
-                                                                                ),
+                                                                        onChange={(value) =>
+                                                                            handleUpdateBlockSettings(
+                                                                                {
+                                                                                    background_gradient:
+                                                                                        value,
+                                                                                }
+                                                                            )
                                                                         }
-                                                                    )
-                                                                }
-                                                            />
-                                                        </div>
-                                                        <div className="magick-ad-field">
-                                                            <p className="magick-ad-field__label">
-                                                                按钮文字
-                                                            </p>
-                                                            <ColorPicker
-                                                                color={
-                                                                    blockSettings.cta_text_color ||
-                                                                    '#ffffff'
-                                                                }
-                                                                onChangeComplete={(
-                                                                    value
-                                                                ) =>
-                                                                    handleUpdateBlockSettings(
-                                                                        {
-                                                                            cta_text_color:
-                                                                                formatColorValue(
+                                                                        help="例如：linear-gradient(135deg,#60a5fa,#a78bfa)"
+                                                                    />
+                                                                    <div className="magick-ad-field">
+                                                                        <p className="magick-ad-field__label">
+                                                                            文字颜色
+                                                                        </p>
+                                                                        <ColorPicker
+                                                                            color={
+                                                                                blockSettings.text_color ||
+                                                                                '#1d2327'
+                                                                            }
+                                                                            onChangeComplete={(
+                                                                                value
+                                                                            ) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        text_color:
+                                                                                            formatColorValue(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                            enableAlpha
+                                                                        />
+                                                                    </div>
+                                                                    <div className="magick-ad-image-grid">
+                                                                        <RangeControl
+                                                                            label="内边距"
+                                                                            min={0}
+                                                                            max={80}
+                                                                            value={
+                                                                                blockSettings.padding ??
+                                                                                0
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        padding:
+                                                                                            Number(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <RangeControl
+                                                                            label="圆角"
+                                                                            min={0}
+                                                                            max={50}
+                                                                            value={
+                                                                                blockSettings.radius ??
+                                                                                0
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        radius:
+                                                                                            Number(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <RangeControl
+                                                                            label="边框"
+                                                                            min={0}
+                                                                            max={12}
+                                                                            value={
+                                                                                blockSettings.border_width ??
+                                                                                0
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        border_width:
+                                                                                            Number(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <RangeControl
+                                                                            label="最大宽度"
+                                                                            min={0}
+                                                                            max={1400}
+                                                                            value={
+                                                                                blockSettings.max_width ??
+                                                                                0
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        max_width:
+                                                                                            Number(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <RangeControl
+                                                                            label="字体大小"
+                                                                            min={10}
+                                                                            max={48}
+                                                                            value={
+                                                                                blockSettings.font_size ??
+                                                                                0
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        font_size:
+                                                                                            Number(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </div>
+                                                                    {blockSettings.border_width >
+                                                                        0 && (
+                                                                        <div className="magick-ad-field">
+                                                                            <p className="magick-ad-field__label">
+                                                                                边框颜色
+                                                                            </p>
+                                                                            <ColorPicker
+                                                                                color={
+                                                                                    blockSettings.border_color ||
+                                                                                    '#d0d7e2'
+                                                                                }
+                                                                                onChangeComplete={(
                                                                                     value
-                                                                                ),
+                                                                                ) =>
+                                                                                    handleUpdateBlockSettings(
+                                                                                        {
+                                                                                            border_color:
+                                                                                                formatColorValue(
+                                                                                                    value
+                                                                                                ),
+                                                                                        }
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        </div>
+                                                                    )}
+                                                                    <SelectControl
+                                                                        label="阴影"
+                                                                        value={
+                                                                            blockSettings.shadow ||
+                                                                            'none'
                                                                         }
-                                                                    )
-                                                                }
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <RangeControl
-                                                        label="按钮圆角"
-                                                        min={0}
-                                                        max={999}
-                                                        value={
-                                                            blockSettings.cta_radius ??
-                                                            0
+                                                                        options={
+                                                                            SHADOW_OPTIONS
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateBlockSettings(
+                                                                                {
+                                                                                    shadow: value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <TextControl
+                                                                        label="字体（可选）"
+                                                                        value={
+                                                                            blockSettings.font_family ||
+                                                                            ''
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateBlockSettings(
+                                                                                {
+                                                                                    font_family:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        help="例如：PingFang SC, Arial, sans-serif"
+                                                                    />
+                                                                    <SelectControl
+                                                                        label="对齐方式"
+                                                                        value={
+                                                                            blockSettings.align ||
+                                                                            ''
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label: '默认',
+                                                                                value: '',
+                                                                            },
+                                                                            {
+                                                                                label: '居中',
+                                                                                value: 'center',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(value) =>
+                                                                            handleUpdateBlockSettings(
+                                                                                {
+                                                                                    align: value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </>
+                                                            );
                                                         }
-                                                        onChange={(value) =>
-                                                            handleUpdateBlockSettings(
-                                                                {
-                                                                    cta_radius:
-                                                                        Number(
-                                                                            value
-                                                                        ),
-                                                                }
-                                                            )
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'layout'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <SelectControl
+                                                                        label="布局"
+                                                                        value={
+                                                                            blockSettings.layout ||
+                                                                            'content'
+                                                                        }
+                                                                        options={[
+                                                                            {
+                                                                                label:
+                                                                                    '仅内容',
+                                                                                value: 'content',
+                                                                            },
+                                                                            {
+                                                                                label:
+                                                                                    '上图下文',
+                                                                                value: 'stack',
+                                                                            },
+                                                                            {
+                                                                                label:
+                                                                                    '左图右文',
+                                                                                value: 'split',
+                                                                            },
+                                                                            {
+                                                                                label:
+                                                                                    '右图左文',
+                                                                                value: 'split-reverse',
+                                                                            },
+                                                                        ]}
+                                                                        onChange={(value) =>
+                                                                            handleUpdateBlockSettings(
+                                                                                {
+                                                                                    layout: value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    {blockSettings.layout &&
+                                                                        blockSettings.layout !==
+                                                                            'content' && (
+                                                                            <div className="magick-ad-field">
+                                                                                <p className="magick-ad-field__label">
+                                                                                    内容配图
+                                                                                </p>
+                                                                                <ImagePicker
+                                                                                    value={
+                                                                                        blockSettings.media_image ||
+                                                                                        {}
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        value
+                                                                                    ) =>
+                                                                                        handleUpdateBlockSettings(
+                                                                                            {
+                                                                                                media_image:
+                                                                                                    value,
+                                                                                            }
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                </>
+                                                            );
                                                         }
-                                                    />
-                                                </>
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'text'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <TextControl
+                                                                        label="标题"
+                                                                        value={
+                                                                            blockSettings.heading ||
+                                                                            ''
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateBlockSettings(
+                                                                                {
+                                                                                    heading:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <TextControl
+                                                                        label="副标题"
+                                                                        value={
+                                                                            blockSettings.subheading ||
+                                                                            ''
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateBlockSettings(
+                                                                                {
+                                                                                    subheading:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <div className="magick-ad-image-grid">
+                                                                        <RangeControl
+                                                                            label="标题字号"
+                                                                            min={12}
+                                                                            max={48}
+                                                                            value={
+                                                                                blockSettings.heading_size ??
+                                                                                0
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        heading_size:
+                                                                                            Number(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <RangeControl
+                                                                            label="标题行高"
+                                                                            min={1}
+                                                                            max={2.4}
+                                                                            step={0.1}
+                                                                            value={
+                                                                                blockSettings.heading_line_height ??
+                                                                                0
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        heading_line_height:
+                                                                                            Number(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <SelectControl
+                                                                            label="标题字重"
+                                                                            value={
+                                                                                blockSettings.heading_weight ||
+                                                                                'semibold'
+                                                                            }
+                                                                            options={[
+                                                                                {
+                                                                                    label:
+                                                                                        'Normal',
+                                                                                    value: 'normal',
+                                                                                },
+                                                                                {
+                                                                                    label:
+                                                                                        'Medium',
+                                                                                    value: 'medium',
+                                                                                },
+                                                                                {
+                                                                                    label:
+                                                                                        'Semibold',
+                                                                                    value: 'semibold',
+                                                                                },
+                                                                                {
+                                                                                    label:
+                                                                                        'Bold',
+                                                                                    value: 'bold',
+                                                                                },
+                                                                                {
+                                                                                    label:
+                                                                                        'Black',
+                                                                                    value: 'black',
+                                                                                },
+                                                                            ]}
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        heading_weight:
+                                                                                            value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </div>
+                                                                    <div className="magick-ad-image-grid">
+                                                                        <RangeControl
+                                                                            label="副标题字号"
+                                                                            min={10}
+                                                                            max={32}
+                                                                            value={
+                                                                                blockSettings.subheading_size ??
+                                                                                0
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        subheading_size:
+                                                                                            Number(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <RangeControl
+                                                                            label="副标题行高"
+                                                                            min={1}
+                                                                            max={2.4}
+                                                                            step={0.1}
+                                                                            value={
+                                                                                blockSettings.subheading_line_height ??
+                                                                                0
+                                                                            }
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        subheading_line_height:
+                                                                                            Number(
+                                                                                                value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <SelectControl
+                                                                            label="副标题字重"
+                                                                            value={
+                                                                                blockSettings.subheading_weight ||
+                                                                                'normal'
+                                                                            }
+                                                                            options={[
+                                                                                {
+                                                                                    label:
+                                                                                        'Normal',
+                                                                                    value: 'normal',
+                                                                                },
+                                                                                {
+                                                                                    label:
+                                                                                        'Medium',
+                                                                                    value: 'medium',
+                                                                                },
+                                                                                {
+                                                                                    label:
+                                                                                        'Semibold',
+                                                                                    value: 'semibold',
+                                                                                },
+                                                                                {
+                                                                                    label:
+                                                                                        'Bold',
+                                                                                    value: 'bold',
+                                                                                },
+                                                                                {
+                                                                                    label:
+                                                                                        'Black',
+                                                                                    value: 'black',
+                                                                                },
+                                                                            ]}
+                                                                            onChange={(value) =>
+                                                                                handleUpdateBlockSettings(
+                                                                                    {
+                                                                                        subheading_weight:
+                                                                                            value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </div>
+                                                                </>
+                                                            );
+                                                        }
+                                                        if (
+                                                            settingsTabView.name ===
+                                                            'cta'
+                                                        ) {
+                                                            return (
+                                                                <>
+                                                                    <TextControl
+                                                                        label="按钮文案"
+                                                                        value={
+                                                                            blockSettings.cta_text ||
+                                                                            ''
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateBlockSettings(
+                                                                                {
+                                                                                    cta_text:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <LinkPicker
+                                                                        value={
+                                                                            blockSettings.cta_link ||
+                                                                            ''
+                                                                        }
+                                                                        target={
+                                                                            blockSettings.cta_target
+                                                                        }
+                                                                        onChange={({
+                                                                            url,
+                                                                            target,
+                                                                        }) =>
+                                                                            handleUpdateBlockSettings(
+                                                                                {
+                                                                                    cta_link:
+                                                                                        url,
+                                                                                    cta_target:
+                                                                                        Boolean(
+                                                                                            target
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <div className="magick-ad-image-grid">
+                                                                        <div className="magick-ad-field">
+                                                                            <p className="magick-ad-field__label">
+                                                                                按钮背景
+                                                                            </p>
+                                                                            <ColorPicker
+                                                                                color={
+                                                                                    blockSettings.cta_background ||
+                                                                                    '#2563eb'
+                                                                                }
+                                                                                onChangeComplete={(
+                                                                                    value
+                                                                                ) =>
+                                                                                    handleUpdateBlockSettings(
+                                                                                        {
+                                                                                            cta_background:
+                                                                                                formatColorValue(
+                                                                                                    value
+                                                                                                ),
+                                                                                        }
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        </div>
+                                                                        <div className="magick-ad-field">
+                                                                            <p className="magick-ad-field__label">
+                                                                                按钮文字
+                                                                            </p>
+                                                                            <ColorPicker
+                                                                                color={
+                                                                                    blockSettings.cta_text_color ||
+                                                                                    '#ffffff'
+                                                                                }
+                                                                                onChangeComplete={(
+                                                                                    value
+                                                                                ) =>
+                                                                                    handleUpdateBlockSettings(
+                                                                                        {
+                                                                                            cta_text_color:
+                                                                                                formatColorValue(
+                                                                                                    value
+                                                                                                ),
+                                                                                        }
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    <RangeControl
+                                                                        label="按钮圆角"
+                                                                        min={0}
+                                                                        max={999}
+                                                                        value={
+                                                                            blockSettings.cta_radius ??
+                                                                            0
+                                                                        }
+                                                                        onChange={(value) =>
+                                                                            handleUpdateBlockSettings(
+                                                                                {
+                                                                                    cta_radius:
+                                                                                        Number(
+                                                                                            value
+                                                                                        ),
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    }}
+                                                </TabPanel>
                                             );
                                         }}
                                     </TabPanel>
