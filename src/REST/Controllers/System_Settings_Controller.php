@@ -58,6 +58,44 @@ final class System_Settings_Controller {
         return in_array($value, array('ad', 'placement'), true) ? $value : 'ad';
     }
 
+    private static function sanitize_domain_list($value): array {
+        if (is_string($value)) {
+            $value = preg_split('/[\\s,;]+/', $value);
+        }
+        if (!is_array($value)) {
+            return array();
+        }
+        $items = array();
+        foreach ($value as $item) {
+            if (!is_string($item)) {
+                continue;
+            }
+            $item = trim(strtolower($item));
+            if ($item === '') {
+                continue;
+            }
+            $item = preg_replace('#^https?://#', '', $item);
+            $item = preg_replace('#/.*$#', '', $item);
+            if ($item === '') {
+                continue;
+            }
+            $items[] = $item;
+        }
+        $items = array_values(array_unique($items));
+        if (count($items) > 50) {
+            $items = array_slice($items, 0, 50);
+        }
+        return $items;
+    }
+
+    private static function get_site_domain(): string {
+        $host = wp_parse_url(home_url(), PHP_URL_HOST);
+        if (!is_string($host) || $host === '') {
+            $host = wp_parse_url(site_url(), PHP_URL_HOST);
+        }
+        return is_string($host) ? strtolower($host) : '';
+    }
+
     public static function get() {
         $dedupe_ttl = (int) get_option('magick_ad_track_dedupe_ttl', DAY_IN_SECONDS);
         $dedupe_ttl = self::sanitize_positive_int($dedupe_ttl, DAY_IN_SECONDS, 60, WEEK_IN_SECONDS);
@@ -73,6 +111,16 @@ final class System_Settings_Controller {
         $stats_dim_retention_days = self::sanitize_optional_int($stats_dim_retention_days, 30, 365);
         $slot_client_resolver = (get_option('magick_ad_slot_client_resolver', '1') === '1');
         $html_sandbox = (get_option('magick_ad_html_sandbox', '0') === '1');
+        $raw_allowlist = get_option('magick_ad_html_script_allowlist', null);
+        $raw_blocklist = get_option('magick_ad_html_script_blocklist', array());
+        $html_script_allowlist = self::sanitize_domain_list($raw_allowlist);
+        $html_script_blocklist = self::sanitize_domain_list($raw_blocklist);
+        if (($raw_allowlist === null || $raw_allowlist === false) && empty($html_script_allowlist)) {
+            $site_domain = self::get_site_domain();
+            if ($site_domain !== '') {
+                $html_script_allowlist = array($site_domain);
+            }
+        }
         $consent_guard_enabled = (get_option('magick_ad_consent_guard_enabled', '0') === '1');
         $consent_banner_enabled = (get_option('magick_ad_consent_banner_enabled', '1') === '1');
         $consent_banner_text = get_option(
@@ -104,6 +152,8 @@ final class System_Settings_Controller {
             'stats_dim_retention_days' => $stats_dim_retention_days,
             'slot_client_resolver' => $slot_client_resolver,
             'html_sandbox' => $html_sandbox,
+            'html_script_allowlist' => $html_script_allowlist,
+            'html_script_blocklist' => $html_script_blocklist,
             'consent_guard_enabled' => $consent_guard_enabled,
             'consent_banner_enabled' => $consent_banner_enabled,
             'consent_banner_text' => $consent_banner_text,
@@ -195,6 +245,12 @@ final class System_Settings_Controller {
         $html_sandbox = !array_key_exists('html_sandbox', $params)
             ? (get_option('magick_ad_html_sandbox', '0') === '1')
             : !empty($params['html_sandbox']);
+        $html_script_allowlist = self::sanitize_domain_list(
+            $params['html_script_allowlist'] ?? get_option('magick_ad_html_script_allowlist', array())
+        );
+        $html_script_blocklist = self::sanitize_domain_list(
+            $params['html_script_blocklist'] ?? get_option('magick_ad_html_script_blocklist', array())
+        );
         $brand_name = isset($params['brand_name']) && is_string($params['brand_name'])
             ? sanitize_text_field($params['brand_name'])
             : get_option('magick_ad_brand_name', 'Magick AD');
@@ -217,6 +273,8 @@ final class System_Settings_Controller {
         update_option('magick_ad_stats_dim_retention_days', $stats_dim_retention_days);
         update_option('magick_ad_slot_client_resolver', $slot_client_resolver ? '1' : '0');
         update_option('magick_ad_html_sandbox', $html_sandbox ? '1' : '0');
+        update_option('magick_ad_html_script_allowlist', $html_script_allowlist);
+        update_option('magick_ad_html_script_blocklist', $html_script_blocklist);
         update_option('magick_ad_consent_guard_enabled', $consent_guard_enabled ? '1' : '0');
         update_option('magick_ad_consent_banner_enabled', $consent_banner_enabled ? '1' : '0');
         update_option('magick_ad_consent_banner_text', $consent_banner_text);
@@ -246,6 +304,8 @@ final class System_Settings_Controller {
             'stats_dim_retention_days' => $stats_dim_retention_days,
             'slot_client_resolver' => $slot_client_resolver,
             'html_sandbox' => $html_sandbox,
+            'html_script_allowlist' => $html_script_allowlist,
+            'html_script_blocklist' => $html_script_blocklist,
             'consent_guard_enabled' => $consent_guard_enabled,
             'consent_banner_enabled' => $consent_banner_enabled,
             'consent_banner_text' => $consent_banner_text,

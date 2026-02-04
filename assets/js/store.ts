@@ -67,6 +67,7 @@ const createAdGroupTemplate = (
         html_load_strategy: 'immediate',
         html_load_delay: 0,
         variants_enabled: false,
+        variants_strategy: 'request',
         variants: [],
         video_settings: {
             type: 'mp4',
@@ -360,6 +361,10 @@ const normalizeAd = (ad: unknown): Ad => {
                 : 'immediate',
             html_load_delay: Number(content.html_load_delay || 0),
             variants_enabled: Boolean(content.variants_enabled),
+            variants_strategy:
+                content.variants_strategy === 'session'
+                    ? 'session'
+                    : 'request',
             variants: variantsRaw.map((variant) => {
                 const safeVariant =
                     variant && typeof variant === 'object'

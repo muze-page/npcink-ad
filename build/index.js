@@ -3452,6 +3452,8 @@ const DEFAULT_SETTINGS = {
   page_cache_detected: false,
   slot_client_resolver: true,
   html_sandbox: false,
+  html_script_allowlist: [],
+  html_script_blocklist: [],
   brand_name: 'Magick AD',
   brand_tagline: '广告配置与投放规则管理',
   manage_capability: 'manage_options'
@@ -3464,6 +3466,8 @@ const SystemSettingsPanel = ({
   const [saving, setSaving] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [error, setError] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
   const [openSection, setOpenSection] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('tracking');
+  const parseDomainList = (value = '') => value.split(/[\s,;]+/).map(item => item.trim()).filter(Boolean);
+  const formatDomainList = list => Array.isArray(list) ? list.join('\n') : '';
   const diagnosticsExpiryLabel = (() => {
     if (!settings.stats_diagnostics_expires_at) {
       return '';
@@ -3642,6 +3646,22 @@ const SystemSettingsPanel = ({
       html_sandbox: value
     }),
     help: "\u4EC5\u5BF9 Full HTML \u751F\u6548\uFF0C\u9ED8\u8BA4\u5173\u95ED\uFF1B\u5F00\u542F\u540E\u5C06\u9694\u79BB\u7B2C\u4E09\u65B9\u811A\u672C\u3002"
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+    label: "\u811A\u672C\u767D\u540D\u5355\uFF08\u7CFB\u7EDF\u7EA7\uFF09",
+    value: formatDomainList(settings.html_script_allowlist),
+    disabled: loading || saving,
+    onChange: value => updateSettings({
+      html_script_allowlist: parseDomainList(value)
+    }),
+    help: "\u9ED8\u8BA4\u53EA\u5141\u8BB8\u5F53\u524D\u7AD9\u70B9\u57DF\u540D\u3002\u6BCF\u884C\u4E00\u4E2A\u57DF\u540D\u6216\u7528\u9017\u53F7\u5206\u9694\u3002"
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+    label: "\u811A\u672C\u9ED1\u540D\u5355\uFF08\u7CFB\u7EDF\u7EA7\uFF09",
+    value: formatDomainList(settings.html_script_blocklist),
+    disabled: loading || saving,
+    onChange: value => updateSettings({
+      html_script_blocklist: parseDomainList(value)
+    }),
+    help: "\u7CFB\u7EDF\u7EA7\u9ED1\u540D\u5355\u4F18\u5148\u751F\u6548\uFF0C\u547D\u4E2D\u5373\u79FB\u9664\u811A\u672C\u3002"
   })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u8BCA\u65AD\u65E5\u5FD7",
     opened: openSection === 'diagnostics',
@@ -4821,6 +4841,7 @@ const AdsConfig = () => {
       return null;
     }
     const variantsEnabled = Boolean(selectedAd.content?.variants_enabled);
+    const variantsStrategy = selectedAd.content?.variants_strategy === 'session' ? 'session' : 'request';
     const variants = Array.isArray(selectedAd.content?.variants) ? selectedAd.content.variants : [];
     return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
       className: "magick-ad-variant-section"
@@ -4831,7 +4852,21 @@ const AdsConfig = () => {
         variants_enabled: value
       }),
       help: "\u540C\u4E00\u5E7F\u544A\u53EF\u914D\u7F6E\u591A\u4E2A\u5185\u5BB9\u7248\u672C\uFF0C\u6309\u6743\u91CD\u968F\u673A\u5C55\u793A\u3002"
-    }), variantsEnabled && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    }), variantsEnabled && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+      label: "\u968F\u673A\u7B56\u7565",
+      value: variantsStrategy,
+      options: [{
+        label: '按请求随机',
+        value: 'request'
+      }, {
+        label: '按会话固定',
+        value: 'session'
+      }],
+      onChange: value => handleUpdateContent({
+        variants_strategy: value
+      }),
+      help: "\u4F1A\u8BDD\u56FA\u5B9A\u53EF\u907F\u514D\u5237\u65B0\u95EA\u70C1\uFF1B\u6309\u8BF7\u6C42\u968F\u673A\u9002\u5408\u5FEB\u901F\u8BD5\u9A8C\u3002"
+    }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
       className: "magick-ad-variant-list"
     }, variants.map((variant, index) => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
       className: "magick-ad-variant-card",
@@ -4886,7 +4921,7 @@ const AdsConfig = () => {
     }, "\u79FB\u9664\u7248\u672C")))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
       variant: "secondary",
       onClick: () => addVariant(type)
-    }, "\u6DFB\u52A0\u7248\u672C")));
+    }, "\u6DFB\u52A0\u7248\u672C"))));
   };
   const renderFrequencyControls = (behavior = {}) => {
     var _behavior$frequency_l;
@@ -5561,19 +5596,19 @@ const AdsConfig = () => {
           html_load_delay: Number(value)
         })
       }), !isQuickMode && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
-        label: "\u811A\u672C\u767D\u540D\u5355\uFF08\u57DF\u540D\uFF09",
+        label: "\u811A\u672C\u767D\u540D\u5355\uFF08\u8FFD\u52A0\u57DF\u540D\uFF09",
         value: formatDomainList(selectedAd.content?.html_script_allowlist),
         onChange: value => handleUpdateContent({
           html_script_allowlist: parseDomainList(value)
         }),
-        help: "\u4EC5\u9650\u5236\u5916\u94FE <script src>\u3002\u6BCF\u884C\u4E00\u4E2A\u57DF\u540D\u6216\u7528\u9017\u53F7\u5206\u9694\u3002"
+        help: "\u7CFB\u7EDF\u9ED8\u8BA4\u4EC5\u5141\u8BB8\u5F53\u524D\u7AD9\u70B9\u57DF\u540D\uFF0C\u6B64\u5904\u4E3A\u8FFD\u52A0\u767D\u540D\u5355\u3002\u6BCF\u884C\u4E00\u4E2A\u57DF\u540D\u6216\u7528\u9017\u53F7\u5206\u9694\u3002"
       }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
-        label: "\u811A\u672C\u9ED1\u540D\u5355\uFF08\u57DF\u540D\uFF09",
+        label: "\u811A\u672C\u9ED1\u540D\u5355\uFF08\u8FFD\u52A0\u57DF\u540D\uFF09",
         value: formatDomainList(selectedAd.content?.html_script_blocklist),
         onChange: value => handleUpdateContent({
           html_script_blocklist: parseDomainList(value)
         }),
-        help: "\u547D\u4E2D\u9ED1\u540D\u5355\u7684\u811A\u672C\u4F1A\u88AB\u79FB\u9664\u3002"
+        help: "\u7CFB\u7EDF\u7EA7\u9ED1\u540D\u5355\u4F18\u5148\u751F\u6548\uFF0C\u6B64\u5904\u4E3A\u8FFD\u52A0\u9ED1\u540D\u5355\u3002\u547D\u4E2D\u5373\u79FB\u9664\u3002"
       })));
     })))), activeContentType === 'video' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
       title: "\u5185\u5BB9\u914D\u7F6E",
@@ -7240,6 +7275,7 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
     html_load_strategy: 'immediate',
     html_load_delay: 0,
     variants_enabled: false,
+    variants_strategy: 'request',
     variants: [],
     video_settings: {
       type: 'mp4',
@@ -7448,6 +7484,7 @@ const normalizeAd = ad => {
       html_load_strategy: ['immediate', 'delay', 'viewport'].includes(content.html_load_strategy) ? content.html_load_strategy : 'immediate',
       html_load_delay: Number(content.html_load_delay || 0),
       variants_enabled: Boolean(content.variants_enabled),
+      variants_strategy: content.variants_strategy === 'session' ? 'session' : 'request',
       variants: variantsRaw.map(variant => {
         const safeVariant = variant && typeof variant === 'object' ? variant : {};
         const variantContent = safeVariant.content && typeof safeVariant.content === 'object' ? safeVariant.content : {};

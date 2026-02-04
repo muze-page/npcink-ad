@@ -642,6 +642,11 @@ final class Settings {
         }
 
         $variants_enabled = !empty($content['variants_enabled']);
+        $variants_strategy = self::sanitize_choice(
+            isset($content['variants_strategy']) ? $content['variants_strategy'] : 'request',
+            array('request', 'session'),
+            'request'
+        );
         $variants = self::sanitize_variants(
             isset($content['variants']) ? $content['variants'] : array(),
             $html_mode,
@@ -695,6 +700,7 @@ final class Settings {
             'html_load_strategy' => $html_load_strategy,
             'html_load_delay' => $html_load_delay,
             'variants_enabled' => $variants_enabled,
+            'variants_strategy' => $variants_strategy,
             'variants' => $variants,
             'image' => array(
                 'id' => isset($image['id']) ? absint($image['id']) : 0,

@@ -8,6 +8,7 @@ import {
     PanelBody,
     SelectControl,
     TextControl,
+    TextareaControl,
     ToggleControl,
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
@@ -26,6 +27,8 @@ const DEFAULT_SETTINGS = {
     page_cache_detected: false,
     slot_client_resolver: true,
     html_sandbox: false,
+    html_script_allowlist: [],
+    html_script_blocklist: [],
     brand_name: 'Magick AD',
     brand_tagline: '广告配置与投放规则管理',
     manage_capability: 'manage_options',
@@ -37,6 +40,15 @@ const SystemSettingsPanel = ({ onNotice }) => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [openSection, setOpenSection] = useState('tracking');
+
+    const parseDomainList = (value = '') =>
+        value
+            .split(/[\s,;]+/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+
+    const formatDomainList = (list) =>
+        Array.isArray(list) ? list.join('\n') : '';
 
     const diagnosticsExpiryLabel = (() => {
         if (!settings.stats_diagnostics_expires_at) {
@@ -246,6 +258,34 @@ const SystemSettingsPanel = ({ onNotice }) => {
                                 })
                             }
                             help="仅对 Full HTML 生效，默认关闭；开启后将隔离第三方脚本。"
+                        />
+                        <TextareaControl
+                            label="脚本白名单（系统级）"
+                            value={formatDomainList(
+                                settings.html_script_allowlist
+                            )}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    html_script_allowlist:
+                                        parseDomainList(value),
+                                })
+                            }
+                            help="默认只允许当前站点域名。每行一个域名或用逗号分隔。"
+                        />
+                        <TextareaControl
+                            label="脚本黑名单（系统级）"
+                            value={formatDomainList(
+                                settings.html_script_blocklist
+                            )}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    html_script_blocklist:
+                                        parseDomainList(value),
+                                })
+                            }
+                            help="系统级黑名单优先生效，命中即移除脚本。"
                         />
                     </PanelBody>
                     <PanelBody

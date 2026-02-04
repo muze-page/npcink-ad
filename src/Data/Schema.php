@@ -89,6 +89,14 @@ final class Schema {
         update_option(self::DIM_READY_KEY, (string) MAGICK_AD_DB_VERSION, false);
         add_option('magick_ad_slot_client_resolver', '1', '', false);
         add_option('magick_ad_html_sandbox', '0', '', false);
+        $site_domain = wp_parse_url(home_url(), PHP_URL_HOST);
+        if (is_string($site_domain) && $site_domain !== '') {
+            $site_domain = strtolower($site_domain);
+            add_option('magick_ad_html_script_allowlist', array($site_domain), '', false);
+        } else {
+            add_option('magick_ad_html_script_allowlist', array(), '', false);
+        }
+        add_option('magick_ad_html_script_blocklist', array(), '', false);
     }
 
     private static function is_schema_ready(): bool {

@@ -2248,7 +2248,7 @@ final class Frontend {
         $content_type = self::resolve_content_type($options);
         $container_type = self::resolve_container_type($options);
 
-        $content = self::apply_content_variant($content, $content_type, $options);
+        $content = self::apply_content_variant($content, $content_type, $options, $ad);
         $body = self::build_body_by_type($content_type, $content, $options, $ad);
         if ($body === '') {
             return '';
@@ -2281,7 +2281,7 @@ final class Frontend {
         return $content;
     }
 
-    private static function apply_content_variant(array $content, string $content_type, array $options): array {
+    private static function apply_content_variant(array $content, string $content_type, array $options, array $ad): array {
         if (empty($content['variants_enabled'])) {
             return $content;
         }
@@ -2315,7 +2315,12 @@ final class Frontend {
             return $content;
         }
 
-        $picked = self::pick_weighted_variant($candidates);
+        $strategy = isset($content['variants_strategy']) && $content['variants_strategy'] === 'session'
+            ? 'session'
+            : 'request';
+        $picked = $strategy === 'session'
+            ? self::pick_session_variant($candidates, $ad)
+            : self::pick_weighted_variant($candidates);
         if ($picked === null) {
             return $content;
         }
@@ -2357,6 +2362,61 @@ final class Frontend {
             }
         }
         return $variants[0] ?? null;
+    }
+
+    private static function pick_session_variant(array $variants, array $ad): ?array {
+        $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
+        if ($ad_id === '') {
+            return self::pick_weighted_variant($variants);
+        }
+        $cookie_key = self::build_variant_cookie_key($ad_id);
+        $cookie_value = isset($_COOKIE[$cookie_key]) ? sanitize_text_field(wp_unslash($_COOKIE[$cookie_key])) : '';
+        if ($cookie_value !== '') {
+            foreach ($variants as $variant) {
+                if (!empty($variant['id']) && (string) $variant['id'] === $cookie_value) {
+                    return $variant;
+                }
+            }
+        }
+
+        $picked = self::pick_weighted_variant($variants);
+        if ($picked !== null && !empty($picked['id'])) {
+            self::set_variant_cookie($cookie_key, (string) $picked['id']);
+        }
+        return $picked;
+    }
+
+    private static function build_variant_cookie_key(string $ad_id): string {
+        $safe = preg_replace('/[^a-zA-Z0-9_]/', '_', $ad_id);
+        if (!is_string($safe) || $safe === '') {
+            $safe = 'unknown';
+        }
+        return 'magick_ad_variant_' . $safe;
+    }
+
+    private static function set_variant_cookie(string $key, string $value): void {
+        if ($key === '' || $value === '') {
+            return;
+        }
+        if (!self::can_set_variant_cookie()) {
+            return;
+        }
+        if (headers_sent()) {
+            return;
+        }
+        $path = defined('COOKIEPATH') && COOKIEPATH ? COOKIEPATH : '/';
+        $domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+        setcookie($key, $value, 0, $path, $domain, is_ssl(), false);
+        $_COOKIE[$key] = $value;
+    }
+
+    private static function can_set_variant_cookie(): bool {
+        $requires = (get_option('magick_ad_tracking_require_consent', '0') === '1');
+        $requires = (bool) apply_filters('magick_ad_variant_requires_consent', $requires);
+        if (!$requires) {
+            return true;
+        }
+        return (bool) apply_filters('magick_ad_has_consent', false);
     }
 
     private static function maybe_hydrate_ad(array $ad): array {
@@ -2625,12 +2685,16 @@ final class Frontend {
 
         $body = self::append_custom_markup($html, $content);
 
+        $system_allowlist = self::get_html_script_allowlist();
+        $system_blocklist = self::get_html_script_blocklist();
         $allowlist = isset($content['html_script_allowlist']) && is_array($content['html_script_allowlist'])
             ? $content['html_script_allowlist']
             : array();
         $blocklist = isset($content['html_script_blocklist']) && is_array($content['html_script_blocklist'])
             ? $content['html_script_blocklist']
             : array();
+        $allowlist = self::normalize_domain_list(array_merge($system_allowlist, $allowlist));
+        $blocklist = self::normalize_domain_list(array_merge($system_blocklist, $blocklist));
         if (!empty($allowlist) || !empty($blocklist)) {
             $body = self::filter_html_scripts($body, $allowlist, $blocklist);
         }
@@ -2759,6 +2823,33 @@ final class Frontend {
             $list[] = $domain;
         }
         return array_values(array_unique($list));
+    }
+
+    private static function get_site_domain(): string {
+        $host = wp_parse_url(home_url(), PHP_URL_HOST);
+        if (!is_string($host) || $host === '') {
+            $host = wp_parse_url(site_url(), PHP_URL_HOST);
+        }
+        return is_string($host) ? strtolower($host) : '';
+    }
+
+    private static function get_html_script_allowlist(): array {
+        $raw = get_option('magick_ad_html_script_allowlist', null);
+        $value = is_array($raw) ? $raw : array();
+        $list = self::normalize_domain_list($value);
+        if (($raw === null || $raw === false) && empty($list)) {
+            $site_domain = self::get_site_domain();
+            if ($site_domain !== '') {
+                $list[] = $site_domain;
+            }
+        }
+        return $list;
+    }
+
+    private static function get_html_script_blocklist(): array {
+        $value = get_option('magick_ad_html_script_blocklist', array());
+        $value = is_array($value) ? $value : array();
+        return self::normalize_domain_list($value);
     }
 
     private static function is_domain_allowed(string $host, array $allowlist): bool {
@@ -3188,6 +3279,9 @@ final class Frontend {
         }
         if (!empty($content['_variant_id'])) {
             $data_attrs .= ' data-ad-variant="' . esc_attr((string) $content['_variant_id']) . '"';
+        }
+        if (!empty($content['variants_enabled']) && !empty($content['variants_strategy']) && $content['variants_strategy'] === 'session') {
+            $data_attrs .= ' data-ad-variant-strategy="session"';
         }
 
         $creative_type = isset($options['creative_type']) ? (string) $options['creative_type'] : '';

@@ -1255,6 +1255,10 @@ const AdsConfig = () => {
         const variantsEnabled = Boolean(
             selectedAd.content?.variants_enabled
         );
+        const variantsStrategy =
+            selectedAd.content?.variants_strategy === 'session'
+                ? 'session'
+                : 'request';
         const variants = Array.isArray(selectedAd.content?.variants)
             ? selectedAd.content.variants
             : [];
@@ -1272,98 +1276,114 @@ const AdsConfig = () => {
                     help="同一广告可配置多个内容版本，按权重随机展示。"
                 />
                 {variantsEnabled && (
-                    <div className="magick-ad-variant-list">
-                        {variants.map((variant, index) => (
-                            <div
-                                className="magick-ad-variant-card"
-                                key={variant.id || index}
+                    <>
+                        <SelectControl
+                            label="随机策略"
+                            value={variantsStrategy}
+                            options={[
+                                { label: '按请求随机', value: 'request' },
+                                { label: '按会话固定', value: 'session' },
+                            ]}
+                            onChange={(value) =>
+                                handleUpdateContent({
+                                    variants_strategy: value,
+                                })
+                            }
+                            help="会话固定可避免刷新闪烁；按请求随机适合快速试验。"
+                        />
+                        <div className="magick-ad-variant-list">
+                            {variants.map((variant, index) => (
+                                <div
+                                    className="magick-ad-variant-card"
+                                    key={variant.id || index}
+                                >
+                                    <div className="magick-ad-variant-card__head">
+                                        <TextControl
+                                            label="版本名称"
+                                            value={variant.label || ''}
+                                            onChange={(value) =>
+                                                updateVariant(index, {
+                                                    label: value,
+                                                })
+                                            }
+                                        />
+                                        <RangeControl
+                                            label="权重"
+                                            min={1}
+                                            max={100}
+                                            value={Number(variant.weight || 1)}
+                                            onChange={(value) =>
+                                                updateVariant(index, {
+                                                    weight: Number(value),
+                                                })
+                                            }
+                                        />
+                                    </div>
+                                    {type === 'html' && (
+                                        <TextareaControl
+                                            label="HTML 内容"
+                                            value={variant.content?.html || ''}
+                                            onChange={(value) =>
+                                                updateVariant(index, {
+                                                    content: {
+                                                        html: value,
+                                                    },
+                                                })
+                                            }
+                                        />
+                                    )}
+                                    {type === 'video' && (
+                                        <TextControl
+                                            label="视频地址"
+                                            value={
+                                                variant.content?.video_url || ''
+                                            }
+                                            onChange={(value) =>
+                                                updateVariant(index, {
+                                                    content: {
+                                                        video_url: value,
+                                                    },
+                                                })
+                                            }
+                                        />
+                                    )}
+                                    {type === 'block' && (
+                                        <TextareaControl
+                                            label="区块内容"
+                                            value={
+                                                variant.content?.blocks || ''
+                                            }
+                                            onChange={(value) =>
+                                                updateVariant(index, {
+                                                    content: {
+                                                        blocks: value,
+                                                    },
+                                                })
+                                            }
+                                            help="这里填写区块内容（HTML/区块序列化）。样式仍使用主配置。"
+                                        />
+                                    )}
+                                    <div className="magick-ad-variant-card__actions">
+                                        <Button
+                                            variant="tertiary"
+                                            isDestructive
+                                            onClick={() =>
+                                                removeVariant(index)
+                                            }
+                                        >
+                                            移除版本
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                            <Button
+                                variant="secondary"
+                                onClick={() => addVariant(type)}
                             >
-                                <div className="magick-ad-variant-card__head">
-                                    <TextControl
-                                        label="版本名称"
-                                        value={variant.label || ''}
-                                        onChange={(value) =>
-                                            updateVariant(index, {
-                                                label: value,
-                                            })
-                                        }
-                                    />
-                                    <RangeControl
-                                        label="权重"
-                                        min={1}
-                                        max={100}
-                                        value={Number(variant.weight || 1)}
-                                        onChange={(value) =>
-                                            updateVariant(index, {
-                                                weight: Number(value),
-                                            })
-                                        }
-                                    />
-                                </div>
-                                {type === 'html' && (
-                                    <TextareaControl
-                                        label="HTML 内容"
-                                        value={variant.content?.html || ''}
-                                        onChange={(value) =>
-                                            updateVariant(index, {
-                                                content: {
-                                                    html: value,
-                                                },
-                                            })
-                                        }
-                                    />
-                                )}
-                                {type === 'video' && (
-                                    <TextControl
-                                        label="视频地址"
-                                        value={
-                                            variant.content?.video_url || ''
-                                        }
-                                        onChange={(value) =>
-                                            updateVariant(index, {
-                                                content: {
-                                                    video_url: value,
-                                                },
-                                            })
-                                        }
-                                    />
-                                )}
-                                {type === 'block' && (
-                                    <TextareaControl
-                                        label="区块内容"
-                                        value={
-                                            variant.content?.blocks || ''
-                                        }
-                                        onChange={(value) =>
-                                            updateVariant(index, {
-                                                content: {
-                                                    blocks: value,
-                                                },
-                                            })
-                                        }
-                                        help="这里填写区块内容（HTML/区块序列化）。样式仍使用主配置。"
-                                    />
-                                )}
-                                <div className="magick-ad-variant-card__actions">
-                                    <Button
-                                        variant="tertiary"
-                                        isDestructive
-                                        onClick={() =>
-                                            removeVariant(index)
-                                        }
-                                    >
-                                        移除版本
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                        <Button
-                            variant="secondary"
-                            onClick={() => addVariant(type)}
-                        >
-                            添加版本
-                        </Button>
-                    </div>
+                                添加版本
+                            </Button>
+                        </div>
+                    </>
                 )}
             </div>
         );
@@ -2556,7 +2576,7 @@ const AdsConfig = () => {
                                                     {!isQuickMode && (
                                                         <>
                                                             <TextareaControl
-                                                                label="脚本白名单（域名）"
+                                                                label="脚本白名单（追加域名）"
                                                                 value={formatDomainList(
                                                                     selectedAd
                                                                         .content
@@ -2574,10 +2594,10 @@ const AdsConfig = () => {
                                                                         }
                                                                     )
                                                                 }
-                                                                help="仅限制外链 <script src>。每行一个域名或用逗号分隔。"
+                                                                help="系统默认仅允许当前站点域名，此处为追加白名单。每行一个域名或用逗号分隔。"
                                                             />
                                                             <TextareaControl
-                                                                label="脚本黑名单（域名）"
+                                                                label="脚本黑名单（追加域名）"
                                                                 value={formatDomainList(
                                                                     selectedAd
                                                                         .content
@@ -2595,7 +2615,7 @@ const AdsConfig = () => {
                                                                         }
                                                                     )
                                                                 }
-                                                                help="命中黑名单的脚本会被移除。"
+                                                                help="系统级黑名单优先生效，此处为追加黑名单。命中即移除。"
                                                             />
                                                         </>
                                                     )}

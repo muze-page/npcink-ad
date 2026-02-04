@@ -382,6 +382,55 @@
             }
         };
 
+        const buildVariantCookieKey = (adId = '') => {
+            const safeId = String(adId).replace(/[^a-zA-Z0-9_]/g, '_');
+            return `magick_ad_variant_${safeId || 'unknown'}`;
+        };
+
+        const readCookieValue = (name) => {
+            if (!name) {
+                return '';
+            }
+            const cookies = document.cookie ? document.cookie.split('; ') : [];
+            for (let i = 0; i < cookies.length; i += 1) {
+                const part = cookies[i];
+                if (part.startsWith(`${name}=`)) {
+                    return decodeURIComponent(part.slice(name.length + 1));
+                }
+            }
+            return '';
+        };
+
+        const persistVariantCookie = (ad) => {
+            if (!ad) {
+                return;
+            }
+            if (requiresConsent && !hasConsent) {
+                return;
+            }
+            const strategy =
+                ad.getAttribute('data-ad-variant-strategy') || '';
+            if (strategy !== 'session') {
+                return;
+            }
+            const adId = ad.getAttribute('data-ad-id') || '';
+            const variantId = ad.getAttribute('data-ad-variant') || '';
+            if (!adId || !variantId) {
+                return;
+            }
+            const key = buildVariantCookieKey(adId);
+            if (readCookieValue(key) === variantId) {
+                return;
+            }
+            let cookie = `${encodeURIComponent(key)}=${encodeURIComponent(
+                variantId
+            )}; path=/; SameSite=Lax`;
+            if (window.location.protocol === 'https:') {
+                cookie += '; Secure';
+            }
+            document.cookie = cookie;
+        };
+
         const updateLockScroll = (ad, shouldLock) => {
             if (!ad || !document.body) {
                 return;
@@ -427,6 +476,7 @@
                 return;
             }
             ad.dataset.adBehaviorInitialized = '1';
+            persistVariantCookie(ad);
 
             if (!shouldShowByFrequency(ad)) {
                 ad.dataset.adFreqBlocked = '1';
@@ -750,6 +800,54 @@
                 video.muted = true;
             });
         }
+    };
+
+    const buildVariantCookieKey = (adId = '') => {
+        const safeId = String(adId).replace(/[^a-zA-Z0-9_]/g, '_');
+        return `magick_ad_variant_${safeId || 'unknown'}`;
+    };
+
+    const readCookieValue = (name) => {
+        if (!name) {
+            return '';
+        }
+        const cookies = document.cookie ? document.cookie.split('; ') : [];
+        for (let i = 0; i < cookies.length; i += 1) {
+            const part = cookies[i];
+            if (part.startsWith(`${name}=`)) {
+                return decodeURIComponent(part.slice(name.length + 1));
+            }
+        }
+        return '';
+    };
+
+    const persistVariantCookie = (ad) => {
+        if (!ad) {
+            return;
+        }
+        if (requiresConsent && !hasConsent) {
+            return;
+        }
+        const strategy = ad.getAttribute('data-ad-variant-strategy') || '';
+        if (strategy !== 'session') {
+            return;
+        }
+        const adId = ad.getAttribute('data-ad-id') || '';
+        const variantId = ad.getAttribute('data-ad-variant') || '';
+        if (!adId || !variantId) {
+            return;
+        }
+        const key = buildVariantCookieKey(adId);
+        if (readCookieValue(key) === variantId) {
+            return;
+        }
+        let cookie = `${encodeURIComponent(key)}=${encodeURIComponent(
+            variantId
+        )}; path=/; SameSite=Lax`;
+        if (window.location.protocol === 'https:') {
+            cookie += '; Secure';
+        }
+        document.cookie = cookie;
     };
     const getAdElement = (element) => {
         if (!element) {
@@ -1222,6 +1320,7 @@
             return;
         }
         ad.dataset.adBehaviorInitialized = '1';
+        persistVariantCookie(ad);
 
         const delay = Number(ad.getAttribute('data-ad-delay') || 0);
         const animation = ad.getAttribute('data-ad-anim');

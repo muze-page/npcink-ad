@@ -82,6 +82,7 @@ export type RandomStrategy = 'request' | 'session' | 'cookie';
 export type HtmlMode = 'safe' | 'full';
 export type HtmlSandboxMode = 'inherit' | 'enable' | 'disable';
 export type HtmlLoadStrategy = 'immediate' | 'delay' | 'viewport';
+export type VariantStrategy = 'request' | 'session';
 export type EditorMode = 'quick' | 'design' | 'expert';
 export type DeviceType = 'all' | 'mobile' | 'tablet' | 'desktop';
 export type LoginType = 'all' | 'logged-in' | 'logged-out';
@@ -249,6 +250,7 @@ export interface AdContent {
     html_load_strategy: HtmlLoadStrategy;
     html_load_delay: number;
     variants_enabled: boolean;
+    variants_strategy: VariantStrategy;
     variants: ContentVariant[];
     image: ImageAsset;
     container_style: ContainerStyle;
