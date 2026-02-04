@@ -62,7 +62,6 @@ import apiFetch from '@wordpress/api-fetch';
 
 const AdsConfig = () => {
     const headerStorageKey = 'magick_ad_header_collapsed';
-    const scheduleStorageKey = 'magick_ad_schedule_collapsed';
     const quickPanelStorageKey = 'magick_ad_panel_quick';
     const containerTabStorageKey = 'magick_ad_container_tab';
     const frequencyPanelStorageKey = 'magick_ad_panel_frequency';
@@ -108,20 +107,6 @@ const AdsConfig = () => {
             return stored === '1';
         } catch (err) {
             return true;
-        }
-    });
-    const [scheduleOpen, setScheduleOpen] = useState(() => {
-        if (typeof window === 'undefined') {
-            return false;
-        }
-        try {
-            const stored = window.localStorage?.getItem(scheduleStorageKey);
-            if (stored === null) {
-                return false;
-            }
-            return stored !== '1';
-        } catch (err) {
-            return false;
         }
     });
     const readEditorMode = (fallback) => {
@@ -495,20 +480,6 @@ const AdsConfig = () => {
             // ignore storage errors
         }
     }, [headerCollapsed]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return;
-        }
-        try {
-            window.localStorage?.setItem(
-                scheduleStorageKey,
-                scheduleOpen ? '0' : '1'
-            );
-        } catch (err) {
-            // ignore storage errors
-        }
-    }, [scheduleOpen]);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -3942,119 +3913,106 @@ const AdsConfig = () => {
                     >
                         {statusMeta(selectedAd).label}
                     </span>
-                    <Button
-                        className="magick-ad-collapse-toggle"
-                        icon={
-                            scheduleOpen ? chevronUp : chevronDown
-                        }
-                        label={scheduleOpen ? '折叠' : '展开'}
-                        variant="tertiary"
-                        onClick={() =>
-                            setScheduleOpen((prev) => !prev)
-                        }
-                    />
                 </div>
             </div>
-            {scheduleOpen && (
-                <div className="magick-ad-right-section__body">
-                    <SelectControl
-                        label="发布状态"
-                        value={resolveStatus(selectedAd)}
-                        options={[
-                            { label: '已发布', value: 'publish' },
-                            { label: '待审核', value: 'pending' },
-                            { label: '草稿/停用', value: 'draft' },
-                            ...(resolveStatus(selectedAd) ===
-                            'future'
-                                ? [
-                                      {
-                                          label: '已排期',
-                                          value: 'future',
-                                          disabled: true,
-                                      },
-                                  ]
-                                : []),
-                        ]}
-                        onChange={(value) => {
-                            if (!selectedAd) {
-                                return;
-                            }
-                            if (value === 'draft') {
-                                handleUpdateMeta({
-                                    status: 'draft',
-                                    options: {
-                                        ...selectedAd.options,
-                                        enabled: false,
-                                    },
-                                });
-                                return;
-                            }
-                            if (value === 'pending') {
-                                handleUpdateMeta({
-                                    status: 'pending',
-                                    options: {
-                                        ...selectedAd.options,
-                                        enabled: true,
-                                    },
-                                });
-                                return;
-                            }
-                            const nextDate =
-                                selectedAd.date &&
-                                isFutureDate(selectedAd.date)
-                                    ? formatDateFromDate(new Date())
-                                    : selectedAd.date || '';
+            <div className="magick-ad-right-section__body">
+                <SelectControl
+                    label="发布状态"
+                    value={resolveStatus(selectedAd)}
+                    options={[
+                        { label: '已发布', value: 'publish' },
+                        { label: '待审核', value: 'pending' },
+                        { label: '草稿/停用', value: 'draft' },
+                        ...(resolveStatus(selectedAd) ===
+                        'future'
+                            ? [
+                                  {
+                                      label: '已排期',
+                                      value: 'future',
+                                      disabled: true,
+                                  },
+                              ]
+                            : []),
+                    ]}
+                    onChange={(value) => {
+                        if (!selectedAd) {
+                            return;
+                        }
+                        if (value === 'draft') {
                             handleUpdateMeta({
-                                status: 'publish',
-                                date: nextDate,
+                                status: 'draft',
+                                options: {
+                                    ...selectedAd.options,
+                                    enabled: false,
+                                },
+                            });
+                            return;
+                        }
+                        if (value === 'pending') {
+                            handleUpdateMeta({
+                                status: 'pending',
                                 options: {
                                     ...selectedAd.options,
                                     enabled: true,
                                 },
                             });
-                        }}
-                    />
-                    <div className="magick-ad-right-subsection">
-                        <div className="magick-ad-right-subsection__title">
-                            投放周期
-                        </div>
-                        <div className="magick-ad-right-subsection__body">
-                            <TextControl
-                                label="开始时间"
-                                type="datetime-local"
-                                value={formatDateTimeLocalInput(
-                                    selectedAd.options?.start_date
-                                )}
-                                onChange={(value) =>
-                                    handleUpdateOptions({
-                                        start_date:
-                                            formatDateTimeStorage(
-                                                value
-                                            ),
-                                    })
-                                }
-                                help="开始时间为空表示立即生效。"
-                            />
-                            <TextControl
-                                label="结束时间"
-                                type="datetime-local"
-                                value={formatEndDateTimeLocalInput(
-                                    selectedAd.options?.end_date
-                                )}
-                                onChange={(value) =>
-                                    handleUpdateOptions({
-                                        end_date:
-                                            formatDateTimeStorage(
-                                                value
-                                            ),
-                                    })
-                                }
-                                help="结束时间为空表示长期有效，支持到分钟。"
-                            />
-                        </div>
+                            return;
+                        }
+                        const nextDate =
+                            selectedAd.date &&
+                            isFutureDate(selectedAd.date)
+                                ? formatDateFromDate(new Date())
+                                : selectedAd.date || '';
+                        handleUpdateMeta({
+                            status: 'publish',
+                            date: nextDate,
+                            options: {
+                                ...selectedAd.options,
+                                enabled: true,
+                            },
+                        });
+                    }}
+                />
+                <div className="magick-ad-right-subsection">
+                    <div className="magick-ad-right-subsection__title">
+                        投放周期
+                    </div>
+                    <div className="magick-ad-right-subsection__body">
+                        <TextControl
+                            label="开始时间"
+                            type="datetime-local"
+                            value={formatDateTimeLocalInput(
+                                selectedAd.options?.start_date
+                            )}
+                            onChange={(value) =>
+                                handleUpdateOptions({
+                                    start_date:
+                                        formatDateTimeStorage(
+                                            value
+                                        ),
+                                })
+                            }
+                            help="开始时间为空表示立即生效。"
+                        />
+                        <TextControl
+                            label="结束时间"
+                            type="datetime-local"
+                            value={formatEndDateTimeLocalInput(
+                                selectedAd.options?.end_date
+                            )}
+                            onChange={(value) =>
+                                handleUpdateOptions({
+                                    end_date:
+                                        formatDateTimeStorage(
+                                            value
+                                        ),
+                                })
+                            }
+                            help="结束时间为空表示长期有效，支持到分钟。"
+                        />
                     </div>
                 </div>
-            )}
+            </div>
         </div>
 
     );
@@ -5706,11 +5664,7 @@ const AdsConfig = () => {
                     className="magick-ad-modal magick-ad-config-modal"
                     onRequestClose={() => setPreviewModalOpen(false)}
                 >
-                    <Panel>
-                        <PanelBody title="预览页面" initialOpen>
-                            {renderPreviewControls()}
-                        </PanelBody>
-                    </Panel>
+                    {renderPreviewControls()}
                 </Modal>
             )}
 

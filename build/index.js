@@ -3806,7 +3806,6 @@ __webpack_require__.r(__webpack_exports__);
 
 const AdsConfig = () => {
   const headerStorageKey = 'magick_ad_header_collapsed';
-  const scheduleStorageKey = 'magick_ad_schedule_collapsed';
   const quickPanelStorageKey = 'magick_ad_panel_quick';
   const containerTabStorageKey = 'magick_ad_container_tab';
   const frequencyPanelStorageKey = 'magick_ad_panel_frequency';
@@ -3854,20 +3853,6 @@ const AdsConfig = () => {
       return stored === '1';
     } catch (err) {
       return true;
-    }
-  });
-  const [scheduleOpen, setScheduleOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-    try {
-      const stored = window.localStorage?.getItem(scheduleStorageKey);
-      if (stored === null) {
-        return false;
-      }
-      return stored !== '1';
-    } catch (err) {
-      return false;
     }
   });
   const readEditorMode = fallback => {
@@ -4186,16 +4171,6 @@ const AdsConfig = () => {
       // ignore storage errors
     }
   }, [headerCollapsed]);
-  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    try {
-      window.localStorage?.setItem(scheduleStorageKey, scheduleOpen ? '0' : '1');
-    } catch (err) {
-      // ignore storage errors
-    }
-  }, [scheduleOpen]);
   (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
     if (typeof window === 'undefined') {
       return;
@@ -6204,13 +6179,7 @@ const AdsConfig = () => {
     disabled: isSaving || !selectedAd
   }, isSaving ? '保存中...' : '保存'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
     className: `magick-ad-status-pill ${statusMeta(selectedAd).className}`
-  }, statusMeta(selectedAd).label), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-    className: "magick-ad-collapse-toggle",
-    icon: scheduleOpen ? _wordpress_icons__WEBPACK_IMPORTED_MODULE_5__["default"] : _wordpress_icons__WEBPACK_IMPORTED_MODULE_4__["default"],
-    label: scheduleOpen ? '折叠' : '展开',
-    variant: "tertiary",
-    onClick: () => setScheduleOpen(prev => !prev)
-  }))), scheduleOpen && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+  }, statusMeta(selectedAd).label))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-right-section__body"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
     label: "\u53D1\u5E03\u72B6\u6001",
@@ -7050,10 +7019,7 @@ const AdsConfig = () => {
     title: "\u9884\u89C8\u8BBE\u7F6E",
     className: "magick-ad-modal magick-ad-config-modal",
     onRequestClose: () => setPreviewModalOpen(false)
-  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-    title: "\u9884\u89C8\u9875\u9762",
-    initialOpen: true
-  }, renderPreviewControls()))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_TemplateLibraryModal__WEBPACK_IMPORTED_MODULE_18__["default"], {
+  }, renderPreviewControls()), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_TemplateLibraryModal__WEBPACK_IMPORTED_MODULE_18__["default"], {
     isOpen: templateModalOpen,
     type: templateType,
     templates: templateLibrary,
