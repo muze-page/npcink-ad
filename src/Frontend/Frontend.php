@@ -2354,7 +2354,57 @@ final class Frontend {
 
     private static function build_block_body(array $content): string {
         $blocks = isset($content['blocks']) ? (string) $content['blocks'] : '';
-        return $blocks ? do_blocks($blocks) : '';
+        if ($blocks === '') {
+            return '';
+        }
+        $output = do_blocks($blocks);
+        $block_settings = isset($content['block_settings']) && is_array($content['block_settings'])
+            ? $content['block_settings']
+            : array();
+        $styles = array();
+        $background = isset($block_settings['background']) ? (string) $block_settings['background'] : '';
+        if ($background !== '' && $background !== 'transparent') {
+            $styles[] = 'background:' . esc_attr($background);
+        }
+        $text_color = isset($block_settings['text_color']) ? (string) $block_settings['text_color'] : '';
+        if ($text_color !== '' && $text_color !== 'transparent') {
+            $styles[] = 'color:' . esc_attr($text_color);
+        }
+        $padding = isset($block_settings['padding']) ? absint($block_settings['padding']) : 0;
+        if ($padding > 0) {
+            $styles[] = 'padding:' . $padding . 'px';
+        }
+        $radius = isset($block_settings['radius']) ? absint($block_settings['radius']) : 0;
+        if ($radius > 0) {
+            $styles[] = 'border-radius:' . $radius . 'px';
+        }
+        $max_width = isset($block_settings['max_width']) ? absint($block_settings['max_width']) : 0;
+        if ($max_width > 0) {
+            $styles[] = 'max-width:' . $max_width . 'px';
+        }
+        $font_size = isset($block_settings['font_size']) ? absint($block_settings['font_size']) : 0;
+        if ($font_size > 0) {
+            $styles[] = 'font-size:' . $font_size . 'px';
+        }
+        $font_family = isset($block_settings['font_family']) ? (string) $block_settings['font_family'] : '';
+        if ($font_family !== '') {
+            $styles[] = 'font-family:' . esc_attr($font_family);
+        }
+        $background_image = isset($block_settings['background_image']['url'])
+            ? (string) $block_settings['background_image']['url']
+            : '';
+        if ($background_image !== '') {
+            $styles[] = 'background-image:url(' . esc_url($background_image) . ')';
+            $styles[] = 'background-size:cover';
+            $styles[] = 'background-position:center';
+        }
+        $align = isset($block_settings['align']) ? (string) $block_settings['align'] : '';
+        if ($align === 'center' || $max_width > 0) {
+            $styles[] = 'margin-left:auto';
+            $styles[] = 'margin-right:auto';
+        }
+        $style_attr = !empty($styles) ? ' style="' . esc_attr(implode(';', $styles)) . '"' : '';
+        return '<div class="magick-ad-block-content"' . $style_attr . '>' . $output . '</div>';
     }
 
     private static function build_html_body(array $content, array $options): string {
@@ -2369,6 +2419,13 @@ final class Frontend {
     }
 
     private static function should_sandbox_html(array $options): bool {
+        $override = isset($options['html_sandbox']) ? (string) $options['html_sandbox'] : '';
+        if ($override === 'enable') {
+            return true;
+        }
+        if ($override === 'disable') {
+            return false;
+        }
         $enabled = (get_option('magick_ad_html_sandbox', '0') === '1');
         $enabled = (bool) apply_filters('magick_ad_html_sandbox_enabled', $enabled, $options);
         if (!$enabled) {
@@ -2512,18 +2569,70 @@ final class Frontend {
         if (empty($content['video_url'])) {
             return '';
         }
-        return '<div class="magick-ad-video"><video controls src="' . esc_url($content['video_url']) . '"></video></div>';
+        $settings = isset($content['video_settings']) && is_array($content['video_settings'])
+            ? $content['video_settings']
+            : array();
+        $type = isset($settings['type']) ? (string) $settings['type'] : 'mp4';
+        $aspect = isset($settings['aspect_ratio']) ? (string) $settings['aspect_ratio'] : '16:9';
+        $wrapper_styles = array();
+        $wrapper_class = 'magick-ad-video';
+        if ($aspect !== '' && $aspect !== 'auto') {
+            $wrapper_styles[] = 'aspect-ratio:' . esc_attr(str_replace(':', '/', $aspect));
+            $wrapper_class .= ' magick-ad-video--ratio';
+        }
+        $wrapper_style_attr = !empty($wrapper_styles)
+            ? ' style="' . esc_attr(implode(';', $wrapper_styles)) . '"'
+            : '';
+        $video_url = esc_url($content['video_url']);
+        if ($type === 'embed') {
+            return '<div class="' . esc_attr($wrapper_class) . '"' . $wrapper_style_attr . '><iframe class="magick-ad-video__media" src="' . $video_url . '" allowfullscreen loading="lazy" referrerpolicy="no-referrer"></iframe></div>';
+        }
+        $attrs = array();
+        $autoplay = !empty($settings['autoplay']);
+        $muted = !empty($settings['muted']) || $autoplay;
+        if (!empty($settings['controls']) || !array_key_exists('controls', $settings)) {
+            $attrs[] = 'controls';
+        }
+        if ($autoplay) {
+            $attrs[] = 'autoplay';
+        }
+        if ($muted) {
+            $attrs[] = 'muted';
+        }
+        if (!empty($settings['loop'])) {
+            $attrs[] = 'loop';
+        }
+        if (!empty($settings['playsinline']) || !array_key_exists('playsinline', $settings)) {
+            $attrs[] = 'playsinline';
+        }
+        $preload = isset($settings['preload']) ? (string) $settings['preload'] : '';
+        if (in_array($preload, array('auto', 'metadata', 'none'), true)) {
+            $attrs[] = 'preload="' . esc_attr($preload) . '"';
+        }
+        $poster = isset($settings['poster']['url']) ? esc_url($settings['poster']['url']) : '';
+        if ($poster !== '') {
+            $attrs[] = 'poster="' . $poster . '"';
+        }
+        $fallback = isset($settings['fallback_text']) ? esc_html($settings['fallback_text']) : '';
+        $attr_string = !empty($attrs) ? ' ' . implode(' ', $attrs) : '';
+        $video = '<video class="magick-ad-video__media" src="' . $video_url . '"' . $attr_string . '>' . $fallback . '</video>';
+        return '<div class="' . esc_attr($wrapper_class) . '"' . $wrapper_style_attr . '>' . $video . '</div>';
     }
 
     private static function append_custom_markup(string $body, array $content): string {
         $custom_html = isset($content['custom_html']) ? (string) $content['custom_html'] : '';
         $custom_css = isset($content['custom_css']) ? (string) $content['custom_css'] : '';
+        $custom_js = isset($content['custom_js']) ? (string) $content['custom_js'] : '';
         if ($custom_html) {
             $body .= $custom_html;
         }
         if ($custom_css) {
             $custom_css = preg_replace('/<\/?style[^>]*>/i', '', $custom_css);
             $body = '<style>' . $custom_css . '</style>' . $body;
+        }
+        if ($custom_js) {
+            $custom_js = preg_replace('/<\/?script[^>]*>/i', '', $custom_js);
+            $body .= '<script>' . $custom_js . '</script>';
         }
         return $body;
     }

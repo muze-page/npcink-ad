@@ -26,6 +26,7 @@ const createAdGroupTemplate = (
         display_mode: 'show',
         random_strategy: 'request',
         html_mode: 'safe',
+        html_sandbox: 'inherit',
         editor_mode: 'design',
         placement_hook: 'footer',
         placement_position: '',
@@ -59,6 +60,30 @@ const createAdGroupTemplate = (
         cta_text: '',
         custom_html: '',
         custom_css: '',
+        custom_js: '',
+        video_settings: {
+            type: 'mp4',
+            autoplay: false,
+            muted: false,
+            loop: false,
+            controls: true,
+            playsinline: true,
+            preload: 'metadata',
+            aspect_ratio: '16:9',
+            poster: { id: 0, url: '', alt: '' },
+            fallback_text: '',
+        },
+        block_settings: {
+            background: 'transparent',
+            text_color: '',
+            padding: 0,
+            radius: 0,
+            max_width: 0,
+            font_size: 0,
+            font_family: '',
+            align: '',
+            background_image: { id: 0, url: '', alt: '' },
+        },
         container_style: {
             mode: 'boxed',
             max_width: 100,
@@ -163,6 +188,14 @@ const normalizeAd = (ad: unknown): Ad => {
         content.container_style && typeof content.container_style === 'object'
             ? content.container_style
             : {};
+    const videoSettings =
+        content.video_settings && typeof content.video_settings === 'object'
+            ? content.video_settings
+            : {};
+    const blockSettings =
+        content.block_settings && typeof content.block_settings === 'object'
+            ? content.block_settings
+            : {};
     const behavior =
         content.behavior && typeof content.behavior === 'object'
             ? content.behavior
@@ -221,6 +254,11 @@ const normalizeAd = (ad: unknown): Ad => {
             html_mode: ['safe', 'full'].includes(options.html_mode)
                 ? options.html_mode
                 : 'safe',
+            html_sandbox: ['inherit', 'enable', 'disable'].includes(
+                options.html_sandbox
+            )
+                ? options.html_sandbox
+                : 'inherit',
             editor_mode: ['quick', 'design', 'expert'].includes(options.editor_mode)
                 ? options.editor_mode
                 : 'design',
@@ -274,10 +312,52 @@ const normalizeAd = (ad: unknown): Ad => {
             cta_text: content.cta_text || '',
             custom_html: content.custom_html || '',
             custom_css: content.custom_css || '',
+            custom_js: content.custom_js || '',
             image: {
                 id: Number(image.id || 0),
                 url: image.url || '',
                 alt: image.alt || '',
+            },
+            video_settings: {
+                type: ['mp4', 'embed'].includes(videoSettings.type)
+                    ? videoSettings.type
+                    : 'mp4',
+                autoplay: Boolean(videoSettings.autoplay),
+                muted: Boolean(videoSettings.muted),
+                loop: Boolean(videoSettings.loop),
+                controls: videoSettings.controls !== false,
+                playsinline: videoSettings.playsinline !== false,
+                preload: ['metadata', 'auto', 'none'].includes(
+                    videoSettings.preload
+                )
+                    ? videoSettings.preload
+                    : 'metadata',
+                aspect_ratio: ['auto', '16:9', '4:3', '1:1', '9:16'].includes(
+                    videoSettings.aspect_ratio
+                )
+                    ? videoSettings.aspect_ratio
+                    : '16:9',
+                poster: {
+                    id: Number(videoSettings.poster?.id || 0),
+                    url: videoSettings.poster?.url || '',
+                    alt: videoSettings.poster?.alt || '',
+                },
+                fallback_text: videoSettings.fallback_text || '',
+            },
+            block_settings: {
+                background: blockSettings.background || 'transparent',
+                text_color: blockSettings.text_color || '',
+                padding: Number(blockSettings.padding || 0),
+                radius: Number(blockSettings.radius || 0),
+                max_width: Number(blockSettings.max_width || 0),
+                font_size: Number(blockSettings.font_size || 0),
+                font_family: blockSettings.font_family || '',
+                align: blockSettings.align === 'center' ? 'center' : '',
+                background_image: {
+                    id: Number(blockSettings.background_image?.id || 0),
+                    url: blockSettings.background_image?.url || '',
+                    alt: blockSettings.background_image?.alt || '',
+                },
             },
             container_style: {
                 mode: containerStyle.mode === 'raw' ? 'raw' : 'boxed',

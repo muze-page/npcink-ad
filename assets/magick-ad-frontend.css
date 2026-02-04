@@ -36,11 +36,25 @@
     height: auto;
 }
 
-.magick-ad-video video {
-    display: block;
+.magick-ad-video {
+    width: 100%;
     max-width: 100%;
+}
+
+.magick-ad-video__media {
+    display: block;
     width: 100%;
     height: auto;
+    border: 0;
+}
+
+.magick-ad-video--ratio .magick-ad-video__media {
+    width: 100%;
+    height: 100%;
+}
+
+.magick-ad-block-content {
+    width: 100%;
 }
 
 .magick-ad-html-container {

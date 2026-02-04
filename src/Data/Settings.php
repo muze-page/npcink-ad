@@ -529,6 +529,11 @@ final class Settings {
                 array('safe', 'full'),
                 'safe'
             ),
+            'html_sandbox' => self::sanitize_choice(
+                isset($options['html_sandbox']) ? $options['html_sandbox'] : 'inherit',
+                array('inherit', 'enable', 'disable'),
+                'inherit'
+            ),
             'editor_mode' => self::sanitize_choice(
                 isset($options['editor_mode']) ? $options['editor_mode'] : 'design',
                 array('quick', 'design', 'expert'),
@@ -609,10 +614,22 @@ final class Settings {
         $custom_css = isset($content['custom_css']) && is_string($content['custom_css'])
             ? $content['custom_css']
             : '';
+        $custom_js = isset($content['custom_js']) && is_string($content['custom_js'])
+            ? $content['custom_js']
+            : '';
         if (!current_user_can('unfiltered_html')) {
             $custom_html = '';
             $custom_css = '';
+            $custom_js = '';
         }
+
+        $video_settings = isset($content['video_settings']) && is_array($content['video_settings'])
+            ? $content['video_settings']
+            : array();
+
+        $block_settings = isset($content['block_settings']) && is_array($content['block_settings'])
+            ? $content['block_settings']
+            : array();
 
         $sanitized_content = array(
             'html' => $html_value,
@@ -624,10 +641,64 @@ final class Settings {
             'cta_text' => isset($content['cta_text']) ? sanitize_text_field($content['cta_text']) : '',
             'custom_html' => $custom_html,
             'custom_css' => $custom_css,
+            'custom_js' => $custom_js,
             'image' => array(
                 'id' => isset($image['id']) ? absint($image['id']) : 0,
                 'url' => isset($image['url']) ? esc_url_raw($image['url']) : '',
                 'alt' => isset($image['alt']) ? sanitize_text_field($image['alt']) : '',
+            ),
+            'video_settings' => array(
+                'type' => self::sanitize_choice(
+                    isset($video_settings['type']) ? $video_settings['type'] : 'mp4',
+                    array('mp4', 'embed'),
+                    'mp4'
+                ),
+                'autoplay' => !empty($video_settings['autoplay']),
+                'muted' => !empty($video_settings['muted']),
+                'loop' => !empty($video_settings['loop']),
+                'controls' => array_key_exists('controls', $video_settings)
+                    ? (bool) $video_settings['controls']
+                    : true,
+                'playsinline' => array_key_exists('playsinline', $video_settings)
+                    ? (bool) $video_settings['playsinline']
+                    : true,
+                'preload' => self::sanitize_choice(
+                    isset($video_settings['preload']) ? $video_settings['preload'] : 'metadata',
+                    array('metadata', 'auto', 'none'),
+                    'metadata'
+                ),
+                'aspect_ratio' => self::sanitize_choice(
+                    isset($video_settings['aspect_ratio']) ? $video_settings['aspect_ratio'] : '16:9',
+                    array('auto', '16:9', '4:3', '1:1', '9:16'),
+                    '16:9'
+                ),
+                'poster' => array(
+                    'id' => isset($video_settings['poster']['id']) ? absint($video_settings['poster']['id']) : 0,
+                    'url' => isset($video_settings['poster']['url']) ? esc_url_raw($video_settings['poster']['url']) : '',
+                    'alt' => isset($video_settings['poster']['alt']) ? sanitize_text_field($video_settings['poster']['alt']) : '',
+                ),
+                'fallback_text' => isset($video_settings['fallback_text'])
+                    ? sanitize_text_field($video_settings['fallback_text'])
+                    : '',
+            ),
+            'block_settings' => array(
+                'background' => self::sanitize_color(isset($block_settings['background']) ? $block_settings['background'] : 'transparent'),
+                'text_color' => self::sanitize_color(isset($block_settings['text_color']) ? $block_settings['text_color'] : ''),
+                'padding' => isset($block_settings['padding']) ? absint($block_settings['padding']) : 0,
+                'radius' => isset($block_settings['radius']) ? absint($block_settings['radius']) : 0,
+                'max_width' => isset($block_settings['max_width']) ? absint($block_settings['max_width']) : 0,
+                'font_size' => isset($block_settings['font_size']) ? absint($block_settings['font_size']) : 0,
+                'font_family' => isset($block_settings['font_family']) ? sanitize_text_field($block_settings['font_family']) : '',
+                'align' => self::sanitize_choice(
+                    isset($block_settings['align']) ? $block_settings['align'] : '',
+                    array('', 'center'),
+                    ''
+                ),
+                'background_image' => array(
+                    'id' => isset($block_settings['background_image']['id']) ? absint($block_settings['background_image']['id']) : 0,
+                    'url' => isset($block_settings['background_image']['url']) ? esc_url_raw($block_settings['background_image']['url']) : '',
+                    'alt' => isset($block_settings['background_image']['alt']) ? sanitize_text_field($block_settings['background_image']['alt']) : '',
+                ),
             ),
             'container_style' => array(
                 'mode' => self::sanitize_choice(

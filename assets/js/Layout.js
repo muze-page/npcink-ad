@@ -238,16 +238,96 @@ const Layout = ({
                 </>
             );
         } else if (creativeType === 'video' && content.video_url) {
-            inner = (
-                <video
-                    className="magick-ad-preview__video"
-                    controls
+            const settings = content.video_settings || {};
+            const isEmbed = settings.type === 'embed';
+            const ratio = settings.aspect_ratio || '16:9';
+            const ratioStyle =
+                ratio && ratio !== 'auto'
+                    ? {
+                          aspectRatio: ratio.replace(':', ' / '),
+                      }
+                    : undefined;
+            const videoNode = isEmbed ? (
+                <iframe
+                    className="magick-ad-preview__video-media"
                     src={content.video_url}
+                    title="video"
+                    frameBorder="0"
+                    allowFullScreen
                 />
+            ) : (
+                <video
+                    className="magick-ad-preview__video-media"
+                    src={content.video_url}
+                    autoPlay={Boolean(settings.autoplay)}
+                    muted={Boolean(settings.muted || settings.autoplay)}
+                    loop={Boolean(settings.loop)}
+                    controls={settings.controls !== false}
+                    playsInline={settings.playsinline !== false}
+                    preload={settings.preload || 'metadata'}
+                    poster={settings.poster?.url || undefined}
+                >
+                    {settings.fallback_text || ''}
+                </video>
             );
-        } else if (creativeType === 'block' && content.blocks) {
             inner = (
                 <div
+                    className={`magick-ad-preview__video ${
+                        ratio && ratio !== 'auto'
+                            ? 'is-ratio'
+                            : ''
+                    }`}
+                    style={ratioStyle}
+                >
+                    {videoNode}
+                </div>
+            );
+        } else if (creativeType === 'block' && content.blocks) {
+            const blockSettings = content.block_settings || {};
+            const blockStyle = {};
+            if (
+                blockSettings.background &&
+                blockSettings.background !== 'transparent'
+            ) {
+                blockStyle.background = blockSettings.background;
+            }
+            if (
+                blockSettings.text_color &&
+                blockSettings.text_color !== 'transparent'
+            ) {
+                blockStyle.color = blockSettings.text_color;
+            }
+            if (blockSettings.padding) {
+                blockStyle.padding = `${blockSettings.padding}px`;
+            }
+            if (blockSettings.radius) {
+                blockStyle.borderRadius = `${blockSettings.radius}px`;
+            }
+            if (blockSettings.max_width) {
+                blockStyle.maxWidth = `${blockSettings.max_width}px`;
+            }
+            if (
+                blockSettings.align === 'center' ||
+                blockSettings.max_width
+            ) {
+                blockStyle.marginLeft = 'auto';
+                blockStyle.marginRight = 'auto';
+            }
+            if (blockSettings.font_size) {
+                blockStyle.fontSize = `${blockSettings.font_size}px`;
+            }
+            if (blockSettings.font_family) {
+                blockStyle.fontFamily = blockSettings.font_family;
+            }
+            if (blockSettings.background_image?.url) {
+                blockStyle.backgroundImage = `url(${blockSettings.background_image.url})`;
+                blockStyle.backgroundSize = 'cover';
+                blockStyle.backgroundPosition = 'center';
+            }
+            inner = (
+                <div
+                    className="magick-ad-preview__block"
+                    style={blockStyle}
                     dangerouslySetInnerHTML={{
                         __html: content.blocks,
                     }}

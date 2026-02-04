@@ -75,6 +75,7 @@ export type ContainerType =
 export type DisplayMode = 'show' | 'random' | 'hide';
 export type RandomStrategy = 'request' | 'session' | 'cookie';
 export type HtmlMode = 'safe' | 'full';
+export type HtmlSandboxMode = 'inherit' | 'enable' | 'disable';
 export type EditorMode = 'quick' | 'design' | 'expert';
 export type DeviceType = 'all' | 'mobile' | 'tablet' | 'desktop';
 export type LoginType = 'all' | 'logged-in' | 'logged-out';
@@ -101,6 +102,10 @@ export type BadgeType = 'text' | 'image';
 export type LayoutType = '' | 'centered';
 export type AnimationType = 'none' | 'fade' | 'slide-up' | 'zoom';
 export type FrequencyMode = 'none' | 'session' | 'day' | 'count';
+export type VideoType = 'mp4' | 'embed';
+export type VideoPreload = 'metadata' | 'auto' | 'none';
+export type VideoAspect = 'auto' | '16:9' | '4:3' | '1:1' | '9:16';
+export type BlockAlign = '' | 'center';
 
 export interface ImageAsset {
     id: number;
@@ -149,6 +154,31 @@ export interface ImageSettings {
     margin_right: number;
 }
 
+export interface VideoSettings {
+    type: VideoType;
+    autoplay: boolean;
+    muted: boolean;
+    loop: boolean;
+    controls: boolean;
+    playsinline: boolean;
+    preload: VideoPreload;
+    aspect_ratio: VideoAspect;
+    poster: ImageAsset;
+    fallback_text: string;
+}
+
+export interface BlockSettings {
+    background: string;
+    text_color: string;
+    padding: number;
+    radius: number;
+    max_width: number;
+    font_size: number;
+    font_family: string;
+    align: BlockAlign;
+    background_image: ImageAsset;
+}
+
 export interface AdContent {
     html: string;
     blocks: string;
@@ -159,10 +189,13 @@ export interface AdContent {
     cta_text: string;
     custom_html: string;
     custom_css: string;
+    custom_js: string;
     image: ImageAsset;
     container_style: ContainerStyle;
     behavior: BehaviorOptions;
     image_settings: ImageSettings;
+    video_settings: VideoSettings;
+    block_settings: BlockSettings;
 }
 
 export interface AdOptions {
@@ -173,6 +206,7 @@ export interface AdOptions {
     display_mode: DisplayMode;
     random_strategy: RandomStrategy;
     html_mode: HtmlMode;
+    html_sandbox?: HtmlSandboxMode;
     editor_mode: EditorMode;
     placement_hook: string;
     placement_position: string;

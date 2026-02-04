@@ -179,13 +179,69 @@ const Layout = ({
       }, content.cta_text) : null;
       inner = (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, wrappedImage, cta);
     } else if (creativeType === 'video' && content.video_url) {
-      inner = (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("video", {
-        className: "magick-ad-preview__video",
-        controls: true,
-        src: content.video_url
-      });
-    } else if (creativeType === 'block' && content.blocks) {
+      const settings = content.video_settings || {};
+      const isEmbed = settings.type === 'embed';
+      const ratio = settings.aspect_ratio || '16:9';
+      const ratioStyle = ratio && ratio !== 'auto' ? {
+        aspectRatio: ratio.replace(':', ' / ')
+      } : undefined;
+      const videoNode = isEmbed ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("iframe", {
+        className: "magick-ad-preview__video-media",
+        src: content.video_url,
+        title: "video",
+        frameBorder: "0",
+        allowFullScreen: true
+      }) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("video", {
+        className: "magick-ad-preview__video-media",
+        src: content.video_url,
+        autoPlay: Boolean(settings.autoplay),
+        muted: Boolean(settings.muted || settings.autoplay),
+        loop: Boolean(settings.loop),
+        controls: settings.controls !== false,
+        playsInline: settings.playsinline !== false,
+        preload: settings.preload || 'metadata',
+        poster: settings.poster?.url || undefined
+      }, settings.fallback_text || '');
       inner = (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: `magick-ad-preview__video ${ratio && ratio !== 'auto' ? 'is-ratio' : ''}`,
+        style: ratioStyle
+      }, videoNode);
+    } else if (creativeType === 'block' && content.blocks) {
+      const blockSettings = content.block_settings || {};
+      const blockStyle = {};
+      if (blockSettings.background && blockSettings.background !== 'transparent') {
+        blockStyle.background = blockSettings.background;
+      }
+      if (blockSettings.text_color && blockSettings.text_color !== 'transparent') {
+        blockStyle.color = blockSettings.text_color;
+      }
+      if (blockSettings.padding) {
+        blockStyle.padding = `${blockSettings.padding}px`;
+      }
+      if (blockSettings.radius) {
+        blockStyle.borderRadius = `${blockSettings.radius}px`;
+      }
+      if (blockSettings.max_width) {
+        blockStyle.maxWidth = `${blockSettings.max_width}px`;
+      }
+      if (blockSettings.align === 'center' || blockSettings.max_width) {
+        blockStyle.marginLeft = 'auto';
+        blockStyle.marginRight = 'auto';
+      }
+      if (blockSettings.font_size) {
+        blockStyle.fontSize = `${blockSettings.font_size}px`;
+      }
+      if (blockSettings.font_family) {
+        blockStyle.fontFamily = blockSettings.font_family;
+      }
+      if (blockSettings.background_image?.url) {
+        blockStyle.backgroundImage = `url(${blockSettings.background_image.url})`;
+        blockStyle.backgroundSize = 'cover';
+        blockStyle.backgroundPosition = 'center';
+      }
+      inner = (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: "magick-ad-preview__block",
+        style: blockStyle,
         dangerouslySetInnerHTML: {
           __html: content.blocks
         }
@@ -3782,7 +3838,10 @@ const AdsConfig = () => {
   const [previewLoading, setPreviewLoading] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [previewLogin, setPreviewLogin] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('auto');
   const [previewUsePage, setPreviewUsePage] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
+  const [htmlTab, setHtmlTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('content');
   const [imageTab, setImageTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('content');
+  const [videoTab, setVideoTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('content');
+  const [blockTab, setBlockTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('content');
   const [pickerConfirmOpen, setPickerConfirmOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [pickerType, setPickerType] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('id');
   const [pickerValue, setPickerValue] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('');
@@ -4556,6 +4615,30 @@ const AdsConfig = () => {
       }
     });
   };
+  const handleUpdateVideoSettings = updates => {
+    if (!selectedAd) {
+      return;
+    }
+    const currentSettings = selectedAd.content?.video_settings || {};
+    handleUpdateContent({
+      video_settings: {
+        ...currentSettings,
+        ...updates
+      }
+    });
+  };
+  const handleUpdateBlockSettings = updates => {
+    if (!selectedAd) {
+      return;
+    }
+    const currentSettings = selectedAd.content?.block_settings || {};
+    handleUpdateContent({
+      block_settings: {
+        ...currentSettings,
+        ...updates
+      }
+    });
+  };
   const handleUpdateContainerStyle = updates => {
     if (!selectedAd) {
       return;
@@ -5145,7 +5228,25 @@ const AdsConfig = () => {
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
       title: "\u5185\u5BB9\u914D\u7F6E",
       initialOpen: true
-    }, isExpertMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
+      className: "magick-ad-html-tabs",
+      tabs: [{
+        name: 'content',
+        title: '内容'
+      }, {
+        name: 'settings',
+        title: '配置'
+      }],
+      initialTabName: htmlTab,
+      onSelect: name => setHtmlTab(name),
+      key: htmlTab
+    }, htmlTabView => htmlTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ClassicEditor__WEBPACK_IMPORTED_MODULE_16__["default"], {
+      value: selectedAd.content?.html || '',
+      active: activeContentType === 'html',
+      onChange: value => handleUpdateContent({
+        html: value
+      })
+    }) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, isExpertMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
       label: "HTML \u6A21\u5F0F",
       value: selectedAd.options?.html_mode || 'safe',
       options: [{
@@ -5171,39 +5272,287 @@ const AdsConfig = () => {
     }) : !isQuickMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
       status: "info",
       isDismissible: false
-    }, "\u5F53\u524D\u662F\u201C\u8BBE\u8BA1\u6A21\u5F0F\u201D\uFF1AHTML \u5F3A\u5236\u4F7F\u7528 \u201C\u5B89\u5168\u6A21\u5F0F\uFF08\u8FC7\u6EE4\u811A\u672C\uFF09\u201D\u3002 \u5982\u9700\u542F\u7528\u811A\u672C\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u4E13\u5BB6\u6A21\u5F0F\u201D\u3002") : null, selectedAd.options?.html_mode === 'full' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    }, "\u5F53\u524D\u662F\u201C\u8BBE\u8BA1\u6A21\u5F0F\u201D\uFF1AHTML \u5F3A\u5236\u4F7F\u7528\u201C\u5B89\u5168\u6A21\u5F0F\uFF08\u8FC7\u6EE4\u811A\u672C\uFF09\u201D\u3002 \u5982\u9700\u542F\u7528\u811A\u672C\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u4E13\u5BB6\u6A21\u5F0F\u201D\u3002") : null, selectedAd.options?.html_mode === 'full' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
       status: "warning",
       isDismissible: false
-    }, "\u5B8C\u5168\u6A21\u5F0F\u5C06\u539F\u6837\u8F93\u51FA HTML\uFF0C\u8BF7\u786E\u4FDD\u7D20\u6750\u4E0E \u4EE3\u7801\u6765\u6E90\u53EF\u4FE1\u3002"), selectedAd.options?.html_mode === 'safe' && /<script[\s>]/i.test(selectedAd.content?.html || '') && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    }, "\u5B8C\u5168\u6A21\u5F0F\u5C06\u539F\u6837\u8F93\u51FA HTML\uFF0C\u8BF7\u786E\u4FDD\u7D20\u6750\u4E0E\u4EE3\u7801\u6765\u6E90\u53EF\u4FE1\u3002"), selectedAd.options?.html_mode === 'safe' && /<script[\s>]/i.test(selectedAd.content?.html || '') && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
       status: "warning",
       isDismissible: false
-    }, "\u68C0\u6D4B\u5230 ", (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("code", null, "<script>"), ' ', "\u6807\u7B7E\u3002\u5B89\u5168\u6A21\u5F0F\u4F1A\u79FB\u9664\u811A\u672C\uFF0C \u8BF7\u5207\u6362\u5230\u201C\u5B8C\u5168\u6A21\u5F0F\u201D\u5E76\u786E\u4FDD\u8D26\u53F7\u5177\u5907\u6743\u9650\u3002"), selectedAd.options?.html_mode === 'full' && !canUnfilteredHtml && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    }, "\u68C0\u6D4B\u5230", ' ', (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("code", null, "<script>"), ' ', "\u6807\u7B7E\u3002\u5B89\u5168\u6A21\u5F0F\u4F1A\u79FB\u9664\u811A\u672C\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u5B8C\u5168\u6A21\u5F0F\u201D\u5E76\u786E\u4FDD\u8D26\u53F7\u5177\u5907\u6743\u9650\u3002"), selectedAd.options?.html_mode === 'full' && !canUnfilteredHtml && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
       status: "error",
       isDismissible: false
-    }, "\u5F53\u524D\u8D26\u53F7\u65E0 unfiltered_html \u6743\u9650\uFF0C \u811A\u672C\u4F1A\u88AB\u8FC7\u6EE4\u5E76\u81EA\u52A8\u56DE\u9000\u5230\u5B89\u5168\u6A21\u5F0F\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ClassicEditor__WEBPACK_IMPORTED_MODULE_16__["default"], {
-      value: selectedAd.content?.html || '',
-      active: activeContentType === 'html',
+    }, "\u5F53\u524D\u8D26\u53F7\u65E0 unfiltered_html \u6743\u9650\uFF0C\u811A\u672C\u4F1A\u88AB\u8FC7\u6EE4\u5E76\u81EA\u52A8\u56DE\u9000\u5230\u5B89\u5168\u6A21\u5F0F\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+      label: "iframe \u6C99\u7BB1",
+      value: selectedAd.options?.html_sandbox || 'inherit',
+      options: [{
+        label: '跟随系统设置',
+        value: 'inherit'
+      }, {
+        label: '强制启用',
+        value: 'enable'
+      }, {
+        label: '强制关闭',
+        value: 'disable'
+      }],
+      onChange: value => handleUpdateOptions({
+        html_sandbox: value
+      }),
+      help: "\u4EC5\u5BF9 HTML \u5B8C\u5168\u6A21\u5F0F\u751F\u6548\uFF1B\u7CFB\u7EDF\u7EA7\u5F00\u5173\u5728\u201C\u7CFB\u7EDF\u8BBE\u7F6E\u201D\u4E2D\u3002"
+    }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+      label: "\u9644\u52A0 HTML\uFF08\u53EF\u9009\uFF09",
+      value: selectedAd.content?.custom_html || '',
       onChange: value => handleUpdateContent({
-        html: value
-      })
-    })))), activeContentType === 'video' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+        custom_html: value
+      }),
+      help: "\u4F1A\u8FFD\u52A0\u5728\u5E7F\u544A\u5185\u5BB9\u540E\u9762\u3002"
+    }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+      label: "\u81EA\u5B9A\u4E49 CSS\uFF08\u53EF\u9009\uFF09",
+      value: selectedAd.content?.custom_css || '',
+      onChange: value => handleUpdateContent({
+        custom_css: value
+      }),
+      help: "\u65E0\u9700\u5199 <style> \u6807\u7B7E\uFF0C\u7CFB\u7EDF\u4F1A\u81EA\u52A8\u5305\u88F9\u3002"
+    }), isExpertMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextareaControl, {
+      label: "\u81EA\u5B9A\u4E49 JS\uFF08\u53EF\u9009\uFF09",
+      value: selectedAd.content?.custom_js || '',
+      onChange: value => handleUpdateContent({
+        custom_js: value
+      }),
+      help: "\u4EC5\u4E13\u5BB6\u6A21\u5F0F\u53EF\u7528\uFF0C\u7CFB\u7EDF\u4F1A\u81EA\u52A8\u5305\u88F9 <script>\u3002"
+    }) : null))))), activeContentType === 'video' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
       title: "\u5185\u5BB9\u914D\u7F6E",
       initialOpen: true
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-      label: "\u89C6\u9891\u5730\u5740",
-      value: selectedAd.content?.video_url || '',
-      onChange: value => handleUpdateContent({
-        video_url: value
-      }),
-      help: "\u652F\u6301 MP4 \u6216\u5916\u90E8\u5D4C\u5165\u94FE\u63A5"
+    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
+      className: "magick-ad-video-tabs",
+      tabs: [{
+        name: 'content',
+        title: '内容'
+      }, {
+        name: 'settings',
+        title: '配置'
+      }],
+      initialTabName: videoTab,
+      onSelect: name => setVideoTab(name),
+      key: videoTab
+    }, videoTabView => {
+      const videoSettings = selectedAd.content?.video_settings || {};
+      const isEmbed = videoSettings.type === 'embed';
+      return videoTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+        label: isEmbed ? '嵌入地址' : '视频地址',
+        value: selectedAd.content?.video_url || '',
+        onChange: value => handleUpdateContent({
+          video_url: value
+        }),
+        help: isEmbed ? '支持 YouTube/Bilibili 等嵌入链接' : '支持 MP4 链接'
+      }) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+        label: "\u89C6\u9891\u7C7B\u578B",
+        value: videoSettings.type || 'mp4',
+        options: [{
+          label: 'MP4',
+          value: 'mp4'
+        }, {
+          label: '嵌入（iframe）',
+          value: 'embed'
+        }],
+        onChange: value => handleUpdateVideoSettings({
+          type: value
+        })
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+        label: "\u6BD4\u4F8B",
+        value: videoSettings.aspect_ratio || '16:9',
+        options: [{
+          label: '自适应',
+          value: 'auto'
+        }, {
+          label: '16:9',
+          value: '16:9'
+        }, {
+          label: '4:3',
+          value: '4:3'
+        }, {
+          label: '1:1',
+          value: '1:1'
+        }, {
+          label: '9:16',
+          value: '9:16'
+        }],
+        onChange: value => handleUpdateVideoSettings({
+          aspect_ratio: value
+        })
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+        label: "\u9884\u52A0\u8F7D",
+        value: videoSettings.preload || 'metadata',
+        options: [{
+          label: 'metadata',
+          value: 'metadata'
+        }, {
+          label: 'auto',
+          value: 'auto'
+        }, {
+          label: 'none',
+          value: 'none'
+        }],
+        onChange: value => handleUpdateVideoSettings({
+          preload: value
+        })
+      }), !isEmbed && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: "magick-ad-field"
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+        className: "magick-ad-field__label"
+      }, "\u5C01\u9762\u56FE"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
+        value: videoSettings.poster || {},
+        onChange: value => handleUpdateVideoSettings({
+          poster: value
+        })
+      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: "magick-ad-image-grid"
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+        label: "\u81EA\u52A8\u64AD\u653E",
+        checked: Boolean(videoSettings.autoplay),
+        onChange: value => handleUpdateVideoSettings({
+          autoplay: value,
+          muted: value ? true : Boolean(videoSettings.muted)
+        }),
+        help: "\u81EA\u52A8\u64AD\u653E\u901A\u5E38\u9700\u8981\u9759\u97F3\u3002"
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+        label: "\u9759\u97F3",
+        checked: Boolean(videoSettings.muted),
+        onChange: value => handleUpdateVideoSettings({
+          muted: value
+        })
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+        label: "\u5FAA\u73AF",
+        checked: Boolean(videoSettings.loop),
+        onChange: value => handleUpdateVideoSettings({
+          loop: value
+        })
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+        label: "\u663E\u793A\u63A7\u5236\u6761",
+        checked: videoSettings.controls !== false,
+        onChange: value => handleUpdateVideoSettings({
+          controls: value
+        })
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+        label: "\u79FB\u52A8\u7AEF\u5185\u5D4C\u64AD\u653E",
+        checked: videoSettings.playsinline !== false,
+        onChange: value => handleUpdateVideoSettings({
+          playsinline: value
+        })
+      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+        label: "\u5907\u7528\u63D0\u793A\u6587\u6848",
+        value: videoSettings.fallback_text || '',
+        onChange: value => handleUpdateVideoSettings({
+          fallback_text: value
+        }),
+        help: "\u6D4F\u89C8\u5668\u4E0D\u652F\u6301\u89C6\u9891\u65F6\u663E\u793A\u3002"
+      }));
     }))), activeContentType === 'block' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
       title: "\u5185\u5BB9\u914D\u7F6E",
       initialOpen: true
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_BlockEditor__WEBPACK_IMPORTED_MODULE_17__["default"], {
-      value: selectedAd.content?.blocks || '',
-      onChange: value => handleUpdateContent({
-        blocks: value
-      })
+    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
+      className: "magick-ad-block-tabs",
+      tabs: [{
+        name: 'content',
+        title: '内容'
+      }, {
+        name: 'settings',
+        title: '配置'
+      }],
+      initialTabName: blockTab,
+      onSelect: name => setBlockTab(name),
+      key: blockTab
+    }, blockTabView => {
+      var _blockSettings$paddin, _blockSettings$radius, _blockSettings$max_wi, _blockSettings$font_s;
+      const blockSettings = selectedAd.content?.block_settings || {};
+      return blockTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_BlockEditor__WEBPACK_IMPORTED_MODULE_17__["default"], {
+        value: selectedAd.content?.blocks || '',
+        onChange: value => handleUpdateContent({
+          blocks: value
+        })
+      }) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: "magick-ad-field"
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+        className: "magick-ad-field__label"
+      }, "\u80CC\u666F\u56FE"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
+        value: blockSettings.background_image || {},
+        onChange: value => handleUpdateBlockSettings({
+          background_image: value
+        })
+      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: "magick-ad-field"
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+        className: "magick-ad-field__label"
+      }, "\u80CC\u666F\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
+        color: blockSettings.background || 'transparent',
+        onChangeComplete: value => handleUpdateBlockSettings({
+          background: formatColorValue(value)
+        }),
+        enableAlpha: true
+      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: "magick-ad-field"
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+        className: "magick-ad-field__label"
+      }, "\u6587\u5B57\u989C\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
+        color: blockSettings.text_color || '#1d2327',
+        onChangeComplete: value => handleUpdateBlockSettings({
+          text_color: formatColorValue(value)
+        }),
+        enableAlpha: true
+      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+        className: "magick-ad-image-grid"
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+        label: "\u5185\u8FB9\u8DDD",
+        min: 0,
+        max: 80,
+        value: (_blockSettings$paddin = blockSettings.padding) !== null && _blockSettings$paddin !== void 0 ? _blockSettings$paddin : 0,
+        onChange: value => handleUpdateBlockSettings({
+          padding: Number(value)
+        })
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+        label: "\u5706\u89D2",
+        min: 0,
+        max: 50,
+        value: (_blockSettings$radius = blockSettings.radius) !== null && _blockSettings$radius !== void 0 ? _blockSettings$radius : 0,
+        onChange: value => handleUpdateBlockSettings({
+          radius: Number(value)
+        })
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+        label: "\u6700\u5927\u5BBD\u5EA6",
+        min: 0,
+        max: 1400,
+        value: (_blockSettings$max_wi = blockSettings.max_width) !== null && _blockSettings$max_wi !== void 0 ? _blockSettings$max_wi : 0,
+        onChange: value => handleUpdateBlockSettings({
+          max_width: Number(value)
+        })
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+        label: "\u5B57\u4F53\u5927\u5C0F",
+        min: 10,
+        max: 48,
+        value: (_blockSettings$font_s = blockSettings.font_size) !== null && _blockSettings$font_s !== void 0 ? _blockSettings$font_s : 0,
+        onChange: value => handleUpdateBlockSettings({
+          font_size: Number(value)
+        })
+      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+        label: "\u5B57\u4F53\uFF08\u53EF\u9009\uFF09",
+        value: blockSettings.font_family || '',
+        onChange: value => handleUpdateBlockSettings({
+          font_family: value
+        }),
+        help: "\u4F8B\u5982\uFF1APingFang SC, Arial, sans-serif"
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+        label: "\u5BF9\u9F50\u65B9\u5F0F",
+        value: blockSettings.align || '',
+        options: [{
+          label: '默认',
+          value: ''
+        }, {
+          label: '居中',
+          value: 'center'
+        }],
+        onChange: value => handleUpdateBlockSettings({
+          align: value
+        })
+      }));
     }))));
   }) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-empty"
@@ -6346,6 +6695,7 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
     display_mode: 'show',
     random_strategy: 'request',
     html_mode: 'safe',
+    html_sandbox: 'inherit',
     editor_mode: 'design',
     placement_hook: 'footer',
     placement_position: '',
@@ -6383,6 +6733,38 @@ const createAdGroupTemplate = (type = 'global', ads = []) => ({
     cta_text: '',
     custom_html: '',
     custom_css: '',
+    custom_js: '',
+    video_settings: {
+      type: 'mp4',
+      autoplay: false,
+      muted: false,
+      loop: false,
+      controls: true,
+      playsinline: true,
+      preload: 'metadata',
+      aspect_ratio: '16:9',
+      poster: {
+        id: 0,
+        url: '',
+        alt: ''
+      },
+      fallback_text: ''
+    },
+    block_settings: {
+      background: 'transparent',
+      text_color: '',
+      padding: 0,
+      radius: 0,
+      max_width: 0,
+      font_size: 0,
+      font_family: '',
+      align: '',
+      background_image: {
+        id: 0,
+        url: '',
+        alt: ''
+      }
+    },
     container_style: {
       mode: 'boxed',
       max_width: 100,
@@ -6469,6 +6851,8 @@ const normalizeAd = ad => {
   const content = safeAd.content && typeof safeAd.content === 'object' ? safeAd.content : {};
   const image = content.image && typeof content.image === 'object' ? content.image : {};
   const containerStyle = content.container_style && typeof content.container_style === 'object' ? content.container_style : {};
+  const videoSettings = content.video_settings && typeof content.video_settings === 'object' ? content.video_settings : {};
+  const blockSettings = content.block_settings && typeof content.block_settings === 'object' ? content.block_settings : {};
   const behavior = content.behavior && typeof content.behavior === 'object' ? content.behavior : {};
   const placement = normalizePlacement(options);
   const imageSettings = content.image_settings && typeof content.image_settings === 'object' ? content.image_settings : {};
@@ -6487,6 +6871,7 @@ const normalizeAd = ad => {
       display_mode: options.display_mode || 'show',
       random_strategy: ['request', 'session', 'cookie'].includes(options.random_strategy) ? options.random_strategy : 'request',
       html_mode: ['safe', 'full'].includes(options.html_mode) ? options.html_mode : 'safe',
+      html_sandbox: ['inherit', 'enable', 'disable'].includes(options.html_sandbox) ? options.html_sandbox : 'inherit',
       editor_mode: ['quick', 'design', 'expert'].includes(options.editor_mode) ? options.editor_mode : 'design',
       placement_hook: placement.hook || 'footer',
       placement_position: placement.hook === 'content' ? placement.position || 'before' : '',
@@ -6519,10 +6904,42 @@ const normalizeAd = ad => {
       cta_text: content.cta_text || '',
       custom_html: content.custom_html || '',
       custom_css: content.custom_css || '',
+      custom_js: content.custom_js || '',
       image: {
         id: Number(image.id || 0),
         url: image.url || '',
         alt: image.alt || ''
+      },
+      video_settings: {
+        type: ['mp4', 'embed'].includes(videoSettings.type) ? videoSettings.type : 'mp4',
+        autoplay: Boolean(videoSettings.autoplay),
+        muted: Boolean(videoSettings.muted),
+        loop: Boolean(videoSettings.loop),
+        controls: videoSettings.controls !== false,
+        playsinline: videoSettings.playsinline !== false,
+        preload: ['metadata', 'auto', 'none'].includes(videoSettings.preload) ? videoSettings.preload : 'metadata',
+        aspect_ratio: ['auto', '16:9', '4:3', '1:1', '9:16'].includes(videoSettings.aspect_ratio) ? videoSettings.aspect_ratio : '16:9',
+        poster: {
+          id: Number(videoSettings.poster?.id || 0),
+          url: videoSettings.poster?.url || '',
+          alt: videoSettings.poster?.alt || ''
+        },
+        fallback_text: videoSettings.fallback_text || ''
+      },
+      block_settings: {
+        background: blockSettings.background || 'transparent',
+        text_color: blockSettings.text_color || '',
+        padding: Number(blockSettings.padding || 0),
+        radius: Number(blockSettings.radius || 0),
+        max_width: Number(blockSettings.max_width || 0),
+        font_size: Number(blockSettings.font_size || 0),
+        font_family: blockSettings.font_family || '',
+        align: blockSettings.align === 'center' ? 'center' : '',
+        background_image: {
+          id: Number(blockSettings.background_image?.id || 0),
+          url: blockSettings.background_image?.url || '',
+          alt: blockSettings.background_image?.alt || ''
+        }
       },
       container_style: {
         mode: containerStyle.mode === 'raw' ? 'raw' : 'boxed',
