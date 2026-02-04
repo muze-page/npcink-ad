@@ -54,7 +54,7 @@ const VideoPicker = ({ value, onChange, compact = false }) => {
                     </div>
                 ) : (
                     <Button onClick={handleOpen} variant="secondary">
-                        选择视频
+                        从媒体库选择
                     </Button>
                 )}
             </div>
@@ -81,7 +81,7 @@ const VideoPicker = ({ value, onChange, compact = false }) => {
                 </div>
             ) : (
                 <Button onClick={handleOpen} variant="secondary">
-                    选择视频
+                    从媒体库选择
                 </Button>
             )}
         </div>

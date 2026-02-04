@@ -1309,9 +1309,11 @@ const AdsConfig = () => {
                                     )}
                                     {type === 'video' && (
                                         <>
+                                            <p className="magick-ad-field__label">
+                                                视频地址
+                                            </p>
                                             <div className="magick-ad-video-input-row">
                                                 <TextControl
-                                                    label="视频地址"
                                                     value={
                                                         variant.content
                                                             ?.video_url || ''
@@ -2734,13 +2736,13 @@ const AdsConfig = () => {
                                                 'content' ? (
                                                 <>
                                                     <div className="magick-ad-video-input">
+                                                        <p className="magick-ad-field__label">
+                                                            {isEmbed
+                                                                ? '嵌入地址'
+                                                                : '视频地址'}
+                                                        </p>
                                                         <div className="magick-ad-video-input-row">
                                                             <TextControl
-                                                                label={
-                                                                    isEmbed
-                                                                        ? '嵌入地址'
-                                                                        : '视频地址'
-                                                                }
                                                                 value={
                                                                     selectedAd
                                                                         .content

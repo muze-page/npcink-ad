@@ -1037,6 +1037,29 @@
     box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
 }
 
+.magick-ad-sub-tabs .components-panel {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.magick-ad-sub-tabs .components-panel__body {
+    border: none;
+    padding: 0;
+}
+
+.magick-ad-tab-panel .components-panel {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.magick-ad-tab-panel .components-panel__body,
+.magick-ad-tab-panel .components-panel__body.is-opened {
+    border: none;
+    padding: 0;
+}
+
 .magick-ad-right-tabs .components-tab-panel__tabs {
     margin: -4px -4px 12px;
     border-bottom: 1px solid #dcdcde;
@@ -1479,6 +1502,13 @@
 
 .magick-ad-detail .components-panel {
     margin-top: 8px;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.magick-ad-detail .components-panel__body {
+    border: none;
 }
 
 .magick-ad-field__label {
@@ -1588,6 +1618,10 @@
     margin-bottom: 0;
 }
 
+.magick-ad-video-input-row .components-text-control__input {
+    height: 40px;
+}
+
 .magick-ad-video-input-row .magick-ad-video-picker.is-compact {
     display: flex;
     align-items: flex-end;
@@ -1598,6 +1632,13 @@
     .magick-ad-video-picker.is-compact
     .components-button {
     white-space: nowrap;
+    height: 40px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.magick-ad-video-input-row .magick-ad-image-actions {
+    margin-top: 0;
 }
 
 .magick-ad-field {

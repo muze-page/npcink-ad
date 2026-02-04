@@ -2001,7 +2001,7 @@ const VideoPicker = ({
     }, "\u79FB\u9664")) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
       onClick: handleOpen,
       variant: "secondary"
-    }, "\u9009\u62E9\u89C6\u9891"));
+    }, "\u4ECE\u5A92\u4F53\u5E93\u9009\u62E9"));
   }
   return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-video-picker"
@@ -2022,7 +2022,7 @@ const VideoPicker = ({
   }, "\u79FB\u9664"))) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
     onClick: handleOpen,
     variant: "secondary"
-  }, "\u9009\u62E9\u89C6\u9891"));
+  }, "\u4ECE\u5A92\u4F53\u5E93\u9009\u62E9"));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (VideoPicker);
 
@@ -4962,10 +4962,11 @@ const AdsConfig = () => {
           html: value
         }
       })
-    }), type === 'video' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    }), type === 'video' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+      className: "magick-ad-field__label"
+    }, "\u89C6\u9891\u5730\u5740"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
       className: "magick-ad-video-input-row"
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-      label: "\u89C6\u9891\u5730\u5740",
       value: variant.content?.video_url || '',
       onChange: value => updateVariant(index, {
         content: {
@@ -5740,10 +5741,11 @@ const AdsConfig = () => {
       const isEmbed = videoSettings.type === 'embed';
       return videoTabView.name === 'content' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
         className: "magick-ad-video-input"
-      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+        className: "magick-ad-field__label"
+      }, isEmbed ? '嵌入地址' : '视频地址'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
         className: "magick-ad-video-input-row"
       }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-        label: isEmbed ? '嵌入地址' : '视频地址',
         value: selectedAd.content?.video_url || '',
         onChange: value => handleUpdateContent({
           video_url: value
