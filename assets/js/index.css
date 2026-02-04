@@ -932,6 +932,14 @@
     padding: 0;
 }
 
+.magick-ad-config-modal .components-modal__header {
+    padding: 12px 16px;
+}
+
+.magick-ad-config-modal .components-modal__header-heading-container {
+    padding: 0;
+}
+
 .magick-ad-right-subsection {
     border: 1px solid #e2e8f0;
     border-radius: 12px;
