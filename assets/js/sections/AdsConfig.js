@@ -95,6 +95,9 @@ const AdsConfig = () => {
     const [saveTemplateCategory, setSaveTemplateCategory] = useState('');
     const [saveTemplateCategoryName, setSaveTemplateCategoryName] =
         useState('');
+    const [systemSettings, setSystemSettings] = useState({
+        block_editor_enabled: false,
+    });
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [headerCollapsed, setHeaderCollapsed] = useState(() => {
         if (typeof window === 'undefined') {
@@ -123,6 +126,17 @@ const AdsConfig = () => {
         } catch (err) {
             return fallback;
         }
+    };
+    const fetchSystemSettings = () => {
+        apiFetch({ path: '/magick-ad/v1/system-settings' })
+            .then((response) => {
+                setSystemSettings({
+                    block_editor_enabled: Boolean(
+                        response?.block_editor_enabled
+                    ),
+                });
+            })
+            .catch(() => {});
     };
     const [storedEditorMode, setStoredEditorMode] = useState(() =>
         readEditorMode('design')
@@ -333,6 +347,10 @@ const AdsConfig = () => {
     useEffect(() => {
         fetchFromDB();
     }, [fetchFromDB]);
+
+    useEffect(() => {
+        fetchSystemSettings();
+    }, []);
 
     useEffect(() => {
         if (!selectedId && ads.length > 0) {
@@ -2029,17 +2047,31 @@ const AdsConfig = () => {
 
     const activeCreativeType =
         selectedAd?.options?.creative_type || 'image';
+    const isBlockEditorEnabled = Boolean(
+        systemSettings.block_editor_enabled
+    );
+    const creativeTabs = [
+        { name: 'html', title: '代码/HTML' },
+        { name: 'image', title: '图片' },
+        { name: 'video', title: '视频' },
+        ...(isBlockEditorEnabled
+            ? [{ name: 'block', title: '可视化设计' }]
+            : []),
+    ];
+    const allowedCreativeTypes = new Set(
+        creativeTabs.map((tab) => tab.name)
+    );
+    const resolvedCreativeType = allowedCreativeTypes.has(
+        activeCreativeType
+    )
+        ? activeCreativeType
+        : creativeTabs[0]?.name || 'image';
 
     const contentPanels = selectedAd ? (
         <TabPanel
             className="magick-ad-sub-tabs"
-            tabs={[
-                { name: 'html', title: '代码/HTML' },
-                { name: 'image', title: '图片' },
-                { name: 'video', title: '视频' },
-                { name: 'block', title: '可视化设计' },
-            ]}
-            initialTabName={selectedAd.options?.creative_type || 'image'}
+            tabs={creativeTabs}
+            initialTabName={resolvedCreativeType}
             key={selectedAd?.id || 'content'}
             onSelect={(name) =>
                 handleUpdateOptions({
@@ -2048,11 +2080,19 @@ const AdsConfig = () => {
             }
         >
             {() => {
-                const activeContentType =
-                    selectedAd.options?.creative_type || 'image';
+                const activeContentType = resolvedCreativeType;
 
+                const blockEditorHidden =
+                    !isBlockEditorEnabled &&
+                    selectedAd?.options?.creative_type === 'block';
                 return (
                     <>
+                        {blockEditorHidden && (
+                            <Notice status="warning" isDismissible={false}>
+                                当前广告使用“可视化设计（实验）”，该功能已在系统设置中关闭。
+                                如需编辑，请在“系统与调试设置 → 实验与高级”中开启。
+                            </Notice>
+                        )}
                         <div
                             className={`magick-ad-tab-panel ${
                                 activeContentType === 'image'
@@ -5613,11 +5653,16 @@ const AdsConfig = () => {
         </>
     ) : null;
 
+    const handleCloseSettings = () => {
+        setSettingsOpen(false);
+        fetchSystemSettings();
+    };
+
     const toolbarMiddle = selectedAd ? (
         <TemplateActions
             variant="toolbar"
-            onOpen={() => openTemplateLibrary(activeCreativeType)}
-            onSave={() => openSaveTemplate(activeCreativeType)}
+            onOpen={() => openTemplateLibrary(resolvedCreativeType)}
+            onSave={() => openSaveTemplate(resolvedCreativeType)}
         />
     ) : null;
 
@@ -6050,7 +6095,7 @@ const AdsConfig = () => {
                 <Modal
                     title="系统与调试设置"
                     className="magick-ad-modal magick-ad-settings-modal"
-                    onRequestClose={() => setSettingsOpen(false)}
+                    onRequestClose={handleCloseSettings}
                 >
                     <TabPanel
                         className="magick-ad-settings-tabs"

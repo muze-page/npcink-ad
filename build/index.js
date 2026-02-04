@@ -3590,6 +3590,7 @@ const DEFAULT_SETTINGS = {
   html_sandbox: false,
   html_script_allowlist: [],
   html_script_blocklist: [],
+  block_editor_enabled: false,
   brand_name: 'Magick AD',
   brand_tagline: '广告配置与投放规则管理',
   manage_capability: 'manage_options'
@@ -3799,6 +3800,24 @@ const SystemSettingsPanel = ({
     }),
     help: "\u7CFB\u7EDF\u7EA7\u9ED1\u540D\u5355\u4F18\u5148\u751F\u6548\uFF0C\u547D\u4E2D\u5373\u79FB\u9664\u811A\u672C\u3002"
   })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+    title: "\u5B9E\u9A8C\u4E0E\u9AD8\u7EA7",
+    opened: openSection === 'experiments',
+    onToggle: () => handleToggleSection('experiments')
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "info",
+    isDismissible: false
+  }, "\u5B9E\u9A8C\u529F\u80FD\u53EF\u80FD\u5B58\u5728\u517C\u5BB9\u6027\u6216\u7A33\u5B9A\u6027\u95EE\u9898\uFF0C\u5EFA\u8BAE\u5148\u5728\u6D4B\u8BD5\u73AF\u5883\u9A8C\u8BC1\u540E\u518D\u542F\u7528\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+    label: "\u542F\u7528\u53EF\u89C6\u5316\u8BBE\u8BA1\uFF08\u5B9E\u9A8C\uFF09",
+    checked: Boolean(settings.block_editor_enabled),
+    disabled: loading || saving,
+    onChange: value => updateSettings({
+      block_editor_enabled: value
+    }),
+    help: "\u5173\u95ED\u540E\u9690\u85CF\u201C\u53EF\u89C6\u5316\u8BBE\u8BA1\u201D\u521B\u610F\u7C7B\u578B\uFF0C\u4EC5\u5728\u9700\u8981\u65F6\u5F00\u542F\u3002"
+  }), !settings.block_editor_enabled && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "info",
+    isDismissible: false
+  }, "\u53EF\u89C6\u5316\u8BBE\u8BA1\u5F53\u524D\u5904\u4E8E\u9690\u85CF\u72B6\u6001\uFF0C\u4E0D\u5F71\u54CD\u5DF2\u6709\u5E7F\u544A\u5C55\u793A\u3002")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u8BCA\u65AD\u65E5\u5FD7",
     opened: openSection === 'diagnostics',
     onToggle: () => handleToggleSection('diagnostics')
@@ -3985,6 +4004,9 @@ const AdsConfig = () => {
   const [saveTemplateName, setSaveTemplateName] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('');
   const [saveTemplateCategory, setSaveTemplateCategory] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('');
   const [saveTemplateCategoryName, setSaveTemplateCategoryName] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('');
+  const [systemSettings, setSystemSettings] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)({
+    block_editor_enabled: false
+  });
   const [settingsOpen, setSettingsOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [headerCollapsed, setHeaderCollapsed] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(() => {
     if (typeof window === 'undefined') {
@@ -4013,6 +4035,15 @@ const AdsConfig = () => {
     } catch (err) {
       return fallback;
     }
+  };
+  const fetchSystemSettings = () => {
+    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31___default()({
+      path: '/magick-ad/v1/system-settings'
+    }).then(response => {
+      setSystemSettings({
+        block_editor_enabled: Boolean(response?.block_editor_enabled)
+      });
+    }).catch(() => {});
   };
   const [storedEditorMode, setStoredEditorMode] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(() => readEditorMode('design'));
   const [publishModalOpen, setPublishModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
@@ -4198,6 +4229,9 @@ const AdsConfig = () => {
   (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
     fetchFromDB();
   }, [fetchFromDB]);
+  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+    fetchSystemSettings();
+  }, []);
   (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
     if (!selectedId && ads.length > 0) {
       setSelectedId(ads[0].id);
@@ -5484,29 +5518,37 @@ const AdsConfig = () => {
     onNotice: showNotice
   }));
   const activeCreativeType = selectedAd?.options?.creative_type || 'image';
+  const isBlockEditorEnabled = Boolean(systemSettings.block_editor_enabled);
+  const creativeTabs = [{
+    name: 'html',
+    title: '代码/HTML'
+  }, {
+    name: 'image',
+    title: '图片'
+  }, {
+    name: 'video',
+    title: '视频'
+  }, ...(isBlockEditorEnabled ? [{
+    name: 'block',
+    title: '可视化设计'
+  }] : [])];
+  const allowedCreativeTypes = new Set(creativeTabs.map(tab => tab.name));
+  const resolvedCreativeType = allowedCreativeTypes.has(activeCreativeType) ? activeCreativeType : creativeTabs[0]?.name || 'image';
   const contentPanels = selectedAd ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
     className: "magick-ad-sub-tabs",
-    tabs: [{
-      name: 'html',
-      title: '代码/HTML'
-    }, {
-      name: 'image',
-      title: '图片'
-    }, {
-      name: 'video',
-      title: '视频'
-    }, {
-      name: 'block',
-      title: '可视化设计'
-    }],
-    initialTabName: selectedAd.options?.creative_type || 'image',
+    tabs: creativeTabs,
+    initialTabName: resolvedCreativeType,
     key: selectedAd?.id || 'content',
     onSelect: name => handleUpdateOptions({
       creative_type: name
     })
   }, () => {
-    const activeContentType = selectedAd.options?.creative_type || 'image';
-    return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    const activeContentType = resolvedCreativeType;
+    const blockEditorHidden = !isBlockEditorEnabled && selectedAd?.options?.creative_type === 'block';
+    return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, blockEditorHidden && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+      status: "warning",
+      isDismissible: false
+    }, "\u5F53\u524D\u5E7F\u544A\u4F7F\u7528\u201C\u53EF\u89C6\u5316\u8BBE\u8BA1\uFF08\u5B9E\u9A8C\uFF09\u201D\uFF0C\u8BE5\u529F\u80FD\u5DF2\u5728\u7CFB\u7EDF\u8BBE\u7F6E\u4E2D\u5173\u95ED\u3002 \u5982\u9700\u7F16\u8F91\uFF0C\u8BF7\u5728\u201C\u7CFB\u7EDF\u4E0E\u8C03\u8BD5\u8BBE\u7F6E \u2192 \u5B9E\u9A8C\u4E0E\u9AD8\u7EA7\u201D\u4E2D\u5F00\u542F\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
       className: `magick-ad-tab-panel ${activeContentType === 'image' ? '' : 'is-hidden'}`
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
       initialOpen: true
@@ -7104,10 +7146,14 @@ const AdsConfig = () => {
     variant: "tertiary",
     onClick: () => setPreviewModalOpen(true)
   })) : null;
+  const handleCloseSettings = () => {
+    setSettingsOpen(false);
+    fetchSystemSettings();
+  };
   const toolbarMiddle = selectedAd ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_TemplateActions__WEBPACK_IMPORTED_MODULE_20__["default"], {
     variant: "toolbar",
-    onOpen: () => openTemplateLibrary(activeCreativeType),
-    onSave: () => openSaveTemplate(activeCreativeType)
+    onOpen: () => openTemplateLibrary(resolvedCreativeType),
+    onSave: () => openSaveTemplate(resolvedCreativeType)
   }) : null;
   const rightSidebar = selectedAd ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-right-stack"
@@ -7387,7 +7433,7 @@ const AdsConfig = () => {
   }, "\u4FDD\u5B58"))), settingsOpen && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
     title: "\u7CFB\u7EDF\u4E0E\u8C03\u8BD5\u8BBE\u7F6E",
     className: "magick-ad-modal magick-ad-settings-modal",
-    onRequestClose: () => setSettingsOpen(false)
+    onRequestClose: handleCloseSettings
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
     className: "magick-ad-settings-tabs",
     tabs: [{

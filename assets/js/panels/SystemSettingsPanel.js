@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS = {
     html_sandbox: false,
     html_script_allowlist: [],
     html_script_blocklist: [],
+    block_editor_enabled: false,
     brand_name: 'Magick AD',
     brand_tagline: '广告配置与投放规则管理',
     manage_capability: 'manage_options',
@@ -287,6 +288,31 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             }
                             help="系统级黑名单优先生效，命中即移除脚本。"
                         />
+                    </PanelBody>
+                    <PanelBody
+                        title="实验与高级"
+                        opened={openSection === 'experiments'}
+                        onToggle={() => handleToggleSection('experiments')}
+                    >
+                        <Notice status="info" isDismissible={false}>
+                            实验功能可能存在兼容性或稳定性问题，建议先在测试环境验证后再启用。
+                        </Notice>
+                        <ToggleControl
+                            label="启用可视化设计（实验）"
+                            checked={Boolean(settings.block_editor_enabled)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    block_editor_enabled: value,
+                                })
+                            }
+                            help="关闭后隐藏“可视化设计”创意类型，仅在需要时开启。"
+                        />
+                        {!settings.block_editor_enabled && (
+                            <Notice status="info" isDismissible={false}>
+                                可视化设计当前处于隐藏状态，不影响已有广告展示。
+                            </Notice>
+                        )}
                     </PanelBody>
                     <PanelBody
                         title="诊断日志"

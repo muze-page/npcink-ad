@@ -129,6 +129,7 @@ final class System_Settings_Controller {
         );
         $consent_banner_button = get_option('magick_ad_consent_banner_button', '同意');
         $tracking_enabled = (get_option('magick_ad_tracking_enabled', '1') === '1');
+        $block_editor_enabled = (get_option('magick_ad_block_editor_enabled', '0') === '1');
 
         $tracking_require_signature = (get_option('magick_ad_track_require_signature', '1') === '1');
         if (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'production') {
@@ -158,6 +159,7 @@ final class System_Settings_Controller {
             'consent_banner_enabled' => $consent_banner_enabled,
             'consent_banner_text' => $consent_banner_text,
             'consent_banner_button' => $consent_banner_button,
+            'block_editor_enabled' => $block_editor_enabled,
             'brand_name' => get_option('magick_ad_brand_name', 'Magick AD'),
             'brand_tagline' => get_option('magick_ad_brand_tagline', '广告配置与投放规则管理'),
             'manage_capability' => get_option('magick_ad_manage_capability', 'manage_options'),
@@ -251,6 +253,9 @@ final class System_Settings_Controller {
         $html_script_blocklist = self::sanitize_domain_list(
             $params['html_script_blocklist'] ?? get_option('magick_ad_html_script_blocklist', array())
         );
+        $block_editor_enabled = !array_key_exists('block_editor_enabled', $params)
+            ? (get_option('magick_ad_block_editor_enabled', '0') === '1')
+            : !empty($params['block_editor_enabled']);
         $brand_name = isset($params['brand_name']) && is_string($params['brand_name'])
             ? sanitize_text_field($params['brand_name'])
             : get_option('magick_ad_brand_name', 'Magick AD');
@@ -275,6 +280,7 @@ final class System_Settings_Controller {
         update_option('magick_ad_html_sandbox', $html_sandbox ? '1' : '0');
         update_option('magick_ad_html_script_allowlist', $html_script_allowlist);
         update_option('magick_ad_html_script_blocklist', $html_script_blocklist);
+        update_option('magick_ad_block_editor_enabled', $block_editor_enabled ? '1' : '0');
         update_option('magick_ad_consent_guard_enabled', $consent_guard_enabled ? '1' : '0');
         update_option('magick_ad_consent_banner_enabled', $consent_banner_enabled ? '1' : '0');
         update_option('magick_ad_consent_banner_text', $consent_banner_text);
@@ -306,6 +312,7 @@ final class System_Settings_Controller {
             'html_sandbox' => $html_sandbox,
             'html_script_allowlist' => $html_script_allowlist,
             'html_script_blocklist' => $html_script_blocklist,
+            'block_editor_enabled' => $block_editor_enabled,
             'consent_guard_enabled' => $consent_guard_enabled,
             'consent_banner_enabled' => $consent_banner_enabled,
             'consent_banner_text' => $consent_banner_text,
