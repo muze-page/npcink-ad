@@ -3337,6 +3337,7 @@ const SystemSettingsPanel = ({
   const [loading, setLoading] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [saving, setSaving] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [error, setError] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
+  const [openSection, setOpenSection] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('tracking');
   const diagnosticsExpiryLabel = (() => {
     if (!settings.stats_diagnostics_expires_at) {
       return '';
@@ -3402,6 +3403,9 @@ const SystemSettingsPanel = ({
       persist(next);
     }
   };
+  const handleToggleSection = key => {
+    setOpenSection(current => current === key ? null : key);
+  };
   return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Card, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.CardBody, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-field__label"
   }, "\u9690\u79C1\u4E0E\u7CFB\u7EDF\u8BBE\u7F6E"), error && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
@@ -3409,7 +3413,8 @@ const SystemSettingsPanel = ({
     isDismissible: true
   }, error.message || '系统设置加载失败'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u7EDF\u8BA1\u4E0E\u53BB\u91CD",
-    initialOpen: true
+    opened: openSection === 'tracking',
+    onToggle: () => handleToggleSection('tracking')
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
     label: "\u542F\u7528\u524D\u53F0\u7EDF\u8BA1",
     checked: Boolean(settings.tracking_enabled),
@@ -3471,7 +3476,8 @@ const SystemSettingsPanel = ({
     help: "\u9ED8\u8BA4\u6309\u5E7F\u544A\u53BB\u91CD\uFF1B\u5982\u9700\u6309\u4F4D\u7F6E\u7EDF\u8BA1\u8BF7\u9009\u62E9\u201C\u6309\u4F4D\u7F6E\u201D\u3002"
   })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u5B89\u5168\u4E0E\u7F13\u5B58",
-    initialOpen: false
+    opened: openSection === 'security',
+    onToggle: () => handleToggleSection('security')
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
     label: "\u5F3A\u5236\u7B7E\u540D\u6821\u9A8C",
     checked: Boolean(settings.tracking_require_signature),
@@ -3512,7 +3518,8 @@ const SystemSettingsPanel = ({
     help: "\u4EC5\u5BF9 Full HTML \u751F\u6548\uFF0C\u9ED8\u8BA4\u5173\u95ED\uFF1B\u5F00\u542F\u540E\u5C06\u9694\u79BB\u7B2C\u4E09\u65B9\u811A\u672C\u3002"
   })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u8BCA\u65AD\u65E5\u5FD7",
-    initialOpen: false
+    opened: openSection === 'diagnostics',
+    onToggle: () => handleToggleSection('diagnostics')
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-settings-expiry"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("strong", null, "\u8BCA\u65AD\u5230\u671F\u65F6\u95F4\uFF1A"), diagnosticsExpiryLabel ? diagnosticsExpiryLabel : '未启用'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
@@ -3546,7 +3553,8 @@ const SystemSettingsPanel = ({
     isDismissible: false
   }, "\u8BCA\u65AD\u6A21\u5F0F\u5C06\u5728 ", diagnosticsExpiryLabel, " \u81EA\u52A8\u5173\u95ED\u3002")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u54C1\u724C\u4E0E\u6743\u9650",
-    initialOpen: false
+    opened: openSection === 'brand',
+    onToggle: () => handleToggleSection('brand')
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
     label: "\u540E\u53F0\u540D\u79F0\uFF08\u767D\u6807\uFF09",
     value: settings.brand_name,

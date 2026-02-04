@@ -36,6 +36,7 @@ const SystemSettingsPanel = ({ onNotice }) => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
+    const [openSection, setOpenSection] = useState('tracking');
 
     const diagnosticsExpiryLabel = (() => {
         if (!settings.stats_diagnostics_expires_at) {
@@ -99,6 +100,10 @@ const SystemSettingsPanel = ({ onNotice }) => {
         }
     };
 
+    const handleToggleSection = (key) => {
+        setOpenSection((current) => (current === key ? null : key));
+    };
+
     return (
         <Card>
             <CardBody>
@@ -109,7 +114,11 @@ const SystemSettingsPanel = ({ onNotice }) => {
                     </Notice>
                 )}
                 <Panel>
-                    <PanelBody title="统计与去重" initialOpen>
+                    <PanelBody
+                        title="统计与去重"
+                        opened={openSection === 'tracking'}
+                        onToggle={() => handleToggleSection('tracking')}
+                    >
                         <ToggleControl
                             label="启用前台统计"
                             checked={Boolean(settings.tracking_enabled)}
@@ -179,7 +188,11 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             help="默认按广告去重；如需按位置统计请选择“按位置”。"
                         />
                     </PanelBody>
-                    <PanelBody title="安全与缓存" initialOpen={false}>
+                    <PanelBody
+                        title="安全与缓存"
+                        opened={openSection === 'security'}
+                        onToggle={() => handleToggleSection('security')}
+                    >
                         <ToggleControl
                             label="强制签名校验"
                             checked={Boolean(settings.tracking_require_signature)}
@@ -235,7 +248,11 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             help="仅对 Full HTML 生效，默认关闭；开启后将隔离第三方脚本。"
                         />
                     </PanelBody>
-                    <PanelBody title="诊断日志" initialOpen={false}>
+                    <PanelBody
+                        title="诊断日志"
+                        opened={openSection === 'diagnostics'}
+                        onToggle={() => handleToggleSection('diagnostics')}
+                    >
                         <div className="magick-ad-settings-expiry">
                             <strong>诊断到期时间：</strong>
                             {diagnosticsExpiryLabel ? diagnosticsExpiryLabel : '未启用'}
@@ -282,7 +299,11 @@ const SystemSettingsPanel = ({ onNotice }) => {
                                 </Notice>
                             )}
                     </PanelBody>
-                    <PanelBody title="品牌与权限" initialOpen={false}>
+                    <PanelBody
+                        title="品牌与权限"
+                        opened={openSection === 'brand'}
+                        onToggle={() => handleToggleSection('brand')}
+                    >
                         <TextControl
                             label="后台名称（白标）"
                             value={settings.brand_name}
