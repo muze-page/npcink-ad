@@ -1,0 +1,1 @@
+magick_ad_stats_log 的 user_id 索引：已写入 dbDelta 的 Schema，但现有站点不会自动重建索引（MAGICK_AD_DB_VERSION 未提升，Schema::install() 不会再次触发）。需要你手动触发升级（比如临时 bump DB 版本、或手动执行 Schema::install()）。
