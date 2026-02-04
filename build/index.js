@@ -5024,6 +5024,7 @@ const AdsConfig = () => {
       title: '可视化设计'
     }],
     initialTabName: selectedAd.options?.creative_type || 'image',
+    key: activeCreativeType,
     onSelect: name => handleUpdateOptions({
       creative_type: name
     })
