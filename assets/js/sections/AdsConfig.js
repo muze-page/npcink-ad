@@ -64,6 +64,8 @@ const AdsConfig = () => {
     const quickPanelStorageKey = 'magick_ad_panel_quick';
     const containerTabStorageKey = 'magick_ad_container_tab';
     const frequencyPanelStorageKey = 'magick_ad_panel_frequency';
+    const editorModeStorageKey = 'magick_ad_editor_mode';
+    const allowedEditorModes = new Set(['quick', 'design', 'expert']);
     const ads = useStore((state) => state.ads);
     const isLoading = useStore((state) => state.isLoading);
     const isSaving = useStore((state) => state.isSaving);
@@ -120,6 +122,23 @@ const AdsConfig = () => {
             return false;
         }
     });
+    const readEditorMode = (fallback) => {
+        if (typeof window === 'undefined') {
+            return fallback;
+        }
+        try {
+            const stored = window.localStorage?.getItem(editorModeStorageKey);
+            if (!stored) {
+                return fallback;
+            }
+            return allowedEditorModes.has(stored) ? stored : fallback;
+        } catch (err) {
+            return fallback;
+        }
+    };
+    const [storedEditorMode, setStoredEditorMode] = useState(() =>
+        readEditorMode('design')
+    );
     const [publishModalOpen, setPublishModalOpen] = useState(false);
     const [placementModalOpen, setPlacementModalOpen] = useState(false);
     const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -422,15 +441,36 @@ const AdsConfig = () => {
     }, []);
 
     const editorModeRaw =
-        selectedAd?.options?.editor_mode || 'design';
+        selectedAd?.options?.editor_mode || storedEditorMode || 'design';
     const effectiveEditorMode =
         editorModeRaw === 'expert' && !canUnfilteredHtml
             ? 'design'
             : editorModeRaw;
+    const isQuickMode = effectiveEditorMode === 'quick';
+    const isExpertMode = effectiveEditorMode === 'expert';
 
     useEffect(() => {
         setPlacementTab('placement');
-    }, [selectedId, effectiveEditorMode]);
+    }, [selectedId]);
+
+    useEffect(() => {
+        if (!selectedAd?.options?.editor_mode) {
+            return;
+        }
+        const nextMode = selectedAd.options.editor_mode;
+        if (!nextMode || !allowedEditorModes.has(nextMode)) {
+            return;
+        }
+        setStoredEditorMode(nextMode);
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage?.setItem(editorModeStorageKey, nextMode);
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [selectedAd?.options?.editor_mode]);
 
 
     useEffect(() => {
@@ -736,6 +776,18 @@ const AdsConfig = () => {
                 ...updates,
             },
         });
+    };
+
+    const updateEditorMode = (mode) => {
+        setStoredEditorMode(mode);
+        if (typeof window !== 'undefined') {
+            try {
+                window.localStorage?.setItem(editorModeStorageKey, mode);
+            } catch (err) {
+                // ignore storage errors
+            }
+        }
+        handleUpdateOptions({ editor_mode: mode });
     };
 
     const openNodePicker = () => {
@@ -1938,43 +1990,61 @@ const AdsConfig = () => {
                         >
                             <Panel>
                                 <PanelBody title="内容配置" initialOpen>
-                                    <SelectControl
-                                        label="HTML 模式"
-                                        value={
-                                            selectedAd.options?.html_mode ||
-                                            'safe'
-                                        }
-                                        options={[
-                                            {
-                                                label: '安全模式（过滤脚本）',
-                                                value: 'safe',
-                                            },
-                                            {
-                                                label: '完全模式（允许脚本）',
-                                                value: 'full',
-                                            },
-                                        ]}
-                                        onChange={(value) => {
-                                            if (
-                                                value === 'full' &&
-                                                !canUnfilteredHtml
-                                            ) {
-                                                showNotice(
-                                                    'error',
-                                                    '当前账号无 unfiltered_html 权限，无法启用完全模式。',
-                                                    3500
-                                                );
-                                                handleUpdateOptions({
-                                                    html_mode: 'safe',
-                                                });
-                                                return;
+                                    {isExpertMode ? (
+                                        <SelectControl
+                                            label="HTML 模式"
+                                            value={
+                                                selectedAd.options
+                                                    ?.html_mode || 'safe'
                                             }
-                                            handleUpdateOptions({
-                                                html_mode: value,
-                                            });
-                                        }}
-                                        help="安全模式会过滤脚本/iframe；需要第三方脚本或 head 投放请切换完全模式（多站点强制安全）。"
-                                    />
+                                            options={[
+                                                {
+                                                    label:
+                                                        '安全模式（过滤脚本）',
+                                                    value: 'safe',
+                                                },
+                                                {
+                                                    label:
+                                                        '完全模式（允许脚本）',
+                                                    value: 'full',
+                                                },
+                                            ]}
+                                            onChange={(value) => {
+                                                if (
+                                                    value === 'full' &&
+                                                    !canUnfilteredHtml
+                                                ) {
+                                                    showNotice(
+                                                        'error',
+                                                        '当前账号无 unfiltered_html 权限，无法启用完全模式。',
+                                                        3500
+                                                    );
+                                                    handleUpdateOptions({
+                                                        html_mode: 'safe',
+                                                    });
+                                                    return;
+                                                }
+                                                handleUpdateOptions({
+                                                    html_mode: value,
+                                                });
+                                            }}
+                                            help="安全模式会过滤脚本/iframe；需要第三方脚本或 head 投放请切换完全模式（多站点强制安全）。"
+                                        />
+                                    ) : !isQuickMode ? (
+                                        <Notice
+                                            status="info"
+                                            isDismissible={false}
+                                        >
+                                            当前为设计模式，HTML 默认为安全模式。
+                                            如需启用脚本，请切换到“专家模式”。
+                                            当前模式：
+                                            {selectedAd.options?.html_mode ===
+                                            'full'
+                                                ? ' 完全模式'
+                                                : ' 安全模式'}
+                                            。
+                                        </Notice>
+                                    ) : null}
                                     {selectedAd.options?.html_mode ===
                                         'full' && (
                                         <Notice
@@ -2323,7 +2393,10 @@ const AdsConfig = () => {
         </>
     );
 
-    const renderFrequencyAdvancedTab = (behavior = {}) => (
+    const renderFrequencyAdvancedTab = (
+        behavior = {},
+        { showAdvanced = true } = {}
+    ) => (
         <Panel>
             <PanelBody
                 title="频控"
@@ -2336,17 +2409,19 @@ const AdsConfig = () => {
             >
                 {renderFrequencyControls(behavior)}
             </PanelBody>
-            <PanelBody
-                title="高级设置"
-                opened={frequencyPanelOpen === 'advanced'}
-                onToggle={() =>
-                    setFrequencyPanelOpen((prev) =>
-                        prev === 'advanced' ? null : 'advanced'
-                    )
-                }
-            >
-                {renderAdvancedControls({ includePreview: false })}
-            </PanelBody>
+            {showAdvanced && (
+                <PanelBody
+                    title="高级设置"
+                    opened={frequencyPanelOpen === 'advanced'}
+                    onToggle={() =>
+                        setFrequencyPanelOpen((prev) =>
+                            prev === 'advanced' ? null : 'advanced'
+                        )
+                    }
+                >
+                    {renderAdvancedControls({ includePreview: false })}
+                </PanelBody>
+            )}
         </Panel>
     );
 
@@ -2370,9 +2445,7 @@ const AdsConfig = () => {
                                 effectiveEditorMode === 'quick'
                             }
                             onClick={() =>
-                                handleUpdateOptions({
-                                    editor_mode: 'quick',
-                                })
+                                updateEditorMode('quick')
                             }
                         >
                             快速模式
@@ -2383,9 +2456,7 @@ const AdsConfig = () => {
                                 effectiveEditorMode === 'design'
                             }
                             onClick={() =>
-                                handleUpdateOptions({
-                                    editor_mode: 'design',
-                                })
+                                updateEditorMode('design')
                             }
                         >
                             设计模式
@@ -2404,9 +2475,7 @@ const AdsConfig = () => {
                                     );
                                     return;
                                 }
-                                handleUpdateOptions({
-                                    editor_mode: 'expert',
-                                });
+                                updateEditorMode('expert');
                             }}
                             disabled={!canUnfilteredHtml}
                         >
@@ -2636,7 +2705,7 @@ const AdsConfig = () => {
                                 </>
                             )}
                             {renderDeviceLoginControls()}
-                            {renderNodePlacement()}
+                            {isExpertMode && renderNodePlacement()}
                             {renderFrequencySummary(
                                 selectedAd.content?.behavior || {},
                                 { showLink: false }
@@ -2669,7 +2738,9 @@ const AdsConfig = () => {
                                     'inline') === 'inline';
 
                             if (tab.name === 'frequency') {
-                                return renderFrequencyAdvancedTab(behavior);
+                                return renderFrequencyAdvancedTab(behavior, {
+                                    showAdvanced: isExpertMode,
+                                });
                             }
 
                             if (tab.name === 'container') {
@@ -2815,43 +2886,49 @@ const AdsConfig = () => {
                                                                             }}
                                                                             help="容器决定展示形态，投放位置仍由“投放”页签控制。"
                                                                         />
-                                                                        <SelectControl
-                                                                            label="容器模式"
-                                                                            value={
-                                                                                containerStyle.mode ||
-                                                                                'boxed'
-                                                                            }
-                                                                            options={[
-                                                                                {
-                                                                                    label: '包裹容器',
-                                                                                    value: 'boxed',
-                                                                                },
-                                                                                {
-                                                                                    label: '原始输出',
-                                                                                    value: 'raw',
-                                                                                },
-                                                                            ]}
-                                                                            onChange={(
-                                                                                value
-                                                                            ) =>
-                                                                                handleUpdateContainerStyle(
-                                                                                    {
-                                                                                        mode: value,
-                                                                                    }
-                                                                                )
-                                                                            }
-                                                                        />
-                                                                        {containerStyle.mode ===
-                                                                            'raw' && (
-                                                                            <Notice
-                                                                                status="info"
-                                                                                isDismissible={
-                                                                                    false
-                                                                                }
-                                                                            >
-                                                                                原始模式不会应用容器样式。
-                                                                            </Notice>
-                                                                        )}
+                                                    <SelectControl
+                                                        label="容器模式"
+                                                        value={
+                                                            containerStyle.mode ||
+                                                            'boxed'
+                                                        }
+                                                        options={[
+                                                            {
+                                                                label: '包裹容器',
+                                                                value: 'boxed',
+                                                            },
+                                                            {
+                                                                label: '原始输出',
+                                                                value: 'raw',
+                                                            },
+                                                        ]}
+                                                        onChange={(
+                                                            value
+                                                        ) =>
+                                                            handleUpdateContainerStyle(
+                                                                {
+                                                                    mode: value,
+                                                                }
+                                                            )
+                                                        }
+                                                        disabled={!isExpertMode}
+                                                        help={
+                                                            isExpertMode
+                                                                ? ''
+                                                                : '设计模式下仅允许包裹容器，切换到专家模式可修改。'
+                                                        }
+                                                    />
+                                                    {containerStyle.mode ===
+                                                        'raw' && (
+                                                        <Notice
+                                                            status="info"
+                                                            isDismissible={
+                                                                false
+                                                            }
+                                                        >
+                                                            原始模式不会应用容器样式。
+                                                        </Notice>
+                                                    )}
                                                                     </>
                                                                 );
                                                             }
@@ -3303,53 +3380,57 @@ const AdsConfig = () => {
                                                 }
                                                 help="默认关闭。开启后在广告右上角显示关闭按钮。"
                                             />
-                                            <ToggleControl
-                                                label="ESC 关闭"
-                                                checked={
-                                                    behavior.close_on_esc !==
-                                                    false
-                                                }
-                                                onChange={(value) =>
-                                                    handleUpdateBehavior(
-                                                        {
-                                                            close_on_esc:
-                                                                value,
+                                            {isExpertMode && (
+                                                <>
+                                                    <ToggleControl
+                                                        label="ESC 关闭"
+                                                        checked={
+                                                            behavior.close_on_esc !==
+                                                            false
                                                         }
-                                                    )
-                                                }
-                                                help="默认开启。弹窗/横栏可用，按 ESC 关闭。"
-                                            />
-                                            <ToggleControl
-                                                label="点击遮罩关闭"
-                                                checked={
-                                                    behavior.close_on_overlay !==
-                                                    false
-                                                }
-                                                onChange={(value) =>
-                                                    handleUpdateBehavior(
-                                                        {
-                                                            close_on_overlay:
-                                                                value,
+                                                        onChange={(value) =>
+                                                            handleUpdateBehavior(
+                                                                {
+                                                                    close_on_esc:
+                                                                        value,
+                                                                }
+                                                            )
                                                         }
-                                                    )
-                                                }
-                                                help="默认开启。仅弹窗/插屏有效，点击遮罩关闭。"
-                                            />
-                                            <ToggleControl
-                                                label="打开时锁定滚动"
-                                                checked={Boolean(
-                                                    behavior.lock_scroll
-                                                )}
-                                                onChange={(value) =>
-                                                    handleUpdateBehavior(
-                                                        {
-                                                            lock_scroll:
-                                                                value,
+                                                        help="默认开启。弹窗/横栏可用，按 ESC 关闭。"
+                                                    />
+                                                    <ToggleControl
+                                                        label="点击遮罩关闭"
+                                                        checked={
+                                                            behavior.close_on_overlay !==
+                                                            false
                                                         }
-                                                    )
-                                                }
-                                                help="默认关闭。仅弹窗/插屏可用，打开时锁定页面滚动。"
-                                            />
+                                                        onChange={(value) =>
+                                                            handleUpdateBehavior(
+                                                                {
+                                                                    close_on_overlay:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                        help="默认开启。仅弹窗/插屏有效，点击遮罩关闭。"
+                                                    />
+                                                    <ToggleControl
+                                                        label="打开时锁定滚动"
+                                                        checked={Boolean(
+                                                            behavior.lock_scroll
+                                                        )}
+                                                        onChange={(value) =>
+                                                            handleUpdateBehavior(
+                                                                {
+                                                                    lock_scroll:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                        help="默认关闭。仅弹窗/插屏可用，打开时锁定页面滚动。"
+                                                    />
+                                                </>
+                                            )}
                                             <RangeControl
                                                 label="延迟显示（秒）"
                                                 min={0}
@@ -3542,7 +3623,7 @@ const AdsConfig = () => {
                                             </>
                                         )}
                                         {renderDeviceLoginControls()}
-                                        {renderNodePlacement()}
+                                        {isExpertMode && renderNodePlacement()}
                                         {renderFrequencySummary(behavior)}
                                     </PanelBody>
                                 </Panel>

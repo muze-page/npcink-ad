@@ -3671,6 +3671,8 @@ const AdsConfig = () => {
   const quickPanelStorageKey = 'magick_ad_panel_quick';
   const containerTabStorageKey = 'magick_ad_container_tab';
   const frequencyPanelStorageKey = 'magick_ad_panel_frequency';
+  const editorModeStorageKey = 'magick_ad_editor_mode';
+  const allowedEditorModes = new Set(['quick', 'design', 'expert']);
   const ads = (0,_store__WEBPACK_IMPORTED_MODULE_11__.useStore)(state => state.ads);
   const isLoading = (0,_store__WEBPACK_IMPORTED_MODULE_11__.useStore)(state => state.isLoading);
   const isSaving = (0,_store__WEBPACK_IMPORTED_MODULE_11__.useStore)(state => state.isSaving);
@@ -3729,6 +3731,21 @@ const AdsConfig = () => {
       return false;
     }
   });
+  const readEditorMode = fallback => {
+    if (typeof window === 'undefined') {
+      return fallback;
+    }
+    try {
+      const stored = window.localStorage?.getItem(editorModeStorageKey);
+      if (!stored) {
+        return fallback;
+      }
+      return allowedEditorModes.has(stored) ? stored : fallback;
+    } catch (err) {
+      return fallback;
+    }
+  };
+  const [storedEditorMode, setStoredEditorMode] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(() => readEditorMode('design'));
   const [publishModalOpen, setPublishModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [placementModalOpen, setPlacementModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [previewModalOpen, setPreviewModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
@@ -3988,11 +4005,31 @@ const AdsConfig = () => {
     window.addEventListener('magick-ad-debug-updated', handler);
     return () => window.removeEventListener('magick-ad-debug-updated', handler);
   }, []);
-  const editorModeRaw = selectedAd?.options?.editor_mode || 'design';
+  const editorModeRaw = selectedAd?.options?.editor_mode || storedEditorMode || 'design';
   const effectiveEditorMode = editorModeRaw === 'expert' && !canUnfilteredHtml ? 'design' : editorModeRaw;
+  const isQuickMode = effectiveEditorMode === 'quick';
+  const isExpertMode = effectiveEditorMode === 'expert';
   (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
     setPlacementTab('placement');
-  }, [selectedId, effectiveEditorMode]);
+  }, [selectedId]);
+  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+    if (!selectedAd?.options?.editor_mode) {
+      return;
+    }
+    const nextMode = selectedAd.options.editor_mode;
+    if (!nextMode || !allowedEditorModes.has(nextMode)) {
+      return;
+    }
+    setStoredEditorMode(nextMode);
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      window.localStorage?.setItem(editorModeStorageKey, nextMode);
+    } catch (err) {
+      // ignore storage errors
+    }
+  }, [selectedAd?.options?.editor_mode]);
   (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
     if (typeof window === 'undefined') {
       return;
@@ -4266,6 +4303,19 @@ const AdsConfig = () => {
         ...selectedAd.options,
         ...updates
       }
+    });
+  };
+  const updateEditorMode = mode => {
+    setStoredEditorMode(mode);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage?.setItem(editorModeStorageKey, mode);
+      } catch (err) {
+        // ignore storage errors
+      }
+    }
+    handleUpdateOptions({
+      editor_mode: mode
     });
   };
   const openNodePicker = () => {
@@ -5083,7 +5133,7 @@ const AdsConfig = () => {
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
       title: "\u5185\u5BB9\u914D\u7F6E",
       initialOpen: true
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+    }, isExpertMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
       label: "HTML \u6A21\u5F0F",
       value: selectedAd.options?.html_mode || 'safe',
       options: [{
@@ -5106,7 +5156,10 @@ const AdsConfig = () => {
         });
       },
       help: "\u5B89\u5168\u6A21\u5F0F\u4F1A\u8FC7\u6EE4\u811A\u672C/iframe\uFF1B\u9700\u8981\u7B2C\u4E09\u65B9\u811A\u672C\u6216 head \u6295\u653E\u8BF7\u5207\u6362\u5B8C\u5168\u6A21\u5F0F\uFF08\u591A\u7AD9\u70B9\u5F3A\u5236\u5B89\u5168\uFF09\u3002"
-    }), selectedAd.options?.html_mode === 'full' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    }) : !isQuickMode ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+      status: "info",
+      isDismissible: false
+    }, "\u5F53\u524D\u4E3A\u8BBE\u8BA1\u6A21\u5F0F\uFF0CHTML \u9ED8\u8BA4\u4E3A\u5B89\u5168\u6A21\u5F0F\u3002 \u5982\u9700\u542F\u7528\u811A\u672C\uFF0C\u8BF7\u5207\u6362\u5230\u201C\u4E13\u5BB6\u6A21\u5F0F\u201D\u3002 \u5F53\u524D\u6A21\u5F0F\uFF1A", selectedAd.options?.html_mode === 'full' ? ' 完全模式' : ' 安全模式', "\u3002") : null, selectedAd.options?.html_mode === 'full' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
       status: "warning",
       isDismissible: false
     }, "\u5B8C\u5168\u6A21\u5F0F\u5C06\u539F\u6837\u8F93\u51FA HTML\uFF0C\u8BF7\u786E\u4FDD\u7D20\u6750\u4E0E \u4EE3\u7801\u6765\u6E90\u53EF\u4FE1\u3002"), selectedAd.options?.html_mode === 'safe' && /<script[\s>]/i.test(selectedAd.content?.html || '') && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
@@ -5321,11 +5374,13 @@ const AdsConfig = () => {
       help: "\u4EC5\u5BF9\u540C\u4F18\u5148\u7EA7\u5E7F\u544A\u751F\u6548\uFF0C\u6743\u91CD\u8D8A\u5927\u8D8A\u5BB9\u6613\u88AB\u9009\u4E2D\u3002"
     }), includePreview && renderPreviewControls());
   };
-  const renderFrequencyAdvancedTab = (behavior = {}) => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+  const renderFrequencyAdvancedTab = (behavior = {}, {
+    showAdvanced = true
+  } = {}) => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u9891\u63A7",
     opened: frequencyPanelOpen === 'frequency',
     onToggle: () => setFrequencyPanelOpen(prev => prev === 'frequency' ? null : 'frequency')
-  }, renderFrequencyControls(behavior)), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+  }, renderFrequencyControls(behavior)), showAdvanced && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u9AD8\u7EA7\u8BBE\u7F6E",
     opened: frequencyPanelOpen === 'advanced',
     onToggle: () => setFrequencyPanelOpen(prev => prev === 'advanced' ? null : 'advanced')
@@ -5349,15 +5404,11 @@ const AdsConfig = () => {
     }, "\u7F16\u8F91\u6A21\u5F0F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ButtonGroup, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
       variant: "secondary",
       isPressed: effectiveEditorMode === 'quick',
-      onClick: () => handleUpdateOptions({
-        editor_mode: 'quick'
-      })
+      onClick: () => updateEditorMode('quick')
     }, "\u5FEB\u901F\u6A21\u5F0F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
       variant: "secondary",
       isPressed: effectiveEditorMode === 'design',
-      onClick: () => handleUpdateOptions({
-        editor_mode: 'design'
-      })
+      onClick: () => updateEditorMode('design')
     }, "\u8BBE\u8BA1\u6A21\u5F0F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
       variant: "secondary",
       isPressed: effectiveEditorMode === 'expert',
@@ -5366,9 +5417,7 @@ const AdsConfig = () => {
           showNotice('error', '当前账号无 unfiltered_html 权限，无法启用专家模式。', 3500);
           return;
         }
-        handleUpdateOptions({
-          editor_mode: 'expert'
-        });
+        updateEditorMode('expert');
       },
       disabled: !canUnfilteredHtml
     }, "\u4E13\u5BB6\u6A21\u5F0F"))), editorModeRaw === 'expert' && !canUnfilteredHtml && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
@@ -5448,7 +5497,7 @@ const AdsConfig = () => {
       suggestions: selectedAd.options?.target_suggestions || [],
       help: selectedAd.options?.target_type ? '支持输入并搜索添加多个目标' : '请先选择展示类型',
       disabled: !selectedAd.options?.target_type
-    })), renderDeviceLoginControls(), renderNodePlacement(), renderFrequencySummary(selectedAd.content?.behavior || {}, {
+    })), renderDeviceLoginControls(), isExpertMode && renderNodePlacement(), renderFrequencySummary(selectedAd.content?.behavior || {}, {
       showLink: false
     }))), effectiveEditorMode !== 'quick' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
       className: "magick-ad-right-tabs",
@@ -5473,7 +5522,9 @@ const AdsConfig = () => {
       const behavior = selectedAd.content?.behavior || {};
       const isInlineContainer = (selectedAd.options?.container_type || 'inline') === 'inline';
       if (tab.name === 'frequency') {
-        return renderFrequencyAdvancedTab(behavior);
+        return renderFrequencyAdvancedTab(behavior, {
+          showAdvanced: isExpertMode
+        });
       }
       if (tab.name === 'container') {
         return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
@@ -5561,7 +5612,9 @@ const AdsConfig = () => {
               }],
               onChange: value => handleUpdateContainerStyle({
                 mode: value
-              })
+              }),
+              disabled: !isExpertMode,
+              help: isExpertMode ? '' : '设计模式下仅允许包裹容器，切换到专家模式可修改。'
             }), containerStyle.mode === 'raw' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
               status: "info",
               isDismissible: false
@@ -5739,7 +5792,7 @@ const AdsConfig = () => {
             close_button: value
           }),
           help: "\u9ED8\u8BA4\u5173\u95ED\u3002\u5F00\u542F\u540E\u5728\u5E7F\u544A\u53F3\u4E0A\u89D2\u663E\u793A\u5173\u95ED\u6309\u94AE\u3002"
-        }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+        }), isExpertMode && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
           label: "ESC \u5173\u95ED",
           checked: behavior.close_on_esc !== false,
           onChange: value => handleUpdateBehavior({
@@ -5760,7 +5813,7 @@ const AdsConfig = () => {
             lock_scroll: value
           }),
           help: "\u9ED8\u8BA4\u5173\u95ED\u3002\u4EC5\u5F39\u7A97/\u63D2\u5C4F\u53EF\u7528\uFF0C\u6253\u5F00\u65F6\u9501\u5B9A\u9875\u9762\u6EDA\u52A8\u3002"
-        }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+        })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
           label: "\u5EF6\u8FDF\u663E\u793A\uFF08\u79D2\uFF09",
           min: 0,
           max: 30,
@@ -5815,7 +5868,7 @@ const AdsConfig = () => {
         suggestions: selectedAd.options?.target_suggestions || [],
         help: selectedAd.options?.target_type ? '支持输入并搜索添加多个目标' : '请先选择展示类型',
         disabled: !selectedAd.options?.target_type
-      })), renderDeviceLoginControls(), renderNodePlacement(), renderFrequencySummary(behavior)));
+      })), renderDeviceLoginControls(), isExpertMode && renderNodePlacement(), renderFrequencySummary(behavior)));
     }))), effectiveEditorMode === 'quick' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
       className: "magick-ad-right-section"
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
