@@ -1,5 +1,5 @@
 import { useEffect, useState } from '@wordpress/element';
-import { Button, Card, CardBody, Notice, Panel, PanelBody, ToggleControl } from '@wordpress/components';
+import { Button, Card, CardBody, Notice, ToggleControl } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 
 const DebugPanel = ({ onNotice }) => {
@@ -78,84 +78,84 @@ const DebugPanel = ({ onNotice }) => {
     return (
         <Card>
             <CardBody>
-                <Panel>
-                    <PanelBody title="调试设置" initialOpen={false}>
-                        {debugLocked && (
-                            <Notice status="warning" isDismissible={false}>
-                                调试已在 wp-config.php 中强制开启。
-                            </Notice>
-                        )}
-                        {debugError && (
-                            <Notice status="error" isDismissible>
-                                {debugError.message || '调试开关加载失败'}
-                            </Notice>
-                        )}
-                        <ToggleControl
-                            label="启用调试日志"
-                            checked={debugEnabled}
-                            disabled={debugLocked || debugLoading || debugSaving}
-                            onChange={(value) => {
-                                const previous = debugEnabled;
-                                setDebugEnabled(value);
-                                updateDebug(value, debugLogSettings, buildProbeEnabled, () =>
-                                    setDebugEnabled(previous)
-                                );
-                            }}
-                            help={
-                                debugLoading
-                                    ? '正在加载调试状态…'
-                                    : '开启后会将调试信息写入 debug.log'
+                <div className="magick-ad-field__label">调试设置</div>
+                {debugLocked && (
+                    <Notice status="warning" isDismissible={false}>
+                        调试已在 wp-config.php 中强制开启。
+                    </Notice>
+                )}
+                {debugError && (
+                    <Notice status="error" isDismissible>
+                        {debugError.message || '调试开关加载失败'}
+                    </Notice>
+                )}
+                <ToggleControl
+                    label="启用调试日志"
+                    checked={debugEnabled}
+                    disabled={debugLocked || debugLoading || debugSaving}
+                    onChange={(value) => {
+                        const previous = debugEnabled;
+                        setDebugEnabled(value);
+                        updateDebug(
+                            value,
+                            debugLogSettings,
+                            buildProbeEnabled,
+                            () => setDebugEnabled(previous)
+                        );
+                    }}
+                    help={
+                        debugLoading
+                            ? '正在加载调试状态…'
+                            : '开启后会将调试信息写入 debug.log'
+                    }
+                />
+                <ToggleControl
+                    label="记录设置快照（settings=Array）"
+                    checked={debugLogSettings}
+                    disabled={debugLoading || debugSaving || !debugEnabled}
+                    onChange={(value) => {
+                        const previous = debugLogSettings;
+                        setDebugLogSettings(value);
+                        updateDebug(
+                            debugEnabled,
+                            value,
+                            buildProbeEnabled,
+                            () => setDebugLogSettings(previous)
+                        );
+                    }}
+                    help="控制 settings=Array 是否写入 debug.log"
+                />
+                <ToggleControl
+                    label="显示构建版本探针"
+                    checked={buildProbeEnabled}
+                    disabled={debugLoading || debugSaving}
+                    onChange={(value) => {
+                        const previous = buildProbeEnabled;
+                        setBuildProbeEnabled(value);
+                        updateDebug(
+                            debugEnabled,
+                            debugLogSettings,
+                            value,
+                            () => setBuildProbeEnabled(previous)
+                        );
+                    }}
+                    help="右下角显示当前 build 时间与版本号"
+                />
+                <div className="magick-ad-debug-actions">
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            const url = window.MagickAD?.diagnoseUrl || '';
+                            if (!url) {
+                                onNotice?.('error', '诊断链接未配置');
+                                return;
                             }
-                        />
-                        <ToggleControl
-                            label="记录设置快照（settings=Array）"
-                            checked={debugLogSettings}
-                            disabled={
-                                debugLoading || debugSaving || !debugEnabled
-                            }
-                            onChange={(value) => {
-                                const previous = debugLogSettings;
-                                setDebugLogSettings(value);
-                                updateDebug(debugEnabled, value, buildProbeEnabled, () =>
-                                    setDebugLogSettings(previous)
-                                );
-                            }}
-                            help="控制 settings=Array 是否写入 debug.log"
-                        />
-                        <ToggleControl
-                            label="显示构建版本探针"
-                            checked={buildProbeEnabled}
-                            disabled={debugLoading || debugSaving}
-                            onChange={(value) => {
-                                const previous = buildProbeEnabled;
-                                setBuildProbeEnabled(value);
-                                updateDebug(debugEnabled, debugLogSettings, value, () =>
-                                    setBuildProbeEnabled(previous)
-                                );
-                            }}
-                            help="右下角显示当前 build 时间与版本号"
-                        />
-                        <div className="magick-ad-debug-actions">
-                            <Button
-                                variant="secondary"
-                                onClick={() => {
-                                    const url =
-                                        window.MagickAD?.diagnoseUrl || '';
-                                    if (!url) {
-                                        onNotice?.(
-                                            'error',
-                                            '诊断链接未配置'
-                                        );
-                                        return;
-                                    }
-                                    window.open(url, '_blank');
-                                }}
-                            >
-                                打开投放诊断
-                            </Button>
-                        </div>
-                    </PanelBody>
-                </Panel>
+                            window.open(url, '_blank');
+                        }}
+                    >
+                        打开投放诊断
+                    </Button>
+                </div>
             </CardBody>
         </Card>
     );

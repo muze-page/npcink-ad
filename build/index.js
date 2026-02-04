@@ -2919,10 +2919,9 @@ const ConsentPanel = ({
       persist(next);
     }
   };
-  return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Card, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.CardBody, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-    title: "\u540C\u610F\u4E0E\u5408\u89C4",
-    initialOpen: false
-  }, error && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+  return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Card, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.CardBody, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-field__label"
+  }, "\u540C\u610F\u4E0E\u5408\u89C4"), error && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
     status: "error",
     isDismissible: true
   }, error.message || '设置加载失败'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
@@ -2975,7 +2974,7 @@ const ConsentPanel = ({
   }))) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
     status: "info",
     isDismissible: false
-  }, "\u5DF2\u5173\u95ED\u540C\u610F\u95E8\u63A7\uFF1A\u524D\u7AEF\u9891\u63A7\u4E0E\u7EDF\u8BA1\u5C06\u4E0D\u53D7\u540C\u610F\u72B6\u6001\u5F71\u54CD\u3002")))));
+  }, "\u5DF2\u5173\u95ED\u540C\u610F\u95E8\u63A7\uFF1A\u524D\u7AEF\u9891\u63A7\u4E0E\u7EDF\u8BA1\u5C06\u4E0D\u53D7\u540C\u610F\u72B6\u6001\u5F71\u54CD\u3002")));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (ConsentPanel);
 
@@ -3065,10 +3064,9 @@ const DebugPanel = ({
       onNotice?.('error', err?.message || '调试设置更新失败');
     });
   };
-  return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Card, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.CardBody, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-    title: "\u8C03\u8BD5\u8BBE\u7F6E",
-    initialOpen: false
-  }, debugLocked && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+  return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Card, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.CardBody, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-field__label"
+  }, "\u8C03\u8BD5\u8BBE\u7F6E"), debugLocked && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
     status: "warning",
     isDismissible: false
   }, "\u8C03\u8BD5\u5DF2\u5728 wp-config.php \u4E2D\u5F3A\u5236\u5F00\u542F\u3002"), debugError && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
@@ -3116,7 +3114,7 @@ const DebugPanel = ({
       }
       window.open(url, '_blank');
     }
-  }, "\u6253\u5F00\u6295\u653E\u8BCA\u65AD"))))));
+  }, "\u6253\u5F00\u6295\u653E\u8BCA\u65AD"))));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (DebugPanel);
 
@@ -3404,10 +3402,9 @@ const SystemSettingsPanel = ({
       persist(next);
     }
   };
-  return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Card, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.CardBody, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-    title: "\u9690\u79C1\u4E0E\u7CFB\u7EDF\u8BBE\u7F6E",
-    initialOpen: false
-  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+  return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Card, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.CardBody, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-field__label"
+  }, "\u9690\u79C1\u4E0E\u7CFB\u7EDF\u8BBE\u7F6E"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-settings-expiry"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("strong", null, "\u8BCA\u65AD\u5230\u671F\u65F6\u95F4\uFF1A"), diagnosticsExpiryLabel ? diagnosticsExpiryLabel : '未启用'), error && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
     status: "error",
@@ -3573,7 +3570,7 @@ const SystemSettingsPanel = ({
       manage_capability: value
     }),
     help: "\u5207\u6362\u540E\u53EF\u80FD\u9700\u8981\u91CD\u65B0\u767B\u5F55\u540E\u53F0\u3002"
-  })))));
+  })));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (SystemSettingsPanel);
 
