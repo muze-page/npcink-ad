@@ -107,7 +107,7 @@ const SlotsPanel = ({
             </Card>
             {open && (
                 <Modal
-                    className="magick-ad-slots-modal"
+                    className="magick-ad-modal magick-ad-slots-modal"
                     title="Slot 管理"
                     onRequestClose={() => setOpen(false)}
                 >

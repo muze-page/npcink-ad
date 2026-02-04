@@ -1797,7 +1797,8 @@ const TemplateLibraryModal = ({
   return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_1__.Modal, {
     title: "\u6A21\u677F\u5E93",
     onRequestClose: onClose,
-    size: "large"
+    size: "large",
+    className: "magick-ad-modal magick-ad-template-modal"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-template-shell"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_1__.TabPanel, {
@@ -3223,7 +3224,7 @@ const SlotsPanel = ({
   }, "\u7BA1\u7406 Slots")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
     className: "description"
   }, "Slot \u7528\u4E8E\u533A\u5757/\u77ED\u4EE3\u7801/\u6A21\u677F\u51FD\u6570\u8C03\u7528\uFF0C\u5E7F\u544A\u5185\u5BB9\u7531 Slot \u7ED1\u5B9A\u51B3\u5B9A\u3002"))))), open && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
-    className: "magick-ad-slots-modal",
+    className: "magick-ad-modal magick-ad-slots-modal",
     title: "Slot \u7BA1\u7406",
     onRequestClose: () => setOpen(false)
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
@@ -5968,15 +5969,15 @@ const AdsConfig = () => {
     contentPanels: contentPanels
   }), publishModalOpen && selectedAd && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
     title: "\u53D1\u5E03\u4E0E\u6392\u671F",
-    className: "magick-ad-config-modal",
+    className: "magick-ad-modal magick-ad-config-modal",
     onRequestClose: () => setPublishModalOpen(false)
   }, renderPublishSection()), placementModalOpen && selectedAd && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
     title: "\u6295\u653E\u8BBE\u7F6E",
-    className: "magick-ad-config-modal",
+    className: "magick-ad-modal magick-ad-config-modal",
     onRequestClose: () => setPlacementModalOpen(false)
   }, renderPlacementSection()), previewModalOpen && selectedAd && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
     title: "\u9884\u89C8\u8BBE\u7F6E",
-    className: "magick-ad-config-modal",
+    className: "magick-ad-modal magick-ad-config-modal",
     onRequestClose: () => setPreviewModalOpen(false)
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u9884\u89C8\u9875\u9762",
@@ -6007,7 +6008,7 @@ const AdsConfig = () => {
   }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_BuildProbe__WEBPACK_IMPORTED_MODULE_19__["default"], null), saveTemplateOpen && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
     title: "\u5B58\u4E3A\u6A21\u677F",
     onRequestClose: () => setSaveTemplateOpen(false),
-    className: "magick-ad-rename-modal"
+    className: "magick-ad-modal magick-ad-rename-modal"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
     label: "\u6A21\u677F\u540D\u79F0",
     value: saveTemplateName,
@@ -6048,7 +6049,7 @@ const AdsConfig = () => {
   }, "\u4FDD\u5B58\u6A21\u677F"))), pickerConfirmOpen && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
     title: "\u786E\u8BA4\u8282\u70B9",
     onRequestClose: () => setPickerConfirmOpen(false),
-    className: "magick-ad-rename-modal"
+    className: "magick-ad-modal magick-ad-rename-modal"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
     label: "\u5B9A\u4F4D\u65B9\u5F0F",
     value: pickerType,
@@ -6090,7 +6091,7 @@ const AdsConfig = () => {
   }, "\u786E\u8BA4"))), deleteTarget && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
     title: "\u786E\u8BA4\u5220\u9664\u5E7F\u544A\u7EC4",
     onRequestClose: () => setDeleteTarget(null),
-    className: "magick-ad-confirm-modal"
+    className: "magick-ad-modal magick-ad-confirm-modal"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", null, "\u786E\u8BA4\u5220\u9664\u201C", deleteTarget.name || '未命名广告组', "\u201D\u5417\uFF1F \u5220\u9664\u540E\u65E0\u6CD5\u6062\u590D\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-confirm-actions"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
@@ -6117,7 +6118,7 @@ const AdsConfig = () => {
   }, "\u786E\u8BA4\u5220\u9664"))), renameTarget && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
     title: "\u4FEE\u6539\u5E7F\u544A\u540D\u79F0",
     onRequestClose: () => setRenameTarget(null),
-    className: "magick-ad-rename-modal"
+    className: "magick-ad-modal magick-ad-rename-modal"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
     label: "\u5E7F\u544A\u540D\u79F0",
     value: renameValue,
@@ -6145,7 +6146,7 @@ const AdsConfig = () => {
     }
   }, "\u4FDD\u5B58"))), settingsOpen && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Modal, {
     title: "\u7CFB\u7EDF\u4E0E\u8C03\u8BD5\u8BBE\u7F6E",
-    className: "magick-ad-settings-modal",
+    className: "magick-ad-modal magick-ad-settings-modal",
     onRequestClose: () => setSettingsOpen(false)
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
     className: "magick-ad-settings-tabs",

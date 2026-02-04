@@ -3785,7 +3785,7 @@ const AdsConfig = () => {
             {publishModalOpen && selectedAd && (
                 <Modal
                     title="发布与排期"
-                    className="magick-ad-config-modal"
+                    className="magick-ad-modal magick-ad-config-modal"
                     onRequestClose={() => setPublishModalOpen(false)}
                 >
                     {renderPublishSection()}
@@ -3795,7 +3795,7 @@ const AdsConfig = () => {
             {placementModalOpen && selectedAd && (
                 <Modal
                     title="投放设置"
-                    className="magick-ad-config-modal"
+                    className="magick-ad-modal magick-ad-config-modal"
                     onRequestClose={() => setPlacementModalOpen(false)}
                 >
                     {renderPlacementSection()}
@@ -3805,7 +3805,7 @@ const AdsConfig = () => {
             {previewModalOpen && selectedAd && (
                 <Modal
                     title="预览设置"
-                    className="magick-ad-config-modal"
+                    className="magick-ad-modal magick-ad-config-modal"
                     onRequestClose={() => setPreviewModalOpen(false)}
                 >
                     <Panel>
@@ -3847,7 +3847,7 @@ const AdsConfig = () => {
                 <Modal
                     title="存为模板"
                     onRequestClose={() => setSaveTemplateOpen(false)}
-                    className="magick-ad-rename-modal"
+                    className="magick-ad-modal magick-ad-rename-modal"
                 >
                     <TextControl
                         label="模板名称"
@@ -3902,7 +3902,7 @@ const AdsConfig = () => {
                 <Modal
                     title="确认节点"
                     onRequestClose={() => setPickerConfirmOpen(false)}
-                    className="magick-ad-rename-modal"
+                    className="magick-ad-modal magick-ad-rename-modal"
                 >
                     <SelectControl
                         label="定位方式"
@@ -3966,7 +3966,7 @@ const AdsConfig = () => {
                 <Modal
                     title="确认删除广告组"
                     onRequestClose={() => setDeleteTarget(null)}
-                    className="magick-ad-confirm-modal"
+                    className="magick-ad-modal magick-ad-confirm-modal"
                 >
                     <p>
                         确认删除“{deleteTarget.name || '未命名广告组'}”吗？
@@ -4017,7 +4017,7 @@ const AdsConfig = () => {
                 <Modal
                     title="修改广告名称"
                     onRequestClose={() => setRenameTarget(null)}
-                    className="magick-ad-rename-modal"
+                    className="magick-ad-modal magick-ad-rename-modal"
                 >
                     <TextControl
                         label="广告名称"
@@ -4062,7 +4062,7 @@ const AdsConfig = () => {
             {settingsOpen && (
                 <Modal
                     title="系统与调试设置"
-                    className="magick-ad-settings-modal"
+                    className="magick-ad-modal magick-ad-settings-modal"
                     onRequestClose={() => setSettingsOpen(false)}
                 >
                     <TabPanel

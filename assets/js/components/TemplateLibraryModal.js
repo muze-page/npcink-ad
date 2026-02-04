@@ -266,7 +266,12 @@ const TemplateLibraryModal = ({
     );
 
     return (
-        <Modal title="模板库" onRequestClose={onClose} size="large">
+        <Modal
+            title="模板库"
+            onRequestClose={onClose}
+            size="large"
+            className="magick-ad-modal magick-ad-template-modal"
+        >
             <div className="magick-ad-template-shell">
                 <TabPanel
                     className="magick-ad-template-tabs"
