@@ -1,4 +1,9 @@
-export type TrackEvent = 'impression' | 'click';
+export type TrackEvent =
+    | 'impression'
+    | 'click'
+    | 'video_play'
+    | 'video_pause'
+    | 'video_complete';
 
 export interface TrackPayload {
     adId: string;
@@ -76,6 +81,7 @@ export type DisplayMode = 'show' | 'random' | 'hide';
 export type RandomStrategy = 'request' | 'session' | 'cookie';
 export type HtmlMode = 'safe' | 'full';
 export type HtmlSandboxMode = 'inherit' | 'enable' | 'disable';
+export type HtmlLoadStrategy = 'immediate' | 'delay' | 'viewport';
 export type EditorMode = 'quick' | 'design' | 'expert';
 export type DeviceType = 'all' | 'mobile' | 'tablet' | 'desktop';
 export type LoginType = 'all' | 'logged-in' | 'logged-out';
@@ -104,8 +110,17 @@ export type AnimationType = 'none' | 'fade' | 'slide-up' | 'zoom';
 export type FrequencyMode = 'none' | 'session' | 'day' | 'count';
 export type VideoType = 'mp4' | 'embed';
 export type VideoPreload = 'metadata' | 'auto' | 'none';
-export type VideoAspect = 'auto' | '16:9' | '4:3' | '1:1' | '9:16';
+export type VideoAspect = 'auto' | '16:9' | '4:3' | '1:1' | '9:16' | 'custom';
+export type VideoPosterMode = 'manual' | 'auto';
 export type BlockAlign = '' | 'center';
+export type BlockLayout = 'content' | 'stack' | 'split' | 'split-reverse';
+export type BlockShadow = 'none' | 'soft' | 'float';
+export type FontWeight =
+    | 'normal'
+    | 'medium'
+    | 'semibold'
+    | 'bold'
+    | 'black';
 
 export interface ImageAsset {
     id: number;
@@ -157,18 +172,24 @@ export interface ImageSettings {
 export interface VideoSettings {
     type: VideoType;
     autoplay: boolean;
+    autoplay_first: boolean;
+    repeat_muted: boolean;
     muted: boolean;
     loop: boolean;
     controls: boolean;
     playsinline: boolean;
     preload: VideoPreload;
     aspect_ratio: VideoAspect;
+    aspect_ratio_custom: string;
+    poster_mode: VideoPosterMode;
     poster: ImageAsset;
     fallback_text: string;
+    track_events: boolean;
 }
 
 export interface BlockSettings {
     background: string;
+    background_gradient: string;
     text_color: string;
     padding: number;
     radius: number;
@@ -177,6 +198,38 @@ export interface BlockSettings {
     font_family: string;
     align: BlockAlign;
     background_image: ImageAsset;
+    layout: BlockLayout;
+    media_image: ImageAsset;
+    heading: string;
+    subheading: string;
+    heading_size: number;
+    heading_line_height: number;
+    heading_weight: FontWeight;
+    subheading_size: number;
+    subheading_line_height: number;
+    subheading_weight: FontWeight;
+    cta_text: string;
+    cta_link: string;
+    cta_target: boolean;
+    cta_text_color: string;
+    cta_background: string;
+    cta_radius: number;
+    border_width: number;
+    border_color: string;
+    shadow: BlockShadow;
+}
+
+export interface ContentVariantPayload {
+    html?: string;
+    blocks?: string;
+    video_url?: string;
+}
+
+export interface ContentVariant {
+    id: string;
+    label: string;
+    weight: number;
+    content: ContentVariantPayload;
 }
 
 export interface AdContent {
@@ -190,6 +243,13 @@ export interface AdContent {
     custom_html: string;
     custom_css: string;
     custom_js: string;
+    html_script_allowlist: string[];
+    html_script_blocklist: string[];
+    html_runtime_vars: boolean;
+    html_load_strategy: HtmlLoadStrategy;
+    html_load_delay: number;
+    variants_enabled: boolean;
+    variants: ContentVariant[];
     image: ImageAsset;
     container_style: ContainerStyle;
     behavior: BehaviorOptions;

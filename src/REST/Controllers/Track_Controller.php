@@ -331,44 +331,46 @@ final class Track_Controller {
             set_transient($dedupe_key, 1, self::get_dedupe_ttl($payload['event']));
         }
 
-        $stats_key = $payload['date'] . '|' . $payload['ad_id'];
-        if (!isset($stats_agg[$stats_key])) {
-            $stats_agg[$stats_key] = array(
-                'date' => $payload['date'],
-                'ad_id' => $payload['ad_id'],
-                'impressions' => 0,
-                'clicks' => 0,
-            );
-        }
-        if ($payload['event'] === 'click') {
-            $stats_agg[$stats_key]['clicks'] += 1;
-        } else {
-            $stats_agg[$stats_key]['impressions'] += 1;
-        }
-
-        if (!($payload['slot'] === '' && $payload['position'] === '' && $payload['container'] === '')) {
-            $dim_key = implode('|', array(
-                $payload['date'],
-                $payload['ad_id'],
-                $payload['slot'],
-                $payload['position'],
-                $payload['container'],
-            ));
-            if (!isset($dim_agg[$dim_key])) {
-                $dim_agg[$dim_key] = array(
+        if (self::is_countable_event($payload['event'])) {
+            $stats_key = $payload['date'] . '|' . $payload['ad_id'];
+            if (!isset($stats_agg[$stats_key])) {
+                $stats_agg[$stats_key] = array(
                     'date' => $payload['date'],
                     'ad_id' => $payload['ad_id'],
-                    'slot' => $payload['slot'],
-                    'position' => $payload['position'],
-                    'container' => $payload['container'],
                     'impressions' => 0,
                     'clicks' => 0,
                 );
             }
             if ($payload['event'] === 'click') {
-                $dim_agg[$dim_key]['clicks'] += 1;
+                $stats_agg[$stats_key]['clicks'] += 1;
             } else {
-                $dim_agg[$dim_key]['impressions'] += 1;
+                $stats_agg[$stats_key]['impressions'] += 1;
+            }
+
+            if (!($payload['slot'] === '' && $payload['position'] === '' && $payload['container'] === '')) {
+                $dim_key = implode('|', array(
+                    $payload['date'],
+                    $payload['ad_id'],
+                    $payload['slot'],
+                    $payload['position'],
+                    $payload['container'],
+                ));
+                if (!isset($dim_agg[$dim_key])) {
+                    $dim_agg[$dim_key] = array(
+                        'date' => $payload['date'],
+                        'ad_id' => $payload['ad_id'],
+                        'slot' => $payload['slot'],
+                        'position' => $payload['position'],
+                        'container' => $payload['container'],
+                        'impressions' => 0,
+                        'clicks' => 0,
+                    );
+                }
+                if ($payload['event'] === 'click') {
+                    $dim_agg[$dim_key]['clicks'] += 1;
+                } else {
+                    $dim_agg[$dim_key]['impressions'] += 1;
+                }
             }
         }
 
@@ -449,25 +451,27 @@ final class Track_Controller {
             set_transient($dedupe_key, 1, self::get_dedupe_ttl($payload['event']));
         }
 
-        $written = self::write_stats(
-            $payload['ad_id'],
-            $payload['event'],
-            $payload['date']
-        );
-        if (is_wp_error($written)) {
-            return $written;
-        }
+        if (self::is_countable_event($payload['event'])) {
+            $written = self::write_stats(
+                $payload['ad_id'],
+                $payload['event'],
+                $payload['date']
+            );
+            if (is_wp_error($written)) {
+                return $written;
+            }
 
-        $dim_written = self::write_dimension_stats(
-            $payload['ad_id'],
-            $payload['event'],
-            $payload['date'],
-            $payload['slot'],
-            $payload['position'],
-            $payload['container']
-        );
-        if (is_wp_error($dim_written)) {
-            return $dim_written;
+            $dim_written = self::write_dimension_stats(
+                $payload['ad_id'],
+                $payload['event'],
+                $payload['date'],
+                $payload['slot'],
+                $payload['position'],
+                $payload['container']
+            );
+            if (is_wp_error($dim_written)) {
+                return $dim_written;
+            }
         }
 
         if (self::diagnostics_enabled()) {
@@ -485,9 +489,17 @@ final class Track_Controller {
     private static function normalize_event(string $event): ?string {
         $event = sanitize_text_field($event);
         return match ($event) {
-            'impression', 'click' => $event,
+            'impression',
+            'click',
+            'video_play',
+            'video_pause',
+            'video_complete' => $event,
             default => null,
         };
+    }
+
+    private static function is_countable_event(string $event): bool {
+        return in_array($event, array('impression', 'click'), true);
     }
 
     private static function sanitize_dimension(mixed $value): string {

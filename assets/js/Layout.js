@@ -240,7 +240,11 @@ const Layout = ({
         } else if (creativeType === 'video' && content.video_url) {
             const settings = content.video_settings || {};
             const isEmbed = settings.type === 'embed';
-            const ratio = settings.aspect_ratio || '16:9';
+            const ratio =
+                settings.aspect_ratio === 'custom' &&
+                settings.aspect_ratio_custom
+                    ? settings.aspect_ratio_custom
+                    : settings.aspect_ratio || '16:9';
             const ratioStyle =
                 ratio && ratio !== 'auto'
                     ? {
@@ -265,7 +269,11 @@ const Layout = ({
                     controls={settings.controls !== false}
                     playsInline={settings.playsinline !== false}
                     preload={settings.preload || 'metadata'}
-                    poster={settings.poster?.url || undefined}
+                    poster={
+                        settings.poster_mode === 'auto'
+                            ? undefined
+                            : settings.poster?.url || undefined
+                    }
                 >
                     {settings.fallback_text || ''}
                 </video>
@@ -285,7 +293,10 @@ const Layout = ({
         } else if (creativeType === 'block' && content.blocks) {
             const blockSettings = content.block_settings || {};
             const blockStyle = {};
-            if (
+            if (blockSettings.background_gradient) {
+                blockStyle.backgroundImage =
+                    blockSettings.background_gradient;
+            } else if (
                 blockSettings.background &&
                 blockSettings.background !== 'transparent'
             ) {
@@ -302,6 +313,16 @@ const Layout = ({
             }
             if (blockSettings.radius) {
                 blockStyle.borderRadius = `${blockSettings.radius}px`;
+            }
+            if (blockSettings.border_width) {
+                blockStyle.border = `${blockSettings.border_width}px solid ${
+                    blockSettings.border_color || '#d0d7e2'
+                }`;
+            }
+            if (blockSettings.shadow === 'soft') {
+                blockStyle.boxShadow = '0 18px 40px rgba(15,23,42,0.12)';
+            } else if (blockSettings.shadow === 'float') {
+                blockStyle.boxShadow = '0 30px 60px rgba(15,23,42,0.18)';
             }
             if (blockSettings.max_width) {
                 blockStyle.maxWidth = `${blockSettings.max_width}px`;
@@ -324,14 +345,118 @@ const Layout = ({
                 blockStyle.backgroundSize = 'cover';
                 blockStyle.backgroundPosition = 'center';
             }
+            const mediaUrl = blockSettings.media_image?.url;
+            const mediaNode = mediaUrl ? (
+                <div className="magick-ad-block__media">
+                    <img
+                        className="magick-ad-block__media-img"
+                        src={mediaUrl}
+                        alt={blockSettings.media_image?.alt || ''}
+                    />
+                </div>
+            ) : null;
+            const headingStyle = {};
+            if (blockSettings.heading_size) {
+                headingStyle.fontSize = `${blockSettings.heading_size}px`;
+            }
+            if (blockSettings.heading_line_height) {
+                headingStyle.lineHeight = blockSettings.heading_line_height;
+            }
+            if (blockSettings.heading_weight) {
+                headingStyle.fontWeight = blockSettings.heading_weight;
+            }
+            const subheadingStyle = {};
+            if (blockSettings.subheading_size) {
+                subheadingStyle.fontSize = `${blockSettings.subheading_size}px`;
+            }
+            if (blockSettings.subheading_line_height) {
+                subheadingStyle.lineHeight =
+                    blockSettings.subheading_line_height;
+            }
+            if (blockSettings.subheading_weight) {
+                subheadingStyle.fontWeight =
+                    blockSettings.subheading_weight;
+            }
+            const headingNode = blockSettings.heading ? (
+                <div
+                    className="magick-ad-block__heading"
+                    style={headingStyle}
+                >
+                    {blockSettings.heading}
+                </div>
+            ) : null;
+            const subheadingNode = blockSettings.subheading ? (
+                <div
+                    className="magick-ad-block__subheading"
+                    style={subheadingStyle}
+                >
+                    {blockSettings.subheading}
+                </div>
+            ) : null;
+            const ctaStyle = {};
+            if (blockSettings.cta_text_color) {
+                ctaStyle.color = blockSettings.cta_text_color;
+            }
+            if (blockSettings.cta_background) {
+                ctaStyle.background = blockSettings.cta_background;
+            }
+            if (blockSettings.cta_radius) {
+                ctaStyle.borderRadius = `${blockSettings.cta_radius}px`;
+            }
+            const ctaNode =
+                blockSettings.cta_text && blockSettings.cta_link ? (
+                    <a
+                        className="magick-ad-block__cta"
+                        href={blockSettings.cta_link}
+                        target={
+                            blockSettings.cta_target ? '_blank' : undefined
+                        }
+                        rel={
+                            blockSettings.cta_target
+                                ? 'noopener noreferrer'
+                                : undefined
+                        }
+                        style={ctaStyle}
+                    >
+                        {blockSettings.cta_text}
+                    </a>
+                ) : null;
+            const showMedia =
+                blockSettings.layout &&
+                blockSettings.layout !== 'content' &&
+                mediaNode;
             inner = (
                 <div
                     className="magick-ad-preview__block"
                     style={blockStyle}
-                    dangerouslySetInnerHTML={{
-                        __html: content.blocks,
-                    }}
-                />
+                >
+                    <div
+                        className={`magick-ad-block magick-ad-block--${
+                            blockSettings.layout || 'content'
+                        } ${
+                            blockSettings.layout === 'split-reverse'
+                                ? 'magick-ad-block--reverse'
+                                : ''
+                        }`}
+                    >
+                        {blockSettings.layout === 'split-reverse'
+                            ? null
+                            : showMedia}
+                        <div className="magick-ad-block__content">
+                            {headingNode}
+                            {subheadingNode}
+                            <div
+                                dangerouslySetInnerHTML={{
+                                    __html: content.blocks,
+                                }}
+                            />
+                            {ctaNode}
+                        </div>
+                        {blockSettings.layout === 'split-reverse'
+                            ? showMedia
+                            : null}
+                    </div>
+                </div>
             );
         }
 

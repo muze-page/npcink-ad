@@ -1123,6 +1123,87 @@ const AdsConfig = () => {
         });
     };
 
+    const parseDomainList = (value = '') =>
+        value
+            .split(/[\s,;]+/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+
+    const formatDomainList = (list) =>
+        Array.isArray(list) ? list.join('\n') : '';
+
+    const updateVariants = (nextVariants) => {
+        if (!selectedAd) {
+            return;
+        }
+        handleUpdateContent({
+            variants: nextVariants,
+        });
+    };
+
+    const updateVariant = (index, updates) => {
+        if (!selectedAd) {
+            return;
+        }
+        const variants = Array.isArray(selectedAd.content?.variants)
+            ? [...selectedAd.content.variants]
+            : [];
+        if (!variants[index]) {
+            return;
+        }
+        variants[index] = {
+            ...variants[index],
+            ...updates,
+            content: {
+                ...(variants[index].content || {}),
+                ...(updates.content || {}),
+            },
+        };
+        updateVariants(variants);
+    };
+
+    const removeVariant = (index) => {
+        if (!selectedAd) {
+            return;
+        }
+        const variants = Array.isArray(selectedAd.content?.variants)
+            ? [...selectedAd.content.variants]
+            : [];
+        variants.splice(index, 1);
+        updateVariants(variants);
+    };
+
+    const createVariantId = () => {
+        if (window.crypto?.randomUUID) {
+            return window.crypto.randomUUID();
+        }
+        return `var_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    };
+
+    const addVariant = (type) => {
+        if (!selectedAd) {
+            return;
+        }
+        const variants = Array.isArray(selectedAd.content?.variants)
+            ? [...selectedAd.content.variants]
+            : [];
+        const baseContent = {};
+        if (type === 'html') {
+            baseContent.html = selectedAd.content?.html || '';
+        } else if (type === 'video') {
+            baseContent.video_url = selectedAd.content?.video_url || '';
+        } else if (type === 'block') {
+            baseContent.blocks = selectedAd.content?.blocks || '';
+        }
+        variants.push({
+            id: createVariantId(),
+            label: `版本 ${variants.length + 1}`,
+            weight: 1,
+            content: baseContent,
+        });
+        updateVariants(variants);
+    };
+
     const handleUpdateContainerStyle = (updates) => {
         if (!selectedAd) {
             return;
@@ -1165,6 +1246,127 @@ const AdsConfig = () => {
             return `rgba(${r}, ${g}, ${b}, ${a})`;
         }
         return color.hex || 'transparent';
+    };
+
+    const renderVariantSection = (type) => {
+        if (!selectedAd) {
+            return null;
+        }
+        const variantsEnabled = Boolean(
+            selectedAd.content?.variants_enabled
+        );
+        const variants = Array.isArray(selectedAd.content?.variants)
+            ? selectedAd.content.variants
+            : [];
+
+        return (
+            <div className="magick-ad-variant-section">
+                <ToggleControl
+                    label="启用 A/B 版本"
+                    checked={variantsEnabled}
+                    onChange={(value) =>
+                        handleUpdateContent({
+                            variants_enabled: value,
+                        })
+                    }
+                    help="同一广告可配置多个内容版本，按权重随机展示。"
+                />
+                {variantsEnabled && (
+                    <div className="magick-ad-variant-list">
+                        {variants.map((variant, index) => (
+                            <div
+                                className="magick-ad-variant-card"
+                                key={variant.id || index}
+                            >
+                                <div className="magick-ad-variant-card__head">
+                                    <TextControl
+                                        label="版本名称"
+                                        value={variant.label || ''}
+                                        onChange={(value) =>
+                                            updateVariant(index, {
+                                                label: value,
+                                            })
+                                        }
+                                    />
+                                    <RangeControl
+                                        label="权重"
+                                        min={1}
+                                        max={100}
+                                        value={Number(variant.weight || 1)}
+                                        onChange={(value) =>
+                                            updateVariant(index, {
+                                                weight: Number(value),
+                                            })
+                                        }
+                                    />
+                                </div>
+                                {type === 'html' && (
+                                    <TextareaControl
+                                        label="HTML 内容"
+                                        value={variant.content?.html || ''}
+                                        onChange={(value) =>
+                                            updateVariant(index, {
+                                                content: {
+                                                    html: value,
+                                                },
+                                            })
+                                        }
+                                    />
+                                )}
+                                {type === 'video' && (
+                                    <TextControl
+                                        label="视频地址"
+                                        value={
+                                            variant.content?.video_url || ''
+                                        }
+                                        onChange={(value) =>
+                                            updateVariant(index, {
+                                                content: {
+                                                    video_url: value,
+                                                },
+                                            })
+                                        }
+                                    />
+                                )}
+                                {type === 'block' && (
+                                    <TextareaControl
+                                        label="区块内容"
+                                        value={
+                                            variant.content?.blocks || ''
+                                        }
+                                        onChange={(value) =>
+                                            updateVariant(index, {
+                                                content: {
+                                                    blocks: value,
+                                                },
+                                            })
+                                        }
+                                        help="这里填写区块内容（HTML/区块序列化）。样式仍使用主配置。"
+                                    />
+                                )}
+                                <div className="magick-ad-variant-card__actions">
+                                    <Button
+                                        variant="tertiary"
+                                        isDestructive
+                                        onClick={() =>
+                                            removeVariant(index)
+                                        }
+                                    >
+                                        移除版本
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                        <Button
+                            variant="secondary"
+                            onClick={() => addVariant(type)}
+                        >
+                            添加版本
+                        </Button>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     const renderFrequencyControls = (behavior = {}) => (
@@ -2047,21 +2249,26 @@ const AdsConfig = () => {
                                     >
                                         {(htmlTabView) =>
                                             htmlTabView.name === 'content' ? (
-                                                <ClassicEditor
-                                                    value={
-                                                        selectedAd.content
-                                                            ?.html || ''
-                                                    }
-                                                    active={
-                                                        activeContentType ===
+                                                <>
+                                                    <ClassicEditor
+                                                        value={
+                                                            selectedAd.content
+                                                                ?.html || ''
+                                                        }
+                                                        active={
+                                                            activeContentType ===
+                                                            'html'
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateContent({
+                                                                html: value,
+                                                            })
+                                                        }
+                                                    />
+                                                    {renderVariantSection(
                                                         'html'
-                                                    }
-                                                    onChange={(value) =>
-                                                        handleUpdateContent({
-                                                            html: value,
-                                                        })
-                                                    }
-                                                />
+                                                    )}
+                                                </>
                                             ) : (
                                                 <>
                                                     {isExpertMode ? (
@@ -2260,6 +2467,138 @@ const AdsConfig = () => {
                                                             help="仅专家模式可用，系统会自动包裹 <script>。"
                                                         />
                                                     ) : null}
+                                                    {!isQuickMode && (
+                                                        <Notice
+                                                            status="info"
+                                                            isDismissible={
+                                                                false
+                                                            }
+                                                        >
+                                                            沙箱只对“完全模式”生效：启用后 HTML 会在 iframe 中运行；关闭将直接执行页面脚本。
+                                                        </Notice>
+                                                    )}
+                                                    <ToggleControl
+                                                        label="启用变量替换"
+                                                        checked={
+                                                            selectedAd.content
+                                                                ?.html_runtime_vars !==
+                                                            false
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateContent(
+                                                                {
+                                                                    html_runtime_vars:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                        help="支持 {site_url} / {page_url} / {ad_id}"
+                                                    />
+                                                    <SelectControl
+                                                        label="载入方式"
+                                                        value={
+                                                            selectedAd.content
+                                                                ?.html_load_strategy ||
+                                                            'immediate'
+                                                        }
+                                                        options={[
+                                                            {
+                                                                label:
+                                                                    '立即加载',
+                                                                value: 'immediate',
+                                                            },
+                                                            {
+                                                                label:
+                                                                    '延迟加载',
+                                                                value: 'delay',
+                                                            },
+                                                            {
+                                                                label:
+                                                                    '视窗内加载',
+                                                                value: 'viewport',
+                                                            },
+                                                        ]}
+                                                        onChange={(value) =>
+                                                            handleUpdateContent(
+                                                                {
+                                                                    html_load_strategy:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                        help="延迟与视窗内加载可减少首屏压力。"
+                                                    />
+                                                    {selectedAd.content
+                                                        ?.html_load_strategy ===
+                                                        'delay' && (
+                                                        <TextControl
+                                                            label="延迟时间（毫秒）"
+                                                            type="number"
+                                                            min={0}
+                                                            value={
+                                                                selectedAd
+                                                                    .content
+                                                                    ?.html_load_delay ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateContent(
+                                                                    {
+                                                                        html_load_delay:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                    )}
+                                                    {!isQuickMode && (
+                                                        <>
+                                                            <TextareaControl
+                                                                label="脚本白名单（域名）"
+                                                                value={formatDomainList(
+                                                                    selectedAd
+                                                                        .content
+                                                                        ?.html_script_allowlist
+                                                                )}
+                                                                onChange={(
+                                                                    value
+                                                                ) =>
+                                                                    handleUpdateContent(
+                                                                        {
+                                                                            html_script_allowlist:
+                                                                                parseDomainList(
+                                                                                    value
+                                                                                ),
+                                                                        }
+                                                                    )
+                                                                }
+                                                                help="仅限制外链 <script src>。每行一个域名或用逗号分隔。"
+                                                            />
+                                                            <TextareaControl
+                                                                label="脚本黑名单（域名）"
+                                                                value={formatDomainList(
+                                                                    selectedAd
+                                                                        .content
+                                                                        ?.html_script_blocklist
+                                                                )}
+                                                                onChange={(
+                                                                    value
+                                                                ) =>
+                                                                    handleUpdateContent(
+                                                                        {
+                                                                            html_script_blocklist:
+                                                                                parseDomainList(
+                                                                                    value
+                                                                                ),
+                                                                        }
+                                                                    )
+                                                                }
+                                                                help="命中黑名单的脚本会被移除。"
+                                                            />
+                                                        </>
+                                                    )}
                                                 </>
                                             )
                                         }
@@ -2291,27 +2630,34 @@ const AdsConfig = () => {
                                                 videoSettings.type === 'embed';
                                             return videoTabView.name ===
                                                 'content' ? (
-                                                <TextControl
-                                                    label={
-                                                        isEmbed
-                                                            ? '嵌入地址'
-                                                            : '视频地址'
-                                                    }
-                                                    value={
-                                                        selectedAd.content
-                                                            ?.video_url || ''
-                                                    }
-                                                    onChange={(value) =>
-                                                        handleUpdateContent({
-                                                            video_url: value,
-                                                        })
-                                                    }
-                                                    help={
-                                                        isEmbed
-                                                            ? '支持 YouTube/Bilibili 等嵌入链接'
-                                                            : '支持 MP4 链接'
-                                                    }
-                                                />
+                                                <>
+                                                    <TextControl
+                                                        label={
+                                                            isEmbed
+                                                                ? '嵌入地址'
+                                                                : '视频地址'
+                                                        }
+                                                        value={
+                                                            selectedAd.content
+                                                                ?.video_url ||
+                                                            ''
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateContent({
+                                                                video_url:
+                                                                    value,
+                                                            })
+                                                        }
+                                                        help={
+                                                            isEmbed
+                                                                ? '支持 YouTube/Bilibili 等嵌入链接'
+                                                                : '支持 MP4 链接'
+                                                        }
+                                                    />
+                                                    {renderVariantSection(
+                                                        'video'
+                                                    )}
+                                                </>
                                             ) : (
                                                 <>
                                                     <SelectControl
@@ -2365,6 +2711,10 @@ const AdsConfig = () => {
                                                                 label: '9:16',
                                                                 value: '9:16',
                                                             },
+                                                            {
+                                                                label: '自定义',
+                                                                value: 'custom',
+                                                            },
                                                         ]}
                                                         onChange={(value) =>
                                                             handleUpdateVideoSettings(
@@ -2375,6 +2725,25 @@ const AdsConfig = () => {
                                                             )
                                                         }
                                                     />
+                                                    {videoSettings.aspect_ratio ===
+                                                        'custom' && (
+                                                        <TextControl
+                                                            label="自定义比例（如 3:2）"
+                                                            value={
+                                                                videoSettings.aspect_ratio_custom ||
+                                                                ''
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateVideoSettings(
+                                                                    {
+                                                                        aspect_ratio_custom:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                            help="格式如 3:2、21:9。"
+                                                        />
+                                                    )}
                                                     <SelectControl
                                                         label="预加载"
                                                         value={
@@ -2405,27 +2774,61 @@ const AdsConfig = () => {
                                                         }
                                                     />
                                                     {!isEmbed && (
-                                                        <div className="magick-ad-field">
-                                                            <p className="magick-ad-field__label">
-                                                                封面图
-                                                            </p>
-                                                            <ImagePicker
+                                                        <>
+                                                            <SelectControl
+                                                                label="封面策略"
                                                                 value={
-                                                                    videoSettings.poster ||
-                                                                    {}
+                                                                    videoSettings.poster_mode ||
+                                                                    'manual'
                                                                 }
+                                                                options={[
+                                                                    {
+                                                                        label:
+                                                                            '使用封面图',
+                                                                        value: 'manual',
+                                                                    },
+                                                                    {
+                                                                        label:
+                                                                            '无封面时取首帧',
+                                                                        value: 'auto',
+                                                                    },
+                                                                ]}
                                                                 onChange={(
                                                                     value
                                                                 ) =>
                                                                     handleUpdateVideoSettings(
                                                                         {
-                                                                            poster:
+                                                                            poster_mode:
                                                                                 value,
                                                                         }
                                                                     )
                                                                 }
                                                             />
-                                                        </div>
+                                                            {videoSettings.poster_mode !==
+                                                                'auto' && (
+                                                                <div className="magick-ad-field">
+                                                                    <p className="magick-ad-field__label">
+                                                                        封面图
+                                                                    </p>
+                                                                    <ImagePicker
+                                                                        value={
+                                                                            videoSettings.poster ||
+                                                                            {}
+                                                                        }
+                                                                        onChange={(
+                                                                            value
+                                                                        ) =>
+                                                                            handleUpdateVideoSettings(
+                                                                                {
+                                                                                    poster:
+                                                                                        value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     )}
                                                     <div className="magick-ad-image-grid">
                                                         <ToggleControl
@@ -2444,69 +2847,112 @@ const AdsConfig = () => {
                                                                                 : Boolean(
                                                                                       videoSettings.muted
                                                                                   ),
-                                                                    }
-                                                                )
-                                                            }
-                                                            help="自动播放通常需要静音。"
-                                                        />
-                                                        <ToggleControl
-                                                            label="静音"
-                                                            checked={Boolean(
-                                                                videoSettings.muted
-                                                            )}
-                                                            onChange={(value) =>
-                                                                handleUpdateVideoSettings(
-                                                                    {
-                                                                        muted:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <ToggleControl
-                                                            label="循环"
-                                                            checked={Boolean(
-                                                                videoSettings.loop
-                                                            )}
-                                                            onChange={(value) =>
-                                                                handleUpdateVideoSettings(
-                                                                    {
-                                                                        loop: value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <ToggleControl
-                                                            label="显示控制条"
-                                                            checked={
-                                                                videoSettings.controls !==
-                                                                false
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateVideoSettings(
-                                                                    {
-                                                                        controls:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
-                                                        <ToggleControl
-                                                            label="移动端内嵌播放"
-                                                            checked={
-                                                                videoSettings.playsinline !==
-                                                                false
-                                                            }
-                                                            onChange={(value) =>
-                                                                handleUpdateVideoSettings(
-                                                                    {
-                                                                        playsinline:
-                                                                            value,
-                                                                    }
-                                                                )
-                                                            }
-                                                        />
+                                                                }
+                                                            )
+                                                        }
+                                                        help="自动播放通常需要静音。"
+                                                    />
+                                                    <ToggleControl
+                                                        label="首次展示自动播放"
+                                                        checked={Boolean(
+                                                            videoSettings.autoplay_first
+                                                        )}
+                                                        onChange={(value) =>
+                                                            handleUpdateVideoSettings(
+                                                                {
+                                                                    autoplay_first:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                        help="仅首次展示时尝试自动播放（会强制静音）。"
+                                                    />
+                                                    <ToggleControl
+                                                        label="静音"
+                                                        checked={Boolean(
+                                                            videoSettings.muted
+                                                        )}
+                                                        onChange={(value) =>
+                                                            handleUpdateVideoSettings(
+                                                                {
+                                                                    muted: value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <ToggleControl
+                                                        label="二次展示强制静音"
+                                                        checked={Boolean(
+                                                            videoSettings.repeat_muted
+                                                        )}
+                                                        onChange={(value) =>
+                                                            handleUpdateVideoSettings(
+                                                                {
+                                                                    repeat_muted:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <ToggleControl
+                                                        label="循环"
+                                                        checked={Boolean(
+                                                            videoSettings.loop
+                                                        )}
+                                                        onChange={(value) =>
+                                                            handleUpdateVideoSettings(
+                                                                {
+                                                                    loop: value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <ToggleControl
+                                                        label="显示控制条"
+                                                        checked={
+                                                            videoSettings.controls !==
+                                                            false
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateVideoSettings(
+                                                                {
+                                                                    controls:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <ToggleControl
+                                                        label="移动端内嵌播放"
+                                                        checked={
+                                                            videoSettings.playsinline !==
+                                                            false
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateVideoSettings(
+                                                                {
+                                                                    playsinline:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
                                                     </div>
+                                                    <ToggleControl
+                                                        label="追踪播放/暂停/完成"
+                                                        checked={Boolean(
+                                                            videoSettings.track_events
+                                                        )}
+                                                        onChange={(value) =>
+                                                            handleUpdateVideoSettings(
+                                                                {
+                                                                    track_events:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                        help="会向统计接口上报播放事件。"
+                                                    />
                                                     <TextControl
                                                         label="备用提示文案"
                                                         value={
@@ -2552,17 +2998,26 @@ const AdsConfig = () => {
                                                     ?.block_settings || {};
                                             return blockTabView.name ===
                                                 'content' ? (
-                                                <BlockEditor
-                                                    value={
-                                                        selectedAd.content
-                                                            ?.blocks || ''
-                                                    }
-                                                    onChange={(value) =>
-                                                        handleUpdateContent({
-                                                            blocks: value,
-                                                        })
-                                                    }
-                                                />
+                                                <>
+                                                    <BlockEditor
+                                                        value={
+                                                            selectedAd.content
+                                                                ?.blocks ||
+                                                            ''
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateContent(
+                                                                {
+                                                                    blocks:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    {renderVariantSection(
+                                                        'block'
+                                                    )}
+                                                </>
                                             ) : (
                                                 <>
                                                     <div className="magick-ad-field">
@@ -2610,6 +3065,22 @@ const AdsConfig = () => {
                                                             enableAlpha
                                                         />
                                                     </div>
+                                                    <TextControl
+                                                        label="背景渐变（可选）"
+                                                        value={
+                                                            blockSettings.background_gradient ||
+                                                            ''
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateBlockSettings(
+                                                                {
+                                                                    background_gradient:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                        help="例如：linear-gradient(135deg,#60a5fa,#a78bfa)"
+                                                    />
                                                     <div className="magick-ad-field">
                                                         <p className="magick-ad-field__label">
                                                             文字颜色
@@ -2634,6 +3105,67 @@ const AdsConfig = () => {
                                                             enableAlpha
                                                         />
                                                     </div>
+                                                    <SelectControl
+                                                        label="布局"
+                                                        value={
+                                                            blockSettings.layout ||
+                                                            'content'
+                                                        }
+                                                        options={[
+                                                            {
+                                                                label:
+                                                                    '仅内容',
+                                                                value: 'content',
+                                                            },
+                                                            {
+                                                                label:
+                                                                    '上图下文',
+                                                                value: 'stack',
+                                                            },
+                                                            {
+                                                                label:
+                                                                    '左图右文',
+                                                                value: 'split',
+                                                            },
+                                                            {
+                                                                label:
+                                                                    '右图左文',
+                                                                value: 'split-reverse',
+                                                            },
+                                                        ]}
+                                                        onChange={(value) =>
+                                                            handleUpdateBlockSettings(
+                                                                {
+                                                                    layout: value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    {blockSettings.layout &&
+                                                        blockSettings.layout !==
+                                                            'content' && (
+                                                            <div className="magick-ad-field">
+                                                                <p className="magick-ad-field__label">
+                                                                    内容配图
+                                                                </p>
+                                                                <ImagePicker
+                                                                    value={
+                                                                        blockSettings.media_image ||
+                                                                        {}
+                                                                    }
+                                                                    onChange={(
+                                                                        value
+                                                                    ) =>
+                                                                        handleUpdateBlockSettings(
+                                                                            {
+                                                                                media_image:
+                                                                                    value,
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </div>
+                                                        )}
                                                     <div className="magick-ad-image-grid">
                                                         <RangeControl
                                                             label="内边距"
@@ -2666,6 +3198,25 @@ const AdsConfig = () => {
                                                                 handleUpdateBlockSettings(
                                                                     {
                                                                         radius:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                        <RangeControl
+                                                            label="边框"
+                                                            min={0}
+                                                            max={12}
+                                                            value={
+                                                                blockSettings.border_width ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateBlockSettings(
+                                                                    {
+                                                                        border_width:
                                                                             Number(
                                                                                 value
                                                                             ),
@@ -2712,6 +3263,47 @@ const AdsConfig = () => {
                                                             }
                                                         />
                                                     </div>
+                                                    {blockSettings.border_width >
+                                                        0 && (
+                                                        <div className="magick-ad-field">
+                                                            <p className="magick-ad-field__label">
+                                                                边框颜色
+                                                            </p>
+                                                            <ColorPicker
+                                                                color={
+                                                                    blockSettings.border_color ||
+                                                                    '#d0d7e2'
+                                                                }
+                                                                onChangeComplete={(
+                                                                    value
+                                                                ) =>
+                                                                    handleUpdateBlockSettings(
+                                                                        {
+                                                                            border_color:
+                                                                                formatColorValue(
+                                                                                    value
+                                                                                ),
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <SelectControl
+                                                        label="阴影"
+                                                        value={
+                                                            blockSettings.shadow ||
+                                                            'none'
+                                                        }
+                                                        options={SHADOW_OPTIONS}
+                                                        onChange={(value) =>
+                                                            handleUpdateBlockSettings(
+                                                                {
+                                                                    shadow: value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
                                                     <TextControl
                                                         label="字体（可选）"
                                                         value={
@@ -2748,6 +3340,314 @@ const AdsConfig = () => {
                                                             handleUpdateBlockSettings(
                                                                 {
                                                                     align: value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <div className="magick-ad-section-divider">
+                                                        标题/副标题
+                                                    </div>
+                                                    <TextControl
+                                                        label="标题"
+                                                        value={
+                                                            blockSettings.heading ||
+                                                            ''
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateBlockSettings(
+                                                                {
+                                                                    heading:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <TextControl
+                                                        label="副标题"
+                                                        value={
+                                                            blockSettings.subheading ||
+                                                            ''
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateBlockSettings(
+                                                                {
+                                                                    subheading:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <div className="magick-ad-image-grid">
+                                                        <RangeControl
+                                                            label="标题字号"
+                                                            min={12}
+                                                            max={48}
+                                                            value={
+                                                                blockSettings.heading_size ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateBlockSettings(
+                                                                    {
+                                                                        heading_size:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                        <RangeControl
+                                                            label="标题行高"
+                                                            min={1}
+                                                            max={2.4}
+                                                            step={0.1}
+                                                            value={
+                                                                blockSettings.heading_line_height ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateBlockSettings(
+                                                                    {
+                                                                        heading_line_height:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                        <SelectControl
+                                                            label="标题字重"
+                                                            value={
+                                                                blockSettings.heading_weight ||
+                                                                'semibold'
+                                                            }
+                                                            options={[
+                                                                {
+                                                                    label:
+                                                                        'Normal',
+                                                                    value: 'normal',
+                                                                },
+                                                                {
+                                                                    label:
+                                                                        'Medium',
+                                                                    value: 'medium',
+                                                                },
+                                                                {
+                                                                    label:
+                                                                        'Semibold',
+                                                                    value: 'semibold',
+                                                                },
+                                                                {
+                                                                    label:
+                                                                        'Bold',
+                                                                    value: 'bold',
+                                                                },
+                                                                {
+                                                                    label:
+                                                                        'Black',
+                                                                    value: 'black',
+                                                                },
+                                                            ]}
+                                                            onChange={(value) =>
+                                                                handleUpdateBlockSettings(
+                                                                    {
+                                                                        heading_weight:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
+                                                    <div className="magick-ad-image-grid">
+                                                        <RangeControl
+                                                            label="副标题字号"
+                                                            min={10}
+                                                            max={32}
+                                                            value={
+                                                                blockSettings.subheading_size ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateBlockSettings(
+                                                                    {
+                                                                        subheading_size:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                        <RangeControl
+                                                            label="副标题行高"
+                                                            min={1}
+                                                            max={2.4}
+                                                            step={0.1}
+                                                            value={
+                                                                blockSettings.subheading_line_height ??
+                                                                0
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateBlockSettings(
+                                                                    {
+                                                                        subheading_line_height:
+                                                                            Number(
+                                                                                value
+                                                                            ),
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                        <SelectControl
+                                                            label="副标题字重"
+                                                            value={
+                                                                blockSettings.subheading_weight ||
+                                                                'normal'
+                                                            }
+                                                            options={[
+                                                                {
+                                                                    label:
+                                                                        'Normal',
+                                                                    value: 'normal',
+                                                                },
+                                                                {
+                                                                    label:
+                                                                        'Medium',
+                                                                    value: 'medium',
+                                                                },
+                                                                {
+                                                                    label:
+                                                                        'Semibold',
+                                                                    value: 'semibold',
+                                                                },
+                                                                {
+                                                                    label:
+                                                                        'Bold',
+                                                                    value: 'bold',
+                                                                },
+                                                                {
+                                                                    label:
+                                                                        'Black',
+                                                                    value: 'black',
+                                                                },
+                                                            ]}
+                                                            onChange={(value) =>
+                                                                handleUpdateBlockSettings(
+                                                                    {
+                                                                        subheading_weight:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
+                                                    <div className="magick-ad-section-divider">
+                                                        CTA 按钮
+                                                    </div>
+                                                    <TextControl
+                                                        label="按钮文案"
+                                                        value={
+                                                            blockSettings.cta_text ||
+                                                            ''
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateBlockSettings(
+                                                                {
+                                                                    cta_text:
+                                                                        value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <LinkPicker
+                                                        value={
+                                                            blockSettings.cta_link ||
+                                                            ''
+                                                        }
+                                                        target={
+                                                            blockSettings.cta_target
+                                                        }
+                                                        onChange={({
+                                                            url,
+                                                            target,
+                                                        }) =>
+                                                            handleUpdateBlockSettings(
+                                                                {
+                                                                    cta_link:
+                                                                        url,
+                                                                    cta_target:
+                                                                        Boolean(
+                                                                            target
+                                                                        ),
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                    <div className="magick-ad-image-grid">
+                                                        <div className="magick-ad-field">
+                                                            <p className="magick-ad-field__label">
+                                                                按钮背景
+                                                            </p>
+                                                            <ColorPicker
+                                                                color={
+                                                                    blockSettings.cta_background ||
+                                                                    '#2563eb'
+                                                                }
+                                                                onChangeComplete={(
+                                                                    value
+                                                                ) =>
+                                                                    handleUpdateBlockSettings(
+                                                                        {
+                                                                            cta_background:
+                                                                                formatColorValue(
+                                                                                    value
+                                                                                ),
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                        </div>
+                                                        <div className="magick-ad-field">
+                                                            <p className="magick-ad-field__label">
+                                                                按钮文字
+                                                            </p>
+                                                            <ColorPicker
+                                                                color={
+                                                                    blockSettings.cta_text_color ||
+                                                                    '#ffffff'
+                                                                }
+                                                                onChangeComplete={(
+                                                                    value
+                                                                ) =>
+                                                                    handleUpdateBlockSettings(
+                                                                        {
+                                                                            cta_text_color:
+                                                                                formatColorValue(
+                                                                                    value
+                                                                                ),
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <RangeControl
+                                                        label="按钮圆角"
+                                                        min={0}
+                                                        max={999}
+                                                        value={
+                                                            blockSettings.cta_radius ??
+                                                            0
+                                                        }
+                                                        onChange={(value) =>
+                                                            handleUpdateBlockSettings(
+                                                                {
+                                                                    cta_radius:
+                                                                        Number(
+                                                                            value
+                                                                        ),
                                                                 }
                                                             )
                                                         }

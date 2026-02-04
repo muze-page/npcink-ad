@@ -673,6 +673,64 @@
     width: 100%;
 }
 
+.magick-ad-preview__block .magick-ad-block {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.magick-ad-preview__block .magick-ad-block--content,
+.magick-ad-preview__block .magick-ad-block--stack {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.magick-ad-preview__block .magick-ad-block--split {
+    flex-direction: row;
+}
+
+.magick-ad-preview__block .magick-ad-block--reverse {
+    flex-direction: row-reverse;
+}
+
+.magick-ad-preview__block .magick-ad-block__media {
+    flex: 0 0 40%;
+}
+
+.magick-ad-preview__block .magick-ad-block__media-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    -o-object-fit: cover;
+       object-fit: cover;
+}
+
+.magick-ad-preview__block .magick-ad-block__heading {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.magick-ad-preview__block .magick-ad-block__subheading {
+    font-size: 13px;
+    opacity: 0.75;
+    margin-bottom: 10px;
+}
+
+.magick-ad-preview__block .magick-ad-block__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 13px;
+    text-decoration: none;
+}
+
 .magick-ad-html-container {
     position: relative;
     box-sizing: border-box;
@@ -691,6 +749,43 @@
 
 .magick-ad-block-editor .block-editor-block-list__layout {
     min-height: 220px;
+}
+
+.magick-ad-section-divider {
+    margin: 16px 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #5a6b84;
+}
+
+.magick-ad-variant-section {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #f6f8fb;
+}
+
+.magick-ad-variant-list {
+    margin-top: 12px;
+    display: grid;
+    gap: 12px;
+}
+
+.magick-ad-variant-card {
+    padding: 12px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e3e8f0;
+}
+
+.magick-ad-variant-card__head {
+    display: grid;
+    gap: 8px;
+}
+
+.magick-ad-variant-card__actions {
+    margin-top: 8px;
+    text-align: right;
 }
 
 .magick-ad-badge {

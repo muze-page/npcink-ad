@@ -598,10 +598,12 @@ final class Settings {
             $blocks_value = wp_kses_post($raw_blocks);
         }
 
+        $can_unfiltered = current_user_can('unfiltered_html');
+
         $raw_html = isset($content['html']) && is_string($content['html']) ? $content['html'] : '';
         $html_value = $raw_html;
         $html_mode = isset($sanitized_options['html_mode']) ? $sanitized_options['html_mode'] : 'safe';
-        if ($html_mode !== 'full' || !current_user_can('unfiltered_html')) {
+        if ($html_mode !== 'full' || !$can_unfiltered) {
             $html_value = wp_kses_post($raw_html);
             if ($html_mode === 'full') {
                 $sanitized_options['html_mode'] = 'safe';
@@ -617,11 +619,34 @@ final class Settings {
         $custom_js = isset($content['custom_js']) && is_string($content['custom_js'])
             ? $content['custom_js']
             : '';
-        if (!current_user_can('unfiltered_html')) {
+        if (!$can_unfiltered) {
             $custom_html = '';
             $custom_css = '';
             $custom_js = '';
         }
+
+        $html_script_allowlist = self::sanitize_domain_list(isset($content['html_script_allowlist']) ? $content['html_script_allowlist'] : array());
+        $html_script_blocklist = self::sanitize_domain_list(isset($content['html_script_blocklist']) ? $content['html_script_blocklist'] : array());
+        $html_runtime_vars = !array_key_exists('html_runtime_vars', $content) ? true : !empty($content['html_runtime_vars']);
+        $html_load_strategy = self::sanitize_choice(
+            isset($content['html_load_strategy']) ? $content['html_load_strategy'] : 'immediate',
+            array('immediate', 'delay', 'viewport'),
+            'immediate'
+        );
+        $html_load_delay = isset($content['html_load_delay']) ? absint($content['html_load_delay']) : 0;
+        if ($html_load_delay < 0) {
+            $html_load_delay = 0;
+        }
+        if ($html_load_delay > 120000) {
+            $html_load_delay = 120000;
+        }
+
+        $variants_enabled = !empty($content['variants_enabled']);
+        $variants = self::sanitize_variants(
+            isset($content['variants']) ? $content['variants'] : array(),
+            $html_mode,
+            $can_unfiltered
+        );
 
         $video_settings = isset($content['video_settings']) && is_array($content['video_settings'])
             ? $content['video_settings']
@@ -630,6 +655,28 @@ final class Settings {
         $block_settings = isset($content['block_settings']) && is_array($content['block_settings'])
             ? $content['block_settings']
             : array();
+
+        $video_preload = self::sanitize_choice(
+            isset($video_settings['preload']) ? $video_settings['preload'] : 'metadata',
+            array('metadata', 'auto', 'none'),
+            'metadata'
+        );
+        $video_aspect = self::sanitize_choice(
+            isset($video_settings['aspect_ratio']) ? $video_settings['aspect_ratio'] : '16:9',
+            array('auto', '16:9', '4:3', '1:1', '9:16', 'custom'),
+            '16:9'
+        );
+        $video_poster_mode = self::sanitize_choice(
+            isset($video_settings['poster_mode']) ? $video_settings['poster_mode'] : 'manual',
+            array('manual', 'auto'),
+            'manual'
+        );
+        if ($video_poster_mode === 'auto' && $video_preload === 'none') {
+            $video_preload = 'metadata';
+        }
+        $video_aspect_custom = self::sanitize_ratio(
+            isset($video_settings['aspect_ratio_custom']) ? $video_settings['aspect_ratio_custom'] : ''
+        );
 
         $sanitized_content = array(
             'html' => $html_value,
@@ -642,6 +689,13 @@ final class Settings {
             'custom_html' => $custom_html,
             'custom_css' => $custom_css,
             'custom_js' => $custom_js,
+            'html_script_allowlist' => $html_script_allowlist,
+            'html_script_blocklist' => $html_script_blocklist,
+            'html_runtime_vars' => $html_runtime_vars,
+            'html_load_strategy' => $html_load_strategy,
+            'html_load_delay' => $html_load_delay,
+            'variants_enabled' => $variants_enabled,
+            'variants' => $variants,
             'image' => array(
                 'id' => isset($image['id']) ? absint($image['id']) : 0,
                 'url' => isset($image['url']) ? esc_url_raw($image['url']) : '',
@@ -654,6 +708,8 @@ final class Settings {
                     'mp4'
                 ),
                 'autoplay' => !empty($video_settings['autoplay']),
+                'autoplay_first' => !empty($video_settings['autoplay_first']),
+                'repeat_muted' => !empty($video_settings['repeat_muted']),
                 'muted' => !empty($video_settings['muted']),
                 'loop' => !empty($video_settings['loop']),
                 'controls' => array_key_exists('controls', $video_settings)
@@ -662,16 +718,10 @@ final class Settings {
                 'playsinline' => array_key_exists('playsinline', $video_settings)
                     ? (bool) $video_settings['playsinline']
                     : true,
-                'preload' => self::sanitize_choice(
-                    isset($video_settings['preload']) ? $video_settings['preload'] : 'metadata',
-                    array('metadata', 'auto', 'none'),
-                    'metadata'
-                ),
-                'aspect_ratio' => self::sanitize_choice(
-                    isset($video_settings['aspect_ratio']) ? $video_settings['aspect_ratio'] : '16:9',
-                    array('auto', '16:9', '4:3', '1:1', '9:16'),
-                    '16:9'
-                ),
+                'preload' => $video_preload,
+                'aspect_ratio' => $video_aspect,
+                'aspect_ratio_custom' => $video_aspect_custom,
+                'poster_mode' => $video_poster_mode,
                 'poster' => array(
                     'id' => isset($video_settings['poster']['id']) ? absint($video_settings['poster']['id']) : 0,
                     'url' => isset($video_settings['poster']['url']) ? esc_url_raw($video_settings['poster']['url']) : '',
@@ -680,9 +730,11 @@ final class Settings {
                 'fallback_text' => isset($video_settings['fallback_text'])
                     ? sanitize_text_field($video_settings['fallback_text'])
                     : '',
+                'track_events' => !empty($video_settings['track_events']),
             ),
             'block_settings' => array(
                 'background' => self::sanitize_color(isset($block_settings['background']) ? $block_settings['background'] : 'transparent'),
+                'background_gradient' => isset($block_settings['background_gradient']) ? sanitize_text_field($block_settings['background_gradient']) : '',
                 'text_color' => self::sanitize_color(isset($block_settings['text_color']) ? $block_settings['text_color'] : ''),
                 'padding' => isset($block_settings['padding']) ? absint($block_settings['padding']) : 0,
                 'radius' => isset($block_settings['radius']) ? absint($block_settings['radius']) : 0,
@@ -698,6 +750,49 @@ final class Settings {
                     'id' => isset($block_settings['background_image']['id']) ? absint($block_settings['background_image']['id']) : 0,
                     'url' => isset($block_settings['background_image']['url']) ? esc_url_raw($block_settings['background_image']['url']) : '',
                     'alt' => isset($block_settings['background_image']['alt']) ? sanitize_text_field($block_settings['background_image']['alt']) : '',
+                ),
+                'layout' => self::sanitize_choice(
+                    isset($block_settings['layout']) ? $block_settings['layout'] : 'content',
+                    array('content', 'stack', 'split', 'split-reverse'),
+                    'content'
+                ),
+                'media_image' => array(
+                    'id' => isset($block_settings['media_image']['id']) ? absint($block_settings['media_image']['id']) : 0,
+                    'url' => isset($block_settings['media_image']['url']) ? esc_url_raw($block_settings['media_image']['url']) : '',
+                    'alt' => isset($block_settings['media_image']['alt']) ? sanitize_text_field($block_settings['media_image']['alt']) : '',
+                ),
+                'heading' => isset($block_settings['heading']) ? sanitize_text_field($block_settings['heading']) : '',
+                'subheading' => isset($block_settings['subheading']) ? sanitize_text_field($block_settings['subheading']) : '',
+                'heading_size' => isset($block_settings['heading_size']) ? absint($block_settings['heading_size']) : 0,
+                'heading_line_height' => isset($block_settings['heading_line_height'])
+                    ? floatval($block_settings['heading_line_height'])
+                    : 0,
+                'heading_weight' => self::sanitize_choice(
+                    isset($block_settings['heading_weight']) ? $block_settings['heading_weight'] : 'semibold',
+                    array('normal', 'medium', 'semibold', 'bold', 'black'),
+                    'semibold'
+                ),
+                'subheading_size' => isset($block_settings['subheading_size']) ? absint($block_settings['subheading_size']) : 0,
+                'subheading_line_height' => isset($block_settings['subheading_line_height'])
+                    ? floatval($block_settings['subheading_line_height'])
+                    : 0,
+                'subheading_weight' => self::sanitize_choice(
+                    isset($block_settings['subheading_weight']) ? $block_settings['subheading_weight'] : 'normal',
+                    array('normal', 'medium', 'semibold', 'bold', 'black'),
+                    'normal'
+                ),
+                'cta_text' => isset($block_settings['cta_text']) ? sanitize_text_field($block_settings['cta_text']) : '',
+                'cta_link' => isset($block_settings['cta_link']) ? esc_url_raw($block_settings['cta_link']) : '',
+                'cta_target' => !empty($block_settings['cta_target']),
+                'cta_text_color' => self::sanitize_color(isset($block_settings['cta_text_color']) ? $block_settings['cta_text_color'] : '#ffffff'),
+                'cta_background' => self::sanitize_color(isset($block_settings['cta_background']) ? $block_settings['cta_background'] : '#2563eb'),
+                'cta_radius' => isset($block_settings['cta_radius']) ? absint($block_settings['cta_radius']) : 0,
+                'border_width' => isset($block_settings['border_width']) ? absint($block_settings['border_width']) : 0,
+                'border_color' => self::sanitize_color(isset($block_settings['border_color']) ? $block_settings['border_color'] : '#d0d7e2'),
+                'shadow' => self::sanitize_choice(
+                    isset($block_settings['shadow']) ? $block_settings['shadow'] : 'none',
+                    array('none', 'soft', 'float'),
+                    'none'
                 ),
             ),
             'container_style' => array(
@@ -800,6 +895,89 @@ final class Settings {
             return $value;
         }
         return 'transparent';
+    }
+
+    private static function sanitize_ratio($value): string {
+        $value = is_string($value) ? trim($value) : '';
+        if ($value === '') {
+            return '';
+        }
+        if (preg_match('/^\\d{1,3}:\\d{1,3}$/', $value)) {
+            return $value;
+        }
+        return '';
+    }
+
+    private static function sanitize_domain_list($value): array {
+        $items = array();
+        if (is_string($value)) {
+            $value = preg_split('/[\\s,;]+/', $value);
+        }
+        if (!is_array($value)) {
+            return $items;
+        }
+        foreach ($value as $item) {
+            if (!is_string($item)) {
+                continue;
+            }
+            $item = trim(strtolower($item));
+            if ($item === '') {
+                continue;
+            }
+            $item = preg_replace('#^https?://#', '', $item);
+            $item = preg_replace('#/.*$#', '', $item);
+            if ($item === '') {
+                continue;
+            }
+            $items[] = $item;
+        }
+        $items = array_values(array_unique($items));
+        if (count($items) > 50) {
+            $items = array_slice($items, 0, 50);
+        }
+        return $items;
+    }
+
+    private static function sanitize_variants($value, string $html_mode, bool $can_unfiltered): array {
+        if (!is_array($value)) {
+            return array();
+        }
+        $variants = array();
+        foreach ($value as $variant) {
+            if (!is_array($variant)) {
+                continue;
+            }
+            $content = isset($variant['content']) && is_array($variant['content'])
+                ? $variant['content']
+                : array();
+
+            $raw_blocks = isset($content['blocks']) && is_string($content['blocks']) ? $content['blocks'] : '';
+            $blocks_value = $raw_blocks;
+            if (!$can_unfiltered) {
+                $blocks_value = wp_kses_post($raw_blocks);
+            }
+
+            $raw_html = isset($content['html']) && is_string($content['html']) ? $content['html'] : '';
+            $html_value = $raw_html;
+            if ($html_mode !== 'full' || !$can_unfiltered) {
+                $html_value = wp_kses_post($raw_html);
+            }
+
+            $variants[] = array(
+                'id' => isset($variant['id']) ? sanitize_text_field($variant['id']) : '',
+                'label' => isset($variant['label']) ? sanitize_text_field($variant['label']) : '',
+                'weight' => isset($variant['weight']) ? max(1, absint($variant['weight'])) : 1,
+                'content' => array(
+                    'html' => $html_value,
+                    'blocks' => $blocks_value,
+                    'video_url' => isset($content['video_url']) ? esc_url_raw($content['video_url']) : '',
+                ),
+            );
+            if (count($variants) >= 10) {
+                break;
+            }
+        }
+        return $variants;
     }
 
     private static function sanitize_datetime($value): string {

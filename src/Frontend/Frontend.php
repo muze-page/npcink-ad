@@ -850,6 +850,13 @@ final class Frontend {
             if (!empty($options['placement_hook']) && $options['placement_hook'] === 'node') {
                 return true;
             }
+            $creative_type = isset($options['creative_type']) ? (string) $options['creative_type'] : '';
+            if ($creative_type === 'html') {
+                $strategy = isset($content['html_load_strategy']) ? (string) $content['html_load_strategy'] : 'immediate';
+                if (in_array($strategy, array('delay', 'viewport'), true)) {
+                    return true;
+                }
+            }
         }
 
         return false;
@@ -2241,12 +2248,14 @@ final class Frontend {
         $content_type = self::resolve_content_type($options);
         $container_type = self::resolve_container_type($options);
 
-        $body = self::build_body_by_type($content_type, $content, $options);
+        $content = self::apply_content_variant($content, $content_type, $options);
+        $body = self::build_body_by_type($content_type, $content, $options, $ad);
         if ($body === '') {
             return '';
         }
-
-        $body = self::append_custom_markup($body, $content);
+        if ($content_type !== 'html') {
+            $body = self::append_custom_markup($body, $content);
+        }
         $body = self::wrap_container_markup($body, $content);
         $body = self::wrap_modal_container($body, $container_type);
 
@@ -2270,6 +2279,84 @@ final class Frontend {
             $content['image_settings'] = array();
         }
         return $content;
+    }
+
+    private static function apply_content_variant(array $content, string $content_type, array $options): array {
+        if (empty($content['variants_enabled'])) {
+            return $content;
+        }
+        $variants = isset($content['variants']) && is_array($content['variants'])
+            ? $content['variants']
+            : array();
+        if (empty($variants)) {
+            return $content;
+        }
+
+        $candidates = array();
+        foreach ($variants as $variant) {
+            if (!is_array($variant)) {
+                continue;
+            }
+            $weight = isset($variant['weight']) ? absint($variant['weight']) : 1;
+            if ($weight < 1) {
+                continue;
+            }
+            $variant_content = isset($variant['content']) && is_array($variant['content'])
+                ? $variant['content']
+                : array();
+            $candidates[] = array(
+                'id' => isset($variant['id']) ? (string) $variant['id'] : '',
+                'weight' => $weight,
+                'content' => $variant_content,
+            );
+        }
+
+        if (empty($candidates)) {
+            return $content;
+        }
+
+        $picked = self::pick_weighted_variant($candidates);
+        if ($picked === null) {
+            return $content;
+        }
+
+        $keys = match ($content_type) {
+            'html' => array('html'),
+            'block' => array('blocks'),
+            'video' => array('video_url'),
+            default => array(),
+        };
+        if (!empty($keys)) {
+            foreach ($keys as $key) {
+                if (isset($picked['content'][$key]) && $picked['content'][$key] !== '') {
+                    $content[$key] = $picked['content'][$key];
+                }
+            }
+        }
+        if (!empty($picked['id'])) {
+            $content['_variant_id'] = $picked['id'];
+        }
+
+        return $content;
+    }
+
+    private static function pick_weighted_variant(array $variants): ?array {
+        $total = 0;
+        foreach ($variants as $variant) {
+            $total += isset($variant['weight']) ? absint($variant['weight']) : 0;
+        }
+        if ($total < 1) {
+            return null;
+        }
+        $target = wp_rand(1, $total);
+        $running = 0;
+        foreach ($variants as $variant) {
+            $running += isset($variant['weight']) ? absint($variant['weight']) : 0;
+            if ($running >= $target) {
+                return $variant;
+            }
+        }
+        return $variants[0] ?? null;
     }
 
     private static function maybe_hydrate_ad(array $ad): array {
@@ -2342,10 +2429,10 @@ final class Frontend {
         };
     }
 
-    private static function build_body_by_type(string $content_type, array $content, array $options): string {
+    private static function build_body_by_type(string $content_type, array $content, array $options, array $ad): string {
         return match ($content_type) {
             'block' => self::build_block_body($content),
-            'html' => self::build_html_body($content, $options),
+            'html' => self::build_html_body($content, $options, $ad),
             'image' => self::build_image_body($content, $options),
             'video' => self::build_video_body($content),
             default => '',
@@ -2363,7 +2450,10 @@ final class Frontend {
             : array();
         $styles = array();
         $background = isset($block_settings['background']) ? (string) $block_settings['background'] : '';
-        if ($background !== '' && $background !== 'transparent') {
+        $background_gradient = isset($block_settings['background_gradient']) ? (string) $block_settings['background_gradient'] : '';
+        if ($background_gradient !== '') {
+            $styles[] = 'background-image:' . esc_attr($background_gradient);
+        } elseif ($background !== '' && $background !== 'transparent') {
             $styles[] = 'background:' . esc_attr($background);
         }
         $text_color = isset($block_settings['text_color']) ? (string) $block_settings['text_color'] : '';
@@ -2377,6 +2467,18 @@ final class Frontend {
         $radius = isset($block_settings['radius']) ? absint($block_settings['radius']) : 0;
         if ($radius > 0) {
             $styles[] = 'border-radius:' . $radius . 'px';
+        }
+        $border_width = isset($block_settings['border_width']) ? absint($block_settings['border_width']) : 0;
+        $border_color = isset($block_settings['border_color']) ? (string) $block_settings['border_color'] : '';
+        if ($border_width > 0) {
+            $color = $border_color !== '' ? esc_attr($border_color) : '#d0d7e2';
+            $styles[] = 'border:' . $border_width . 'px solid ' . $color;
+        }
+        $shadow = isset($block_settings['shadow']) ? (string) $block_settings['shadow'] : 'none';
+        if ($shadow === 'soft') {
+            $styles[] = 'box-shadow:0 18px 40px rgba(15, 23, 42, 0.12)';
+        } elseif ($shadow === 'float') {
+            $styles[] = 'box-shadow:0 30px 60px rgba(15, 23, 42, 0.18)';
         }
         $max_width = isset($block_settings['max_width']) ? absint($block_settings['max_width']) : 0;
         if ($max_width > 0) {
@@ -2404,18 +2506,151 @@ final class Frontend {
             $styles[] = 'margin-right:auto';
         }
         $style_attr = !empty($styles) ? ' style="' . esc_attr(implode(';', $styles)) . '"' : '';
-        return '<div class="magick-ad-block-content"' . $style_attr . '>' . $output . '</div>';
+
+        $layout = isset($block_settings['layout']) ? (string) $block_settings['layout'] : 'content';
+        $media = isset($block_settings['media_image']) && is_array($block_settings['media_image'])
+            ? $block_settings['media_image']
+            : array();
+        $media_markup = '';
+        $media_id = isset($media['id']) ? absint($media['id']) : 0;
+        $media_url = isset($media['url']) ? (string) $media['url'] : '';
+        $media_alt = isset($media['alt']) ? (string) $media['alt'] : '';
+        if ($media_id > 0) {
+            $media_markup = wp_get_attachment_image(
+                $media_id,
+                'full',
+                false,
+                array(
+                    'class' => 'magick-ad-block__media-img',
+                    'loading' => 'lazy',
+                    'decoding' => 'async',
+                    'alt' => $media_alt,
+                )
+            );
+        } elseif ($media_url !== '') {
+            $media_markup = '<img class="magick-ad-block__media-img" src="' . esc_url($media_url) . '" alt="' . esc_attr($media_alt) . '" loading="lazy" decoding="async" />';
+        }
+        if ($media_markup !== '') {
+            $media_markup = '<div class="magick-ad-block__media">' . $media_markup . '</div>';
+        }
+
+        $heading = isset($block_settings['heading']) ? (string) $block_settings['heading'] : '';
+        $subheading = isset($block_settings['subheading']) ? (string) $block_settings['subheading'] : '';
+        $heading_style = array();
+        $heading_size = isset($block_settings['heading_size']) ? absint($block_settings['heading_size']) : 0;
+        if ($heading_size > 0) {
+            $heading_style[] = 'font-size:' . $heading_size . 'px';
+        }
+        $heading_line = isset($block_settings['heading_line_height']) ? (float) $block_settings['heading_line_height'] : 0;
+        if ($heading_line > 0) {
+            $heading_style[] = 'line-height:' . $heading_line;
+        }
+        $heading_weight = isset($block_settings['heading_weight']) ? (string) $block_settings['heading_weight'] : '';
+        if ($heading_weight !== '') {
+            $heading_style[] = 'font-weight:' . esc_attr($heading_weight);
+        }
+        $subheading_style = array();
+        $subheading_size = isset($block_settings['subheading_size']) ? absint($block_settings['subheading_size']) : 0;
+        if ($subheading_size > 0) {
+            $subheading_style[] = 'font-size:' . $subheading_size . 'px';
+        }
+        $subheading_line = isset($block_settings['subheading_line_height']) ? (float) $block_settings['subheading_line_height'] : 0;
+        if ($subheading_line > 0) {
+            $subheading_style[] = 'line-height:' . $subheading_line;
+        }
+        $subheading_weight = isset($block_settings['subheading_weight']) ? (string) $block_settings['subheading_weight'] : '';
+        if ($subheading_weight !== '') {
+            $subheading_style[] = 'font-weight:' . esc_attr($subheading_weight);
+        }
+        $heading_markup = $heading !== ''
+            ? '<div class="magick-ad-block__heading"' . (!empty($heading_style) ? ' style="' . esc_attr(implode(';', $heading_style)) . '"' : '') . '>' . esc_html($heading) . '</div>'
+            : '';
+        $subheading_markup = $subheading !== ''
+            ? '<div class="magick-ad-block__subheading"' . (!empty($subheading_style) ? ' style="' . esc_attr(implode(';', $subheading_style)) . '"' : '') . '>' . esc_html($subheading) . '</div>'
+            : '';
+
+        $cta_text = isset($block_settings['cta_text']) ? (string) $block_settings['cta_text'] : '';
+        $cta_link = isset($block_settings['cta_link']) ? (string) $block_settings['cta_link'] : '';
+        $cta_target = !empty($block_settings['cta_target']);
+        $cta_text_color = isset($block_settings['cta_text_color']) ? (string) $block_settings['cta_text_color'] : '';
+        $cta_background = isset($block_settings['cta_background']) ? (string) $block_settings['cta_background'] : '';
+        $cta_radius = isset($block_settings['cta_radius']) ? absint($block_settings['cta_radius']) : 0;
+        $cta_style = array();
+        if ($cta_text_color !== '' && $cta_text_color !== 'transparent') {
+            $cta_style[] = 'color:' . esc_attr($cta_text_color);
+        }
+        if ($cta_background !== '' && $cta_background !== 'transparent') {
+            $cta_style[] = 'background:' . esc_attr($cta_background);
+        }
+        if ($cta_radius > 0) {
+            $cta_style[] = 'border-radius:' . $cta_radius . 'px';
+        }
+        $cta_attrs = $cta_target ? ' target="_blank" rel="noopener noreferrer"' : '';
+        $cta_markup = ($cta_text !== '' && $cta_link !== '')
+            ? '<a class="magick-ad-block__cta" href="' . esc_url($cta_link) . '"' . $cta_attrs . (!empty($cta_style) ? ' style="' . esc_attr(implode(';', $cta_style)) . '"' : '') . '>' . esc_html($cta_text) . '</a>'
+            : '';
+
+        $content_markup = '<div class="magick-ad-block__content">' . $heading_markup . $subheading_markup . $output . $cta_markup . '</div>';
+
+        $layout_class = 'magick-ad-block magick-ad-block--content';
+        $inner = $content_markup;
+        if ($layout === 'stack' && $media_markup !== '') {
+            $layout_class = 'magick-ad-block magick-ad-block--stack';
+            $inner = $media_markup . $content_markup;
+        } elseif ($layout === 'split' && $media_markup !== '') {
+            $layout_class = 'magick-ad-block magick-ad-block--split';
+            $inner = $media_markup . $content_markup;
+        } elseif ($layout === 'split-reverse' && $media_markup !== '') {
+            $layout_class = 'magick-ad-block magick-ad-block--split magick-ad-block--reverse';
+            $inner = $content_markup . $media_markup;
+        }
+
+        return '<div class="magick-ad-block-content"' . $style_attr . '><div class="' . esc_attr($layout_class) . '">' . $inner . '</div></div>';
     }
 
-    private static function build_html_body(array $content, array $options): string {
+    private static function build_html_body(array $content, array $options, array $ad): string {
         $html = isset($content['html']) ? (string) $content['html'] : '';
         if ($html === '') {
             return '';
         }
-        if (!self::should_sandbox_html($options)) {
-            return $html;
+
+        $runtime_vars = !array_key_exists('html_runtime_vars', $content) ? true : !empty($content['html_runtime_vars']);
+        if ($runtime_vars) {
+            $tokens = self::build_runtime_tokens($ad);
+            $html = self::replace_runtime_tokens($html, $tokens);
+            $content['custom_html'] = self::replace_runtime_tokens((string) ($content['custom_html'] ?? ''), $tokens);
+            $content['custom_css'] = self::replace_runtime_tokens((string) ($content['custom_css'] ?? ''), $tokens);
+            $content['custom_js'] = self::replace_runtime_tokens((string) ($content['custom_js'] ?? ''), $tokens);
         }
-        return self::build_sandboxed_html($html, $options);
+
+        $body = self::append_custom_markup($html, $content);
+
+        $allowlist = isset($content['html_script_allowlist']) && is_array($content['html_script_allowlist'])
+            ? $content['html_script_allowlist']
+            : array();
+        $blocklist = isset($content['html_script_blocklist']) && is_array($content['html_script_blocklist'])
+            ? $content['html_script_blocklist']
+            : array();
+        if (!empty($allowlist) || !empty($blocklist)) {
+            $body = self::filter_html_scripts($body, $allowlist, $blocklist);
+        }
+
+        if (self::should_sandbox_html($options)) {
+            $body = self::build_sandboxed_html($body, $options);
+        }
+
+        $strategy = isset($content['html_load_strategy']) ? (string) $content['html_load_strategy'] : 'immediate';
+        $delay = isset($content['html_load_delay']) ? absint($content['html_load_delay']) : 0;
+        if ($strategy !== 'immediate') {
+            $payload = base64_encode($body);
+            $attrs = ' data-ad-html="' . esc_attr($payload) . '" data-ad-html-strategy="' . esc_attr($strategy) . '"';
+            if ($delay > 0) {
+                $attrs .= ' data-ad-html-delay="' . esc_attr((string) $delay) . '"';
+            }
+            return '<div class="magick-ad-html-lazy"' . $attrs . '></div>';
+        }
+
+        return $body;
     }
 
     private static function should_sandbox_html(array $options): bool {
@@ -2449,6 +2684,110 @@ final class Frontend {
         $srcdoc = esc_attr($html);
 
         return '<iframe class="magick-ad-html-sandbox"' . $sandbox_attr . $referrer_attr . ' loading="lazy" srcdoc="' . $srcdoc . '"></iframe>';
+    }
+
+    private static function build_runtime_tokens(array $ad): array {
+        $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
+        $page_url = $request_uri !== '' ? home_url($request_uri) : home_url('/');
+        return array(
+            '{site_url}' => home_url('/'),
+            '{page_url}' => $page_url,
+            '{ad_id}' => $ad_id,
+        );
+    }
+
+    private static function replace_runtime_tokens(string $value, array $tokens): string {
+        if ($value === '' || empty($tokens)) {
+            return $value;
+        }
+        return strtr($value, $tokens);
+    }
+
+    private static function filter_html_scripts(string $html, array $allowlist, array $blocklist): string {
+        if ($html === '') {
+            return '';
+        }
+        $allowlist = self::normalize_domain_list($allowlist);
+        $blocklist = self::normalize_domain_list($blocklist);
+        if (empty($allowlist) && empty($blocklist)) {
+            return $html;
+        }
+        return preg_replace_callback(
+            '/<script\\b([^>]*)>(.*?)<\\/script>/is',
+            function ($match) use ($allowlist, $blocklist) {
+                $attrs = $match[1] ?? '';
+                if (!preg_match('/\\bsrc\\s*=\\s*([\\\"\\\'])(.*?)\\1/i', $attrs, $src_match)) {
+                    return $match[0];
+                }
+                $src = $src_match[2] ?? '';
+                $host = '';
+                $parsed = wp_parse_url($src);
+                if (is_array($parsed) && !empty($parsed['host'])) {
+                    $host = strtolower($parsed['host']);
+                }
+                if ($host === '') {
+                    return $match[0];
+                }
+                if (self::is_domain_blocked($host, $blocklist)) {
+                    return '';
+                }
+                if (!empty($allowlist) && !self::is_domain_allowed($host, $allowlist)) {
+                    return '';
+                }
+                return $match[0];
+            },
+            $html
+        );
+    }
+
+    private static function normalize_domain_list(array $domains): array {
+        $list = array();
+        foreach ($domains as $domain) {
+            if (!is_string($domain)) {
+                continue;
+            }
+            $domain = trim(strtolower($domain));
+            if ($domain === '') {
+                continue;
+            }
+            $domain = preg_replace('#^https?://#', '', $domain);
+            $domain = preg_replace('#/.*$#', '', $domain);
+            if ($domain === '') {
+                continue;
+            }
+            $list[] = $domain;
+        }
+        return array_values(array_unique($list));
+    }
+
+    private static function is_domain_allowed(string $host, array $allowlist): bool {
+        foreach ($allowlist as $entry) {
+            if (self::domain_matches($host, $entry)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static function is_domain_blocked(string $host, array $blocklist): bool {
+        foreach ($blocklist as $entry) {
+            if (self::domain_matches($host, $entry)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static function domain_matches(string $host, string $pattern): bool {
+        if ($pattern === '') {
+            return false;
+        }
+        if (str_starts_with($pattern, '*.')) {
+            $suffix = substr($pattern, 1);
+            return str_ends_with($host, $suffix);
+        }
+        return $host === $pattern;
     }
 
     private static function build_image_body(array $content, array $options = array()): string {
@@ -2574,6 +2913,14 @@ final class Frontend {
             : array();
         $type = isset($settings['type']) ? (string) $settings['type'] : 'mp4';
         $aspect = isset($settings['aspect_ratio']) ? (string) $settings['aspect_ratio'] : '16:9';
+        if ($aspect === 'custom') {
+            $custom_ratio = isset($settings['aspect_ratio_custom']) ? (string) $settings['aspect_ratio_custom'] : '';
+            if (preg_match('/^\\d{1,3}:\\d{1,3}$/', $custom_ratio)) {
+                $aspect = $custom_ratio;
+            } else {
+                $aspect = '16:9';
+            }
+        }
         $wrapper_styles = array();
         $wrapper_class = 'magick-ad-video';
         if ($aspect !== '' && $aspect !== 'auto') {
@@ -2609,9 +2956,12 @@ final class Frontend {
         if (in_array($preload, array('auto', 'metadata', 'none'), true)) {
             $attrs[] = 'preload="' . esc_attr($preload) . '"';
         }
-        $poster = isset($settings['poster']['url']) ? esc_url($settings['poster']['url']) : '';
-        if ($poster !== '') {
-            $attrs[] = 'poster="' . $poster . '"';
+        $poster_mode = isset($settings['poster_mode']) ? (string) $settings['poster_mode'] : 'manual';
+        if ($poster_mode !== 'auto') {
+            $poster = isset($settings['poster']['url']) ? esc_url($settings['poster']['url']) : '';
+            if ($poster !== '') {
+                $attrs[] = 'poster="' . $poster . '"';
+            }
         }
         $fallback = isset($settings['fallback_text']) ? esc_html($settings['fallback_text']) : '';
         $attr_string = !empty($attrs) ? ' ' . implode(' ', $attrs) : '';
@@ -2835,6 +3185,28 @@ final class Frontend {
         if ($frequency_mode && $frequency_mode !== 'none') {
             $data_attrs .= ' data-ad-freq-mode="' . esc_attr($frequency_mode) . '"';
             $data_attrs .= ' data-ad-freq-limit="' . esc_attr($frequency_limit) . '"';
+        }
+        if (!empty($content['_variant_id'])) {
+            $data_attrs .= ' data-ad-variant="' . esc_attr((string) $content['_variant_id']) . '"';
+        }
+
+        $creative_type = isset($options['creative_type']) ? (string) $options['creative_type'] : '';
+        if ($creative_type === 'video') {
+            $video_settings = isset($content['video_settings']) && is_array($content['video_settings'])
+                ? $content['video_settings']
+                : array();
+            if (!empty($video_settings['autoplay_first'])) {
+                $data_attrs .= ' data-ad-video-autoplay-first="1"';
+            }
+            if (!empty($video_settings['repeat_muted'])) {
+                $data_attrs .= ' data-ad-video-repeat-muted="1"';
+            }
+            if (isset($video_settings['poster_mode']) && $video_settings['poster_mode'] === 'auto') {
+                $data_attrs .= ' data-ad-video-poster-auto="1"';
+            }
+            if (!empty($video_settings['track_events'])) {
+                $data_attrs .= ' data-ad-video-track="1"';
+            }
         }
         $data_attrs .= ' data-wp-init="actions.initAd"';
 

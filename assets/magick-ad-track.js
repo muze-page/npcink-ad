@@ -288,12 +288,70 @@
         { threshold: 0.5 }
     );
 
+    const initVideoTracking = (ad) => {
+        if (!ad || ad.dataset.adVideoTrackingInit === '1') {
+            return;
+        }
+        if (ad.getAttribute('data-ad-video-track') !== '1') {
+            return;
+        }
+        const videos = ad.querySelectorAll('.magick-ad-video__media');
+        if (!videos.length) {
+            return;
+        }
+        ad.dataset.adVideoTrackingInit = '1';
+
+        const markOnce = (video, key) => {
+            if (video.dataset[key] === '1') {
+                return false;
+            }
+            video.dataset[key] = '1';
+            return true;
+        };
+
+        videos.forEach((video) => {
+            video.addEventListener('play', () => {
+                if (!markOnce(video, 'adVideoPlaySent')) {
+                    return;
+                }
+                const payload = buildTrackPayload(ad, 'video_play');
+                if (payload) {
+                    enqueueTrack(payload);
+                }
+            });
+
+            video.addEventListener('pause', () => {
+                if (video.ended) {
+                    return;
+                }
+                if (!markOnce(video, 'adVideoPauseSent')) {
+                    return;
+                }
+                const payload = buildTrackPayload(ad, 'video_pause');
+                if (payload) {
+                    enqueueTrack(payload);
+                }
+            });
+
+            video.addEventListener('ended', () => {
+                if (!markOnce(video, 'adVideoCompleteSent')) {
+                    return;
+                }
+                const payload = buildTrackPayload(ad, 'video_complete');
+                if (payload) {
+                    enqueueTrack(payload);
+                }
+            });
+        });
+    };
+
     const initAdElement = (element) => {
         if (!element || element.dataset.adInitialized === '1') {
             return;
         }
         element.dataset.adInitialized = '1';
         observer.observe(element);
+        initVideoTracking(element);
     };
 
     const initTracking = () => {

@@ -220,6 +220,168 @@
             return decideRandomSession(ad);
         };
 
+        const decodeHtmlPayload = (value) => {
+            if (!value) {
+                return '';
+            }
+            try {
+                return decodeURIComponent(escape(window.atob(value)));
+            } catch (err) {
+                try {
+                    return window.atob(value);
+                } catch (error) {
+                    return '';
+                }
+            }
+        };
+
+        const executeScripts = (container) => {
+            const scripts = container.querySelectorAll('script');
+            scripts.forEach((script) => {
+                const fresh = document.createElement('script');
+                Array.from(script.attributes).forEach((attr) => {
+                    fresh.setAttribute(attr.name, attr.value);
+                });
+                fresh.text = script.text || script.textContent || '';
+                script.parentNode?.replaceChild(fresh, script);
+            });
+        };
+
+        const hydrateHtml = (node) => {
+            if (!node || node.dataset.adHtmlLoaded === '1') {
+                return;
+            }
+            const payload = node.getAttribute('data-ad-html') || '';
+            if (!payload) {
+                return;
+            }
+            const html = decodeHtmlPayload(payload);
+            if (!html) {
+                return;
+            }
+            node.innerHTML = html;
+            node.dataset.adHtmlLoaded = '1';
+            executeScripts(node);
+        };
+
+        let htmlObserver = null;
+        const initHtmlLazy = (ad, extraDelay = 0) => {
+            if (!ad) {
+                return;
+            }
+            const nodes = ad.querySelectorAll('.magick-ad-html-lazy');
+            if (!nodes.length) {
+                return;
+            }
+            nodes.forEach((node) => {
+                if (node.dataset.adHtmlInit === '1') {
+                    return;
+                }
+                node.dataset.adHtmlInit = '1';
+                const strategy =
+                    node.getAttribute('data-ad-html-strategy') || 'immediate';
+                const delay =
+                    Number(node.getAttribute('data-ad-html-delay') || 0) +
+                    Number(extraDelay || 0);
+                if (strategy === 'delay') {
+                    window.setTimeout(() => hydrateHtml(node), delay);
+                    return;
+                }
+                if (strategy === 'viewport') {
+                    if (!window.IntersectionObserver) {
+                        hydrateHtml(node);
+                        return;
+                    }
+                    if (!htmlObserver) {
+                        htmlObserver = new IntersectionObserver(
+                            (entries) => {
+                                entries.forEach((entry) => {
+                                    if (!entry.isIntersecting) {
+                                        return;
+                                    }
+                                    const target = entry.target;
+                                    htmlObserver.unobserve(target);
+                                    window.setTimeout(() => {
+                                        hydrateHtml(target);
+                                    }, delay);
+                                });
+                            },
+                            { rootMargin: '120px' }
+                        );
+                    }
+                    htmlObserver.observe(node);
+                    return;
+                }
+                hydrateHtml(node);
+            });
+        };
+
+        const initVideoBehavior = (ad) => {
+            if (!ad) {
+                return;
+            }
+            const videos = ad.querySelectorAll('.magick-ad-video__media');
+            if (!videos.length) {
+                return;
+            }
+            const adId = ad.getAttribute('data-ad-id') || '';
+            const autoplayFirst =
+                ad.getAttribute('data-ad-video-autoplay-first') === '1';
+            const repeatMuted =
+                ad.getAttribute('data-ad-video-repeat-muted') === '1';
+            const posterAuto =
+                ad.getAttribute('data-ad-video-poster-auto') === '1';
+            const seenKey = adId ? `magick_ad_video_seen_${adId}` : '';
+            const wasSeen = seenKey
+                ? Boolean(readStorageValue(sessionStorage, seenKey))
+                : ad.dataset.adVideoSeen === '1';
+
+            videos.forEach((video) => {
+                if (posterAuto && video.dataset.adPosterInit !== '1') {
+                    video.dataset.adPosterInit = '1';
+                    if (!video.getAttribute('poster')) {
+                        video.addEventListener(
+                            'loadeddata',
+                            () => {
+                                try {
+                                    video.currentTime = 0.01;
+                                    video.pause();
+                                } catch (err) {
+                                    return;
+                                }
+                            },
+                            { once: true }
+                        );
+                    }
+                }
+            });
+
+            if (!adId) {
+                return;
+            }
+
+            if (!wasSeen) {
+                if (seenKey) {
+                    writeStorageValue(sessionStorage, seenKey, '1');
+                } else {
+                    ad.dataset.adVideoSeen = '1';
+                }
+                if (autoplayFirst) {
+                    videos.forEach((video) => {
+                        video.muted = true;
+                        video.play?.().catch(() => undefined);
+                    });
+                }
+                return;
+            }
+
+            if (repeatMuted) {
+                videos.forEach((video) => {
+                    video.muted = true;
+                });
+            }
+        };
+
         const updateLockScroll = (ad, shouldLock) => {
             if (!ad || !document.body) {
                 return;
@@ -248,6 +410,7 @@
             }
             updateLockScroll(ad, true);
             recordFrequency(ad);
+            initVideoBehavior(ad);
         };
 
         const hideFallbackAd = (ad) => {
@@ -279,12 +442,14 @@
             const delay = Number(ad.getAttribute('data-ad-delay') || 0);
             if (delay > 0) {
                 hideFallbackAd(ad);
+                initHtmlLazy(ad, delay * 1000);
                 window.setTimeout(() => {
                     showFallbackAd(ad);
                 }, delay * 1000);
                 return;
             }
 
+            initHtmlLazy(ad, 0);
             showFallbackAd(ad);
         };
 
@@ -422,6 +587,168 @@
             return true;
         } catch (err) {
             return false;
+        }
+    };
+
+    const decodeHtmlPayload = (value) => {
+        if (!value) {
+            return '';
+        }
+        try {
+            return decodeURIComponent(escape(window.atob(value)));
+        } catch (err) {
+            try {
+                return window.atob(value);
+            } catch (error) {
+                return '';
+            }
+        }
+    };
+
+    const executeScripts = (container) => {
+        const scripts = container.querySelectorAll('script');
+        scripts.forEach((script) => {
+            const fresh = document.createElement('script');
+            Array.from(script.attributes).forEach((attr) => {
+                fresh.setAttribute(attr.name, attr.value);
+            });
+            fresh.text = script.text || script.textContent || '';
+            script.parentNode?.replaceChild(fresh, script);
+        });
+    };
+
+    const hydrateHtml = (node) => {
+        if (!node || node.dataset.adHtmlLoaded === '1') {
+            return;
+        }
+        const payload = node.getAttribute('data-ad-html') || '';
+        if (!payload) {
+            return;
+        }
+        const html = decodeHtmlPayload(payload);
+        if (!html) {
+            return;
+        }
+        node.innerHTML = html;
+        node.dataset.adHtmlLoaded = '1';
+        executeScripts(node);
+    };
+
+    let htmlObserver = null;
+    const initHtmlLazy = (ad, extraDelay = 0) => {
+        if (!ad) {
+            return;
+        }
+        const nodes = ad.querySelectorAll('.magick-ad-html-lazy');
+        if (!nodes.length) {
+            return;
+        }
+        nodes.forEach((node) => {
+            if (node.dataset.adHtmlInit === '1') {
+                return;
+            }
+            node.dataset.adHtmlInit = '1';
+            const strategy =
+                node.getAttribute('data-ad-html-strategy') || 'immediate';
+            const delay =
+                Number(node.getAttribute('data-ad-html-delay') || 0) +
+                Number(extraDelay || 0);
+            if (strategy === 'delay') {
+                window.setTimeout(() => hydrateHtml(node), delay);
+                return;
+            }
+            if (strategy === 'viewport') {
+                if (!window.IntersectionObserver) {
+                    hydrateHtml(node);
+                    return;
+                }
+                if (!htmlObserver) {
+                    htmlObserver = new IntersectionObserver(
+                        (entries) => {
+                            entries.forEach((entry) => {
+                                if (!entry.isIntersecting) {
+                                    return;
+                                }
+                                const target = entry.target;
+                                htmlObserver.unobserve(target);
+                                window.setTimeout(() => {
+                                    hydrateHtml(target);
+                                }, delay);
+                            });
+                        },
+                        { rootMargin: '120px' }
+                    );
+                }
+                htmlObserver.observe(node);
+                return;
+            }
+            hydrateHtml(node);
+        });
+    };
+
+    const initVideoBehavior = (ad) => {
+        if (!ad) {
+            return;
+        }
+        const videos = ad.querySelectorAll('.magick-ad-video__media');
+        if (!videos.length) {
+            return;
+        }
+        const adId = ad.getAttribute('data-ad-id') || '';
+        const autoplayFirst =
+            ad.getAttribute('data-ad-video-autoplay-first') === '1';
+        const repeatMuted =
+            ad.getAttribute('data-ad-video-repeat-muted') === '1';
+        const posterAuto =
+            ad.getAttribute('data-ad-video-poster-auto') === '1';
+        const seenKey = adId ? `magick_ad_video_seen_${adId}` : '';
+        const wasSeen = seenKey
+            ? Boolean(readStorageValue(sessionStorage, seenKey))
+            : ad.dataset.adVideoSeen === '1';
+
+        videos.forEach((video) => {
+            if (posterAuto && video.dataset.adPosterInit !== '1') {
+                video.dataset.adPosterInit = '1';
+                if (!video.getAttribute('poster')) {
+                    video.addEventListener(
+                        'loadeddata',
+                        () => {
+                            try {
+                                video.currentTime = 0.01;
+                                video.pause();
+                            } catch (err) {
+                                return;
+                            }
+                        },
+                        { once: true }
+                    );
+                }
+            }
+        });
+
+        if (!adId) {
+            return;
+        }
+
+        if (!wasSeen) {
+            if (seenKey) {
+                writeStorageValue(sessionStorage, seenKey, '1');
+            } else {
+                ad.dataset.adVideoSeen = '1';
+            }
+            if (autoplayFirst) {
+                videos.forEach((video) => {
+                    video.muted = true;
+                    video.play?.().catch(() => undefined);
+                });
+            }
+            return;
+        }
+
+        if (repeatMuted) {
+            videos.forEach((video) => {
+                video.muted = true;
+            });
         }
     };
     const getAdElement = (element) => {
@@ -881,6 +1208,7 @@
         }
         recordFrequency(ad);
         activateModal(ad);
+        initVideoBehavior(ad);
     };
 
     const hideAd = (ad) => {
@@ -915,12 +1243,13 @@
 
         if (delay > 0) {
             hideAd(ad);
+            initHtmlLazy(ad, delay * 1000);
             window.setTimeout(() => {
                 showAd(ad, animation);
             }, delay * 1000);
             return;
         }
-
+        initHtmlLazy(ad, 0);
         showAd(ad, animation);
     };
 

@@ -61,20 +61,33 @@ const createAdGroupTemplate = (
         custom_html: '',
         custom_css: '',
         custom_js: '',
+        html_script_allowlist: [],
+        html_script_blocklist: [],
+        html_runtime_vars: true,
+        html_load_strategy: 'immediate',
+        html_load_delay: 0,
+        variants_enabled: false,
+        variants: [],
         video_settings: {
             type: 'mp4',
             autoplay: false,
+            autoplay_first: false,
+            repeat_muted: false,
             muted: false,
             loop: false,
             controls: true,
             playsinline: true,
             preload: 'metadata',
             aspect_ratio: '16:9',
+            aspect_ratio_custom: '',
+            poster_mode: 'manual',
             poster: { id: 0, url: '', alt: '' },
             fallback_text: '',
+            track_events: false,
         },
         block_settings: {
             background: 'transparent',
+            background_gradient: '',
             text_color: '',
             padding: 0,
             radius: 0,
@@ -83,6 +96,25 @@ const createAdGroupTemplate = (
             font_family: '',
             align: '',
             background_image: { id: 0, url: '', alt: '' },
+            layout: 'content',
+            media_image: { id: 0, url: '', alt: '' },
+            heading: '',
+            subheading: '',
+            heading_size: 0,
+            heading_line_height: 0,
+            heading_weight: 'semibold',
+            subheading_size: 0,
+            subheading_line_height: 0,
+            subheading_weight: 'normal',
+            cta_text: '',
+            cta_link: '',
+            cta_target: false,
+            cta_text_color: '#ffffff',
+            cta_background: '#2563eb',
+            cta_radius: 999,
+            border_width: 0,
+            border_color: '#d0d7e2',
+            shadow: 'none',
         },
         container_style: {
             mode: 'boxed',
@@ -196,6 +228,7 @@ const normalizeAd = (ad: unknown): Ad => {
         content.block_settings && typeof content.block_settings === 'object'
             ? content.block_settings
             : {};
+    const variantsRaw = Array.isArray(content.variants) ? content.variants : [];
     const behavior =
         content.behavior && typeof content.behavior === 'object'
             ? content.behavior
@@ -313,6 +346,41 @@ const normalizeAd = (ad: unknown): Ad => {
             custom_html: content.custom_html || '',
             custom_css: content.custom_css || '',
             custom_js: content.custom_js || '',
+            html_script_allowlist: Array.isArray(content.html_script_allowlist)
+                ? content.html_script_allowlist.filter(Boolean)
+                : [],
+            html_script_blocklist: Array.isArray(content.html_script_blocklist)
+                ? content.html_script_blocklist.filter(Boolean)
+                : [],
+            html_runtime_vars: content.html_runtime_vars !== false,
+            html_load_strategy: ['immediate', 'delay', 'viewport'].includes(
+                content.html_load_strategy
+            )
+                ? content.html_load_strategy
+                : 'immediate',
+            html_load_delay: Number(content.html_load_delay || 0),
+            variants_enabled: Boolean(content.variants_enabled),
+            variants: variantsRaw.map((variant) => {
+                const safeVariant =
+                    variant && typeof variant === 'object'
+                        ? (variant as Record<string, any>)
+                        : {};
+                const variantContent =
+                    safeVariant.content &&
+                    typeof safeVariant.content === 'object'
+                        ? safeVariant.content
+                        : {};
+                return {
+                    id: String(safeVariant.id || ''),
+                    label: String(safeVariant.label || ''),
+                    weight: Number(safeVariant.weight || 1) || 1,
+                    content: {
+                        html: variantContent.html || '',
+                        blocks: variantContent.blocks || '',
+                        video_url: variantContent.video_url || '',
+                    },
+                };
+            }),
             image: {
                 id: Number(image.id || 0),
                 url: image.url || '',
@@ -323,6 +391,8 @@ const normalizeAd = (ad: unknown): Ad => {
                     ? videoSettings.type
                     : 'mp4',
                 autoplay: Boolean(videoSettings.autoplay),
+                autoplay_first: Boolean(videoSettings.autoplay_first),
+                repeat_muted: Boolean(videoSettings.repeat_muted),
                 muted: Boolean(videoSettings.muted),
                 loop: Boolean(videoSettings.loop),
                 controls: videoSettings.controls !== false,
@@ -332,20 +402,33 @@ const normalizeAd = (ad: unknown): Ad => {
                 )
                     ? videoSettings.preload
                     : 'metadata',
-                aspect_ratio: ['auto', '16:9', '4:3', '1:1', '9:16'].includes(
-                    videoSettings.aspect_ratio
-                )
+                aspect_ratio: [
+                    'auto',
+                    '16:9',
+                    '4:3',
+                    '1:1',
+                    '9:16',
+                    'custom',
+                ].includes(videoSettings.aspect_ratio)
                     ? videoSettings.aspect_ratio
                     : '16:9',
+                aspect_ratio_custom:
+                    typeof videoSettings.aspect_ratio_custom === 'string'
+                        ? videoSettings.aspect_ratio_custom
+                        : '',
+                poster_mode:
+                    videoSettings.poster_mode === 'auto' ? 'auto' : 'manual',
                 poster: {
                     id: Number(videoSettings.poster?.id || 0),
                     url: videoSettings.poster?.url || '',
                     alt: videoSettings.poster?.alt || '',
                 },
                 fallback_text: videoSettings.fallback_text || '',
+                track_events: Boolean(videoSettings.track_events),
             },
             block_settings: {
                 background: blockSettings.background || 'transparent',
+                background_gradient: blockSettings.background_gradient || '',
                 text_color: blockSettings.text_color || '',
                 padding: Number(blockSettings.padding || 0),
                 radius: Number(blockSettings.radius || 0),
@@ -358,6 +441,45 @@ const normalizeAd = (ad: unknown): Ad => {
                     url: blockSettings.background_image?.url || '',
                     alt: blockSettings.background_image?.alt || '',
                 },
+                layout: ['content', 'stack', 'split', 'split-reverse'].includes(
+                    blockSettings.layout
+                )
+                    ? blockSettings.layout
+                    : 'content',
+                media_image: {
+                    id: Number(blockSettings.media_image?.id || 0),
+                    url: blockSettings.media_image?.url || '',
+                    alt: blockSettings.media_image?.alt || '',
+                },
+                heading: blockSettings.heading || '',
+                subheading: blockSettings.subheading || '',
+                heading_size: Number(blockSettings.heading_size || 0),
+                heading_line_height: Number(
+                    blockSettings.heading_line_height || 0
+                ),
+                heading_weight:
+                    typeof blockSettings.heading_weight === 'string'
+                        ? blockSettings.heading_weight
+                        : 'semibold',
+                subheading_size: Number(blockSettings.subheading_size || 0),
+                subheading_line_height: Number(
+                    blockSettings.subheading_line_height || 0
+                ),
+                subheading_weight:
+                    typeof blockSettings.subheading_weight === 'string'
+                        ? blockSettings.subheading_weight
+                        : 'normal',
+                cta_text: blockSettings.cta_text || '',
+                cta_link: blockSettings.cta_link || '',
+                cta_target: Boolean(blockSettings.cta_target),
+                cta_text_color: blockSettings.cta_text_color || '#ffffff',
+                cta_background: blockSettings.cta_background || '#2563eb',
+                cta_radius: Number(blockSettings.cta_radius || 0),
+                border_width: Number(blockSettings.border_width || 0),
+                border_color: blockSettings.border_color || '#d0d7e2',
+                shadow: ['none', 'soft', 'float'].includes(blockSettings.shadow)
+                    ? blockSettings.shadow
+                    : 'none',
             },
             container_style: {
                 mode: containerStyle.mode === 'raw' ? 'raw' : 'boxed',
