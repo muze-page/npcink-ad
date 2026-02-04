@@ -1277,7 +1277,18 @@
 
 .magick-ad-settings-body {
     margin-top: 12px;
+    padding: 18px 20px 12px;
+    border-radius: 16px;
+    border: 1px solid #e6ecf4;
+    background: #ffffff;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
 }
+
+.magick-ad-settings-modal .components-modal__frame {
+    width: 860px;
+    max-width: calc(100vw - 64px);
+}
+
 
 .magick-ad-detail .components-panel {
     margin-top: 8px;

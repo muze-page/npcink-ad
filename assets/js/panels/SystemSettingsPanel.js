@@ -4,6 +4,8 @@ import {
     Card,
     CardBody,
     Notice,
+    Panel,
+    PanelBody,
     SelectControl,
     TextControl,
     ToggleControl,
@@ -101,224 +103,232 @@ const SystemSettingsPanel = ({ onNotice }) => {
         <Card>
             <CardBody>
                 <div className="magick-ad-field__label">隐私与系统设置</div>
-                <div className="magick-ad-settings-expiry">
-                    <strong>诊断到期时间：</strong>
-                    {diagnosticsExpiryLabel ? diagnosticsExpiryLabel : '未启用'}
-                </div>
                 {error && (
                     <Notice status="error" isDismissible>
                         {error.message || '系统设置加载失败'}
                     </Notice>
                 )}
-                <ToggleControl
-                    label="启用前台统计"
-                    checked={Boolean(settings.tracking_enabled)}
-                    disabled={loading || saving}
-                    onChange={(value) =>
-                        updateSettings({ tracking_enabled: value })
-                    }
-                    help="关闭后不加载统计脚本，前台不再上报数据。"
-                />
-                {!settings.tracking_enabled && (
-                    <Notice status="warning" isDismissible={false}>
-                        统计已关闭，报表将暂停更新（不影响广告展示）。
-                    </Notice>
-                )}
-                <SelectControl
-                    label="统计去重策略"
-                    value={settings.tracking_strategy}
-                    disabled={loading || saving}
-                    options={[
-                        { label: '无标识（每次请求随机）', value: 'request' },
-                        { label: '会话级（sessionStorage）', value: 'session' },
-                        { label: '持久 Cookie（需同意）', value: 'cookie' },
-                        { label: '登录用户 ID', value: 'user' },
-                    ]}
-                    onChange={(value) =>
-                        updateSettings({ tracking_strategy: value })
-                    }
-                    help="默认不使用 Cookie，可按需切换。"
-                />
-                {settings.tracking_strategy === 'cookie' && (
-                    <Notice status="info" isDismissible={false}>
-                        Cookie 策略依赖同意状态。未同意时会自动回退到无 Cookie
-                        的策略。
-                    </Notice>
-                )}
-                <TextControl
-                    label="统计去重窗口（秒）"
-                    type="number"
-                    value={settings.tracking_dedupe_ttl}
-                    disabled={loading || saving}
-                    onChange={(value) =>
-                        updateSettings({
-                            tracking_dedupe_ttl: Number(value) || 60,
-                        })
-                    }
-                    help="用于去重/防刷；在窗口内同一广告只计一次。默认 86400 秒。"
-                />
-                <SelectControl
-                    label="去重口径"
-                    value={settings.tracking_dedupe_scope}
-                    disabled={loading || saving}
-                    options={[
-                        {
-                            label: '按广告（同页同广告仅算一次）',
-                            value: 'ad',
-                        },
-                        {
-                            label: '按位置（同广告不同位置分别统计）',
-                            value: 'placement',
-                        },
-                    ]}
-                    onChange={(value) =>
-                        updateSettings({
-                            tracking_dedupe_scope: value,
-                        })
-                    }
-                    help="默认按广告去重；如需按位置统计请选择“按位置”。"
-                />
-                <ToggleControl
-                    label="强制签名校验"
-                    checked={Boolean(settings.tracking_require_signature)}
-                    disabled={loading || saving}
-                    onChange={(value) =>
-                        updateSettings({
-                            tracking_require_signature: value,
-                        })
-                    }
-                    help="关闭后可接受无签名的 /track 请求（风险更高）。"
-                />
-                <ToggleControl
-                    label="启用缓存友好 Slot 轮播（客户端选择）"
-                    checked={Boolean(settings.slot_client_resolver)}
-                    disabled={loading || saving}
-                    onChange={(value) =>
-                        updateSettings({
-                            slot_client_resolver: value,
-                        })
-                    }
-                    help="开启后仅输出候选 ID，由前端按权重决定展示，适配全页缓存场景。"
-                />
-                {settings.page_cache_detected &&
-                    !settings.slot_client_resolver && (
-                        <Notice status="warning" isDismissible={false}>
-                            检测到可能启用了全页缓存，随机策略=请求在缓存页面会失效。
-                            建议启用“缓存友好 Slot 轮播”或改用随机=会话策略。
-                            <div style={{ marginTop: 8 }}>
-                                <Button
-                                    variant="primary"
-                                    size="small"
-                                    disabled={loading || saving}
-                                    onClick={() =>
-                                        updateSettings({
-                                            slot_client_resolver: true,
-                                        })
-                                    }
-                                >
-                                    一键启用轮播
-                                </Button>
-                            </div>
-                        </Notice>
-                    )}
-                <ToggleControl
-                    label="Full HTML 启用 iframe 沙箱"
-                    checked={Boolean(settings.html_sandbox)}
-                    disabled={loading || saving}
-                    onChange={(value) =>
-                        updateSettings({
-                            html_sandbox: value,
-                        })
-                    }
-                    help="仅对 Full HTML 生效，默认关闭；开启后将隔离第三方脚本。"
-                />
-                <ToggleControl
-                    label="启用统计诊断日志"
-                    checked={Boolean(settings.stats_diagnostics)}
-                    disabled={loading || saving}
-                    onChange={(value) =>
-                        updateSettings({ stats_diagnostics: value })
-                    }
-                    help="仅诊断时记录 page_url / user_agent / user_id。"
-                />
-                <TextControl
-                    label="诊断日志保留天数"
-                    type="number"
-                    value={settings.stats_diagnostics_retention_days}
-                    disabled={loading || saving}
-                    onChange={(value) =>
-                        updateSettings({
-                            stats_diagnostics_retention_days:
-                                Number(value) || 7,
-                        })
-                    }
-                    help="超过天数会自动清理诊断日志。"
-                />
-                <TextControl
-                    label="诊断自动关闭天数"
-                    type="number"
-                    value={settings.stats_diagnostics_auto_off_days}
-                    disabled={loading || saving}
-                    onChange={(value) =>
-                        updateSettings({
-                            stats_diagnostics_auto_off_days:
-                                Number(value) || 7,
-                        })
-                    }
-                    help="开启诊断后，超过天数将自动关闭诊断模式。"
-                />
-                {settings.stats_diagnostics && diagnosticsExpiryLabel && (
-                    <Notice status="info" isDismissible={false}>
-                        诊断模式将在 {diagnosticsExpiryLabel} 自动关闭。
-                    </Notice>
-                )}
-                <TextControl
-                    label="后台名称（白标）"
-                    value={settings.brand_name}
-                    disabled={loading || saving}
-                    onChange={(value) =>
-                        updateSettings({ brand_name: value }, false)
-                    }
-                    onBlur={() =>
-                        updateSettings(
-                            { brand_name: settings.brand_name },
-                            true
-                        )
-                    }
-                />
-                <TextControl
-                    label="后台副标题"
-                    value={settings.brand_tagline}
-                    disabled={loading || saving}
-                    onChange={(value) =>
-                        updateSettings({ brand_tagline: value }, false)
-                    }
-                    onBlur={() =>
-                        updateSettings(
-                            { brand_tagline: settings.brand_tagline },
-                            true
-                        )
-                    }
-                />
-                <SelectControl
-                    label="后台管理权限"
-                    value={settings.manage_capability}
-                    disabled={loading || saving}
-                    options={[
-                        {
-                            label: '仅管理员 (manage_options)',
-                            value: 'manage_options',
-                        },
-                        {
-                            label: 'Magick AD 管理员',
-                            value: 'manage_magick_ads',
-                        },
-                    ]}
-                    onChange={(value) =>
-                        updateSettings({ manage_capability: value })
-                    }
-                    help="切换后可能需要重新登录后台。"
-                />
+                <Panel>
+                    <PanelBody title="统计与去重" initialOpen>
+                        <ToggleControl
+                            label="启用前台统计"
+                            checked={Boolean(settings.tracking_enabled)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({ tracking_enabled: value })
+                            }
+                            help="关闭后不加载统计脚本，前台不再上报数据。"
+                        />
+                        {!settings.tracking_enabled && (
+                            <Notice status="warning" isDismissible={false}>
+                                统计已关闭，报表将暂停更新（不影响广告展示）。
+                            </Notice>
+                        )}
+                        <SelectControl
+                            label="统计去重策略"
+                            value={settings.tracking_strategy}
+                            disabled={loading || saving}
+                            options={[
+                                { label: '无标识（每次请求随机）', value: 'request' },
+                                { label: '会话级（sessionStorage）', value: 'session' },
+                                { label: '持久 Cookie（需同意）', value: 'cookie' },
+                                { label: '登录用户 ID', value: 'user' },
+                            ]}
+                            onChange={(value) =>
+                                updateSettings({ tracking_strategy: value })
+                            }
+                            help="默认不使用 Cookie，可按需切换。"
+                        />
+                        {settings.tracking_strategy === 'cookie' && (
+                            <Notice status="info" isDismissible={false}>
+                                Cookie 策略依赖同意状态。未同意时会自动回退到无
+                                Cookie 的策略。
+                            </Notice>
+                        )}
+                        <TextControl
+                            label="统计去重窗口（秒）"
+                            type="number"
+                            value={settings.tracking_dedupe_ttl}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    tracking_dedupe_ttl: Number(value) || 60,
+                                })
+                            }
+                            help="用于去重/防刷；在窗口内同一广告只计一次。默认 86400 秒。"
+                        />
+                        <SelectControl
+                            label="去重口径"
+                            value={settings.tracking_dedupe_scope}
+                            disabled={loading || saving}
+                            options={[
+                                {
+                                    label: '按广告（同页同广告仅算一次）',
+                                    value: 'ad',
+                                },
+                                {
+                                    label: '按位置（同广告不同位置分别统计）',
+                                    value: 'placement',
+                                },
+                            ]}
+                            onChange={(value) =>
+                                updateSettings({
+                                    tracking_dedupe_scope: value,
+                                })
+                            }
+                            help="默认按广告去重；如需按位置统计请选择“按位置”。"
+                        />
+                    </PanelBody>
+                    <PanelBody title="安全与缓存" initialOpen={false}>
+                        <ToggleControl
+                            label="强制签名校验"
+                            checked={Boolean(settings.tracking_require_signature)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    tracking_require_signature: value,
+                                })
+                            }
+                            help="关闭后可接受无签名的 /track 请求（风险更高）。"
+                        />
+                        <ToggleControl
+                            label="启用缓存友好 Slot 轮播（客户端选择）"
+                            checked={Boolean(settings.slot_client_resolver)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    slot_client_resolver: value,
+                                })
+                            }
+                            help="开启后仅输出候选 ID，由前端按权重决定展示，适配全页缓存场景。"
+                        />
+                        {settings.page_cache_detected &&
+                            !settings.slot_client_resolver && (
+                                <Notice status="warning" isDismissible={false}>
+                                    检测到可能启用了全页缓存，随机策略=请求在缓存页面会失效。
+                                    建议启用“缓存友好 Slot 轮播”或改用随机=会话策略。
+                                    <div style={{ marginTop: 8 }}>
+                                        <Button
+                                            variant="primary"
+                                            size="small"
+                                            disabled={loading || saving}
+                                            onClick={() =>
+                                                updateSettings({
+                                                    slot_client_resolver: true,
+                                                })
+                                            }
+                                        >
+                                            一键启用轮播
+                                        </Button>
+                                    </div>
+                                </Notice>
+                            )}
+                        <ToggleControl
+                            label="Full HTML 启用 iframe 沙箱"
+                            checked={Boolean(settings.html_sandbox)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    html_sandbox: value,
+                                })
+                            }
+                            help="仅对 Full HTML 生效，默认关闭；开启后将隔离第三方脚本。"
+                        />
+                    </PanelBody>
+                    <PanelBody title="诊断日志" initialOpen={false}>
+                        <div className="magick-ad-settings-expiry">
+                            <strong>诊断到期时间：</strong>
+                            {diagnosticsExpiryLabel ? diagnosticsExpiryLabel : '未启用'}
+                        </div>
+                        <ToggleControl
+                            label="启用统计诊断日志"
+                            checked={Boolean(settings.stats_diagnostics)}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({ stats_diagnostics: value })
+                            }
+                            help="仅诊断时记录 page_url / user_agent / user_id。"
+                        />
+                        <TextControl
+                            label="诊断日志保留天数"
+                            type="number"
+                            value={settings.stats_diagnostics_retention_days}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    stats_diagnostics_retention_days:
+                                        Number(value) || 7,
+                                })
+                            }
+                            help="超过天数会自动清理诊断日志。"
+                        />
+                        <TextControl
+                            label="诊断自动关闭天数"
+                            type="number"
+                            value={settings.stats_diagnostics_auto_off_days}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({
+                                    stats_diagnostics_auto_off_days:
+                                        Number(value) || 7,
+                                })
+                            }
+                            help="开启诊断后，超过天数将自动关闭诊断模式。"
+                        />
+                        {settings.stats_diagnostics &&
+                            diagnosticsExpiryLabel && (
+                                <Notice status="info" isDismissible={false}>
+                                    诊断模式将在 {diagnosticsExpiryLabel} 自动关闭。
+                                </Notice>
+                            )}
+                    </PanelBody>
+                    <PanelBody title="品牌与权限" initialOpen={false}>
+                        <TextControl
+                            label="后台名称（白标）"
+                            value={settings.brand_name}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings({ brand_name: value }, false)
+                            }
+                            onBlur={() =>
+                                updateSettings(
+                                    { brand_name: settings.brand_name },
+                                    true
+                                )
+                            }
+                        />
+                        <TextControl
+                            label="后台副标题"
+                            value={settings.brand_tagline}
+                            disabled={loading || saving}
+                            onChange={(value) =>
+                                updateSettings(
+                                    { brand_tagline: value },
+                                    false
+                                )
+                            }
+                            onBlur={() =>
+                                updateSettings(
+                                    { brand_tagline: settings.brand_tagline },
+                                    true
+                                )
+                            }
+                        />
+                        <SelectControl
+                            label="后台管理权限"
+                            value={settings.manage_capability}
+                            disabled={loading || saving}
+                            options={[
+                                { label: '仅管理员 (manage_options)', value: 'manage_options' },
+                                { label: 'Magick AD 管理员', value: 'manage_magick_ads' },
+                            ]}
+                            onChange={(value) =>
+                                updateSettings({ manage_capability: value })
+                            }
+                            help="切换后可能需要重新登录后台。"
+                        />
+                    </PanelBody>
+                </Panel>
             </CardBody>
         </Card>
     );

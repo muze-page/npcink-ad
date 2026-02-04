@@ -5,6 +5,7 @@
 WordPress 的广告插件，带流量点击图
 
 - 增量编译：pnpm run start
+- 打包：pnpm run build
 
 #### 软件架构
 
