@@ -4088,14 +4088,6 @@ const AdsConfig = () => {
                             </div>
                         )}
                     </TabPanel>
-                    <div className="magick-ad-confirm-actions">
-                        <Button
-                            variant="secondary"
-                            onClick={() => setSettingsOpen(false)}
-                        >
-                            关闭
-                        </Button>
-                    </div>
                 </Modal>
             )}
 

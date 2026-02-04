@@ -6168,12 +6168,7 @@ const AdsConfig = () => {
     onNotice: showNotice
   }) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_DebugPanel__WEBPACK_IMPORTED_MODULE_20__["default"], {
     onNotice: showNotice
-  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-    className: "magick-ad-confirm-actions"
-  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-    variant: "secondary",
-    onClick: () => setSettingsOpen(false)
-  }, "\u5173\u95ED"))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+  })))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
     ref: fileInputRef,
     type: "file",
     accept: "application/json",
