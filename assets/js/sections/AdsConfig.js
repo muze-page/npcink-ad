@@ -1165,6 +1165,12 @@ const AdsConfig = () => {
         const baseContent = {};
         if (type === 'html') {
             baseContent.html = selectedAd.content?.html || '';
+        } else if (type === 'image') {
+            baseContent.image = selectedAd.content?.image || null;
+            baseContent.link = selectedAd.content?.link || '';
+            baseContent.link_target = Boolean(
+                selectedAd.content?.link_target
+            );
         } else if (type === 'video') {
             baseContent.video_url = selectedAd.content?.video_url || '';
         } else if (type === 'block') {
@@ -1360,6 +1366,51 @@ const AdsConfig = () => {
                                             }
                                             help="这里填写区块内容（HTML/区块序列化）。样式仍使用主配置。"
                                         />
+                                    )}
+                                    {type === 'image' && (
+                                        <>
+                                            <LinkPicker
+                                                value={
+                                                    variant.content?.link || ''
+                                                }
+                                                target={
+                                                    variant.content
+                                                        ?.link_target
+                                                }
+                                                onChange={({
+                                                    url,
+                                                    target,
+                                                }) =>
+                                                    updateVariant(index, {
+                                                        content: {
+                                                            link: url,
+                                                            link_target:
+                                                                Boolean(
+                                                                    target
+                                                                ),
+                                                        },
+                                                    })
+                                                }
+                                            />
+                                            <div className="magick-ad-field">
+                                                <p className="magick-ad-field__label">
+                                                    图片
+                                                </p>
+                                                <ImagePicker
+                                                    value={
+                                                        variant.content
+                                                            ?.image || null
+                                                    }
+                                                    onChange={(value) =>
+                                                        updateVariant(index, {
+                                                            content: {
+                                                                image: value,
+                                                            },
+                                                        })
+                                                    }
+                                                />
+                                            </div>
+                                        </>
                                     )}
                                     <div className="magick-ad-variant-card__actions">
                                         <Button
@@ -2067,6 +2118,9 @@ const AdsConfig = () => {
                                                             }
                                                         />
                                                     </div>
+                                                    {renderVariantSection(
+                                                        'image'
+                                                    )}
                                                 </>
                                             ) : (
                                                 <>

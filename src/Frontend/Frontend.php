@@ -2329,12 +2329,31 @@ final class Frontend {
             'html' => array('html'),
             'block' => array('blocks'),
             'video' => array('video_url'),
+            'image' => array('image', 'link', 'link_target'),
             default => array(),
         };
         if (!empty($keys)) {
             foreach ($keys as $key) {
-                if (isset($picked['content'][$key]) && $picked['content'][$key] !== '') {
-                    $content[$key] = $picked['content'][$key];
+                if (!array_key_exists($key, $picked['content'])) {
+                    continue;
+                }
+                $value = $picked['content'][$key];
+                if ($key === 'link') {
+                    $content[$key] = (string) $value;
+                    continue;
+                }
+                if ($key === 'link_target') {
+                    $content[$key] = (bool) $value;
+                    continue;
+                }
+                if ($key === 'image') {
+                    if (is_array($value)) {
+                        $content[$key] = $value;
+                    }
+                    continue;
+                }
+                if ($value !== '') {
+                    $content[$key] = $value;
                 }
             }
         }

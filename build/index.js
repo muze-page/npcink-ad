@@ -4894,6 +4894,10 @@ const AdsConfig = () => {
     const baseContent = {};
     if (type === 'html') {
       baseContent.html = selectedAd.content?.html || '';
+    } else if (type === 'image') {
+      baseContent.image = selectedAd.content?.image || null;
+      baseContent.link = selectedAd.content?.link || '';
+      baseContent.link_target = Boolean(selectedAd.content?.link_target);
     } else if (type === 'video') {
       baseContent.video_url = selectedAd.content?.video_url || '';
     } else if (type === 'block') {
@@ -5039,7 +5043,30 @@ const AdsConfig = () => {
         }
       }),
       help: "\u8FD9\u91CC\u586B\u5199\u533A\u5757\u5185\u5BB9\uFF08HTML/\u533A\u5757\u5E8F\u5217\u5316\uFF09\u3002\u6837\u5F0F\u4ECD\u4F7F\u7528\u4E3B\u914D\u7F6E\u3002"
+    }), type === 'image' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_LinkPicker__WEBPACK_IMPORTED_MODULE_16__["default"], {
+      value: variant.content?.link || '',
+      target: variant.content?.link_target,
+      onChange: ({
+        url,
+        target
+      }) => updateVariant(index, {
+        content: {
+          link: url,
+          link_target: Boolean(target)
+        }
+      })
     }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+      className: "magick-ad-field"
+    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+      className: "magick-ad-field__label"
+    }, "\u56FE\u7247"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
+      value: variant.content?.image || null,
+      onChange: value => updateVariant(index, {
+        content: {
+          image: value
+        }
+      })
+    }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
       className: "magick-ad-variant-card__actions"
     }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
       variant: "tertiary",
@@ -5516,7 +5543,7 @@ const AdsConfig = () => {
         onChange: value => handleUpdateContent({
           image: value
         })
-      }))) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+      })), renderVariantSection('image')) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
         status: "info",
         isDismissible: false
       }, "\u56FE\u7247\u914D\u7F6E\u4EC5\u5F71\u54CD\u56FE\u7247\u672C\u4F53\uFF08img\uFF09\u3002\u5BB9\u5668\u80CC\u666F\u3001\u5185\u8FB9\u8DDD\u3001 \u9634\u5F71\u7B49\u8BF7\u5728\u53F3\u4FA7\u201C\u5BB9\u5668\u5916\u89C2\u201D\u4E2D\u8BBE\u7F6E\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
