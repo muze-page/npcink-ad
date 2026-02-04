@@ -378,6 +378,70 @@ body.magick-ad-lock-scroll {
     color: #0f172a;
 }
 
+.magick-ad-diagnose__section {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px;
+    background: #f8fafc;
+    margin-bottom: 12px;
+}
+
+.magick-ad-diagnose__section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #0f172a;
+}
+
+.magick-ad-diagnose__section-date {
+    font-weight: 500;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.magick-ad-diagnose__stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+@media (max-width: 640px) {
+    .magick-ad-diagnose__stats {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.magick-ad-diagnose__stat {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    padding: 10px;
+}
+
+.magick-ad-diagnose__stat.is-active {
+    border-color: #93c5fd;
+    background: #eff6ff;
+}
+
+.magick-ad-diagnose__stat-label {
+    color: #475569;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.magick-ad-diagnose__stat-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.magick-ad-diagnose__empty {
+    color: #64748b;
+    font-size: 12px;
+}
+
 .magick-ad-diagnose__content {
     margin: 0;
     white-space: pre-wrap;

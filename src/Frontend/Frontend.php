@@ -1644,6 +1644,35 @@ final class Frontend {
         echo '</div>';
         echo '</div>';
         echo '<div class="magick-ad-diagnose__body">';
+        $failure_stats = $report['today_failure_stats'] ?? array();
+        $failure_date = isset($failure_stats['date']) ? (string) $failure_stats['date'] : '';
+        $failure_counts = isset($failure_stats['counts']) && is_array($failure_stats['counts'])
+            ? $failure_stats['counts']
+            : array();
+        $failure_labels = isset($failure_stats['labels']) && is_array($failure_stats['labels'])
+            ? $failure_stats['labels']
+            : array();
+        echo '<div class="magick-ad-diagnose__section">';
+        echo '<div class="magick-ad-diagnose__section-title">今日失败原因统计';
+        if ($failure_date !== '') {
+            echo '<span class="magick-ad-diagnose__section-date">' . esc_html($failure_date) . '</span>';
+        }
+        echo '</div>';
+        if (empty($failure_labels)) {
+            echo '<div class="magick-ad-diagnose__empty">暂无统计</div>';
+        } else {
+            echo '<div class="magick-ad-diagnose__stats">';
+            foreach ($failure_labels as $reason => $label) {
+                $count = isset($failure_counts[$reason]) ? (int) $failure_counts[$reason] : 0;
+                $active = $count > 0 ? ' is-active' : '';
+                echo '<div class="magick-ad-diagnose__stat' . $active . '">';
+                echo '<div class="magick-ad-diagnose__stat-label">' . esc_html((string) $label) . '</div>';
+                echo '<div class="magick-ad-diagnose__stat-value">' . esc_html((string) $count) . '</div>';
+                echo '</div>';
+            }
+            echo '</div>';
+        }
+        echo '</div>';
         echo '<pre class="magick-ad-diagnose__content" id="magick-ad-diagnose-content">' . esc_html($json) . '</pre>';
         echo '</div>';
         echo '</div>';

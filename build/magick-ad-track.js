@@ -1,1 +1,389 @@
-(()=>{"use strict";(()=>{const t=window.MagickADTrack||{},e=t.restUrl||"";if(!e)return;let n=!0===t.hasConsent;const a=!0===t.requireConsent;let o=n,r=n;const s=(()=>{if(!r)return"";const t="magick_ad_session_id",e=((t,e)=>{if(t===localStorage&&!o||t===sessionStorage&&!r)return null;try{return t.getItem(e)}catch(t){return null}})(sessionStorage,t);if(e)return e;let n="";return n=window.crypto&&window.crypto.randomUUID?window.crypto.randomUUID():`sess_${Math.random().toString(36).slice(2)}${Date.now()}`,((t,e,n)=>{if(t===localStorage&&!o||t===sessionStorage&&!r)return!1;try{return t.setItem(e,n),!0}catch(t){return!1}})(sessionStorage,t,n),n})(),i=(t=>{let e=0;for(let n=0;n<t.length;n+=1)e=(e<<5)-e+t.charCodeAt(n),e|=0;return Math.abs(e).toString(16)})(window.location.href),d=(t,e)=>{if(!t)return null;const n=t.getAttribute("data-ad-id");return n?{adId:n,event:e,sig:t.getAttribute("data-ad-sig")||"",sigTs:t.getAttribute("data-ad-sig-ts")||"",sigRev:t.getAttribute("data-ad-sig-rev")||"",slot:t.getAttribute("data-ad-slot")||"",position:t.getAttribute("data-ad-position")||"",container:t.getAttribute("data-ad-container")||""}:null},c=Number.parseInt(t.batchSize,10)||10,l=Number.parseInt(t.batchInterval,10)||2e3,u=[];let g=null;const h=t=>{const e={ad_id:t.adId,event:t.event};return t.sig&&(e.sig=t.sig),t.sigTs&&(e.sig_ts=t.sigTs),t.sigRev&&(e.sig_rev=t.sigRev),t.slot&&(e.slot=t.slot),t.position&&(e.position=t.position),t.container&&(e.container=t.container),e},p=(n,a=!1)=>{if(!n.length)return;const o=JSON.stringify((e=>{const n={session_id:s,page_hash:i,items:e.map(h)};return t.collectPageUrl&&(n.page_url=window.location.href),n})(n));if(a&&navigator.sendBeacon){const t=new Blob([o],{type:"application/json"});return void navigator.sendBeacon(e,t)}fetch(e,{method:"POST",headers:{"Content-Type":"application/json",...t.nonce?{"X-WP-Nonce":t.nonce}:{}},body:o,keepalive:!0}).catch(()=>{})},w=()=>{g||(g=window.setTimeout(()=>{g=null,m()},l))},m=(t={})=>{if(!u.length)return;g&&(window.clearTimeout(g),g=null);const e=!0===t.useBeacon,n=!0===t.force;do{const t=u.splice(0,c);p(t,e)}while((e||n)&&u.length);!u.length||e||n||(u.length>=c?window.setTimeout(()=>m(),100):w())},v=(t,e={})=>{a&&!n||t&&t.adId&&(u.push(t),u.length>=c?m(e):w())},f=new Map,y=new Set;let b=null;const A="placement"===t.dedupeScope?"placement":"ad",S=new IntersectionObserver(t=>{t.forEach(t=>{const e=t.target;if(!e||1!==e.nodeType)return;const n=d(e,"impression");if(!n)return;const a=(t=>"placement"===A?[t.adId,t.slot||"",t.position||"",t.container||""].join("|"):t.adId)(n),o=f.get(a)||{seen:!1,startAt:null,payload:null};t.isIntersecting?o.seen||o.startAt||(o.startAt=Date.now(),o.payload=n,y.add(a),b||(b=window.setInterval(()=>{if(!y.size)return window.clearInterval(b),void(b=null);const t=Date.now();y.forEach(e=>{const n=f.get(e);n&&!n.seen&&n.startAt?t-n.startAt>=2e3&&(v(n.payload),n.seen=!0,n.startAt=null,n.payload=null,f.set(e,n),y.delete(e)):y.delete(e)})},250))):o.startAt&&(o.startAt=null,o.payload=null,y.delete(a)),f.set(a,o)})},{threshold:.5}),I=t=>{t&&"1"!==t.dataset.adInitialized&&(t.dataset.adInitialized="1",S.observe(t))},E=()=>{document.querySelectorAll("[data-ad-id]").forEach(t=>{I(t)})},T=()=>{window.MutationObserver&&document.body&&(document.querySelector('[data-magick-ad-slot-resolver="1"]')||document.querySelector("[data-ad-node-type]")||!0===t.observeMutations)&&new MutationObserver(t=>{t.forEach(t=>{t.addedNodes.forEach(t=>{t&&1===t.nodeType&&(t.matches?.("[data-ad-id]")&&I(t),t.querySelectorAll&&t.querySelectorAll("[data-ad-id]").forEach(t=>{I(t)}))})})}).observe(document.body,{childList:!0,subtree:!0})};"loading"===document.readyState?document.addEventListener("DOMContentLoaded",()=>{E(),T()}):(E(),T()),document.addEventListener("click",t=>{if(t.target.closest(".magick-ad-overlay"))return;if(t.target.closest(".magick-ad-close"))return;const e=t.target.closest("[data-ad-id]");if(!e)return;const n=d(e,"click");n&&v(n,{useBeacon:!0,force:!0})},!0),window.addEventListener("magickad:consent",t=>{const e=t?.detail?.hasConsent;!0===e&&(n=!0,o=!0,r=!0)}),document.addEventListener("visibilitychange",()=>{"hidden"===document.visibilityState&&m({useBeacon:!0,force:!0})}),window.addEventListener("pagehide",()=>{m({useBeacon:!0,force:!0})})})()})();
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	// The require scope
+/******/ 	var __webpack_require__ = {};
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+/*!***********************************************!*\
+  !*** ./assets/js/frontend/magick-ad-track.ts ***!
+  \***********************************************/
+__webpack_require__.r(__webpack_exports__);
+(() => {
+  const config = window.MagickADTrack || {};
+  const trackUrl = config.restUrl || '';
+  if (!trackUrl) {
+    return;
+  }
+  let hasConsent = config.hasConsent === true;
+  const requireConsent = config.requireConsent === true;
+  let allowLocalStorage = hasConsent;
+  let allowSessionStorage = hasConsent;
+  const readStorageValue = (storage, key) => {
+    if (storage === localStorage && !allowLocalStorage || storage === sessionStorage && !allowSessionStorage) {
+      return null;
+    }
+    try {
+      return storage.getItem(key);
+    } catch (err) {
+      return null;
+    }
+  };
+  const writeStorageValue = (storage, key, value) => {
+    if (storage === localStorage && !allowLocalStorage || storage === sessionStorage && !allowSessionStorage) {
+      return false;
+    }
+    try {
+      storage.setItem(key, value);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
+  const getSessionId = () => {
+    if (!allowSessionStorage) {
+      return '';
+    }
+    const key = 'magick_ad_session_id';
+    const existing = readStorageValue(sessionStorage, key);
+    if (existing) {
+      return existing;
+    }
+    let id = '';
+    if (window.crypto && window.crypto.randomUUID) {
+      id = window.crypto.randomUUID();
+    } else {
+      id = `sess_${Math.random().toString(36).slice(2)}${Date.now()}`;
+    }
+    writeStorageValue(sessionStorage, key, id);
+    return id;
+  };
+  const sessionId = getSessionId();
+  const hashString = value => {
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      hash = (hash << 5) - hash + value.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(16);
+  };
+  const pageHash = hashString(window.location.href);
+  const buildTrackPayload = (element, event) => {
+    if (!element) {
+      return null;
+    }
+    const adId = element.getAttribute('data-ad-id');
+    if (!adId) {
+      return null;
+    }
+    return {
+      adId,
+      event,
+      sig: element.getAttribute('data-ad-sig') || '',
+      sigTs: element.getAttribute('data-ad-sig-ts') || '',
+      sigRev: element.getAttribute('data-ad-sig-rev') || '',
+      slot: element.getAttribute('data-ad-slot') || '',
+      position: element.getAttribute('data-ad-position') || '',
+      container: element.getAttribute('data-ad-container') || ''
+    };
+  };
+  const batchSize = Number.parseInt(config.batchSize, 10) || 10;
+  const batchInterval = Number.parseInt(config.batchInterval, 10) || 2000;
+  const trackQueue = [];
+  let flushTimer = null;
+  const buildItemPayload = payload => {
+    const item = {
+      ad_id: payload.adId,
+      event: payload.event
+    };
+    if (payload.sig) {
+      item.sig = payload.sig;
+    }
+    if (payload.sigTs) {
+      item.sig_ts = payload.sigTs;
+    }
+    if (payload.sigRev) {
+      item.sig_rev = payload.sigRev;
+    }
+    if (payload.slot) {
+      item.slot = payload.slot;
+    }
+    if (payload.position) {
+      item.position = payload.position;
+    }
+    if (payload.container) {
+      item.container = payload.container;
+    }
+    return item;
+  };
+  const buildBatchPayload = items => {
+    const bodyData = {
+      session_id: sessionId,
+      page_hash: pageHash,
+      items: items.map(buildItemPayload)
+    };
+    if (config.collectPageUrl) {
+      bodyData.page_url = window.location.href;
+    }
+    return bodyData;
+  };
+  const sendBatch = (items, useBeacon = false) => {
+    if (!items.length) {
+      return;
+    }
+    const body = JSON.stringify(buildBatchPayload(items));
+    if (useBeacon && navigator.sendBeacon) {
+      const blob = new Blob([body], {
+        type: 'application/json'
+      });
+      navigator.sendBeacon(trackUrl, blob);
+      return;
+    }
+    fetch(trackUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(config.nonce ? {
+          'X-WP-Nonce': config.nonce
+        } : {})
+      },
+      body,
+      keepalive: true
+    }).catch(() => undefined);
+  };
+  const scheduleFlush = () => {
+    if (flushTimer) {
+      return;
+    }
+    flushTimer = window.setTimeout(() => {
+      flushTimer = null;
+      flushQueue();
+    }, batchInterval);
+  };
+  const flushQueue = (options = {}) => {
+    if (!trackQueue.length) {
+      return;
+    }
+    if (flushTimer) {
+      window.clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+    const useBeacon = options.useBeacon === true;
+    const force = options.force === true;
+    do {
+      const items = trackQueue.splice(0, batchSize);
+      sendBatch(items, useBeacon);
+    } while ((useBeacon || force) && trackQueue.length);
+    if (trackQueue.length && !useBeacon && !force) {
+      if (trackQueue.length >= batchSize) {
+        window.setTimeout(() => flushQueue(), 100);
+      } else {
+        scheduleFlush();
+      }
+    }
+  };
+  const enqueueTrack = (payload, options = {}) => {
+    if (requireConsent && !hasConsent) {
+      return;
+    }
+    if (!payload || !payload.adId) {
+      return;
+    }
+    trackQueue.push(payload);
+    if (trackQueue.length >= batchSize) {
+      flushQueue(options);
+      return;
+    }
+    scheduleFlush();
+  };
+  const observed = new Map();
+  const pendingImpressions = new Set();
+  let impressionTimer = null;
+  const impressionDelay = 2000;
+  const impressionTick = 250;
+  const dedupeScope = config.dedupeScope === 'placement' ? 'placement' : 'ad';
+  const buildObservedKey = payload => dedupeScope === 'placement' ? [payload.adId, payload.slot || '', payload.position || '', payload.container || ''].join('|') : payload.adId;
+  const startImpressionTicker = () => {
+    if (impressionTimer) {
+      return;
+    }
+    impressionTimer = window.setInterval(() => {
+      if (!pendingImpressions.size) {
+        window.clearInterval(impressionTimer);
+        impressionTimer = null;
+        return;
+      }
+      const now = Date.now();
+      pendingImpressions.forEach(key => {
+        const state = observed.get(key);
+        if (!state || state.seen || !state.startAt) {
+          pendingImpressions.delete(key);
+          return;
+        }
+        if (now - state.startAt >= impressionDelay) {
+          enqueueTrack(state.payload);
+          state.seen = true;
+          state.startAt = null;
+          state.payload = null;
+          observed.set(key, state);
+          pendingImpressions.delete(key);
+        }
+      });
+    }, impressionTick);
+  };
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      const target = entry.target;
+      if (!target || target.nodeType !== 1) {
+        return;
+      }
+      const payload = buildTrackPayload(target, 'impression');
+      if (!payload) {
+        return;
+      }
+      const observedKey = buildObservedKey(payload);
+      const state = observed.get(observedKey) || {
+        seen: false,
+        startAt: null,
+        payload: null
+      };
+      if (entry.isIntersecting) {
+        if (!state.seen && !state.startAt) {
+          state.startAt = Date.now();
+          state.payload = payload;
+          pendingImpressions.add(observedKey);
+          startImpressionTicker();
+        }
+      } else if (state.startAt) {
+        state.startAt = null;
+        state.payload = null;
+        pendingImpressions.delete(observedKey);
+      }
+      observed.set(observedKey, state);
+    });
+  }, {
+    threshold: 0.5
+  });
+  const initAdElement = element => {
+    if (!element || element.dataset.adInitialized === '1') {
+      return;
+    }
+    element.dataset.adInitialized = '1';
+    observer.observe(element);
+  };
+  const initTracking = () => {
+    document.querySelectorAll('[data-ad-id]').forEach(element => {
+      initAdElement(element);
+    });
+  };
+  const initObservers = () => {
+    initTracking();
+  };
+  const shouldObserveMutations = () => {
+    if (!window.MutationObserver || !document.body) {
+      return false;
+    }
+    if (document.querySelector('[data-magick-ad-slot-resolver="1"]')) {
+      return true;
+    }
+    if (document.querySelector('[data-ad-node-type]')) {
+      return true;
+    }
+    return config.observeMutations === true;
+  };
+  const observeNewAds = () => {
+    if (!shouldObserveMutations()) {
+      return;
+    }
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (!node || node.nodeType !== 1) {
+            return;
+          }
+          if (node.matches?.('[data-ad-id]')) {
+            initAdElement(node);
+          }
+          if (node.querySelectorAll) {
+            node.querySelectorAll('[data-ad-id]').forEach(element => {
+              initAdElement(element);
+            });
+          }
+        });
+      });
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  };
+  const handleClick = event => {
+    if (event.target.closest('.magick-ad-overlay')) {
+      return;
+    }
+    if (event.target.closest('.magick-ad-close')) {
+      return;
+    }
+    const target = event.target.closest('[data-ad-id]');
+    if (!target) {
+      return;
+    }
+    const payload = buildTrackPayload(target, 'click');
+    if (!payload) {
+      return;
+    }
+    enqueueTrack(payload, {
+      useBeacon: true,
+      force: true
+    });
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initObservers();
+      observeNewAds();
+    });
+  } else {
+    initObservers();
+    observeNewAds();
+  }
+  document.addEventListener('click', handleClick, true);
+  window.addEventListener('magickad:consent', event => {
+    const next = event?.detail?.hasConsent;
+    if (next !== true) {
+      return;
+    }
+    hasConsent = true;
+    allowLocalStorage = true;
+    allowSessionStorage = true;
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      flushQueue({
+        useBeacon: true,
+        force: true
+      });
+    }
+  });
+  window.addEventListener('pagehide', () => {
+    flushQueue({
+      useBeacon: true,
+      force: true
+    });
+  });
+})();
+
+/******/ })()
+;
+//# sourceMappingURL=magick-ad-track.js.map

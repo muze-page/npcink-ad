@@ -1,1 +1,1146 @@
-(()=>{"use strict";(()=>{const e=window.MagickADBehavior||{},t=e.renderUrl||"",a=e.renderBatchUrl||"",n=e.nonce||"",r=!0===e.requireConsent||"1"===e.requireConsent||1===e.requireConsent;let o=!0===e.hasConsent||"1"===e.hasConsent||1===e.hasConsent||!r,i=o,d=o;const s=!1!==e.consentBannerEnabled&&"0"!==e.consentBannerEnabled&&0!==e.consentBannerEnabled,c="string"==typeof e.consentBannerText&&e.consentBannerText.trim()?e.consentBannerText.trim():"为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。",l="string"==typeof e.consentBannerButton&&e.consentBannerButton.trim()?e.consentBannerButton.trim():"同意",u=()=>{if(!r||o||!s)return;if(!document.body)return;if(document.querySelector(".magick-ad-consent"))return;const e=document.createElement("div");e.className="magick-ad-consent";const t=document.createElement("div");t.className="magick-ad-consent__text",t.textContent=c;const a=document.createElement("div");a.className="magick-ad-consent__actions";const n=document.createElement("button");n.type="button",n.className="magick-ad-consent__btn",n.textContent=l,n.addEventListener("click",()=>{(()=>{const e="https:"===window.location.protocol?"; secure":"";document.cookie=`magick_ad_consent=1; path=/; max-age=31536000; samesite=lax${e}`})(),o=!0,i=!0,d=!0,window.MagickADBehavior&&(window.MagickADBehavior.hasConsent=!0),window.dispatchEvent(new CustomEvent("magickad:consent",{detail:{hasConsent:!0}})),e.remove()}),a.appendChild(n),e.appendChild(t),e.appendChild(a),document.body.appendChild(e)};if(!window.wp||!window.wp.interactivity){const e=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches,t=(e,t)=>{if(e===localStorage&&!i||e===sessionStorage&&!d)return null;try{return e.getItem(t)}catch(e){return null}},a=(e,t,a)=>{if(e===localStorage&&!i||e===sessionStorage&&!d)return!1;try{return e.setItem(t,a),!0}catch(e){return!1}},n=e=>{if(!i&&!d)return!0;const a=e.getAttribute("data-ad-freq-mode")||"none";if("none"===a)return!0;const n=e.getAttribute("data-ad-id");if(!n)return!0;if("session"===a)return!t(sessionStorage,`magick_ad_freq_${n}`);if("day"===a){const e=(new Date).toISOString().slice(0,10);return!t(localStorage,`magick_ad_freq_${n}_${e}`)}if("count"===a){const a=Number(e.getAttribute("data-ad-freq-limit")||1),r=t(localStorage,`magick_ad_freq_${n}`);return Number(r||0)<a}return!0},r=e=>{if(!i&&!d)return;const n=e.getAttribute("data-ad-freq-mode")||"none",r=e.getAttribute("data-ad-id");if(r&&"none"!==n)if("session"===n)a(sessionStorage,`magick_ad_freq_${r}`,"1");else if("day"===n){const e=(new Date).toISOString().slice(0,10);a(localStorage,`magick_ad_freq_${r}_${e}`,"1")}else if("count"===n){const n=`magick_ad_freq_${r}`,o=Number(e.getAttribute("data-ad-freq-limit")||1),i=t(localStorage,n),d=Number(i||0);d<o&&a(localStorage,n,String(d+1))}},o=e=>{const n=e.getAttribute("data-ad-id");if(!n)return!0;const r=Math.floor(Date.now()/3e5);let o=null;if(d){const e=`magick_ad_random_${n}_${r}`;o=t(sessionStorage,e),o||(o=Math.random()>=.5?"1":"0",a(sessionStorage,e,o))}else e.dataset.adRandomDecided?o=e.dataset.adRandomDecided:(o=Math.random()>=.5?"1":"0",e.dataset.adRandomDecided=o);return"1"===o},s=e=>"session"!==(e.getAttribute("data-ad-random")||"")||o(e),c=(e,t)=>{if(!e||!document.body)return;const a=e.getAttribute("data-ad-container")||"";"popup"!==a&&"interstitial"!==a||"1"!==e.getAttribute("data-ad-lock-scroll")||document.body.classList.toggle("magick-ad-lock-scroll",t)},l=t=>{if(!t)return;t.classList.remove("magick-ad-is-hidden"),t.removeAttribute("aria-hidden");const a=t.getAttribute("data-ad-anim");a&&!e&&t.classList.add(`magick-ad-anim--${a}`),c(t,!0),r(t)},m=e=>{e&&(e.classList.add("magick-ad-is-hidden"),e.setAttribute("aria-hidden","true"),c(e,!1))},f=e=>{if(!e||"1"===e.dataset.adBehaviorInitialized)return;if(e.dataset.adBehaviorInitialized="1",!n(e))return e.dataset.adFreqBlocked="1",void m(e);if(!s(e))return void m(e);const t=Number(e.getAttribute("data-ad-delay")||0);if(t>0)return m(e),void window.setTimeout(()=>{l(e)},1e3*t);l(e)},g=e=>{e&&(e.matches?.("[data-ad-id]")&&f(e),e.querySelectorAll&&e.querySelectorAll("[data-ad-id]").forEach(e=>{f(e)}))},h=()=>{window.MutationObserver&&document.body&&new MutationObserver(e=>{e.forEach(e=>{e.addedNodes.forEach(e=>{e&&1===e.nodeType&&g(e)})})}).observe(document.body,{childList:!0,subtree:!0})},p=e=>{e&&(e.contains(document.activeElement)&&document.activeElement.blur?.(),m(e))};return"loading"===document.readyState?document.addEventListener("DOMContentLoaded",()=>{u(),g(document.body),h()}):(u(),g(document.body),h()),void document.addEventListener("click",e=>{const t=e.target.closest(".magick-ad-close"),a=e.target.closest(".magick-ad-overlay");if(!t&&!a)return;const n=e.target.closest("[data-ad-id]");n&&(a&&"1"!==n.getAttribute("data-ad-close-overlay")||(p(n),e.preventDefault()))},!0)}const{store:m,getElement:f}=window.wp.interactivity,g='a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',h={element:null,lastFocused:null},p=new Set(["AREA","BASE","BR","COL","EMBED","HR","IMG","INPUT","LINK","META","PARAM","SOURCE","TRACK","WBR"]),b=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches,y=new Map,v=new Map;let A=null;const k=(e,t)=>{if(e===localStorage&&!i||e===sessionStorage&&!d)return null;try{return e.getItem(t)}catch(e){return null}},S=(e,t,a)=>{if(e===localStorage&&!i||e===sessionStorage&&!d)return!1;try{return e.setItem(t,a),!0}catch(e){return!1}},_=(e,t)=>{if(!e)return null;const a=e.getAttribute(t);if(!a)return null;try{return JSON.parse(a)}catch(e){return null}},w=e=>{const t=document.createElement("script");return Array.from(e.attributes||[]).forEach(e=>{t.setAttribute(e.name,e.value)}),e.textContent&&(t.text=e.textContent),t},E=e=>e.map(e=>{if(!e||1!==e.nodeType)return e;const t=e;return"SCRIPT"===t.tagName?w(t):(t.querySelectorAll("script").forEach(e=>{const t=w(e);e.parentNode&&e.parentNode.replaceChild(t,e)}),t)}),q=(e,t)=>{const a=Array.isArray(e)?e.filter(e=>e&&e.id):[];if(!a.length)return[];const n=Math.min(Math.max(1,Number(t||1)),a.length),r=[],o=[...a];for(;r.length<n&&o.length;){let e=0;o.forEach(t=>{const a=Math.max(1,Number(t.weight)||1);e+=a});let t=Math.random()*e,a=0;for(let e=0;e<o.length;e+=1)if(t-=Math.max(1,Number(o[e].weight)||1),t<=0){a=e;break}r.push(o[a]),o.splice(a,1)}return r},N=(e,t)=>{if(!e||!e.id)return"";const a=t?.slot||"",n=t?.position||"",r=t?.container||"",o=t?.class||"",i=t?.creative||"",d=e?.sig_rev||"";return[e.id,d,a,n,r,o,i].join("|")},M=(e,t)=>({ad_id:e.id,sig:e.sig||"",sig_ts:e.sig_ts||"",sig_rev:e.sig_rev||"",slot:t?.slot||"",position:t?.position||"",class:t?.class||"",container:t?.container||"",creative:t?.creative||""}),C=async(e,a)=>{if(!t||!e||!e.id)return"";const r=N(e,a);if(r&&y.has(r))return y.get(r);const o=M(e,a),i=(async()=>{try{const e=await fetch(t,{method:"POST",headers:{"Content-Type":"application/json",...n?{"X-WP-Nonce":n}:{}},body:JSON.stringify(o),credentials:"same-origin",keepalive:!0}),a=await e.json();return a?.html||""}catch(e){return""}})();return r&&y.set(r,i),i},B=async(e,t)=>{if(!Array.isArray(e)||!e.length)return[];if(!a)return Promise.all(e.map(e=>C(e,t)));try{const r=new Array(e.length).fill(""),o=[];if(e.forEach((e,a)=>{const n=N(e,t);n&&y.has(n)?r[a]=y.get(n):o.push({candidate:e,index:a,key:n})}),o.length){const e=o.map(({candidate:e})=>M(e,t)),i=(async()=>{const t=await fetch(a,{method:"POST",headers:{"Content-Type":"application/json",...n?{"X-WP-Nonce":n}:{}},body:JSON.stringify({items:e}),credentials:"same-origin",keepalive:!0}),r=await t.json();return Array.isArray(r?.items)?r.items:[]})();o.forEach(({index:e,key:t},a)=>{const n=i.then(e=>e[a]?.html||"");t&&y.set(t,n),r[e]=n})}return Promise.all(r.map(async e=>e?"function"==typeof e.then?await e:e:""))}catch(a){return Promise.all(e.map(e=>C(e,t)))}},L=e=>e?e.closest("[data-ad-id]"):null,D=e=>e?e.querySelector(".magick-ad-popup"):null,I=e=>{if(!e)return;const t=e.getAttribute("data-ad-container")||"";if("popup"!==t&&"interstitial"!==t&&"banner"!==t)return;const a="popup"===t||"interstitial"===t,n=document.activeElement;h.element=e,h.lastFocused=a&&n&&!e.contains(n)?n:null,a&&(e=>{const t=D(e);if(!t)return;const a=t.querySelectorAll(g);a.length>0?a[0].focus({preventScroll:!0}):t.focus({preventScroll:!0})})(e),"popup"===t&&"1"===e.getAttribute("data-ad-lock-scroll")&&document.body.classList.add("magick-ad-lock-scroll")},$=e=>{if(!e||h.element!==e)return;const t=h.lastFocused;h.element=null,h.lastFocused=null,document.body.classList.remove("magick-ad-lock-scroll"),t&&"function"==typeof t.focus&&document.contains(t)&&t.focus({preventScroll:!0})},x=e=>{e&&($(e),e.contains(document.activeElement)&&document.activeElement.blur?.(),e.classList.add("magick-ad-is-hidden"),e.setAttribute("aria-hidden","true"))};m("magick-ad",{actions:{initAd(e){const t=P(f?.().ref||e?.target);t&&F(t)},close(e){const t=L(f?.().ref||e?.target);t&&(x(t),e?.preventDefault())},onOverlayClick(e){const t=L(f?.().ref||e?.target);t&&"1"===t.getAttribute("data-ad-close-overlay")&&(x(t),e?.preventDefault())}}}),document.addEventListener("keydown",e=>{h.element&&(h.element.classList.contains("magick-ad-is-hidden")||("Escape"!==e.key?"Tab"===e.key&&((e,t)=>{if(!t)return;const a=t.getAttribute("data-ad-container")||"";if("popup"!==a&&"interstitial"!==a)return;const n=D(t);if(!n)return;const r=n.querySelectorAll(g);if(0===r.length)return e.preventDefault(),void n.focus();const o=r[0],i=r[r.length-1];e.shiftKey?document.activeElement!==o&&document.activeElement!==n||(e.preventDefault(),i.focus()):document.activeElement===i&&(e.preventDefault(),o.focus())})(e,h.element):"1"===h.element.getAttribute("data-ad-close-esc")&&(x(h.element),e.preventDefault())))}),document.addEventListener("focusin",e=>{h.element&&(h.element.classList.contains("magick-ad-is-hidden")||((e,t)=>{if(!t)return;const a=t.getAttribute("data-ad-container")||"";if("popup"!==a&&"interstitial"!==a)return;const n=D(t);if(!n||n.contains(e.target))return;const r=n.querySelectorAll(g);r.length>0?r[0].focus({preventScroll:!0}):n.focus({preventScroll:!0})})(e,h.element))});const T=(e,t,a)=>{if(!e||!t)return!1;const n=((e,t)=>{if(!e)return t;const a=e.tagName||"";return"append"!==t&&"prepend"!==t||"P"!==a&&!p.has(a)?t:"append"===t?"after":"before"})(e,a);try{switch(n){case"prepend":e.insertAdjacentElement("afterbegin",t);break;case"before":e.insertAdjacentElement("beforebegin",t);break;case"after":e.insertAdjacentElement("afterend",t);break;default:e.insertAdjacentElement("beforeend",t)}return!0}catch(e){return!1}},O=e=>{if(!e||"1"===e.dataset.slotResolved)return;e.dataset.slotResolved="1";const t=_(e,"data-magick-ad-candidates"),a=_(e,"data-magick-ad-args"),n=Number(e.getAttribute("data-magick-ad-limit")||1);v.set(e,{element:e,candidates:t,args:a,limit:n}),A||(A=window.setTimeout(()=>{A=null,(()=>{if(!v.size)return;const e=Array.from(v.values());v.clear();const t=[];if(e.forEach(e=>{if(!e||!e.element)return;const a=q(e.candidates,e.limit);a.length&&t.push({entry:e,selected:a})}),!t.length)return;const a=t.map(({entry:e,selected:t})=>B(t,e.args).then(t=>({entry:e,results:t})));Promise.all(a).then(e=>{e.forEach(({entry:e,results:t})=>{if(!e||!e.element)return;const a=e.element;t.forEach(e=>{if(!e)return;const t=document.createElement("div");t.innerHTML=e,E(Array.from(t.childNodes)).forEach(e=>{a.appendChild(e)}),a.querySelectorAll("[data-ad-id]").forEach(e=>{F(e)})})})})})()},20))},R=(e=document)=>{(t||a)&&e&&(e.matches?.('[data-magick-ad-slot-resolver="1"]')&&O(e),e.querySelectorAll&&e.querySelectorAll('[data-magick-ad-slot-resolver="1"]').forEach(e=>{O(e)}))},P=e=>{if(!e)return null;if(1===e.nodeType){const t=L(e);if(t)return t;if(e.getAttribute&&e.getAttribute("data-ad-id"))return e}return null},j=(e,t)=>{e.classList.remove("magick-ad-is-hidden"),e.removeAttribute("aria-hidden"),t&&!b&&e.classList.add(`magick-ad-anim--${t}`),(e=>{if(!i&&!d)return;const t=e.getAttribute("data-ad-freq-mode")||"none",a=e.getAttribute("data-ad-id");if(a&&"none"!==t)if("session"===t)S(sessionStorage,`magick_ad_freq_${a}`,"1");else if("day"===t){const e=(new Date).toISOString().slice(0,10);S(localStorage,`magick_ad_freq_${a}_${e}`,"1")}else if("count"===t){const t=`magick_ad_freq_${a}`,n=Number(e.getAttribute("data-ad-freq-limit")||1),r=k(localStorage,t),o=Number(r||0);o<n&&S(localStorage,t,String(o+1))}})(e),I(e)},z=e=>{e.classList.add("magick-ad-is-hidden"),e.setAttribute("aria-hidden","true"),$(e)},F=e=>{if(!e||"1"===e.dataset.adBehaviorInitialized)return;e.dataset.adBehaviorInitialized="1";const t=Number(e.getAttribute("data-ad-delay")||0),a=e.getAttribute("data-ad-anim"),n=e.getAttribute("data-ad-random")||"";if(!(e=>{if(!i&&!d)return!0;const t=e.getAttribute("data-ad-freq-mode")||"none";if("none"===t)return!0;const a=e.getAttribute("data-ad-id");if(!a)return!0;if("session"===t)return!k(sessionStorage,`magick_ad_freq_${a}`);if("day"===t){const e=(new Date).toISOString().slice(0,10);return!k(localStorage,`magick_ad_freq_${a}_${e}`)}if("count"===t){const t=Number(e.getAttribute("data-ad-freq-limit")||1),n=k(localStorage,`magick_ad_freq_${a}`);return Number(n||0)<t}return!0})(e))return e.dataset.adFreqBlocked="1",void z(e);if("session"===n){const t=(e=>{const t=e.getAttribute("data-ad-id");if(!t)return!0;const a=Math.floor(Date.now()/3e5);let n=null;if(d){const e=`magick_ad_random_${t}_${a}`;n=k(sessionStorage,e),n||(n=Math.random()>=.5?"1":"0",S(sessionStorage,e,n))}else e.dataset.adRandomDecided?n=e.dataset.adRandomDecided:(n=Math.random()>=.5?"1":"0",e.dataset.adRandomDecided=n);return"1"===n})(e);if(!t)return void z(e)}if(t>0)return z(e),void window.setTimeout(()=>{j(e,a)},1e3*t);j(e,a)},U=()=>{(()=>{const e=document.getElementById("magick-ad-stash");if(!e)return;const t=Array.from(e.querySelectorAll("[data-ad-node-type][data-ad-node-value]"));t.length&&(t.forEach(e=>{if("1"===e.dataset.nodeInserted)return;const t=e.getAttribute("data-ad-node-type")||"id",a=e.getAttribute("data-ad-node-value")||"",n=e.getAttribute("data-ad-node-insert")||"append",r=e.getAttribute("data-ad-node-match")||"first",o=e.getAttribute("data-ad-node-fallback")||"hide",i=Number(e.getAttribute("data-ad-node-index")||1);if("1"===e.getAttribute("data-ad-node-compact")&&e.classList.add("magick-ad-placement--node-compact"),!a)return void e.remove();let d=[];if("id"===t){const e=document.getElementById(a);e&&(d=[e])}else"class"===t&&(d=Array.from(document.getElementsByClassName(a)));if("nth"===r){const e=d[i-1];d=e?[e]:[]}else"first"===r&&(d=d.slice(0,1));if(d.length)if("all"===r&&d.length>1)d.forEach((t,a)=>{const r=0===a?e:e.cloneNode(!0);r.dataset.nodeInserted="1",T(t,r,n)});else{const t=d[0];T(t,e,n),e.dataset.nodeInserted="1"}else{if("footer"===o){const t=(()=>{let e=document.querySelector(".magick-ad-zone--footer");return e||(e=document.createElement("div"),e.className="magick-ad-zone magick-ad-zone--footer",document.body.appendChild(e),e)})();return T(t,e,"append"),void(e.dataset.nodeInserted="1")}e.remove()}}),e.children.length||e.remove())})(),R(),document.querySelectorAll("[data-ad-id]").forEach(e=>{F(e)})},J=()=>{window.MutationObserver&&document.body&&(document.querySelector('[data-magick-ad-slot-resolver="1"]')||document.querySelector("[data-ad-node-type]")||!0===e.observeMutations)&&new MutationObserver(e=>{e.forEach(e=>{e.addedNodes.forEach(e=>{e&&1===e.nodeType&&(R(e),e.matches?.("[data-ad-id]")&&F(e),e.querySelectorAll&&e.querySelectorAll("[data-ad-id]").forEach(e=>{F(e)}))})})}).observe(document.body,{childList:!0,subtree:!0})};window.MagickADInteractivity={open:e=>{e&&(e.classList.contains("magick-ad-is-hidden")||I(e))},close:x,initAd:e=>{const t=P(e);t&&F(t)},initAll:U,isActive:!0},"loading"===document.readyState?document.addEventListener("DOMContentLoaded",()=>{u(),U(),J()}):(u(),U(),J())})()})();
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	// The require scope
+/******/ 	var __webpack_require__ = {};
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+/*!*******************************************************!*\
+  !*** ./assets/js/frontend/magick-ad-interactivity.ts ***!
+  \*******************************************************/
+__webpack_require__.r(__webpack_exports__);
+(() => {
+  const behaviorConfig = window.MagickADBehavior || {};
+  const renderUrl = behaviorConfig.renderUrl || '';
+  const renderBatchUrl = behaviorConfig.renderBatchUrl || '';
+  const requestNonce = behaviorConfig.nonce || '';
+  const requiresConsent = behaviorConfig.requireConsent === true || behaviorConfig.requireConsent === '1' || behaviorConfig.requireConsent === 1;
+  let hasConsent = behaviorConfig.hasConsent === true || behaviorConfig.hasConsent === '1' || behaviorConfig.hasConsent === 1 || !requiresConsent;
+  let allowLocalStorage = hasConsent;
+  let allowSessionStorage = hasConsent;
+  const consentBannerEnabled = behaviorConfig.consentBannerEnabled !== false && behaviorConfig.consentBannerEnabled !== '0' && behaviorConfig.consentBannerEnabled !== 0;
+  const consentBannerText = typeof behaviorConfig.consentBannerText === 'string' && behaviorConfig.consentBannerText.trim() ? behaviorConfig.consentBannerText.trim() : '为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。';
+  const consentBannerButton = typeof behaviorConfig.consentBannerButton === 'string' && behaviorConfig.consentBannerButton.trim() ? behaviorConfig.consentBannerButton.trim() : '同意';
+  const setConsentCookie = () => {
+    const maxAge = 60 * 60 * 24 * 365;
+    const secure = window.location.protocol === 'https:' ? '; secure' : '';
+    document.cookie = `magick_ad_consent=1; path=/; max-age=${maxAge}; samesite=lax${secure}`;
+  };
+  const initConsentBanner = () => {
+    if (!requiresConsent || hasConsent || !consentBannerEnabled) {
+      return;
+    }
+    if (!document.body) {
+      return;
+    }
+    if (document.querySelector('.magick-ad-consent')) {
+      return;
+    }
+    const bar = document.createElement('div');
+    bar.className = 'magick-ad-consent';
+    const text = document.createElement('div');
+    text.className = 'magick-ad-consent__text';
+    text.textContent = consentBannerText;
+    const actions = document.createElement('div');
+    actions.className = 'magick-ad-consent__actions';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'magick-ad-consent__btn';
+    button.textContent = consentBannerButton;
+    button.addEventListener('click', () => {
+      setConsentCookie();
+      hasConsent = true;
+      allowLocalStorage = true;
+      allowSessionStorage = true;
+      if (window.MagickADBehavior) {
+        window.MagickADBehavior.hasConsent = true;
+      }
+      window.dispatchEvent(new CustomEvent('magickad:consent', {
+        detail: {
+          hasConsent: true
+        }
+      }));
+      bar.remove();
+    });
+    actions.appendChild(button);
+    bar.appendChild(text);
+    bar.appendChild(actions);
+    document.body.appendChild(bar);
+  };
+  if (!window.wp || !window.wp.interactivity) {
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const readStorageValue = (storage, key) => {
+      if (storage === localStorage && !allowLocalStorage || storage === sessionStorage && !allowSessionStorage) {
+        return null;
+      }
+      try {
+        return storage.getItem(key);
+      } catch (err) {
+        return null;
+      }
+    };
+    const writeStorageValue = (storage, key, value) => {
+      if (storage === localStorage && !allowLocalStorage || storage === sessionStorage && !allowSessionStorage) {
+        return false;
+      }
+      try {
+        storage.setItem(key, value);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    };
+    const shouldShowByFrequency = ad => {
+      if (!allowLocalStorage && !allowSessionStorage) {
+        return true;
+      }
+      const mode = ad.getAttribute('data-ad-freq-mode') || 'none';
+      if (mode === 'none') {
+        return true;
+      }
+      const adId = ad.getAttribute('data-ad-id');
+      if (!adId) {
+        return true;
+      }
+      if (mode === 'session') {
+        return !readStorageValue(sessionStorage, `magick_ad_freq_${adId}`);
+      }
+      if (mode === 'day') {
+        const day = new Date().toISOString().slice(0, 10);
+        return !readStorageValue(localStorage, `magick_ad_freq_${adId}_${day}`);
+      }
+      if (mode === 'count') {
+        const limit = Number(ad.getAttribute('data-ad-freq-limit') || 1);
+        const rawCount = readStorageValue(localStorage, `magick_ad_freq_${adId}`);
+        const count = Number(rawCount || 0);
+        return count < limit;
+      }
+      return true;
+    };
+    const recordFrequency = ad => {
+      if (!allowLocalStorage && !allowSessionStorage) {
+        return;
+      }
+      const mode = ad.getAttribute('data-ad-freq-mode') || 'none';
+      const adId = ad.getAttribute('data-ad-id');
+      if (!adId || mode === 'none') {
+        return;
+      }
+      if (mode === 'session') {
+        writeStorageValue(sessionStorage, `magick_ad_freq_${adId}`, '1');
+      } else if (mode === 'day') {
+        const day = new Date().toISOString().slice(0, 10);
+        writeStorageValue(localStorage, `magick_ad_freq_${adId}_${day}`, '1');
+      } else if (mode === 'count') {
+        const key = `magick_ad_freq_${adId}`;
+        const limit = Number(ad.getAttribute('data-ad-freq-limit') || 1);
+        const rawCount = readStorageValue(localStorage, key);
+        const count = Number(rawCount || 0);
+        if (count < limit) {
+          writeStorageValue(localStorage, key, String(count + 1));
+        }
+      }
+    };
+    const decideRandomSession = ad => {
+      const adId = ad.getAttribute('data-ad-id');
+      if (!adId) {
+        return true;
+      }
+      const bucket = Math.floor(Date.now() / 300000);
+      let value = null;
+      if (allowSessionStorage) {
+        const key = `magick_ad_random_${adId}_${bucket}`;
+        value = readStorageValue(sessionStorage, key);
+        if (!value) {
+          value = Math.random() >= 0.5 ? '1' : '0';
+          writeStorageValue(sessionStorage, key, value);
+        }
+      } else if (ad.dataset.adRandomDecided) {
+        value = ad.dataset.adRandomDecided;
+      } else {
+        value = Math.random() >= 0.5 ? '1' : '0';
+        ad.dataset.adRandomDecided = value;
+      }
+      return value === '1';
+    };
+    const shouldShowByRandom = ad => {
+      const randomMode = ad.getAttribute('data-ad-random') || '';
+      if (randomMode !== 'session') {
+        return true;
+      }
+      return decideRandomSession(ad);
+    };
+    const updateLockScroll = (ad, shouldLock) => {
+      if (!ad || !document.body) {
+        return;
+      }
+      const container = ad.getAttribute('data-ad-container') || '';
+      if ((container === 'popup' || container === 'interstitial') && ad.getAttribute('data-ad-lock-scroll') === '1') {
+        document.body.classList.toggle('magick-ad-lock-scroll', shouldLock);
+      }
+    };
+    const showFallbackAd = ad => {
+      if (!ad) {
+        return;
+      }
+      ad.classList.remove('magick-ad-is-hidden');
+      ad.removeAttribute('aria-hidden');
+      const animation = ad.getAttribute('data-ad-anim');
+      if (animation && !prefersReducedMotion) {
+        ad.classList.add(`magick-ad-anim--${animation}`);
+      }
+      updateLockScroll(ad, true);
+      recordFrequency(ad);
+    };
+    const hideFallbackAd = ad => {
+      if (!ad) {
+        return;
+      }
+      ad.classList.add('magick-ad-is-hidden');
+      ad.setAttribute('aria-hidden', 'true');
+      updateLockScroll(ad, false);
+    };
+    const initFallbackAd = ad => {
+      if (!ad || ad.dataset.adBehaviorInitialized === '1') {
+        return;
+      }
+      ad.dataset.adBehaviorInitialized = '1';
+      if (!shouldShowByFrequency(ad)) {
+        ad.dataset.adFreqBlocked = '1';
+        hideFallbackAd(ad);
+        return;
+      }
+      if (!shouldShowByRandom(ad)) {
+        hideFallbackAd(ad);
+        return;
+      }
+      const delay = Number(ad.getAttribute('data-ad-delay') || 0);
+      if (delay > 0) {
+        hideFallbackAd(ad);
+        window.setTimeout(() => {
+          showFallbackAd(ad);
+        }, delay * 1000);
+        return;
+      }
+      showFallbackAd(ad);
+    };
+    const initFallbackAdsInRoot = root => {
+      if (!root) {
+        return;
+      }
+      if (root.matches?.('[data-ad-id]')) {
+        initFallbackAd(root);
+      }
+      if (root.querySelectorAll) {
+        root.querySelectorAll('[data-ad-id]').forEach(ad => {
+          initFallbackAd(ad);
+        });
+      }
+    };
+    const observeFallbackAds = () => {
+      if (!window.MutationObserver || !document.body) {
+        return;
+      }
+      const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+          mutation.addedNodes.forEach(node => {
+            if (!node || node.nodeType !== 1) {
+              return;
+            }
+            initFallbackAdsInRoot(node);
+          });
+        });
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    };
+    const closeFallback = ad => {
+      if (!ad) {
+        return;
+      }
+      if (ad.contains(document.activeElement)) {
+        document.activeElement.blur?.();
+      }
+      hideFallbackAd(ad);
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        initConsentBanner();
+        initFallbackAdsInRoot(document.body);
+        observeFallbackAds();
+      });
+    } else {
+      initConsentBanner();
+      initFallbackAdsInRoot(document.body);
+      observeFallbackAds();
+    }
+    document.addEventListener('click', event => {
+      const closeButton = event.target.closest('.magick-ad-close');
+      const overlay = event.target.closest('.magick-ad-overlay');
+      if (!closeButton && !overlay) {
+        return;
+      }
+      const ad = event.target.closest('[data-ad-id]');
+      if (!ad) {
+        return;
+      }
+      if (overlay && ad.getAttribute('data-ad-close-overlay') !== '1') {
+        return;
+      }
+      closeFallback(ad);
+      event.preventDefault();
+    }, true);
+    return;
+  }
+  const {
+    store,
+    getElement
+  } = window.wp.interactivity;
+  const focusableSelector = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+  const activeModal = {
+    element: null,
+    lastFocused: null
+  };
+  const voidElements = new Set(['AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT', 'LINK', 'META', 'PARAM', 'SOURCE', 'TRACK', 'WBR']);
+  const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const renderCache = new Map();
+  const resolverQueue = new Map();
+  let resolverFlushTimer = null;
+  const resolverBatchDelay = 20;
+  const scheduleResolverFlush = () => {
+    if (resolverFlushTimer) {
+      return;
+    }
+    resolverFlushTimer = window.setTimeout(() => {
+      resolverFlushTimer = null;
+      flushResolverQueue();
+    }, resolverBatchDelay);
+  };
+  const flushResolverQueue = () => {
+    if (!resolverQueue.size) {
+      return;
+    }
+    const pending = Array.from(resolverQueue.values());
+    resolverQueue.clear();
+    const requests = [];
+    pending.forEach(entry => {
+      if (!entry || !entry.element) {
+        return;
+      }
+      const selected = pickWeightedCandidates(entry.candidates, entry.limit);
+      if (!selected.length) {
+        return;
+      }
+      requests.push({
+        entry,
+        selected
+      });
+    });
+    if (!requests.length) {
+      return;
+    }
+    const fetchTasks = requests.map(({
+      entry,
+      selected
+    }) => fetchAdMarkups(selected, entry.args).then(results => ({
+      entry,
+      results
+    })));
+    Promise.all(fetchTasks).then(responses => {
+      responses.forEach(({
+        entry,
+        results
+      }) => {
+        if (!entry || !entry.element) {
+          return;
+        }
+        const element = entry.element;
+        results.forEach(html => {
+          if (!html) {
+            return;
+          }
+          const wrapper = document.createElement('div');
+          wrapper.innerHTML = html;
+          const nodes = hydrateScriptNodes(Array.from(wrapper.childNodes));
+          nodes.forEach(node => {
+            element.appendChild(node);
+          });
+          element.querySelectorAll('[data-ad-id]').forEach(ad => {
+            initAdBehavior(ad);
+          });
+        });
+      });
+    });
+  };
+  const readStorageValue = (storage, key) => {
+    if (storage === localStorage && !allowLocalStorage || storage === sessionStorage && !allowSessionStorage) {
+      return null;
+    }
+    try {
+      return storage.getItem(key);
+    } catch (err) {
+      return null;
+    }
+  };
+  const writeStorageValue = (storage, key, value) => {
+    if (storage === localStorage && !allowLocalStorage || storage === sessionStorage && !allowSessionStorage) {
+      return false;
+    }
+    try {
+      storage.setItem(key, value);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
+  const parseJsonAttribute = (element, name) => {
+    if (!element) {
+      return null;
+    }
+    const raw = element.getAttribute(name);
+    if (!raw) {
+      return null;
+    }
+    try {
+      return JSON.parse(raw);
+    } catch (err) {
+      return null;
+    }
+  };
+  const cloneScriptElement = script => {
+    const next = document.createElement('script');
+    Array.from(script.attributes || []).forEach(attr => {
+      next.setAttribute(attr.name, attr.value);
+    });
+    if (script.textContent) {
+      next.text = script.textContent;
+    }
+    return next;
+  };
+  const hydrateScriptNodes = nodes => nodes.map(node => {
+    if (!node || node.nodeType !== 1) {
+      return node;
+    }
+    const element = node;
+    if (element.tagName === 'SCRIPT') {
+      return cloneScriptElement(element);
+    }
+    element.querySelectorAll('script').forEach(script => {
+      const replacement = cloneScriptElement(script);
+      if (script.parentNode) {
+        script.parentNode.replaceChild(replacement, script);
+      }
+    });
+    return element;
+  });
+  const pickWeightedCandidates = (candidates, limit) => {
+    const pool = Array.isArray(candidates) ? candidates.filter(candidate => candidate && candidate.id) : [];
+    if (!pool.length) {
+      return [];
+    }
+    const max = Math.min(Math.max(1, Number(limit || 1)), pool.length);
+    const selected = [];
+    const localPool = [...pool];
+    while (selected.length < max && localPool.length) {
+      let total = 0;
+      localPool.forEach(candidate => {
+        const weight = Math.max(1, Number(candidate.weight) || 1);
+        total += weight;
+      });
+      let roll = Math.random() * total;
+      let pickedIndex = 0;
+      for (let i = 0; i < localPool.length; i += 1) {
+        roll -= Math.max(1, Number(localPool[i].weight) || 1);
+        if (roll <= 0) {
+          pickedIndex = i;
+          break;
+        }
+      }
+      selected.push(localPool[pickedIndex]);
+      localPool.splice(pickedIndex, 1);
+    }
+    return selected;
+  };
+  const buildRenderCacheKey = (candidate, args) => {
+    if (!candidate || !candidate.id) {
+      return '';
+    }
+    const slot = args?.slot || '';
+    const position = args?.position || '';
+    const container = args?.container || '';
+    const className = args?.class || '';
+    const creative = args?.creative || '';
+    const sigRev = candidate?.sig_rev || '';
+    return [candidate.id, sigRev, slot, position, container, className, creative].join('|');
+  };
+  const buildRenderPayload = (candidate, args) => ({
+    ad_id: candidate.id,
+    sig: candidate.sig || '',
+    sig_ts: candidate.sig_ts || '',
+    sig_rev: candidate.sig_rev || '',
+    slot: args?.slot || '',
+    position: args?.position || '',
+    class: args?.class || '',
+    container: args?.container || '',
+    creative: args?.creative || ''
+  });
+  const fetchAdMarkup = async (candidate, args) => {
+    if (!renderUrl || !candidate || !candidate.id) {
+      return '';
+    }
+    const cacheKey = buildRenderCacheKey(candidate, args);
+    if (cacheKey && renderCache.has(cacheKey)) {
+      return renderCache.get(cacheKey);
+    }
+    const payload = buildRenderPayload(candidate, args);
+    const request = (async () => {
+      try {
+        const response = await fetch(renderUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(requestNonce ? {
+              'X-WP-Nonce': requestNonce
+            } : {})
+          },
+          body: JSON.stringify(payload),
+          credentials: 'same-origin',
+          keepalive: true
+        });
+        const data = await response.json();
+        return data?.html || '';
+      } catch (err) {
+        return '';
+      }
+    })();
+    if (cacheKey) {
+      renderCache.set(cacheKey, request);
+    }
+    return request;
+  };
+  const fetchAdMarkups = async (candidates, args) => {
+    if (!Array.isArray(candidates) || !candidates.length) {
+      return [];
+    }
+    if (!renderBatchUrl) {
+      return Promise.all(candidates.map(candidate => fetchAdMarkup(candidate, args)));
+    }
+    try {
+      const results = new Array(candidates.length).fill('');
+      const pending = [];
+      candidates.forEach((candidate, index) => {
+        const key = buildRenderCacheKey(candidate, args);
+        if (key && renderCache.has(key)) {
+          results[index] = renderCache.get(key);
+        } else {
+          pending.push({
+            candidate,
+            index,
+            key
+          });
+        }
+      });
+      if (pending.length) {
+        const payloadItems = pending.map(({
+          candidate
+        }) => buildRenderPayload(candidate, args));
+        const batchPromise = (async () => {
+          const response = await fetch(renderBatchUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(requestNonce ? {
+                'X-WP-Nonce': requestNonce
+              } : {})
+            },
+            body: JSON.stringify({
+              items: payloadItems
+            }),
+            credentials: 'same-origin',
+            keepalive: true
+          });
+          const data = await response.json();
+          return Array.isArray(data?.items) ? data.items : [];
+        })();
+        pending.forEach(({
+          index,
+          key
+        }, idx) => {
+          const htmlPromise = batchPromise.then(items => items[idx]?.html || '');
+          if (key) {
+            renderCache.set(key, htmlPromise);
+          }
+          results[index] = htmlPromise;
+        });
+      }
+      return Promise.all(results.map(async value => {
+        if (!value) {
+          return '';
+        }
+        if (typeof value.then === 'function') {
+          return await value;
+        }
+        return value;
+      }));
+    } catch (err) {
+      return Promise.all(candidates.map(candidate => fetchAdMarkup(candidate, args)));
+    }
+  };
+  const getAdElement = element => {
+    if (!element) {
+      return null;
+    }
+    return element.closest('[data-ad-id]');
+  };
+  const getPopup = ad => ad ? ad.querySelector('.magick-ad-popup') : null;
+  const lockScroll = () => {
+    document.body.classList.add('magick-ad-lock-scroll');
+  };
+  const unlockScroll = () => {
+    document.body.classList.remove('magick-ad-lock-scroll');
+  };
+  const focusPopup = ad => {
+    const popup = getPopup(ad);
+    if (!popup) {
+      return;
+    }
+    const focusable = popup.querySelectorAll(focusableSelector);
+    if (focusable.length > 0) {
+      focusable[0].focus({
+        preventScroll: true
+      });
+    } else {
+      popup.focus({
+        preventScroll: true
+      });
+    }
+  };
+  const activateModal = ad => {
+    if (!ad) {
+      return;
+    }
+    const container = ad.getAttribute('data-ad-container') || '';
+    if (container !== 'popup' && container !== 'interstitial' && container !== 'banner') {
+      return;
+    }
+    const shouldFocus = container === 'popup' || container === 'interstitial';
+    const currentFocused = document.activeElement;
+    activeModal.element = ad;
+    activeModal.lastFocused = shouldFocus && currentFocused && !ad.contains(currentFocused) ? currentFocused : null;
+    if (shouldFocus) {
+      focusPopup(ad);
+    }
+    if (container === 'popup' && ad.getAttribute('data-ad-lock-scroll') === '1') {
+      lockScroll();
+    }
+  };
+  const deactivateModal = ad => {
+    if (!ad || activeModal.element !== ad) {
+      return;
+    }
+    const lastFocused = activeModal.lastFocused;
+    activeModal.element = null;
+    activeModal.lastFocused = null;
+    unlockScroll();
+    if (lastFocused && typeof lastFocused.focus === 'function' && document.contains(lastFocused)) {
+      lastFocused.focus({
+        preventScroll: true
+      });
+    }
+  };
+  const closeAd = ad => {
+    if (!ad) {
+      return;
+    }
+    deactivateModal(ad);
+    if (ad.contains(document.activeElement)) {
+      document.activeElement.blur?.();
+    }
+    ad.classList.add('magick-ad-is-hidden');
+    ad.setAttribute('aria-hidden', 'true');
+  };
+  const trapFocus = (event, ad) => {
+    if (!ad) {
+      return;
+    }
+    const container = ad.getAttribute('data-ad-container') || '';
+    if (container !== 'popup' && container !== 'interstitial') {
+      return;
+    }
+    const popup = getPopup(ad);
+    if (!popup) {
+      return;
+    }
+    const focusable = popup.querySelectorAll(focusableSelector);
+    if (focusable.length === 0) {
+      event.preventDefault();
+      popup.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey) {
+      if (document.activeElement === first || document.activeElement === popup) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else if (document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+  const keepFocus = (event, ad) => {
+    if (!ad) {
+      return;
+    }
+    const container = ad.getAttribute('data-ad-container') || '';
+    if (container !== 'popup' && container !== 'interstitial') {
+      return;
+    }
+    const popup = getPopup(ad);
+    if (!popup || popup.contains(event.target)) {
+      return;
+    }
+    const focusable = popup.querySelectorAll(focusableSelector);
+    if (focusable.length > 0) {
+      focusable[0].focus({
+        preventScroll: true
+      });
+    } else {
+      popup.focus({
+        preventScroll: true
+      });
+    }
+  };
+  store('magick-ad', {
+    actions: {
+      initAd(event) {
+        const ad = resolveAdElement(getElement?.().ref || event?.target);
+        if (!ad) {
+          return;
+        }
+        initAdBehavior(ad);
+      },
+      close(event) {
+        const ad = getAdElement(getElement?.().ref || event?.target);
+        if (!ad) {
+          return;
+        }
+        closeAd(ad);
+        event?.preventDefault();
+      },
+      onOverlayClick(event) {
+        const ad = getAdElement(getElement?.().ref || event?.target);
+        if (!ad) {
+          return;
+        }
+        if (ad.getAttribute('data-ad-close-overlay') === '1') {
+          closeAd(ad);
+          event?.preventDefault();
+        }
+      }
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (!activeModal.element) {
+      return;
+    }
+    if (activeModal.element.classList.contains('magick-ad-is-hidden')) {
+      return;
+    }
+    if (event.key === 'Escape') {
+      if (activeModal.element.getAttribute('data-ad-close-esc') === '1') {
+        closeAd(activeModal.element);
+        event.preventDefault();
+      }
+      return;
+    }
+    if (event.key === 'Tab') {
+      trapFocus(event, activeModal.element);
+    }
+  });
+  document.addEventListener('focusin', event => {
+    if (!activeModal.element) {
+      return;
+    }
+    if (activeModal.element.classList.contains('magick-ad-is-hidden')) {
+      return;
+    }
+    keepFocus(event, activeModal.element);
+  });
+  const ensureFooterZone = () => {
+    let zone = document.querySelector('.magick-ad-zone--footer');
+    if (zone) {
+      return zone;
+    }
+    zone = document.createElement('div');
+    zone.className = 'magick-ad-zone magick-ad-zone--footer';
+    document.body.appendChild(zone);
+    return zone;
+  };
+  const normalizeInsertMode = (target, insertMode) => {
+    if (!target) {
+      return insertMode;
+    }
+    const tag = target.tagName || '';
+    if (insertMode === 'append' || insertMode === 'prepend') {
+      if (tag === 'P' || voidElements.has(tag)) {
+        return insertMode === 'append' ? 'after' : 'before';
+      }
+    }
+    return insertMode;
+  };
+  const insertElement = (target, element, insertMode) => {
+    if (!target || !element) {
+      return false;
+    }
+    const mode = normalizeInsertMode(target, insertMode);
+    try {
+      switch (mode) {
+        case 'prepend':
+          target.insertAdjacentElement('afterbegin', element);
+          break;
+        case 'before':
+          target.insertAdjacentElement('beforebegin', element);
+          break;
+        case 'after':
+          target.insertAdjacentElement('afterend', element);
+          break;
+        case 'append':
+        default:
+          target.insertAdjacentElement('beforeend', element);
+          break;
+      }
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
+  const placeNodeAds = () => {
+    const stash = document.getElementById('magick-ad-stash');
+    if (!stash) {
+      return;
+    }
+    const units = Array.from(stash.querySelectorAll('[data-ad-node-type][data-ad-node-value]'));
+    if (!units.length) {
+      return;
+    }
+    units.forEach(unit => {
+      if (unit.dataset.nodeInserted === '1') {
+        return;
+      }
+      const type = unit.getAttribute('data-ad-node-type') || 'id';
+      const value = unit.getAttribute('data-ad-node-value') || '';
+      const insertMode = unit.getAttribute('data-ad-node-insert') || 'append';
+      const matchMode = unit.getAttribute('data-ad-node-match') || 'first';
+      const fallback = unit.getAttribute('data-ad-node-fallback') || 'hide';
+      const index = Number(unit.getAttribute('data-ad-node-index') || 1);
+      const compact = unit.getAttribute('data-ad-node-compact') === '1';
+      if (compact) {
+        unit.classList.add('magick-ad-placement--node-compact');
+      }
+      if (!value) {
+        unit.remove();
+        return;
+      }
+      let targets = [];
+      if (type === 'id') {
+        const target = document.getElementById(value);
+        if (target) {
+          targets = [target];
+        }
+      } else if (type === 'class') {
+        targets = Array.from(document.getElementsByClassName(value));
+      }
+      if (matchMode === 'nth') {
+        const target = targets[index - 1];
+        targets = target ? [target] : [];
+      } else if (matchMode === 'first') {
+        targets = targets.slice(0, 1);
+      }
+      if (!targets.length) {
+        if (fallback === 'footer') {
+          const zone = ensureFooterZone();
+          insertElement(zone, unit, 'append');
+          unit.dataset.nodeInserted = '1';
+          return;
+        }
+        unit.remove();
+        return;
+      }
+      if (matchMode === 'all' && targets.length > 1) {
+        targets.forEach((target, idx) => {
+          const node = idx === 0 ? unit : unit.cloneNode(true);
+          node.dataset.nodeInserted = '1';
+          insertElement(target, node, insertMode);
+        });
+      } else {
+        const target = targets[0];
+        insertElement(target, unit, insertMode);
+        unit.dataset.nodeInserted = '1';
+      }
+    });
+    if (!stash.children.length) {
+      stash.remove();
+    }
+  };
+  const resolveSlotPlaceholder = element => {
+    if (!element || element.dataset.slotResolved === '1') {
+      return;
+    }
+    element.dataset.slotResolved = '1';
+    const candidates = parseJsonAttribute(element, 'data-magick-ad-candidates');
+    const args = parseJsonAttribute(element, 'data-magick-ad-args');
+    const limit = Number(element.getAttribute('data-magick-ad-limit') || 1);
+    resolverQueue.set(element, {
+      element,
+      candidates,
+      args,
+      limit
+    });
+    scheduleResolverFlush();
+  };
+  const resolveSlotPlaceholders = (root = document) => {
+    if (!renderUrl && !renderBatchUrl) {
+      return;
+    }
+    if (!root) {
+      return;
+    }
+    if (root.matches?.('[data-magick-ad-slot-resolver="1"]')) {
+      resolveSlotPlaceholder(root);
+    }
+    if (root.querySelectorAll) {
+      root.querySelectorAll('[data-magick-ad-slot-resolver="1"]').forEach(element => {
+        resolveSlotPlaceholder(element);
+      });
+    }
+  };
+  const resolveAdElement = input => {
+    if (!input) {
+      return null;
+    }
+    if (input.nodeType === 1) {
+      const wrapped = getAdElement(input);
+      if (wrapped) {
+        return wrapped;
+      }
+      if (input.getAttribute && input.getAttribute('data-ad-id')) {
+        return input;
+      }
+    }
+    return null;
+  };
+  const shouldShowByFrequency = ad => {
+    if (!allowLocalStorage && !allowSessionStorage) {
+      return true;
+    }
+    const mode = ad.getAttribute('data-ad-freq-mode') || 'none';
+    if (mode === 'none') {
+      return true;
+    }
+    const adId = ad.getAttribute('data-ad-id');
+    if (!adId) {
+      return true;
+    }
+    if (mode === 'session') {
+      return !readStorageValue(sessionStorage, `magick_ad_freq_${adId}`);
+    }
+    if (mode === 'day') {
+      const day = new Date().toISOString().slice(0, 10);
+      return !readStorageValue(localStorage, `magick_ad_freq_${adId}_${day}`);
+    }
+    if (mode === 'count') {
+      const limit = Number(ad.getAttribute('data-ad-freq-limit') || 1);
+      const rawCount = readStorageValue(localStorage, `magick_ad_freq_${adId}`);
+      const count = Number(rawCount || 0);
+      return count < limit;
+    }
+    return true;
+  };
+  const recordFrequency = ad => {
+    if (!allowLocalStorage && !allowSessionStorage) {
+      return;
+    }
+    const mode = ad.getAttribute('data-ad-freq-mode') || 'none';
+    const adId = ad.getAttribute('data-ad-id');
+    if (!adId || mode === 'none') {
+      return;
+    }
+    if (mode === 'session') {
+      writeStorageValue(sessionStorage, `magick_ad_freq_${adId}`, '1');
+    } else if (mode === 'day') {
+      const day = new Date().toISOString().slice(0, 10);
+      writeStorageValue(localStorage, `magick_ad_freq_${adId}_${day}`, '1');
+    } else if (mode === 'count') {
+      const key = `magick_ad_freq_${adId}`;
+      const limit = Number(ad.getAttribute('data-ad-freq-limit') || 1);
+      const rawCount = readStorageValue(localStorage, key);
+      const count = Number(rawCount || 0);
+      if (count < limit) {
+        writeStorageValue(localStorage, key, String(count + 1));
+      }
+    }
+  };
+  const decideRandomSession = ad => {
+    const adId = ad.getAttribute('data-ad-id');
+    if (!adId) {
+      return true;
+    }
+    const bucket = Math.floor(Date.now() / 300000);
+    let value = null;
+    if (allowSessionStorage) {
+      const key = `magick_ad_random_${adId}_${bucket}`;
+      value = readStorageValue(sessionStorage, key);
+      if (!value) {
+        value = Math.random() >= 0.5 ? '1' : '0';
+        writeStorageValue(sessionStorage, key, value);
+      }
+    } else if (ad.dataset.adRandomDecided) {
+      value = ad.dataset.adRandomDecided;
+    } else {
+      value = Math.random() >= 0.5 ? '1' : '0';
+      ad.dataset.adRandomDecided = value;
+    }
+    return value === '1';
+  };
+  const showAd = (ad, animation) => {
+    ad.classList.remove('magick-ad-is-hidden');
+    ad.removeAttribute('aria-hidden');
+    if (animation && !prefersReducedMotion) {
+      ad.classList.add(`magick-ad-anim--${animation}`);
+    }
+    recordFrequency(ad);
+    activateModal(ad);
+  };
+  const hideAd = ad => {
+    ad.classList.add('magick-ad-is-hidden');
+    ad.setAttribute('aria-hidden', 'true');
+    deactivateModal(ad);
+  };
+  const initAdBehavior = ad => {
+    if (!ad || ad.dataset.adBehaviorInitialized === '1') {
+      return;
+    }
+    ad.dataset.adBehaviorInitialized = '1';
+    const delay = Number(ad.getAttribute('data-ad-delay') || 0);
+    const animation = ad.getAttribute('data-ad-anim');
+    const randomMode = ad.getAttribute('data-ad-random') || '';
+    if (!shouldShowByFrequency(ad)) {
+      ad.dataset.adFreqBlocked = '1';
+      hideAd(ad);
+      return;
+    }
+    if (randomMode === 'session') {
+      const shouldShow = decideRandomSession(ad);
+      if (!shouldShow) {
+        hideAd(ad);
+        return;
+      }
+    }
+    if (delay > 0) {
+      hideAd(ad);
+      window.setTimeout(() => {
+        showAd(ad, animation);
+      }, delay * 1000);
+      return;
+    }
+    showAd(ad, animation);
+  };
+  const initAll = () => {
+    placeNodeAds();
+    resolveSlotPlaceholders();
+    document.querySelectorAll('[data-ad-id]').forEach(element => {
+      initAdBehavior(element);
+    });
+  };
+  const shouldObserveMutations = () => {
+    if (!window.MutationObserver || !document.body) {
+      return false;
+    }
+    if (document.querySelector('[data-magick-ad-slot-resolver="1"]')) {
+      return true;
+    }
+    if (document.querySelector('[data-ad-node-type]')) {
+      return true;
+    }
+    return behaviorConfig.observeMutations === true;
+  };
+  const observeNewAds = () => {
+    if (!shouldObserveMutations()) {
+      return;
+    }
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (!node || node.nodeType !== 1) {
+            return;
+          }
+          resolveSlotPlaceholders(node);
+          if (node.matches?.('[data-ad-id]')) {
+            initAdBehavior(node);
+          }
+          if (node.querySelectorAll) {
+            node.querySelectorAll('[data-ad-id]').forEach(element => {
+              initAdBehavior(element);
+            });
+          }
+        });
+      });
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  };
+  window.MagickADInteractivity = {
+    open: ad => {
+      if (!ad) {
+        return;
+      }
+      if (ad.classList.contains('magick-ad-is-hidden')) {
+        return;
+      }
+      activateModal(ad);
+    },
+    close: closeAd,
+    initAd: ad => {
+      const resolved = resolveAdElement(ad);
+      if (!resolved) {
+        return;
+      }
+      initAdBehavior(resolved);
+    },
+    initAll,
+    isActive: true
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initConsentBanner();
+      initAll();
+      observeNewAds();
+    });
+  } else {
+    initConsentBanner();
+    initAll();
+    observeNewAds();
+  }
+})();
+
+/******/ })()
+;
+//# sourceMappingURL=magick-ad-interactivity.js.map
