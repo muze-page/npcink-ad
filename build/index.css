@@ -1294,10 +1294,15 @@
     box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
 }
 
+.magick-ad-settings-modal.components-modal__frame,
 .magick-ad-settings-modal .components-modal__frame {
     width: 820px;
     max-width: calc(100vw - 64px);
     min-height: 600px;
+    max-height: calc(100vh - 64px);
+    height: min(720px, calc(100vh - 64px));
+    display: flex;
+    flex-direction: column;
 }
 
 .magick-ad-settings-modal {
@@ -1314,8 +1319,12 @@
 
 .magick-ad-settings-modal .components-modal__content {
     height: 100%;
+    max-height: 100%;
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
 }
 
 .magick-ad-settings-tabs {
@@ -1325,10 +1334,23 @@
     flex-direction: column;
 }
 
+.magick-ad-settings-tabs .components-tab-panel__tabs {
+    flex-shrink: 0;
+}
+
+.magick-ad-settings-tabs .components-tab-panel__tab-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+}
+
 .magick-ad-settings-body {
     flex: 1;
     min-height: 0;
-    overflow: auto;
+    height: 100%;
+    overflow: visible;
 }
 
 
