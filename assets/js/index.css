@@ -1038,14 +1038,14 @@
 }
 
 .magick-ad-tab-panel .components-panel {
-    border: none;
-    box-shadow: none;
+    border: none !important;
+    box-shadow: none !important;
     background: transparent;
 }
 
 .magick-ad-tab-panel .components-panel__body,
 .magick-ad-tab-panel .components-panel__body.is-opened {
-    border: none;
+    border: none !important;
     padding: 0;
 }
 
@@ -1598,7 +1598,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    align-items: flex-end;
+    align-items: stretch;
     margin: 0;
 }
 
@@ -1611,9 +1611,14 @@
     height: 40px;
 }
 
+.magick-ad-video-input-row .components-text-control__input,
+.magick-ad-video-input-row .magick-ad-video-picker.is-compact .components-button {
+    box-sizing: border-box;
+}
+
 .magick-ad-video-input-row .magick-ad-video-picker.is-compact {
     display: flex;
-    align-items: flex-end;
+    align-items: stretch;
     margin-top: 0;
 }
 
@@ -1622,12 +1627,17 @@
     .components-button {
     white-space: nowrap;
     height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding-top: 0;
     padding-bottom: 0;
 }
 
 .magick-ad-video-input-row .magick-ad-image-actions {
     margin-top: 0;
+    height: 100%;
+    align-items: stretch;
 }
 
 .magick-ad-field {
