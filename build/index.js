@@ -3382,6 +3382,116 @@ const DebugPanel = ({
 
 /***/ },
 
+/***/ "./assets/js/panels/ExperimentsPanel.js"
+/*!**********************************************!*\
+  !*** ./assets/js/panels/ExperimentsPanel.js ***!
+  \**********************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @wordpress/element */ "@wordpress/element");
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_wordpress_element__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _wordpress_components__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @wordpress/components */ "@wordpress/components");
+/* harmony import */ var _wordpress_components__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @wordpress/api-fetch */ "@wordpress/api-fetch");
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_3__);
+
+
+
+
+const DEFAULT_SETTINGS = {
+  block_editor_enabled: false
+};
+const ExperimentsPanel = ({
+  onNotice
+}) => {
+  const [settings, setSettings] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(DEFAULT_SETTINGS);
+  const [loading, setLoading] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
+  const [saving, setSaving] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
+  const [error, setError] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
+  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+    let mounted = true;
+    setLoading(true);
+    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_3___default()({
+      path: '/magick-ad/v1/system-settings'
+    }).then(response => {
+      if (!mounted) {
+        return;
+      }
+      setSettings({
+        ...DEFAULT_SETTINGS,
+        ...response
+      });
+      setLoading(false);
+    }).catch(err => {
+      if (!mounted) {
+        return;
+      }
+      setError(err);
+      setLoading(false);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+  const persist = next => {
+    setSaving(true);
+    setError(null);
+    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_3___default()({
+      path: '/magick-ad/v1/system-settings',
+      method: 'POST',
+      data: next
+    }).then(response => {
+      setSettings({
+        ...DEFAULT_SETTINGS,
+        ...response
+      });
+      setSaving(false);
+      onNotice?.('success', '实验设置已更新');
+    }).catch(err => {
+      setSaving(false);
+      setError(err);
+      onNotice?.('error', err?.message || '设置更新失败');
+    });
+  };
+  const updateSettings = patch => {
+    const next = {
+      ...settings,
+      ...patch
+    };
+    setSettings(next);
+    persist(next);
+  };
+  return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Card, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.CardBody, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-field__label"
+  }, "\u5B9E\u9A8C\u4E0E\u9AD8\u7EA7"), error && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "error",
+    isDismissible: true
+  }, error.message || '设置加载失败'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "info",
+    isDismissible: false
+  }, "\u5B9E\u9A8C\u529F\u80FD\u53EF\u80FD\u5B58\u5728\u517C\u5BB9\u6027\u6216\u7A33\u5B9A\u6027\u95EE\u9898\uFF0C\u5EFA\u8BAE\u5148\u5728\u6D4B\u8BD5\u73AF\u5883\u9A8C\u8BC1\u540E\u518D\u542F\u7528\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+    label: "\u542F\u7528\u53EF\u89C6\u5316\u8BBE\u8BA1\uFF08\u5B9E\u9A8C\uFF09",
+    checked: Boolean(settings.block_editor_enabled),
+    disabled: loading || saving,
+    onChange: value => updateSettings({
+      block_editor_enabled: value
+    }),
+    help: "\u5173\u95ED\u540E\u9690\u85CF\u201C\u53EF\u89C6\u5316\u8BBE\u8BA1\u201D\u521B\u610F\u7C7B\u578B\uFF0C\u4EC5\u5728\u9700\u8981\u65F6\u5F00\u542F\u3002"
+  }), !settings.block_editor_enabled && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "info",
+    isDismissible: false
+  }, "\u53EF\u89C6\u5316\u8BBE\u8BA1\u5F53\u524D\u5904\u4E8E\u9690\u85CF\u72B6\u6001\uFF0C\u4E0D\u5F71\u54CD\u5DF2\u6709\u5E7F\u544A\u5C55\u793A\u3002")));
+};
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (ExperimentsPanel);
+
+/***/ },
+
 /***/ "./assets/js/panels/SlotsPanel.js"
 /*!****************************************!*\
   !*** ./assets/js/panels/SlotsPanel.js ***!
@@ -3590,7 +3700,6 @@ const DEFAULT_SETTINGS = {
   html_sandbox: false,
   html_script_allowlist: [],
   html_script_blocklist: [],
-  block_editor_enabled: false,
   brand_name: 'Magick AD',
   brand_tagline: '广告配置与投放规则管理',
   manage_capability: 'manage_options'
@@ -3800,24 +3909,6 @@ const SystemSettingsPanel = ({
     }),
     help: "\u7CFB\u7EDF\u7EA7\u9ED1\u540D\u5355\u4F18\u5148\u751F\u6548\uFF0C\u547D\u4E2D\u5373\u79FB\u9664\u811A\u672C\u3002"
   })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-    title: "\u5B9E\u9A8C\u4E0E\u9AD8\u7EA7",
-    opened: openSection === 'experiments',
-    onToggle: () => handleToggleSection('experiments')
-  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-    status: "info",
-    isDismissible: false
-  }, "\u5B9E\u9A8C\u529F\u80FD\u53EF\u80FD\u5B58\u5728\u517C\u5BB9\u6027\u6216\u7A33\u5B9A\u6027\u95EE\u9898\uFF0C\u5EFA\u8BAE\u5148\u5728\u6D4B\u8BD5\u73AF\u5883\u9A8C\u8BC1\u540E\u518D\u542F\u7528\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-    label: "\u542F\u7528\u53EF\u89C6\u5316\u8BBE\u8BA1\uFF08\u5B9E\u9A8C\uFF09",
-    checked: Boolean(settings.block_editor_enabled),
-    disabled: loading || saving,
-    onChange: value => updateSettings({
-      block_editor_enabled: value
-    }),
-    help: "\u5173\u95ED\u540E\u9690\u85CF\u201C\u53EF\u89C6\u5316\u8BBE\u8BA1\u201D\u521B\u610F\u7C7B\u578B\uFF0C\u4EC5\u5728\u9700\u8981\u65F6\u5F00\u542F\u3002"
-  }), !settings.block_editor_enabled && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-    status: "info",
-    isDismissible: false
-  }, "\u53EF\u89C6\u5316\u8BBE\u8BA1\u5F53\u524D\u5904\u4E8E\u9690\u85CF\u72B6\u6001\uFF0C\u4E0D\u5F71\u54CD\u5DF2\u6709\u5E7F\u544A\u5C55\u793A\u3002")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u8BCA\u65AD\u65E5\u5FD7",
     opened: openSection === 'diagnostics',
     onToggle: () => handleToggleSection('diagnostics')
@@ -3936,14 +4027,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _panels_SystemSettingsPanel__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ../panels/SystemSettingsPanel */ "./assets/js/panels/SystemSettingsPanel.js");
 /* harmony import */ var _panels_ConsentPanel__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ../panels/ConsentPanel */ "./assets/js/panels/ConsentPanel.js");
 /* harmony import */ var _panels_SlotsPanel__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ../panels/SlotsPanel */ "./assets/js/panels/SlotsPanel.js");
-/* harmony import */ var _hooks_useNotice__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ../hooks/useNotice */ "./assets/js/hooks/useNotice.js");
-/* harmony import */ var _hooks_useTemplateLibrary__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ../hooks/useTemplateLibrary */ "./assets/js/hooks/useTemplateLibrary.js");
-/* harmony import */ var _hooks_useTargeting__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ../hooks/useTargeting */ "./assets/js/hooks/useTargeting.js");
-/* harmony import */ var _constants_options__WEBPACK_IMPORTED_MODULE_29__ = __webpack_require__(/*! ../constants/options */ "./assets/js/constants/options.js");
-/* harmony import */ var _wordpress_url__WEBPACK_IMPORTED_MODULE_30__ = __webpack_require__(/*! @wordpress/url */ "@wordpress/url");
-/* harmony import */ var _wordpress_url__WEBPACK_IMPORTED_MODULE_30___default = /*#__PURE__*/__webpack_require__.n(_wordpress_url__WEBPACK_IMPORTED_MODULE_30__);
-/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31__ = __webpack_require__(/*! @wordpress/api-fetch */ "@wordpress/api-fetch");
-/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31___default = /*#__PURE__*/__webpack_require__.n(_wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31__);
+/* harmony import */ var _panels_ExperimentsPanel__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ../panels/ExperimentsPanel */ "./assets/js/panels/ExperimentsPanel.js");
+/* harmony import */ var _hooks_useNotice__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ../hooks/useNotice */ "./assets/js/hooks/useNotice.js");
+/* harmony import */ var _hooks_useTemplateLibrary__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ../hooks/useTemplateLibrary */ "./assets/js/hooks/useTemplateLibrary.js");
+/* harmony import */ var _hooks_useTargeting__WEBPACK_IMPORTED_MODULE_29__ = __webpack_require__(/*! ../hooks/useTargeting */ "./assets/js/hooks/useTargeting.js");
+/* harmony import */ var _constants_options__WEBPACK_IMPORTED_MODULE_30__ = __webpack_require__(/*! ../constants/options */ "./assets/js/constants/options.js");
+/* harmony import */ var _wordpress_url__WEBPACK_IMPORTED_MODULE_31__ = __webpack_require__(/*! @wordpress/url */ "@wordpress/url");
+/* harmony import */ var _wordpress_url__WEBPACK_IMPORTED_MODULE_31___default = /*#__PURE__*/__webpack_require__.n(_wordpress_url__WEBPACK_IMPORTED_MODULE_31__);
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_32__ = __webpack_require__(/*! @wordpress/api-fetch */ "@wordpress/api-fetch");
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_32___default = /*#__PURE__*/__webpack_require__.n(_wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_32__);
+
 
 
 
@@ -3995,7 +4088,7 @@ const AdsConfig = () => {
     notice,
     showNotice,
     clearNotice
-  } = (0,_hooks_useNotice__WEBPACK_IMPORTED_MODULE_26__["default"])();
+  } = (0,_hooks_useNotice__WEBPACK_IMPORTED_MODULE_27__["default"])();
   const [deleteTarget, setDeleteTarget] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
   const [renameTarget, setRenameTarget] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
   const [renameValue, setRenameValue] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('');
@@ -4037,7 +4130,7 @@ const AdsConfig = () => {
     }
   };
   const fetchSystemSettings = () => {
-    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31___default()({
+    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_32___default()({
       path: '/magick-ad/v1/system-settings'
     }).then(response => {
       setSystemSettings({
@@ -4291,7 +4384,7 @@ const AdsConfig = () => {
   }, [selectedAd?.id, selectedAd?.options?.placement_hook, selectedAd?.options?.placement_position, selectedAd?.options?.placement_paragraph]);
   (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
     let isMounted = true;
-    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31___default()({
+    _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_32___default()({
       path: '/magick-ad/v1/debug'
     }).then(response => {
       if (!isMounted) {
@@ -4385,13 +4478,13 @@ const AdsConfig = () => {
     targetSuggestions,
     targetLoading,
     handleTargetSearch
-  } = (0,_hooks_useTargeting__WEBPACK_IMPORTED_MODULE_28__["default"])(selectedAd);
+  } = (0,_hooks_useTargeting__WEBPACK_IMPORTED_MODULE_29__["default"])(selectedAd);
   const positionOptions = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => {
     const page = selectedAd?.options?.show_page || 'all';
     return [{
       label: '请选择展示位置',
       value: ''
-    }, ...(0,_constants_options__WEBPACK_IMPORTED_MODULE_29__.getPositionOptions)(page)];
+    }, ...(0,_constants_options__WEBPACK_IMPORTED_MODULE_30__.getPositionOptions)(page)];
   }, [selectedAd?.options?.show_page]);
   const targetPositionOptions = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => {
     const targetType = selectedAd?.options?.target_type || '';
@@ -4404,7 +4497,7 @@ const AdsConfig = () => {
     return [{
       label: '请选择展示位置',
       value: ''
-    }, ...(0,_constants_options__WEBPACK_IMPORTED_MODULE_29__.getPositionOptions)(targetType)];
+    }, ...(0,_constants_options__WEBPACK_IMPORTED_MODULE_30__.getPositionOptions)(targetType)];
   }, [selectedAd?.options?.target_type]);
   const resolvePlacement = options => {
     const placement = {
@@ -4432,7 +4525,7 @@ const AdsConfig = () => {
     const used = new Set();
     let fixed = 0;
     slots.forEach((slot, index) => {
-      const raw = (0,_wordpress_url__WEBPACK_IMPORTED_MODULE_30__.cleanForSlug)(slot?.id || '');
+      const raw = (0,_wordpress_url__WEBPACK_IMPORTED_MODULE_31__.cleanForSlug)(slot?.id || '');
       if (!raw) {
         return;
       }
@@ -5246,7 +5339,7 @@ const AdsConfig = () => {
     handleExportTemplates,
     handleImportTemplates,
     handleFileChange
-  } = (0,_hooks_useTemplateLibrary__WEBPACK_IMPORTED_MODULE_27__["default"])({
+  } = (0,_hooks_useTemplateLibrary__WEBPACK_IMPORTED_MODULE_28__["default"])({
     selectedAd,
     getCreativeTemplateData,
     onApplyTemplate: applyTemplate,
@@ -5284,7 +5377,7 @@ const AdsConfig = () => {
         params.set('search', previewSearch.trim());
       }
       setPreviewLoading(true);
-      _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_31___default()({
+      _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_32___default()({
         path: `/wp/v2/${endpoint}?${params.toString()}`,
         signal: controller.signal
       }).then(items => {
@@ -6199,7 +6292,7 @@ const AdsConfig = () => {
           })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
             label: "\u9634\u5F71",
             value: blockSettings.shadow || 'none',
-            options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.SHADOW_OPTIONS,
+            options: _constants_options__WEBPACK_IMPORTED_MODULE_30__.SHADOW_OPTIONS,
             onChange: value => handleUpdateBlockSettings({
               shadow: value
             })
@@ -6667,9 +6760,9 @@ const AdsConfig = () => {
     }, "\u8BF7\u5148\u9009\u62E9\u5C55\u793A\u4F4D\u7F6E"), selectedAd.options?.ad_type === 'global' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
       label: "\u5C55\u793A\u9875\u9762",
       value: selectedAd.options?.show_page || 'all',
-      options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.DISPLAY_PAGE_OPTIONS,
+      options: _constants_options__WEBPACK_IMPORTED_MODULE_30__.DISPLAY_PAGE_OPTIONS,
       onChange: value => {
-        const allowedPositions = (0,_constants_options__WEBPACK_IMPORTED_MODULE_29__.getPositionOptions)(value).map(option => option.value);
+        const allowedPositions = (0,_constants_options__WEBPACK_IMPORTED_MODULE_30__.getPositionOptions)(value).map(option => option.value);
         const currentPlacement = resolvePlacement(selectedAd.options || {});
         const currentValue = placementToSlotValue(currentPlacement);
         const nextPosition = allowedPositions.includes(currentValue) ? currentValue : '';
@@ -6685,7 +6778,7 @@ const AdsConfig = () => {
     })), selectedAd.options?.ad_type === 'targeted' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
       label: "\u5C55\u793A\u7C7B\u578B",
       value: selectedAd.options?.target_type || '',
-      options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.TARGET_TYPE_OPTIONS,
+      options: _constants_options__WEBPACK_IMPORTED_MODULE_30__.TARGET_TYPE_OPTIONS,
       onChange: value => handleUpdateOptions({
         target_type: value,
         target_values: []
@@ -6944,7 +7037,7 @@ const AdsConfig = () => {
             }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
               label: "\u9634\u5F71",
               value: containerStyle.shadow || 'none',
-              options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.SHADOW_OPTIONS,
+              options: _constants_options__WEBPACK_IMPORTED_MODULE_30__.SHADOW_OPTIONS,
               onChange: value => handleUpdateContainerStyle({
                 shadow: value
               })
@@ -7013,7 +7106,7 @@ const AdsConfig = () => {
         }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
           label: "\u8FDB\u573A\u52A8\u753B",
           value: behavior.animation || 'none',
-          options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.ANIMATION_OPTIONS,
+          options: _constants_options__WEBPACK_IMPORTED_MODULE_30__.ANIMATION_OPTIONS,
           onChange: value => handleUpdateBehavior({
             animation: value
           })
@@ -7068,9 +7161,9 @@ const AdsConfig = () => {
       }, "\u8BF7\u5148\u9009\u62E9\u5C55\u793A\u4F4D\u7F6E"), selectedAd.options?.ad_type === 'global' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
         label: "\u5C55\u793A\u9875\u9762",
         value: selectedAd.options?.show_page || 'all',
-        options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.DISPLAY_PAGE_OPTIONS,
+        options: _constants_options__WEBPACK_IMPORTED_MODULE_30__.DISPLAY_PAGE_OPTIONS,
         onChange: value => {
-          const allowedPositions = (0,_constants_options__WEBPACK_IMPORTED_MODULE_29__.getPositionOptions)(value).map(option => option.value);
+          const allowedPositions = (0,_constants_options__WEBPACK_IMPORTED_MODULE_30__.getPositionOptions)(value).map(option => option.value);
           const currentPlacement = resolvePlacement(selectedAd.options || {});
           const currentValue = placementToSlotValue(currentPlacement);
           const nextPosition = allowedPositions.includes(currentValue) ? currentValue : '';
@@ -7086,7 +7179,7 @@ const AdsConfig = () => {
       })), selectedAd.options?.ad_type === 'targeted' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
         label: "\u5C55\u793A\u7C7B\u578B",
         value: selectedAd.options?.target_type || '',
-        options: _constants_options__WEBPACK_IMPORTED_MODULE_29__.TARGET_TYPE_OPTIONS,
+        options: _constants_options__WEBPACK_IMPORTED_MODULE_30__.TARGET_TYPE_OPTIONS,
         onChange: value => handleUpdateOptions({
           target_type: value,
           target_values: []
@@ -7443,6 +7536,9 @@ const AdsConfig = () => {
       name: 'consent',
       title: '同意与合规'
     }, {
+      name: 'experiments',
+      title: '实验与高级'
+    }, {
       name: 'debug',
       title: '调试设置'
     }],
@@ -7452,6 +7548,8 @@ const AdsConfig = () => {
   }, tab.name === 'system' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_SystemSettingsPanel__WEBPACK_IMPORTED_MODULE_23__["default"], {
     onNotice: showNotice
   }) : tab.name === 'consent' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_ConsentPanel__WEBPACK_IMPORTED_MODULE_24__["default"], {
+    onNotice: showNotice
+  }) : tab.name === 'experiments' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_ExperimentsPanel__WEBPACK_IMPORTED_MODULE_26__["default"], {
     onNotice: showNotice
   }) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_panels_DebugPanel__WEBPACK_IMPORTED_MODULE_22__["default"], {
     onNotice: showNotice

@@ -48,6 +48,7 @@ import DebugPanel from '../panels/DebugPanel';
 import SystemSettingsPanel from '../panels/SystemSettingsPanel';
 import ConsentPanel from '../panels/ConsentPanel';
 import SlotsPanel from '../panels/SlotsPanel';
+import ExperimentsPanel from '../panels/ExperimentsPanel';
 import useNotice from '../hooks/useNotice';
 import useTemplateLibrary from '../hooks/useTemplateLibrary';
 import useTargeting from '../hooks/useTargeting';
@@ -6102,6 +6103,7 @@ const AdsConfig = () => {
                         tabs={[
                             { name: 'system', title: '系统设置' },
                             { name: 'consent', title: '同意与合规' },
+                            { name: 'experiments', title: '实验与高级' },
                             { name: 'debug', title: '调试设置' },
                         ]}
                         initialTabName="system"
@@ -6114,6 +6116,10 @@ const AdsConfig = () => {
                                     />
                                 ) : tab.name === 'consent' ? (
                                     <ConsentPanel onNotice={showNotice} />
+                                ) : tab.name === 'experiments' ? (
+                                    <ExperimentsPanel
+                                        onNotice={showNotice}
+                                    />
                                 ) : (
                                     <DebugPanel onNotice={showNotice} />
                                 )}
