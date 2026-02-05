@@ -206,12 +206,6 @@ final class Admin {
                 'menu_slug' => 'magick-ad-report',
                 'callback' => array($this, 'render_app'),
             ),
-            array(
-                'page_title' => __('插入入口', 'magick-ad'),
-                'menu_title' => __('插入入口', 'magick-ad'),
-                'menu_slug' => 'magick-ad-insert',
-                'callback' => array($this, 'render_insert_help'),
-            ),
         );
 
         if ($this->is_debug_enabled()) {

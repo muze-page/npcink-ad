@@ -47,6 +47,7 @@ import BuildProbe from '../components/BuildProbe';
 import DebugPanel from '../panels/DebugPanel';
 import SystemSettingsPanel from '../panels/SystemSettingsPanel';
 import ConsentPanel from '../panels/ConsentPanel';
+import InsertHelpPanel from '../panels/InsertHelpPanel';
 import SlotsPanel from '../panels/SlotsPanel';
 import ExperimentsPanel from '../panels/ExperimentsPanel';
 import useNotice from '../hooks/useNotice';
@@ -6316,6 +6317,7 @@ const AdsConfig = () => {
                         tabs={[
                             { name: 'system', title: '系统设置' },
                             { name: 'consent', title: '同意与合规' },
+                            { name: 'insert', title: '插入入口' },
                             { name: 'experiments', title: '实验与高级' },
                             { name: 'debug', title: '调试设置' },
                         ]}
@@ -6329,6 +6331,8 @@ const AdsConfig = () => {
                                     />
                                 ) : tab.name === 'consent' ? (
                                     <ConsentPanel onNotice={showNotice} />
+                                ) : tab.name === 'insert' ? (
+                                    <InsertHelpPanel />
                                 ) : tab.name === 'experiments' ? (
                                     <ExperimentsPanel
                                         onNotice={showNotice}
