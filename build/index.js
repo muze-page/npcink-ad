@@ -3702,6 +3702,21 @@ const DEFAULT_SETTINGS = {
   stats_diagnostics_retention_days: 7,
   stats_diagnostics_auto_off_days: 7,
   stats_diagnostics_expires_at: 0,
+  rate_limit_fallback: 'off',
+  stats_queue_metrics: {
+    enabled: false,
+    stats: 0,
+    dim: 0,
+    variant: 0,
+    event: 0,
+    total: 0,
+    oldest_age: 0,
+    oldest_at: 0,
+    queue_limit: 0,
+    flush_limit: 0,
+    alert_limit: 0,
+    alert_age: 0
+  },
   page_cache_detected: false,
   slot_client_resolver: true,
   html_sandbox: true,
@@ -3722,6 +3737,30 @@ const SystemSettingsPanel = ({
   const [openSection, setOpenSection] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('tracking');
   const parseDomainList = (value = '') => value.split(/[\s,;]+/).map(item => item.trim()).filter(Boolean);
   const formatDomainList = list => Array.isArray(list) ? list.join('\n') : '';
+  const formatAge = seconds => {
+    const value = Number(seconds || 0);
+    if (!value) {
+      return '0 秒';
+    }
+    if (value < 60) {
+      return `${Math.round(value)} 秒`;
+    }
+    if (value < 3600) {
+      return `${Math.ceil(value / 60)} 分钟`;
+    }
+    if (value < 86400) {
+      const hours = value / 3600;
+      return Number.isInteger(hours) ? `${hours} 小时` : `${hours.toFixed(1)} 小时`;
+    }
+    const days = value / 86400;
+    return Number.isInteger(days) ? `${days} 天` : `${days.toFixed(1)} 天`;
+  };
+  const queueMetrics = settings.stats_queue_metrics || {};
+  const queueEnabled = Boolean(queueMetrics.enabled);
+  const queueTotal = Number(queueMetrics.total || 0);
+  const queueOldestAge = Number(queueMetrics.oldest_age || 0);
+  const queueAlertLimit = Number(queueMetrics.alert_limit || 0);
+  const queueAlertAge = Number(queueMetrics.alert_age || 0);
   const diagnosticsExpiryLabel = (() => {
     if (!settings.stats_diagnostics_expires_at) {
       return '';
@@ -3904,7 +3943,17 @@ const SystemSettingsPanel = ({
       tracking_dedupe_scope: value
     }),
     help: "\u9ED8\u8BA4\u6309\u5E7F\u544A\u53BB\u91CD\uFF1B\u5982\u9700\u6309\u4F4D\u7F6E\u7EDF\u8BA1\u8BF7\u9009\u62E9\u201C\u6309\u4F4D\u7F6E\u201D\u3002"
-  })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-settings-expiry"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("strong", null, "\u7EDF\u8BA1\u961F\u5217\uFF1A"), queueEnabled ? `${queueTotal} 条` : '未启用', queueEnabled && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
+    className: "magick-ad-settings-secret__hint"
+  }, "\uFF08\u6700\u4E45\u7B49\u5F85 ", formatAge(queueOldestAge), "\uFF09")), queueEnabled && (queueTotal > 0 || queueOldestAge > 0) && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "info",
+    isDismissible: false
+  }, "\u5F53\u524D\u961F\u5217\uFF1A\u4E3B\u8868 ", queueMetrics.stats || 0, " / \u7EF4\u5EA6", ' ', queueMetrics.dim || 0, " / \u53D8\u4F53", ' ', queueMetrics.variant || 0, " / \u4E8B\u4EF6", ' ', queueMetrics.event || 0), queueEnabled && (queueAlertLimit && queueTotal >= queueAlertLimit || queueAlertAge && queueOldestAge >= queueAlertAge) && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "warning",
+    isDismissible: false
+  }, "\u961F\u5217\u51FA\u73B0\u79EF\u538B\uFF0C\u8BF7\u68C0\u67E5 Cron \u662F\u5426\u8FD0\u884C\u6B63\u5E38\u53CA\u6570\u636E\u5E93\u5199\u5165\u6027\u80FD\u3002")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u5B89\u5168\u4E0E\u7F13\u5B58",
     opened: openSection === 'security',
     onToggle: () => handleToggleSection('security')
@@ -3937,6 +3986,21 @@ const SystemSettingsPanel = ({
       slot_client_resolver: value
     }),
     help: "\u5F00\u542F\u540E\u4EC5\u8F93\u51FA\u5019\u9009 ID\uFF0C\u7531\u524D\u7AEF\u6309\u6743\u91CD\u51B3\u5B9A\u5C55\u793A\uFF0C\u9002\u914D\u5168\u9875\u7F13\u5B58\u573A\u666F\u3002"
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+    label: "\u9650\u6D41\u56DE\u9000\u7B56\u7565\uFF08\u65E0\u6301\u4E45\u5316\u7F13\u5B58\u65F6\uFF09",
+    value: settings.rate_limit_fallback,
+    disabled: loading || saving,
+    options: [{
+      label: '关闭（推荐）',
+      value: 'off'
+    }, {
+      label: '使用 transient（写入数据库）',
+      value: 'transient'
+    }],
+    onChange: value => updateSettings({
+      rate_limit_fallback: value
+    }),
+    help: "\u9ED8\u8BA4\u5173\u95ED\uFF1A\u5F53\u6CA1\u6709\u6301\u4E45\u5316\u7F13\u5B58\u65F6\u4E0D\u505A\u9650\u6D41\u56DE\u9000\uFF0C\u907F\u514D transient \u5199\u5165\u538B\u529B\u3002"
   }), settings.page_cache_detected && !settings.slot_client_resolver && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
     status: "warning",
     isDismissible: false

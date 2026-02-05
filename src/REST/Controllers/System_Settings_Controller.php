@@ -7,6 +7,7 @@ use MagickAD\Utils\TrackingStrategy;
 use MagickAD\Utils\Tracking_Signature;
 use MagickAD\Utils\Diagnostics_Cron;
 use MagickAD\Utils\Stats_Dim_Cron;
+use MagickAD\Utils\Stats_Queue;
 use MagickAD\Utils\Ip;
 
 if (!defined('ABSPATH')) {
@@ -58,6 +59,11 @@ final class System_Settings_Controller {
     private static function sanitize_dedupe_scope($value): string {
         $value = is_string($value) ? $value : '';
         return in_array($value, array('ad', 'placement'), true) ? $value : 'ad';
+    }
+
+    private static function sanitize_rate_limit_fallback($value): string {
+        $value = is_string($value) ? $value : '';
+        return $value === 'transient' ? 'transient' : 'off';
     }
 
     private static function sanitize_stats_write_mode($value): string {
@@ -116,6 +122,9 @@ final class System_Settings_Controller {
         $diagnostics_expires_at = (int) get_option('magick_ad_stats_diagnostics_expires_at', 0);
         $stats_dim_retention_days = (int) get_option('magick_ad_stats_dim_retention_days', 30);
         $stats_dim_retention_days = self::sanitize_optional_int($stats_dim_retention_days, 30, 365);
+        $rate_limit_fallback = self::sanitize_rate_limit_fallback(
+            get_option('magick_ad_rate_limit_fallback', 'off')
+        );
         $stats_write_mode = self::sanitize_stats_write_mode(
             get_option('magick_ad_stats_write_mode', 'async')
         );
@@ -169,7 +178,9 @@ final class System_Settings_Controller {
             'stats_diagnostics_auto_off_days' => $auto_off_days,
             'stats_diagnostics_expires_at' => $diagnostics_expires_at,
             'stats_dim_retention_days' => $stats_dim_retention_days,
+            'rate_limit_fallback' => $rate_limit_fallback,
             'stats_write_mode' => $stats_write_mode,
+            'stats_queue_metrics' => Stats_Queue::get_metrics(),
             'slot_client_resolver' => $slot_client_resolver,
             'html_sandbox' => $html_sandbox,
             'html_script_allowlist' => $html_script_allowlist,
@@ -257,6 +268,9 @@ final class System_Settings_Controller {
             30,
             365
         );
+        $rate_limit_fallback = self::sanitize_rate_limit_fallback(
+            $params['rate_limit_fallback'] ?? get_option('magick_ad_rate_limit_fallback', 'off')
+        );
         $stats_write_mode = self::sanitize_stats_write_mode(
             $params['stats_write_mode'] ?? get_option('magick_ad_stats_write_mode', 'async')
         );
@@ -313,6 +327,7 @@ final class System_Settings_Controller {
         update_option('magick_ad_stats_diagnostics_retention_days', $stats_diagnostics_retention_days);
         update_option('magick_ad_stats_diagnostics_auto_off_days', $stats_diagnostics_auto_off_days);
         update_option('magick_ad_stats_dim_retention_days', $stats_dim_retention_days);
+        update_option('magick_ad_rate_limit_fallback', $rate_limit_fallback);
         update_option('magick_ad_stats_write_mode', $stats_write_mode);
         update_option('magick_ad_slot_client_resolver', $slot_client_resolver ? '1' : '0');
         update_option('magick_ad_html_sandbox', $html_sandbox ? '1' : '0');
@@ -354,7 +369,9 @@ final class System_Settings_Controller {
             'stats_diagnostics_auto_off_days' => $stats_diagnostics_auto_off_days,
             'stats_diagnostics_expires_at' => $expires_at,
             'stats_dim_retention_days' => $stats_dim_retention_days,
+            'rate_limit_fallback' => $rate_limit_fallback,
             'stats_write_mode' => $stats_write_mode,
+            'stats_queue_metrics' => Stats_Queue::get_metrics(),
             'slot_client_resolver' => $slot_client_resolver,
             'html_sandbox' => $html_sandbox,
             'html_script_allowlist' => $html_script_allowlist,

@@ -4,6 +4,7 @@ namespace MagickAD\Admin;
 
 use MagickAD\Data\Schema;
 use MagickAD\Utils\Diagnostics;
+use MagickAD\Utils\Stats_Queue;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -27,6 +28,10 @@ final class Site_Health {
         $tests['direct']['magick_ad_stats_tables'] = array(
             'label' => __('Magick AD: 统计表就绪状态', 'magick-ad'),
             'test' => array($this, 'test_stats_tables'),
+        );
+        $tests['direct']['magick_ad_stats_queue'] = array(
+            'label' => __('Magick AD: 统计队列积压', 'magick-ad'),
+            'test' => array($this, 'test_stats_queue'),
         );
 
         return $tests;
@@ -121,8 +126,58 @@ final class Site_Health {
         );
     }
 
+    public function test_stats_queue(): array {
+        $metrics = Stats_Queue::get_metrics();
+
+        if (empty($metrics['enabled'])) {
+            return array(
+                'label' => __('统计队列未启用。', 'magick-ad'),
+                'status' => 'good',
+                'badge' => array(
+                    'label' => __('Magick AD', 'magick-ad'),
+                    'color' => 'blue',
+                ),
+                'description' => '<p>' . esc_html__('当前使用持久化缓存累计或同步写入。', 'magick-ad') . '</p>',
+                'test' => 'magick_ad_stats_queue',
+            );
+        }
+
+        $total = (int) ($metrics['total'] ?? 0);
+        $oldest_age = (int) ($metrics['oldest_age'] ?? 0);
+        $limit = (int) ($metrics['alert_limit'] ?? 300);
+        $age_limit = (int) ($metrics['alert_age'] ?? 900);
+
+        $status = 'good';
+        $label = __('统计队列正常。', 'magick-ad');
+        if ($total >= $limit || $oldest_age >= $age_limit) {
+            $status = 'recommended';
+            $label = __('统计队列出现积压。', 'magick-ad');
+        }
+        if ($total >= $limit * 2 || $oldest_age >= $age_limit * 2) {
+            $status = 'critical';
+            $label = __('统计队列严重积压。', 'magick-ad');
+        }
+
+        /* translators: 1: queued items, 2: oldest wait time. */
+        $format = __('当前队列 %1$d 条，最久等待 %2$s。', 'magick-ad');
+        $desc = sprintf($format, $total, self::format_age($oldest_age));
+        $desc .= ' ' . __('请确认 Cron 是否正常运行并关注数据库写入性能。', 'magick-ad');
+
+        return array(
+            'label' => $label,
+            'status' => $status,
+            'badge' => array(
+                'label' => __('Magick AD', 'magick-ad'),
+                'color' => 'blue',
+            ),
+            'description' => '<p>' . esc_html($desc) . '</p>',
+            'test' => 'magick_ad_stats_queue',
+        );
+    }
+
     public function register_debug_info(array $info): array {
         $table_status = Schema::get_table_status();
+        $queue_metrics = Stats_Queue::get_metrics();
         $info['magick_ad'] = array(
             'label' => __('Magick AD', 'magick-ad'),
             'fields' => array(
@@ -170,9 +225,39 @@ final class Site_Health {
                     'label' => __('持久化对象缓存', 'magick-ad'),
                     'value' => wp_using_ext_object_cache() ? 'yes' : 'no',
                 ),
+                'stats_queue_enabled' => array(
+                    'label' => __('统计队列启用', 'magick-ad'),
+                    'value' => !empty($queue_metrics['enabled']) ? 'yes' : 'no',
+                ),
+                'stats_queue_total' => array(
+                    'label' => __('统计队列长度', 'magick-ad'),
+                    'value' => (string) ($queue_metrics['total'] ?? 0),
+                ),
+                'stats_queue_oldest' => array(
+                    'label' => __('统计队列最久等待', 'magick-ad'),
+                    'value' => self::format_age((int) ($queue_metrics['oldest_age'] ?? 0)),
+                ),
             ),
         );
 
         return $info;
+    }
+
+    private static function format_age(int $seconds): string {
+        if ($seconds <= 0) {
+            return '0 秒';
+        }
+        if ($seconds < 60) {
+            return $seconds . ' 秒';
+        }
+        if ($seconds < 3600) {
+            return (string) ceil($seconds / 60) . ' 分钟';
+        }
+        if ($seconds < 86400) {
+            $hours = $seconds / 3600;
+            return ($hours == (int) $hours ? (string) (int) $hours : number_format($hours, 1)) . ' 小时';
+        }
+        $days = $seconds / 86400;
+        return ($days == (int) $days ? (string) (int) $days : number_format($days, 1)) . ' 天';
     }
 }

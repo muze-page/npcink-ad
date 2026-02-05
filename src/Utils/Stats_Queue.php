@@ -82,6 +82,45 @@ final class Stats_Queue {
         }
     }
 
+    public static function get_metrics(): array {
+        $queues = array(
+            'stats' => self::get_queue(self::OPTION_STATS),
+            'dim' => self::get_queue(self::OPTION_DIM),
+            'variant' => self::get_queue(self::OPTION_VARIANT),
+            'event' => self::get_queue(self::OPTION_EVENT),
+        );
+
+        $counts = array();
+        $oldest = 0;
+        foreach ($queues as $name => $queue) {
+            $counts[$name] = is_array($queue) ? count($queue) : 0;
+            $queue_oldest = self::oldest_timestamp($queue);
+            if ($queue_oldest > 0 && ($oldest === 0 || $queue_oldest < $oldest)) {
+                $oldest = $queue_oldest;
+            }
+        }
+
+        $now = current_time('timestamp');
+        $age = $oldest > 0 ? max(0, $now - $oldest) : 0;
+        $alert_limit = (int) apply_filters('magick_ad_stats_queue_alert_limit', 300);
+        $alert_age = (int) apply_filters('magick_ad_stats_queue_alert_age', 900);
+
+        return array(
+            'enabled' => self::enabled(),
+            'stats' => $counts['stats'],
+            'dim' => $counts['dim'],
+            'variant' => $counts['variant'],
+            'event' => $counts['event'],
+            'total' => array_sum($counts),
+            'oldest_at' => $oldest,
+            'oldest_age' => $age,
+            'queue_limit' => self::queue_limit(),
+            'flush_limit' => self::flush_limit(),
+            'alert_limit' => max(50, $alert_limit),
+            'alert_age' => max(60, $alert_age),
+        );
+    }
+
     private static function flush_stats_queue(int $limit): void {
         $queue = self::get_queue(self::OPTION_STATS);
         if (empty($queue)) {
@@ -259,6 +298,7 @@ final class Stats_Queue {
             return false;
         }
 
+        $now = current_time('timestamp');
         foreach ($rows as $row) {
             $row = is_array($row) ? $row : array();
             $data = array();
@@ -274,8 +314,21 @@ final class Stats_Queue {
             if (isset($queue[$key]) && is_array($queue[$key])) {
                 $existing = $queue[$key];
             } else {
-                $existing = $data;
+                $existing = array();
             }
+
+            foreach ($fields as $field) {
+                if (in_array($field, array('impressions', 'clicks', 'count'), true)) {
+                    continue;
+                }
+                $existing[$field] = $data[$field];
+            }
+
+            $queued_at = isset($existing['queued_at']) ? (int) $existing['queued_at'] : 0;
+            if ($queued_at <= 0) {
+                $queued_at = $now;
+            }
+            $existing['queued_at'] = $queued_at;
 
             if (isset($data['impressions'])) {
                 $existing['impressions'] = (int) ($existing['impressions'] ?? 0) + (int) $data['impressions'];
@@ -307,6 +360,26 @@ final class Stats_Queue {
             return '';
         }
         return md5(implode("\0", $parts));
+    }
+
+    private static function oldest_timestamp(array $queue): int {
+        if (empty($queue)) {
+            return 0;
+        }
+        $oldest = 0;
+        foreach ($queue as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $ts = isset($row['queued_at']) ? (int) $row['queued_at'] : 0;
+            if ($ts <= 0) {
+                continue;
+            }
+            if ($oldest === 0 || $ts < $oldest) {
+                $oldest = $ts;
+            }
+        }
+        return $oldest;
     }
 
     private static function get_queue(string $option): array {

@@ -36,6 +36,21 @@ define('MAGICK_AD_DEBUG', true);
 wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table
 ```
 
+**系统设置（新增）**
+
+在“系统设置 → 统计与去重 / 安全与缓存”中新增了以下开关：
+
+- `rate_limit_fallback`：限流回退策略。可选 `off`（默认）或 `transient`。当站点没有持久化对象缓存时，`transient` 会写入数据库；默认关闭以避免写入压力。
+- `stats_write_mode`：统计写入模式。可选 `async`（默认）或 `sync`。`async` 会进入统计队列，由 Cron 批量落库；`sync` 直接写库。
+
+**队列观测与报警**
+
+在“系统设置 → 统计与去重”会显示队列长度与最久等待时间，且在积压时给出提示。Site Health 也新增了“统计队列积压”检查。
+
+- 队列启用条件：`stats_write_mode=async` 且未启用持久化对象缓存。
+- 默认告警阈值：队列长度 ≥ 300 或最久等待 ≥ 900 秒（达到 2 倍阈值为严重）。
+- 可通过过滤器调整阈值：`magick_ad_stats_queue_alert_limit`、`magick_ad_stats_queue_alert_age`。
+
 **dist 同步脚本用法**
 
 ```shell

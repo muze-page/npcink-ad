@@ -27,6 +27,21 @@ const DEFAULT_SETTINGS = {
     stats_diagnostics_retention_days: 7,
     stats_diagnostics_auto_off_days: 7,
     stats_diagnostics_expires_at: 0,
+    rate_limit_fallback: 'off',
+    stats_queue_metrics: {
+        enabled: false,
+        stats: 0,
+        dim: 0,
+        variant: 0,
+        event: 0,
+        total: 0,
+        oldest_age: 0,
+        oldest_at: 0,
+        queue_limit: 0,
+        flush_limit: 0,
+        alert_limit: 0,
+        alert_age: 0,
+    },
     page_cache_detected: false,
     slot_client_resolver: true,
     html_sandbox: true,
@@ -53,6 +68,34 @@ const SystemSettingsPanel = ({ onNotice }) => {
 
     const formatDomainList = (list) =>
         Array.isArray(list) ? list.join('\n') : '';
+
+    const formatAge = (seconds) => {
+        const value = Number(seconds || 0);
+        if (!value) {
+            return '0 秒';
+        }
+        if (value < 60) {
+            return `${Math.round(value)} 秒`;
+        }
+        if (value < 3600) {
+            return `${Math.ceil(value / 60)} 分钟`;
+        }
+        if (value < 86400) {
+            const hours = value / 3600;
+            return Number.isInteger(hours)
+                ? `${hours} 小时`
+                : `${hours.toFixed(1)} 小时`;
+        }
+        const days = value / 86400;
+        return Number.isInteger(days) ? `${days} 天` : `${days.toFixed(1)} 天`;
+    };
+
+    const queueMetrics = settings.stats_queue_metrics || {};
+    const queueEnabled = Boolean(queueMetrics.enabled);
+    const queueTotal = Number(queueMetrics.total || 0);
+    const queueOldestAge = Number(queueMetrics.oldest_age || 0);
+    const queueAlertLimit = Number(queueMetrics.alert_limit || 0);
+    const queueAlertAge = Number(queueMetrics.alert_age || 0);
 
     const diagnosticsExpiryLabel = (() => {
         if (!settings.stats_diagnostics_expires_at) {
@@ -253,6 +296,33 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             }
                             help="默认按广告去重；如需按位置统计请选择“按位置”。"
                         />
+                        <div className="magick-ad-settings-expiry">
+                            <strong>统计队列：</strong>
+                            {queueEnabled
+                                ? `${queueTotal} 条`
+                                : '未启用'}
+                            {queueEnabled && (
+                                <span className="magick-ad-settings-secret__hint">
+                                    （最久等待 {formatAge(queueOldestAge)}）
+                                </span>
+                            )}
+                        </div>
+                        {queueEnabled && (queueTotal > 0 || queueOldestAge > 0) && (
+                            <Notice status="info" isDismissible={false}>
+                                当前队列：主表 {queueMetrics.stats || 0} / 维度{' '}
+                                {queueMetrics.dim || 0} / 变体{' '}
+                                {queueMetrics.variant || 0} / 事件{' '}
+                                {queueMetrics.event || 0}
+                            </Notice>
+                        )}
+                        {queueEnabled &&
+                            ((queueAlertLimit && queueTotal >= queueAlertLimit) ||
+                                (queueAlertAge &&
+                                    queueOldestAge >= queueAlertAge)) && (
+                                <Notice status="warning" isDismissible={false}>
+                                    队列出现积压，请检查 Cron 是否运行正常及数据库写入性能。
+                                </Notice>
+                            )}
                     </PanelBody>
                     <PanelBody
                         title="安全与缓存"
@@ -303,6 +373,22 @@ const SystemSettingsPanel = ({ onNotice }) => {
                                 })
                             }
                             help="开启后仅输出候选 ID，由前端按权重决定展示，适配全页缓存场景。"
+                        />
+                        <SelectControl
+                            label="限流回退策略（无持久化缓存时）"
+                            value={settings.rate_limit_fallback}
+                            disabled={loading || saving}
+                            options={[
+                                { label: '关闭（推荐）', value: 'off' },
+                                {
+                                    label: '使用 transient（写入数据库）',
+                                    value: 'transient',
+                                },
+                            ]}
+                            onChange={(value) =>
+                                updateSettings({ rate_limit_fallback: value })
+                            }
+                            help="默认关闭：当没有持久化缓存时不做限流回退，避免 transient 写入压力。"
                         />
                         {settings.page_cache_detected &&
                             !settings.slot_client_resolver && (
