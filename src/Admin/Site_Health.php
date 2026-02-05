@@ -3,6 +3,7 @@
 namespace MagickAD\Admin;
 
 use MagickAD\Data\Schema;
+use MagickAD\Utils\Diagnostics;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -85,7 +86,7 @@ final class Site_Health {
 
     public function test_stats_tables(): array {
         $status = Schema::get_table_status();
-        $diagnostics_enabled = (get_option('magick_ad_stats_diagnostics', '0') === '1');
+        $diagnostics_enabled = Diagnostics::is_enabled();
 
         $issues = array();
         if (!$status['stats']) {

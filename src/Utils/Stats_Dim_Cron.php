@@ -2,6 +2,8 @@
 
 namespace MagickAD\Utils;
 
+use MagickAD\Data\Schema;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -36,7 +38,7 @@ final class Stats_Dim_Cron {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats_dim';
+        $table = Schema::dim_table();
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {

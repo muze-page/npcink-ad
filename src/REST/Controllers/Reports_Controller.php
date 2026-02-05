@@ -2,6 +2,8 @@
 
 namespace MagickAD\REST\Controllers;
 
+use MagickAD\Data\Schema;
+use MagickAD\Data\Stats_Query;
 use WP_REST_Request;
 use WP_Error;
 use MagickAD\REST\Controllers\Track_Controller;
@@ -24,7 +26,7 @@ final class Reports_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats';
+        $table = Schema::stats_table();
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
@@ -35,21 +37,7 @@ final class Reports_Controller {
         }
 
         $start = self::date_for_offset($days - 1);
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT `date` AS date,
-                    SUM(impressions) AS views,
-                    SUM(clicks) AS clicks
-                 FROM %i
-                 WHERE `date` >= %s
-                 GROUP BY `date`
-                 ORDER BY date ASC",
-                $table,
-                $start
-            ),
-            ARRAY_A
-        );
+        $rows = Stats_Query::stats_report($wpdb, $table, $start);
         $map = array();
         foreach ($rows as $row) {
             $map[$row['date']] = array(
@@ -108,8 +96,8 @@ final class Reports_Controller {
         );
         $column = $column_map[$group_by];
         $table = $group_by === 'ad_id'
-            ? $wpdb->prefix . 'magick_ad_stats'
-            : $wpdb->prefix . 'magick_ad_stats_dim';
+            ? Schema::stats_table()
+            : Schema::dim_table();
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
@@ -120,45 +108,9 @@ final class Reports_Controller {
         }
 
         if ($group_by === 'ad_id') {
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
-            $rows = $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT %i AS dimension,
-                        SUM(impressions) AS views,
-                        SUM(clicks) AS clicks
-                     FROM %i
-                     WHERE `date` >= %s
-                     GROUP BY %i
-                     ORDER BY views DESC, clicks DESC
-                     LIMIT 50",
-                    $column,
-                    $table,
-                    $start,
-                    $column
-                ),
-                ARRAY_A
-            );
+            $rows = Stats_Query::dimension_report($wpdb, $table, $start, $column, false);
         } else {
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
-            $rows = $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT %i AS dimension,
-                        SUM(impressions) AS views,
-                        SUM(clicks) AS clicks
-                     FROM %i
-                     WHERE `date` >= %s
-                     AND %i <> ''
-                     GROUP BY %i
-                     ORDER BY views DESC, clicks DESC
-                     LIMIT 50",
-                    $column,
-                    $table,
-                    $start,
-                    $column,
-                    $column
-                ),
-                ARRAY_A
-            );
+            $rows = Stats_Query::dimension_report($wpdb, $table, $start, $column, true);
         }
         $result = array();
         foreach ($rows as $row) {
@@ -217,7 +169,7 @@ final class Reports_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats_variant';
+        $table = Schema::variant_table();
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
@@ -227,42 +179,7 @@ final class Reports_Controller {
         }
 
         $start = self::date_for_offset($days - 1);
-        if ($ad_id !== '') {
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
-            $rows = $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT variant_id,
-                        SUM(impressions) AS impressions,
-                        SUM(clicks) AS clicks
-                     FROM %i
-                     WHERE `date` >= %s AND ad_id = %s
-                     GROUP BY variant_id
-                     ORDER BY impressions DESC, clicks DESC
-                     LIMIT 100",
-                    $table,
-                    $start,
-                    $ad_id
-                ),
-                ARRAY_A
-            );
-        } else {
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
-            $rows = $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT ad_id, variant_id,
-                        SUM(impressions) AS impressions,
-                        SUM(clicks) AS clicks
-                     FROM %i
-                     WHERE `date` >= %s
-                     GROUP BY ad_id, variant_id
-                     ORDER BY impressions DESC, clicks DESC
-                     LIMIT 200",
-                    $table,
-                    $start
-                ),
-                ARRAY_A
-            );
-        }
+        $rows = Stats_Query::variants_report($wpdb, $table, $start, $ad_id);
         $result = array();
         foreach ($rows as $row) {
             $result[] = array(
@@ -298,7 +215,7 @@ final class Reports_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats_event';
+        $table = Schema::event_table();
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
@@ -314,23 +231,7 @@ final class Reports_Controller {
             'variant_id' => 'variant_id',
         );
         $column = $column_map[$group_by];
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT %i AS dimension,
-                    SUM(count) AS total
-                 FROM %i
-                 WHERE `date` >= %s
-                 GROUP BY %i
-                 ORDER BY total DESC
-                 LIMIT 100",
-                $column,
-                $table,
-                $start,
-                $column
-            ),
-            ARRAY_A
-        );
+        $rows = Stats_Query::events_report($wpdb, $table, $start, $column);
         $result = array();
         foreach ($rows as $row) {
             $dimension = isset($row['dimension']) ? (string) $row['dimension'] : '';

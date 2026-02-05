@@ -2,6 +2,7 @@
 
 namespace MagickAD\CLI;
 
+use MagickAD\Data\Schema;
 use MagickAD\Data\Settings;
 use MagickAD\Utils\Stats_Accumulator;
 use MagickAD\Utils\Tracking_Signature;
@@ -99,7 +100,7 @@ final class Magick_Command {
         $offset = isset($assoc_args['offset']) ? (int) $assoc_args['offset'] : 0;
         $file = isset($assoc_args['file']) ? (string) $assoc_args['file'] : '';
 
-        $table = $wpdb->prefix . 'magick_ad_stats_log';
+        $table = Schema::log_table();
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {

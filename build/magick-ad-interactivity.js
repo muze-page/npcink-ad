@@ -1,1 +1,844 @@
-(()=>{"use strict";(()=>{const e=window.MagickADBehavior||{},t=!0===e.requireConsent||"1"===e.requireConsent||1===e.requireConsent;let a=!0===e.hasConsent||"1"===e.hasConsent||1===e.hasConsent||!t,n=a,r=a;const o=!1!==e.consentBannerEnabled&&"0"!==e.consentBannerEnabled&&0!==e.consentBannerEnabled,d="string"==typeof e.consentBannerText&&e.consentBannerText.trim()?e.consentBannerText.trim():"为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。",i="string"==typeof e.consentBannerButton&&e.consentBannerButton.trim()?e.consentBannerButton.trim():"同意",c=()=>{if(!t||a||!o)return;if(!document.body)return;if(document.querySelector(".magick-ad-consent"))return;const e=document.createElement("div");e.className="magick-ad-consent";const c=document.createElement("div");c.className="magick-ad-consent__text",c.textContent=d;const s=document.createElement("div");s.className="magick-ad-consent__actions";const l=document.createElement("button");l.type="button",l.className="magick-ad-consent__btn",l.textContent=i,l.addEventListener("click",()=>{(()=>{const e="https:"===window.location.protocol?"; secure":"";document.cookie=`magick_ad_consent=1; path=/; max-age=31536000; samesite=lax${e}`})(),a=!0,n=!0,r=!0,window.MagickADBehavior&&(window.MagickADBehavior.hasConsent=!0),window.dispatchEvent(new CustomEvent("magickad:consent",{detail:{hasConsent:!0}})),e.remove()}),s.appendChild(l),e.appendChild(c),e.appendChild(s),document.body.appendChild(e)};if(!window.wp||!window.wp.interactivity){const e=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches,t=(e,t)=>{if(e===localStorage&&!n||e===sessionStorage&&!r)return null;try{return e.getItem(t)}catch(e){return null}},a=(e,t,a)=>{if(e===localStorage&&!n||e===sessionStorage&&!r)return!1;try{return e.setItem(t,a),!0}catch(e){return!1}},o=e=>{if(!n&&!r)return!0;const a=e.getAttribute("data-ad-freq-mode")||"none";if("none"===a)return!0;const o=e.getAttribute("data-ad-id");if(!o)return!0;if("session"===a)return!t(sessionStorage,`magick_ad_freq_${o}`);if("day"===a){const e=(new Date).toISOString().slice(0,10);return!t(localStorage,`magick_ad_freq_${o}_${e}`)}if("count"===a){const a=Number(e.getAttribute("data-ad-freq-limit")||1),n=t(localStorage,`magick_ad_freq_${o}`);return Number(n||0)<a}return!0},d=e=>{if(!n&&!r)return;const o=e.getAttribute("data-ad-freq-mode")||"none",d=e.getAttribute("data-ad-id");if(d&&"none"!==o)if("session"===o)a(sessionStorage,`magick_ad_freq_${d}`,"1");else if("day"===o){const e=(new Date).toISOString().slice(0,10);a(localStorage,`magick_ad_freq_${d}_${e}`,"1")}else if("count"===o){const n=`magick_ad_freq_${d}`,r=Number(e.getAttribute("data-ad-freq-limit")||1),o=t(localStorage,n),i=Number(o||0);i<r&&a(localStorage,n,String(i+1))}},i=e=>{const n=e.getAttribute("data-ad-id");if(!n)return!0;const o=Math.floor(Date.now()/3e5);let d=null;if(r){const e=`magick_ad_random_${n}_${o}`;d=t(sessionStorage,e),d||(d=Math.random()>=.5?"1":"0",a(sessionStorage,e,d))}else e.dataset.adRandomDecided?d=e.dataset.adRandomDecided:(d=Math.random()>=.5?"1":"0",e.dataset.adRandomDecided=d);return"1"===d},s=e=>"session"!==(e.getAttribute("data-ad-random")||"")||i(e),l=(e,t)=>{if(!e||!document.body)return;const a=e.getAttribute("data-ad-container")||"";"popup"!==a&&"interstitial"!==a||"1"!==e.getAttribute("data-ad-lock-scroll")||document.body.classList.toggle("magick-ad-lock-scroll",t)},u=t=>{if(!t)return;t.classList.remove("magick-ad-is-hidden"),t.removeAttribute("aria-hidden");const a=t.getAttribute("data-ad-anim");a&&!e&&t.classList.add(`magick-ad-anim--${a}`),l(t,!0),d(t)},m=e=>{e&&(e.classList.add("magick-ad-is-hidden"),e.setAttribute("aria-hidden","true"),l(e,!1))},g=e=>{if(!e||"1"===e.dataset.adBehaviorInitialized)return;if(e.dataset.adBehaviorInitialized="1",!o(e))return e.dataset.adFreqBlocked="1",void m(e);if(!s(e))return void m(e);const t=Number(e.getAttribute("data-ad-delay")||0);if(t>0)return m(e),void window.setTimeout(()=>{u(e)},1e3*t);u(e)},f=e=>{e&&(e.matches?.("[data-ad-id]")&&g(e),e.querySelectorAll&&e.querySelectorAll("[data-ad-id]").forEach(e=>{g(e)}))},b=()=>{window.MutationObserver&&document.body&&new MutationObserver(e=>{e.forEach(e=>{e.addedNodes.forEach(e=>{e&&1===e.nodeType&&f(e)})})}).observe(document.body,{childList:!0,subtree:!0})},h=e=>{e&&(e.contains(document.activeElement)&&document.activeElement.blur?.(),m(e))};return"loading"===document.readyState?document.addEventListener("DOMContentLoaded",()=>{c(),f(document.body),b()}):(c(),f(document.body),b()),void document.addEventListener("click",e=>{const t=e.target.closest(".magick-ad-close"),a=e.target.closest(".magick-ad-overlay");if(!t&&!a)return;const n=e.target.closest("[data-ad-id]");n&&(a&&"1"!==n.getAttribute("data-ad-close-overlay")||(h(n),e.preventDefault()))},!0)}const{store:s,getElement:l}=window.wp.interactivity,u='a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',m={element:null,lastFocused:null},g=new Set(["AREA","BASE","BR","COL","EMBED","HR","IMG","INPUT","LINK","META","PARAM","SOURCE","TRACK","WBR"]),f=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches,b=(e,t)=>{if(e===localStorage&&!n||e===sessionStorage&&!r)return null;try{return e.getItem(t)}catch(e){return null}},h=(e,t,a)=>{if(e===localStorage&&!n||e===sessionStorage&&!r)return!1;try{return e.setItem(t,a),!0}catch(e){return!1}},p=e=>e?e.closest("[data-ad-id]"):null,v=e=>e?e.querySelector(".magick-ad-popup"):null,A=e=>{if(!e)return;const t=e.getAttribute("data-ad-container")||"";if("popup"!==t&&"interstitial"!==t&&"banner"!==t)return;const a="popup"===t||"interstitial"===t,n=document.activeElement;m.element=e,m.lastFocused=a&&n&&!e.contains(n)?n:null,a&&(e=>{const t=v(e);if(!t)return;const a=t.querySelectorAll(u);a.length>0?a[0].focus({preventScroll:!0}):t.focus({preventScroll:!0})})(e),"popup"===t&&"1"===e.getAttribute("data-ad-lock-scroll")&&document.body.classList.add("magick-ad-lock-scroll")},k=e=>{if(!e||m.element!==e)return;const t=m.lastFocused;m.element=null,m.lastFocused=null,document.body.classList.remove("magick-ad-lock-scroll"),t&&"function"==typeof t.focus&&document.contains(t)&&t.focus({preventScroll:!0})},y=e=>{e&&(k(e),e.contains(document.activeElement)&&document.activeElement.blur?.(),e.classList.add("magick-ad-is-hidden"),e.setAttribute("aria-hidden","true"))};s("magick-ad",{actions:{initAd(e){const t=_(l?.().ref||e?.target);t&&q(t)},close(e){const t=p(l?.().ref||e?.target);t&&(y(t),e?.preventDefault())},onOverlayClick(e){const t=p(l?.().ref||e?.target);t&&"1"===t.getAttribute("data-ad-close-overlay")&&(y(t),e?.preventDefault())}}}),document.addEventListener("keydown",e=>{m.element&&(m.element.classList.contains("magick-ad-is-hidden")||("Escape"!==e.key?"Tab"===e.key&&((e,t)=>{if(!t)return;const a=t.getAttribute("data-ad-container")||"";if("popup"!==a&&"interstitial"!==a)return;const n=v(t);if(!n)return;const r=n.querySelectorAll(u);if(0===r.length)return e.preventDefault(),void n.focus();const o=r[0],d=r[r.length-1];e.shiftKey?document.activeElement!==o&&document.activeElement!==n||(e.preventDefault(),d.focus()):document.activeElement===d&&(e.preventDefault(),o.focus())})(e,m.element):"1"===m.element.getAttribute("data-ad-close-esc")&&(y(m.element),e.preventDefault())))}),document.addEventListener("focusin",e=>{m.element&&(m.element.classList.contains("magick-ad-is-hidden")||((e,t)=>{if(!t)return;const a=t.getAttribute("data-ad-container")||"";if("popup"!==a&&"interstitial"!==a)return;const n=v(t);if(!n||n.contains(e.target))return;const r=n.querySelectorAll(u);r.length>0?r[0].focus({preventScroll:!0}):n.focus({preventScroll:!0})})(e,m.element))});const S=(e,t,a)=>{if(!e||!t)return!1;const n=((e,t)=>{if(!e)return t;const a=e.tagName||"";return"append"!==t&&"prepend"!==t||"P"!==a&&!g.has(a)?t:"append"===t?"after":"before"})(e,a);try{switch(n){case"prepend":e.insertAdjacentElement("afterbegin",t);break;case"before":e.insertAdjacentElement("beforebegin",t);break;case"after":e.insertAdjacentElement("afterend",t);break;default:e.insertAdjacentElement("beforeend",t)}return!0}catch(e){return!1}},_=e=>{if(!e)return null;if(1===e.nodeType){const t=p(e);if(t)return t;if(e.getAttribute&&e.getAttribute("data-ad-id"))return e}return null},w=(e,t)=>{e.classList.remove("magick-ad-is-hidden"),e.removeAttribute("aria-hidden"),t&&!f&&e.classList.add(`magick-ad-anim--${t}`),(e=>{if(!n&&!r)return;const t=e.getAttribute("data-ad-freq-mode")||"none",a=e.getAttribute("data-ad-id");if(a&&"none"!==t)if("session"===t)h(sessionStorage,`magick_ad_freq_${a}`,"1");else if("day"===t){const e=(new Date).toISOString().slice(0,10);h(localStorage,`magick_ad_freq_${a}_${e}`,"1")}else if("count"===t){const t=`magick_ad_freq_${a}`,n=Number(e.getAttribute("data-ad-freq-limit")||1),r=b(localStorage,t),o=Number(r||0);o<n&&h(localStorage,t,String(o+1))}})(e),A(e)},E=e=>{e.classList.add("magick-ad-is-hidden"),e.setAttribute("aria-hidden","true"),k(e)},q=e=>{if(!e||"1"===e.dataset.adBehaviorInitialized)return;e.dataset.adBehaviorInitialized="1";const t=Number(e.getAttribute("data-ad-delay")||0),a=e.getAttribute("data-ad-anim"),o=e.getAttribute("data-ad-random")||"";if(!(e=>{if(!n&&!r)return!0;const t=e.getAttribute("data-ad-freq-mode")||"none";if("none"===t)return!0;const a=e.getAttribute("data-ad-id");if(!a)return!0;if("session"===t)return!b(sessionStorage,`magick_ad_freq_${a}`);if("day"===t){const e=(new Date).toISOString().slice(0,10);return!b(localStorage,`magick_ad_freq_${a}_${e}`)}if("count"===t){const t=Number(e.getAttribute("data-ad-freq-limit")||1),n=b(localStorage,`magick_ad_freq_${a}`);return Number(n||0)<t}return!0})(e))return e.dataset.adFreqBlocked="1",void E(e);if("session"===o){const t=(e=>{const t=e.getAttribute("data-ad-id");if(!t)return!0;const a=Math.floor(Date.now()/3e5);let n=null;if(r){const e=`magick_ad_random_${t}_${a}`;n=b(sessionStorage,e),n||(n=Math.random()>=.5?"1":"0",h(sessionStorage,e,n))}else e.dataset.adRandomDecided?n=e.dataset.adRandomDecided:(n=Math.random()>=.5?"1":"0",e.dataset.adRandomDecided=n);return"1"===n})(e);if(!t)return void E(e)}if(t>0)return E(e),void window.setTimeout(()=>{w(e,a)},1e3*t);w(e,a)},B=()=>{(()=>{const e=document.getElementById("magick-ad-stash");if(!e)return;const t=Array.from(e.querySelectorAll("[data-ad-node-type][data-ad-node-value]"));t.length&&(t.forEach(e=>{if("1"===e.dataset.nodeInserted)return;const t=e.getAttribute("data-ad-node-type")||"id",a=e.getAttribute("data-ad-node-value")||"",n=e.getAttribute("data-ad-node-insert")||"append",r=e.getAttribute("data-ad-node-match")||"first",o=e.getAttribute("data-ad-node-fallback")||"hide",d=Number(e.getAttribute("data-ad-node-index")||1);if("1"===e.getAttribute("data-ad-node-compact")&&e.classList.add("magick-ad-placement--node-compact"),!a)return void e.remove();let i=[];if("id"===t){const e=document.getElementById(a);e&&(i=[e])}else"class"===t&&(i=Array.from(document.getElementsByClassName(a)));if("nth"===r){const e=i[d-1];i=e?[e]:[]}else"first"===r&&(i=i.slice(0,1));if(i.length)if("all"===r&&i.length>1)i.forEach((t,a)=>{const r=0===a?e:e.cloneNode(!0);r.dataset.nodeInserted="1",S(t,r,n)});else{const t=i[0];S(t,e,n),e.dataset.nodeInserted="1"}else{if("footer"===o){const t=(()=>{let e=document.querySelector(".magick-ad-zone--footer");return e||(e=document.createElement("div"),e.className="magick-ad-zone magick-ad-zone--footer",document.body.appendChild(e),e)})();return S(t,e,"append"),void(e.dataset.nodeInserted="1")}e.remove()}}),e.children.length||e.remove())})(),document.querySelectorAll("[data-ad-id]").forEach(e=>{q(e)})},D=()=>{window.MutationObserver&&document.body&&(document.querySelector("[data-ad-node-type]")||!0===e.observeMutations)&&new MutationObserver(e=>{e.forEach(e=>{e.addedNodes.forEach(e=>{e&&1===e.nodeType&&(e.matches?.("[data-ad-id]")&&q(e),e.querySelectorAll&&e.querySelectorAll("[data-ad-id]").forEach(e=>{q(e)}))})})}).observe(document.body,{childList:!0,subtree:!0})};window.MagickADInteractivity={open:e=>{e&&(e.classList.contains("magick-ad-is-hidden")||A(e))},close:y,initAd:e=>{const t=_(e);t&&q(t)},initAll:B,isActive:!0},"loading"===document.readyState?document.addEventListener("DOMContentLoaded",()=>{c(),B(),D()}):(c(),B(),D())})()})();
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	// The require scope
+/******/ 	var __webpack_require__ = {};
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+/*!*******************************************************!*\
+  !*** ./assets/js/frontend/magick-ad-interactivity.ts ***!
+  \*******************************************************/
+__webpack_require__.r(__webpack_exports__);
+(() => {
+  const behaviorConfig = window.MagickADBehavior || {};
+  const requiresConsent = behaviorConfig.requireConsent === true || behaviorConfig.requireConsent === '1' || behaviorConfig.requireConsent === 1;
+  let hasConsent = behaviorConfig.hasConsent === true || behaviorConfig.hasConsent === '1' || behaviorConfig.hasConsent === 1 || !requiresConsent;
+  let allowLocalStorage = hasConsent;
+  let allowSessionStorage = hasConsent;
+  const consentBannerEnabled = behaviorConfig.consentBannerEnabled !== false && behaviorConfig.consentBannerEnabled !== '0' && behaviorConfig.consentBannerEnabled !== 0;
+  const consentBannerText = typeof behaviorConfig.consentBannerText === 'string' && behaviorConfig.consentBannerText.trim() ? behaviorConfig.consentBannerText.trim() : '为了提供更好的体验，我们会使用必要的 Cookie/存储进行频控。';
+  const consentBannerButton = typeof behaviorConfig.consentBannerButton === 'string' && behaviorConfig.consentBannerButton.trim() ? behaviorConfig.consentBannerButton.trim() : '同意';
+  const setConsentCookie = () => {
+    const maxAge = 60 * 60 * 24 * 365;
+    const secure = window.location.protocol === 'https:' ? '; secure' : '';
+    document.cookie = `magick_ad_consent=1; path=/; max-age=${maxAge}; samesite=lax${secure}`;
+  };
+  const initConsentBanner = () => {
+    if (!requiresConsent || hasConsent || !consentBannerEnabled) {
+      return;
+    }
+    if (!document.body) {
+      return;
+    }
+    if (document.querySelector('.magick-ad-consent')) {
+      return;
+    }
+    const bar = document.createElement('div');
+    bar.className = 'magick-ad-consent';
+    const text = document.createElement('div');
+    text.className = 'magick-ad-consent__text';
+    text.textContent = consentBannerText;
+    const actions = document.createElement('div');
+    actions.className = 'magick-ad-consent__actions';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'magick-ad-consent__btn';
+    button.textContent = consentBannerButton;
+    button.addEventListener('click', () => {
+      setConsentCookie();
+      hasConsent = true;
+      allowLocalStorage = true;
+      allowSessionStorage = true;
+      if (window.MagickADBehavior) {
+        window.MagickADBehavior.hasConsent = true;
+      }
+      window.dispatchEvent(new CustomEvent('magickad:consent', {
+        detail: {
+          hasConsent: true
+        }
+      }));
+      bar.remove();
+    });
+    actions.appendChild(button);
+    bar.appendChild(text);
+    bar.appendChild(actions);
+    document.body.appendChild(bar);
+  };
+  if (!window.wp || !window.wp.interactivity) {
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const readStorageValue = (storage, key) => {
+      if (storage === localStorage && !allowLocalStorage || storage === sessionStorage && !allowSessionStorage) {
+        return null;
+      }
+      try {
+        return storage.getItem(key);
+      } catch (err) {
+        return null;
+      }
+    };
+    const writeStorageValue = (storage, key, value) => {
+      if (storage === localStorage && !allowLocalStorage || storage === sessionStorage && !allowSessionStorage) {
+        return false;
+      }
+      try {
+        storage.setItem(key, value);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    };
+    const shouldShowByFrequency = ad => {
+      if (!allowLocalStorage && !allowSessionStorage) {
+        return true;
+      }
+      const mode = ad.getAttribute('data-ad-freq-mode') || 'none';
+      if (mode === 'none') {
+        return true;
+      }
+      const adId = ad.getAttribute('data-ad-id');
+      if (!adId) {
+        return true;
+      }
+      if (mode === 'session') {
+        return !readStorageValue(sessionStorage, `magick_ad_freq_${adId}`);
+      }
+      if (mode === 'day') {
+        const day = new Date().toISOString().slice(0, 10);
+        return !readStorageValue(localStorage, `magick_ad_freq_${adId}_${day}`);
+      }
+      if (mode === 'count') {
+        const limit = Number(ad.getAttribute('data-ad-freq-limit') || 1);
+        const rawCount = readStorageValue(localStorage, `magick_ad_freq_${adId}`);
+        const count = Number(rawCount || 0);
+        return count < limit;
+      }
+      return true;
+    };
+    const recordFrequency = ad => {
+      if (!allowLocalStorage && !allowSessionStorage) {
+        return;
+      }
+      const mode = ad.getAttribute('data-ad-freq-mode') || 'none';
+      const adId = ad.getAttribute('data-ad-id');
+      if (!adId || mode === 'none') {
+        return;
+      }
+      if (mode === 'session') {
+        writeStorageValue(sessionStorage, `magick_ad_freq_${adId}`, '1');
+      } else if (mode === 'day') {
+        const day = new Date().toISOString().slice(0, 10);
+        writeStorageValue(localStorage, `magick_ad_freq_${adId}_${day}`, '1');
+      } else if (mode === 'count') {
+        const key = `magick_ad_freq_${adId}`;
+        const limit = Number(ad.getAttribute('data-ad-freq-limit') || 1);
+        const rawCount = readStorageValue(localStorage, key);
+        const count = Number(rawCount || 0);
+        if (count < limit) {
+          writeStorageValue(localStorage, key, String(count + 1));
+        }
+      }
+    };
+    const decideRandomSession = ad => {
+      const adId = ad.getAttribute('data-ad-id');
+      if (!adId) {
+        return true;
+      }
+      const bucket = Math.floor(Date.now() / 300000);
+      let value = null;
+      if (allowSessionStorage) {
+        const key = `magick_ad_random_${adId}_${bucket}`;
+        value = readStorageValue(sessionStorage, key);
+        if (!value) {
+          value = Math.random() >= 0.5 ? '1' : '0';
+          writeStorageValue(sessionStorage, key, value);
+        }
+      } else if (ad.dataset.adRandomDecided) {
+        value = ad.dataset.adRandomDecided;
+      } else {
+        value = Math.random() >= 0.5 ? '1' : '0';
+        ad.dataset.adRandomDecided = value;
+      }
+      return value === '1';
+    };
+    const shouldShowByRandom = ad => {
+      const randomMode = ad.getAttribute('data-ad-random') || '';
+      if (randomMode !== 'session') {
+        return true;
+      }
+      return decideRandomSession(ad);
+    };
+    const updateLockScroll = (ad, shouldLock) => {
+      if (!ad || !document.body) {
+        return;
+      }
+      const container = ad.getAttribute('data-ad-container') || '';
+      if ((container === 'popup' || container === 'interstitial') && ad.getAttribute('data-ad-lock-scroll') === '1') {
+        document.body.classList.toggle('magick-ad-lock-scroll', shouldLock);
+      }
+    };
+    const showFallbackAd = ad => {
+      if (!ad) {
+        return;
+      }
+      ad.classList.remove('magick-ad-is-hidden');
+      ad.removeAttribute('aria-hidden');
+      const animation = ad.getAttribute('data-ad-anim');
+      if (animation && !prefersReducedMotion) {
+        ad.classList.add(`magick-ad-anim--${animation}`);
+      }
+      updateLockScroll(ad, true);
+      recordFrequency(ad);
+    };
+    const hideFallbackAd = ad => {
+      if (!ad) {
+        return;
+      }
+      ad.classList.add('magick-ad-is-hidden');
+      ad.setAttribute('aria-hidden', 'true');
+      updateLockScroll(ad, false);
+    };
+    const initFallbackAd = ad => {
+      if (!ad || ad.dataset.adBehaviorInitialized === '1') {
+        return;
+      }
+      ad.dataset.adBehaviorInitialized = '1';
+      if (!shouldShowByFrequency(ad)) {
+        ad.dataset.adFreqBlocked = '1';
+        hideFallbackAd(ad);
+        return;
+      }
+      if (!shouldShowByRandom(ad)) {
+        hideFallbackAd(ad);
+        return;
+      }
+      const delay = Number(ad.getAttribute('data-ad-delay') || 0);
+      if (delay > 0) {
+        hideFallbackAd(ad);
+        window.setTimeout(() => {
+          showFallbackAd(ad);
+        }, delay * 1000);
+        return;
+      }
+      showFallbackAd(ad);
+    };
+    const initFallbackAdsInRoot = root => {
+      if (!root) {
+        return;
+      }
+      if (root.matches?.('[data-ad-id]')) {
+        initFallbackAd(root);
+      }
+      if (root.querySelectorAll) {
+        root.querySelectorAll('[data-ad-id]').forEach(ad => {
+          initFallbackAd(ad);
+        });
+      }
+    };
+    const observeFallbackAds = () => {
+      if (!window.MutationObserver || !document.body) {
+        return;
+      }
+      const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+          mutation.addedNodes.forEach(node => {
+            if (!node || node.nodeType !== 1) {
+              return;
+            }
+            initFallbackAdsInRoot(node);
+          });
+        });
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    };
+    const closeFallback = ad => {
+      if (!ad) {
+        return;
+      }
+      if (ad.contains(document.activeElement)) {
+        document.activeElement.blur?.();
+      }
+      hideFallbackAd(ad);
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        initConsentBanner();
+        initFallbackAdsInRoot(document.body);
+        observeFallbackAds();
+      });
+    } else {
+      initConsentBanner();
+      initFallbackAdsInRoot(document.body);
+      observeFallbackAds();
+    }
+    document.addEventListener('click', event => {
+      const closeButton = event.target.closest('.magick-ad-close');
+      const overlay = event.target.closest('.magick-ad-overlay');
+      if (!closeButton && !overlay) {
+        return;
+      }
+      const ad = event.target.closest('[data-ad-id]');
+      if (!ad) {
+        return;
+      }
+      if (overlay && ad.getAttribute('data-ad-close-overlay') !== '1') {
+        return;
+      }
+      closeFallback(ad);
+      event.preventDefault();
+    }, true);
+    return;
+  }
+  const {
+    store,
+    getElement
+  } = window.wp.interactivity;
+  const focusableSelector = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+  const activeModal = {
+    element: null,
+    lastFocused: null
+  };
+  const voidElements = new Set(['AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT', 'LINK', 'META', 'PARAM', 'SOURCE', 'TRACK', 'WBR']);
+  const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const readStorageValue = (storage, key) => {
+    if (storage === localStorage && !allowLocalStorage || storage === sessionStorage && !allowSessionStorage) {
+      return null;
+    }
+    try {
+      return storage.getItem(key);
+    } catch (err) {
+      return null;
+    }
+  };
+  const writeStorageValue = (storage, key, value) => {
+    if (storage === localStorage && !allowLocalStorage || storage === sessionStorage && !allowSessionStorage) {
+      return false;
+    }
+    try {
+      storage.setItem(key, value);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
+  const getAdElement = element => {
+    if (!element) {
+      return null;
+    }
+    return element.closest('[data-ad-id]');
+  };
+  const getPopup = ad => ad ? ad.querySelector('.magick-ad-popup') : null;
+  const lockScroll = () => {
+    document.body.classList.add('magick-ad-lock-scroll');
+  };
+  const unlockScroll = () => {
+    document.body.classList.remove('magick-ad-lock-scroll');
+  };
+  const focusPopup = ad => {
+    const popup = getPopup(ad);
+    if (!popup) {
+      return;
+    }
+    const focusable = popup.querySelectorAll(focusableSelector);
+    if (focusable.length > 0) {
+      focusable[0].focus({
+        preventScroll: true
+      });
+    } else {
+      popup.focus({
+        preventScroll: true
+      });
+    }
+  };
+  const activateModal = ad => {
+    if (!ad) {
+      return;
+    }
+    const container = ad.getAttribute('data-ad-container') || '';
+    if (container !== 'popup' && container !== 'interstitial' && container !== 'banner') {
+      return;
+    }
+    const shouldFocus = container === 'popup' || container === 'interstitial';
+    const currentFocused = document.activeElement;
+    activeModal.element = ad;
+    activeModal.lastFocused = shouldFocus && currentFocused && !ad.contains(currentFocused) ? currentFocused : null;
+    if (shouldFocus) {
+      focusPopup(ad);
+    }
+    if (container === 'popup' && ad.getAttribute('data-ad-lock-scroll') === '1') {
+      lockScroll();
+    }
+  };
+  const deactivateModal = ad => {
+    if (!ad || activeModal.element !== ad) {
+      return;
+    }
+    const lastFocused = activeModal.lastFocused;
+    activeModal.element = null;
+    activeModal.lastFocused = null;
+    unlockScroll();
+    if (lastFocused && typeof lastFocused.focus === 'function' && document.contains(lastFocused)) {
+      lastFocused.focus({
+        preventScroll: true
+      });
+    }
+  };
+  const closeAd = ad => {
+    if (!ad) {
+      return;
+    }
+    deactivateModal(ad);
+    if (ad.contains(document.activeElement)) {
+      document.activeElement.blur?.();
+    }
+    ad.classList.add('magick-ad-is-hidden');
+    ad.setAttribute('aria-hidden', 'true');
+  };
+  const trapFocus = (event, ad) => {
+    if (!ad) {
+      return;
+    }
+    const container = ad.getAttribute('data-ad-container') || '';
+    if (container !== 'popup' && container !== 'interstitial') {
+      return;
+    }
+    const popup = getPopup(ad);
+    if (!popup) {
+      return;
+    }
+    const focusable = popup.querySelectorAll(focusableSelector);
+    if (focusable.length === 0) {
+      event.preventDefault();
+      popup.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey) {
+      if (document.activeElement === first || document.activeElement === popup) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else if (document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+  const keepFocus = (event, ad) => {
+    if (!ad) {
+      return;
+    }
+    const container = ad.getAttribute('data-ad-container') || '';
+    if (container !== 'popup' && container !== 'interstitial') {
+      return;
+    }
+    const popup = getPopup(ad);
+    if (!popup || popup.contains(event.target)) {
+      return;
+    }
+    const focusable = popup.querySelectorAll(focusableSelector);
+    if (focusable.length > 0) {
+      focusable[0].focus({
+        preventScroll: true
+      });
+    } else {
+      popup.focus({
+        preventScroll: true
+      });
+    }
+  };
+  store('magick-ad', {
+    actions: {
+      initAd(event) {
+        const ad = resolveAdElement(getElement?.().ref || event?.target);
+        if (!ad) {
+          return;
+        }
+        initAdBehavior(ad);
+      },
+      close(event) {
+        const ad = getAdElement(getElement?.().ref || event?.target);
+        if (!ad) {
+          return;
+        }
+        closeAd(ad);
+        event?.preventDefault();
+      },
+      onOverlayClick(event) {
+        const ad = getAdElement(getElement?.().ref || event?.target);
+        if (!ad) {
+          return;
+        }
+        if (ad.getAttribute('data-ad-close-overlay') === '1') {
+          closeAd(ad);
+          event?.preventDefault();
+        }
+      }
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (!activeModal.element) {
+      return;
+    }
+    if (activeModal.element.classList.contains('magick-ad-is-hidden')) {
+      return;
+    }
+    if (event.key === 'Escape') {
+      if (activeModal.element.getAttribute('data-ad-close-esc') === '1') {
+        closeAd(activeModal.element);
+        event.preventDefault();
+      }
+      return;
+    }
+    if (event.key === 'Tab') {
+      trapFocus(event, activeModal.element);
+    }
+  });
+  document.addEventListener('focusin', event => {
+    if (!activeModal.element) {
+      return;
+    }
+    if (activeModal.element.classList.contains('magick-ad-is-hidden')) {
+      return;
+    }
+    keepFocus(event, activeModal.element);
+  });
+  const ensureFooterZone = () => {
+    let zone = document.querySelector('.magick-ad-zone--footer');
+    if (zone) {
+      return zone;
+    }
+    zone = document.createElement('div');
+    zone.className = 'magick-ad-zone magick-ad-zone--footer';
+    document.body.appendChild(zone);
+    return zone;
+  };
+  const normalizeInsertMode = (target, insertMode) => {
+    if (!target) {
+      return insertMode;
+    }
+    const tag = target.tagName || '';
+    if (insertMode === 'append' || insertMode === 'prepend') {
+      if (tag === 'P' || voidElements.has(tag)) {
+        return insertMode === 'append' ? 'after' : 'before';
+      }
+    }
+    return insertMode;
+  };
+  const insertElement = (target, element, insertMode) => {
+    if (!target || !element) {
+      return false;
+    }
+    const mode = normalizeInsertMode(target, insertMode);
+    try {
+      switch (mode) {
+        case 'prepend':
+          target.insertAdjacentElement('afterbegin', element);
+          break;
+        case 'before':
+          target.insertAdjacentElement('beforebegin', element);
+          break;
+        case 'after':
+          target.insertAdjacentElement('afterend', element);
+          break;
+        case 'append':
+        default:
+          target.insertAdjacentElement('beforeend', element);
+          break;
+      }
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
+  const placeNodeAds = () => {
+    const stash = document.getElementById('magick-ad-stash');
+    if (!stash) {
+      return;
+    }
+    const units = Array.from(stash.querySelectorAll('[data-ad-node-type][data-ad-node-value]'));
+    if (!units.length) {
+      return;
+    }
+    units.forEach(unit => {
+      if (unit.dataset.nodeInserted === '1') {
+        return;
+      }
+      const type = unit.getAttribute('data-ad-node-type') || 'id';
+      const value = unit.getAttribute('data-ad-node-value') || '';
+      const insertMode = unit.getAttribute('data-ad-node-insert') || 'append';
+      const matchMode = unit.getAttribute('data-ad-node-match') || 'first';
+      const fallback = unit.getAttribute('data-ad-node-fallback') || 'hide';
+      const index = Number(unit.getAttribute('data-ad-node-index') || 1);
+      const compact = unit.getAttribute('data-ad-node-compact') === '1';
+      if (compact) {
+        unit.classList.add('magick-ad-placement--node-compact');
+      }
+      if (!value) {
+        unit.remove();
+        return;
+      }
+      let targets = [];
+      if (type === 'id') {
+        const target = document.getElementById(value);
+        if (target) {
+          targets = [target];
+        }
+      } else if (type === 'class') {
+        targets = Array.from(document.getElementsByClassName(value));
+      }
+      if (matchMode === 'nth') {
+        const target = targets[index - 1];
+        targets = target ? [target] : [];
+      } else if (matchMode === 'first') {
+        targets = targets.slice(0, 1);
+      }
+      if (!targets.length) {
+        if (fallback === 'footer') {
+          const zone = ensureFooterZone();
+          insertElement(zone, unit, 'append');
+          unit.dataset.nodeInserted = '1';
+          return;
+        }
+        unit.remove();
+        return;
+      }
+      if (matchMode === 'all' && targets.length > 1) {
+        targets.forEach((target, idx) => {
+          const node = idx === 0 ? unit : unit.cloneNode(true);
+          node.dataset.nodeInserted = '1';
+          insertElement(target, node, insertMode);
+        });
+      } else {
+        const target = targets[0];
+        insertElement(target, unit, insertMode);
+        unit.dataset.nodeInserted = '1';
+      }
+    });
+    if (!stash.children.length) {
+      stash.remove();
+    }
+  };
+  const resolveAdElement = input => {
+    if (!input) {
+      return null;
+    }
+    if (input.nodeType === 1) {
+      const wrapped = getAdElement(input);
+      if (wrapped) {
+        return wrapped;
+      }
+      if (input.getAttribute && input.getAttribute('data-ad-id')) {
+        return input;
+      }
+    }
+    return null;
+  };
+  const shouldShowByFrequency = ad => {
+    if (!allowLocalStorage && !allowSessionStorage) {
+      return true;
+    }
+    const mode = ad.getAttribute('data-ad-freq-mode') || 'none';
+    if (mode === 'none') {
+      return true;
+    }
+    const adId = ad.getAttribute('data-ad-id');
+    if (!adId) {
+      return true;
+    }
+    if (mode === 'session') {
+      return !readStorageValue(sessionStorage, `magick_ad_freq_${adId}`);
+    }
+    if (mode === 'day') {
+      const day = new Date().toISOString().slice(0, 10);
+      return !readStorageValue(localStorage, `magick_ad_freq_${adId}_${day}`);
+    }
+    if (mode === 'count') {
+      const limit = Number(ad.getAttribute('data-ad-freq-limit') || 1);
+      const rawCount = readStorageValue(localStorage, `magick_ad_freq_${adId}`);
+      const count = Number(rawCount || 0);
+      return count < limit;
+    }
+    return true;
+  };
+  const recordFrequency = ad => {
+    if (!allowLocalStorage && !allowSessionStorage) {
+      return;
+    }
+    const mode = ad.getAttribute('data-ad-freq-mode') || 'none';
+    const adId = ad.getAttribute('data-ad-id');
+    if (!adId || mode === 'none') {
+      return;
+    }
+    if (mode === 'session') {
+      writeStorageValue(sessionStorage, `magick_ad_freq_${adId}`, '1');
+    } else if (mode === 'day') {
+      const day = new Date().toISOString().slice(0, 10);
+      writeStorageValue(localStorage, `magick_ad_freq_${adId}_${day}`, '1');
+    } else if (mode === 'count') {
+      const key = `magick_ad_freq_${adId}`;
+      const limit = Number(ad.getAttribute('data-ad-freq-limit') || 1);
+      const rawCount = readStorageValue(localStorage, key);
+      const count = Number(rawCount || 0);
+      if (count < limit) {
+        writeStorageValue(localStorage, key, String(count + 1));
+      }
+    }
+  };
+  const decideRandomSession = ad => {
+    const adId = ad.getAttribute('data-ad-id');
+    if (!adId) {
+      return true;
+    }
+    const bucket = Math.floor(Date.now() / 300000);
+    let value = null;
+    if (allowSessionStorage) {
+      const key = `magick_ad_random_${adId}_${bucket}`;
+      value = readStorageValue(sessionStorage, key);
+      if (!value) {
+        value = Math.random() >= 0.5 ? '1' : '0';
+        writeStorageValue(sessionStorage, key, value);
+      }
+    } else if (ad.dataset.adRandomDecided) {
+      value = ad.dataset.adRandomDecided;
+    } else {
+      value = Math.random() >= 0.5 ? '1' : '0';
+      ad.dataset.adRandomDecided = value;
+    }
+    return value === '1';
+  };
+  const showAd = (ad, animation) => {
+    ad.classList.remove('magick-ad-is-hidden');
+    ad.removeAttribute('aria-hidden');
+    if (animation && !prefersReducedMotion) {
+      ad.classList.add(`magick-ad-anim--${animation}`);
+    }
+    recordFrequency(ad);
+    activateModal(ad);
+  };
+  const hideAd = ad => {
+    ad.classList.add('magick-ad-is-hidden');
+    ad.setAttribute('aria-hidden', 'true');
+    deactivateModal(ad);
+  };
+  const initAdBehavior = ad => {
+    if (!ad || ad.dataset.adBehaviorInitialized === '1') {
+      return;
+    }
+    ad.dataset.adBehaviorInitialized = '1';
+    const delay = Number(ad.getAttribute('data-ad-delay') || 0);
+    const animation = ad.getAttribute('data-ad-anim');
+    const randomMode = ad.getAttribute('data-ad-random') || '';
+    if (!shouldShowByFrequency(ad)) {
+      ad.dataset.adFreqBlocked = '1';
+      hideAd(ad);
+      return;
+    }
+    if (randomMode === 'session') {
+      const shouldShow = decideRandomSession(ad);
+      if (!shouldShow) {
+        hideAd(ad);
+        return;
+      }
+    }
+    if (delay > 0) {
+      hideAd(ad);
+      window.setTimeout(() => {
+        showAd(ad, animation);
+      }, delay * 1000);
+      return;
+    }
+    showAd(ad, animation);
+  };
+  const initAll = () => {
+    placeNodeAds();
+    document.querySelectorAll('[data-ad-id]').forEach(element => {
+      initAdBehavior(element);
+    });
+  };
+  const shouldObserveMutations = () => {
+    if (!window.MutationObserver || !document.body) {
+      return false;
+    }
+    if (document.querySelector('[data-ad-node-type]')) {
+      return true;
+    }
+    return behaviorConfig.observeMutations === true;
+  };
+  const observeNewAds = () => {
+    if (!shouldObserveMutations()) {
+      return;
+    }
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (!node || node.nodeType !== 1) {
+            return;
+          }
+          if (node.matches?.('[data-ad-id]')) {
+            initAdBehavior(node);
+          }
+          if (node.querySelectorAll) {
+            node.querySelectorAll('[data-ad-id]').forEach(element => {
+              initAdBehavior(element);
+            });
+          }
+        });
+      });
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  };
+  window.MagickADInteractivity = {
+    open: ad => {
+      if (!ad) {
+        return;
+      }
+      if (ad.classList.contains('magick-ad-is-hidden')) {
+        return;
+      }
+      activateModal(ad);
+    },
+    close: closeAd,
+    initAd: ad => {
+      const resolved = resolveAdElement(ad);
+      if (!resolved) {
+        return;
+      }
+      initAdBehavior(resolved);
+    },
+    initAll,
+    isActive: true
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initConsentBanner();
+      initAll();
+      observeNewAds();
+    });
+  } else {
+    initConsentBanner();
+    initAll();
+    observeNewAds();
+  }
+})();
+
+/******/ })()
+;
+//# sourceMappingURL=magick-ad-interactivity.js.map

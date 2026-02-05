@@ -6,6 +6,8 @@ use WP_Error;
 use WP_REST_Request;
 use MagickAD\Data\Ads;
 use MagickAD\Data\Schema;
+use MagickAD\Data\Stats_Query;
+use MagickAD\Utils\Diagnostics;
 use MagickAD\Data\Slots;
 use MagickAD\Utils\TrackingStrategy;
 use MagickAD\Utils\Tracking_Signature;
@@ -38,9 +40,6 @@ final class Track_Controller {
     private const OPTION_DIM_READY = 'magick_ad_stats_dim_ready';
     private const OPTION_VARIANT_READY = 'magick_ad_stats_variant_ready';
     private const OPTION_EVENT_READY = 'magick_ad_stats_event_ready';
-    private const OPTION_DIAGNOSTICS_ENABLED = 'magick_ad_stats_diagnostics';
-    private const OPTION_DIAGNOSTICS_EXPIRES = 'magick_ad_stats_diagnostics_expires_at';
-    private const OPTION_DIAGNOSTICS_RETENTION = 'magick_ad_stats_diagnostics_retention_days';
 
     private static ?array $known_ads = null;
     private static ?array $slot_allowlist = null;
@@ -274,7 +273,7 @@ final class Track_Controller {
             return $event_written;
         }
 
-        if (self::diagnostics_enabled()) {
+        if (Diagnostics::is_enabled()) {
             self::write_logs_bulk($log_rows);
         }
 
@@ -442,7 +441,7 @@ final class Track_Controller {
             $event_agg[$event_key]['count'] += 1;
         }
 
-        if (self::diagnostics_enabled()) {
+        if (Diagnostics::is_enabled()) {
             $log_rows[] = array(
                 'ad_id' => $payload['ad_id'],
                 'event' => $payload['event'],
@@ -566,7 +565,7 @@ final class Track_Controller {
             }
         }
 
-        if (self::diagnostics_enabled()) {
+        if (Diagnostics::is_enabled()) {
             self::write_log(
                 $payload['ad_id'],
                 $payload['event'],
@@ -1093,24 +1092,17 @@ final class Track_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats';
+        $table = Schema::stats_table();
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
-        $result = $wpdb->query(
-            $wpdb->prepare(
-                "INSERT INTO %i (`date`, `ad_id`, `impressions`, `clicks`)
-                 VALUES (%s, %s, %d, %d)
-                 ON DUPLICATE KEY UPDATE
-                    impressions = impressions + VALUES(impressions),
-                    clicks = clicks + VALUES(clicks)",
-                $table,
-                $date,
-                $ad_id,
-                $impressions,
-                $clicks
-            )
+        $result = Stats_Query::stats_upsert(
+            $wpdb,
+            $table,
+            $date,
+            $ad_id,
+            $impressions,
+            $clicks
         );
         if ($result === false) {
             return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
@@ -1136,25 +1128,18 @@ final class Track_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats_variant';
+        $table = Schema::variant_table();
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
-        $result = $wpdb->query(
-            $wpdb->prepare(
-                "INSERT INTO %i (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
-                 VALUES (%s, %s, %s, %d, %d)
-                 ON DUPLICATE KEY UPDATE
-                    impressions = impressions + VALUES(impressions),
-                    clicks = clicks + VALUES(clicks)",
-                $table,
-                $date,
-                $ad_id,
-                $variant_id,
-                $impressions,
-                $clicks
-            )
+        $result = Stats_Query::variant_upsert(
+            $wpdb,
+            $table,
+            $date,
+            $ad_id,
+            $variant_id,
+            $impressions,
+            $clicks
         );
         if ($result === false) {
             return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
@@ -1180,22 +1165,16 @@ final class Track_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats_event';
+        $table = Schema::event_table();
 
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
-        $result = $wpdb->query(
-            $wpdb->prepare(
-                "INSERT INTO %i (`date`, `ad_id`, `event`, `variant_id`, `count`)
-                 VALUES (%s, %s, %s, %s, %d)
-                 ON DUPLICATE KEY UPDATE
-                    count = count + VALUES(count)",
-                $table,
-                $date,
-                $ad_id,
-                $event,
-                $variant_id ?: '',
-                1
-            )
+        $result = Stats_Query::event_upsert(
+            $wpdb,
+            $table,
+            $date,
+            $ad_id,
+            $event,
+            $variant_id ?: '',
+            1
         );
         if ($result === false) {
             return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
@@ -1230,7 +1209,7 @@ final class Track_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats';
+        $table = Schema::stats_table();
 
         foreach ($stats_agg as $row) {
             $row = is_array($row) ? $row : array();
@@ -1242,20 +1221,13 @@ final class Track_Controller {
                 continue;
             }
 
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
-            $result = $wpdb->query(
-                $wpdb->prepare(
-                    "INSERT INTO %i (`date`, `ad_id`, `impressions`, `clicks`)
-                     VALUES (%s, %s, %d, %d)
-                     ON DUPLICATE KEY UPDATE
-                        impressions = impressions + VALUES(impressions),
-                        clicks = clicks + VALUES(clicks)",
-                    $table,
-                    $date,
-                    $ad_id,
-                    $impressions,
-                    $clicks
-                )
+            $result = Stats_Query::stats_upsert(
+                $wpdb,
+                $table,
+                $date,
+                $ad_id,
+                $impressions,
+                $clicks
             );
             if ($result === false) {
                 return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
@@ -1307,7 +1279,7 @@ final class Track_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats_variant';
+        $table = Schema::variant_table();
 
         foreach ($variant_agg as $row) {
             $row = is_array($row) ? $row : array();
@@ -1323,21 +1295,14 @@ final class Track_Controller {
                 continue;
             }
 
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
-            $result = $wpdb->query(
-                $wpdb->prepare(
-                    "INSERT INTO %i (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
-                     VALUES (%s, %s, %s, %d, %d)
-                     ON DUPLICATE KEY UPDATE
-                        impressions = impressions + VALUES(impressions),
-                        clicks = clicks + VALUES(clicks)",
-                    $table,
-                    $date,
-                    $ad_id,
-                    $variant_id,
-                    $impressions,
-                    $clicks
-                )
+            $result = Stats_Query::variant_upsert(
+                $wpdb,
+                $table,
+                $date,
+                $ad_id,
+                $variant_id,
+                $impressions,
+                $clicks
             );
             if ($result === false) {
                 return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
@@ -1372,7 +1337,7 @@ final class Track_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats_event';
+        $table = Schema::event_table();
 
         foreach ($event_agg as $row) {
             $row = is_array($row) ? $row : array();
@@ -1385,20 +1350,14 @@ final class Track_Controller {
                 continue;
             }
 
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
-            $result = $wpdb->query(
-                $wpdb->prepare(
-                    "INSERT INTO %i (`date`, `ad_id`, `event`, `variant_id`, `count`)
-                     VALUES (%s, %s, %s, %s, %d)
-                     ON DUPLICATE KEY UPDATE
-                        count = count + VALUES(count)",
-                    $table,
-                    $date,
-                    $ad_id,
-                    $event,
-                    $variant_id,
-                    $count
-                )
+            $result = Stats_Query::event_upsert(
+                $wpdb,
+                $table,
+                $date,
+                $ad_id,
+                $event,
+                $variant_id,
+                $count
             );
             if ($result === false) {
                 return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
@@ -1428,23 +1387,20 @@ final class Track_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats_dim';
+        $table = Schema::dim_table();
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
-        $result = $wpdb->query(
-            $wpdb->prepare(
-                "INSERT INTO %i (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`)\n                 VALUES (%s, %s, %s, %s, %s, %d, %d)\n                 ON DUPLICATE KEY UPDATE\n                    impressions = impressions + VALUES(impressions),\n                    clicks = clicks + VALUES(clicks)",
-                $table,
-                $date,
-                $ad_id,
-                $slot,
-                $position,
-                $container,
-                $impressions,
-                $clicks
-            )
+        $result = Stats_Query::dim_upsert(
+            $wpdb,
+            $table,
+            $date,
+            $ad_id,
+            $slot,
+            $position,
+            $container,
+            $impressions,
+            $clicks
         );
         if ($result === false) {
             return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
@@ -1504,7 +1460,7 @@ final class Track_Controller {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats_dim';
+        $table = Schema::dim_table();
 
         foreach ($dim_agg as $row) {
             $row = is_array($row) ? $row : array();
@@ -1522,23 +1478,16 @@ final class Track_Controller {
                 continue;
             }
 
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
-            $result = $wpdb->query(
-                $wpdb->prepare(
-                    "INSERT INTO %i (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`)
-                     VALUES (%s, %s, %s, %s, %s, %d, %d)
-                     ON DUPLICATE KEY UPDATE
-                        impressions = impressions + VALUES(impressions),
-                        clicks = clicks + VALUES(clicks)",
-                    $table,
-                    $date,
-                    $ad_id,
-                    $slot,
-                    $position,
-                    $container,
-                    $impressions,
-                    $clicks
-                )
+            $result = Stats_Query::dim_upsert(
+                $wpdb,
+                $table,
+                $date,
+                $ad_id,
+                $slot,
+                $position,
+                $container,
+                $impressions,
+                $clicks
             );
             if ($result === false) {
                 return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
@@ -1548,24 +1497,13 @@ final class Track_Controller {
         return true;
     }
 
-    private static function diagnostics_enabled(): bool {
-        $enabled = (get_option(self::OPTION_DIAGNOSTICS_ENABLED, '0') === '1');
-        $expires_at = (int) get_option(self::OPTION_DIAGNOSTICS_EXPIRES, 0);
-        if ($enabled && $expires_at > 0 && current_time('timestamp') >= $expires_at) {
-            update_option(self::OPTION_DIAGNOSTICS_ENABLED, '0');
-            update_option(self::OPTION_DIAGNOSTICS_EXPIRES, 0);
-            $enabled = false;
-        }
-        return (bool) apply_filters('magick_ad_stats_diagnostics_enabled', $enabled);
-    }
-
     private static function write_log(string $ad_id, string $event, string $page_url, int $user_id): void {
         if (!self::ensure_log_ready()) {
             return;
         }
 
         global $wpdb;
-        $log_table = $wpdb->prefix . 'magick_ad_stats_log';
+        $log_table = Schema::log_table();
         $page_url = self::sanitize_log_page_url($page_url);
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
@@ -1597,7 +1535,7 @@ final class Track_Controller {
         }
 
         global $wpdb;
-        $log_table = $wpdb->prefix . 'magick_ad_stats_log';
+        $log_table = Schema::log_table();
         $user_agent = substr(
             isset($_SERVER['HTTP_USER_AGENT'])
                 ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT']))

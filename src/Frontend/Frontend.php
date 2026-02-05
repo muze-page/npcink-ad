@@ -5,6 +5,7 @@ namespace MagickAD\Frontend;
 use MagickAD\Data\Ads;
 use MagickAD\Data\Settings;
 use MagickAD\REST\Controllers\Track_Controller;
+use MagickAD\Utils\Diagnostics;
 use MagickAD\Utils\Capabilities;
 
 if (!defined('ABSPATH')) {
@@ -736,8 +737,7 @@ final class Frontend {
         $track_handle = 'magick-ad-track';
         $container_index = self::get_container_index();
         $defer = self::has_deferred_ads($ads, $container_index);
-        $diagnostics_enabled = (get_option('magick_ad_stats_diagnostics', '0') === '1');
-        $diagnostics_enabled = (bool) apply_filters('magick_ad_stats_diagnostics_enabled', $diagnostics_enabled);
+        $diagnostics_enabled = Diagnostics::is_enabled();
         $behavior_config = self::get_behavior_config();
         $consent_banner_enabled = !empty($behavior_config['consentBannerEnabled']);
         $needs_behavior = self::needs_behavior_assets($ads, $container_index) || $consent_banner_enabled;

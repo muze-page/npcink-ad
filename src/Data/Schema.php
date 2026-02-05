@@ -2,6 +2,8 @@
 
 namespace MagickAD\Data;
 
+use MagickAD\Utils\Diagnostics;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -12,6 +14,26 @@ final class Schema {
     private const LOG_READY_KEY = 'magick_ad_stats_log_ready';
     private const DIM_READY_KEY = 'magick_ad_stats_dim_ready';
     private const EVENT_READY_KEY = 'magick_ad_stats_event_ready';
+
+    public static function stats_table(): string {
+        return self::table_name('magick_ad_stats');
+    }
+
+    public static function log_table(): string {
+        return self::table_name('magick_ad_stats_log');
+    }
+
+    public static function dim_table(): string {
+        return self::table_name('magick_ad_stats_dim');
+    }
+
+    public static function variant_table(): string {
+        return self::table_name('magick_ad_stats_variant');
+    }
+
+    public static function event_table(): string {
+        return self::table_name('magick_ad_stats_event');
+    }
 
     public static function maybe_upgrade(): void {
         $stored = get_option(self::OPTION_KEY, '0');
@@ -28,11 +50,11 @@ final class Schema {
     public static function install(): void {
         global $wpdb;
 
-        $table = $wpdb->prefix . 'magick_ad_stats';
-        $log_table = $wpdb->prefix . 'magick_ad_stats_log';
-        $dim_table = $wpdb->prefix . 'magick_ad_stats_dim';
-        $variant_table = $wpdb->prefix . 'magick_ad_stats_variant';
-        $event_table = $wpdb->prefix . 'magick_ad_stats_event';
+        $table = self::stats_table();
+        $log_table = self::log_table();
+        $dim_table = self::dim_table();
+        $variant_table = self::variant_table();
+        $event_table = self::event_table();
         $charset_collate = $wpdb->get_charset_collate();
 
         if (self::table_exists($table) && !self::table_has_column($table, 'impressions')) {
@@ -147,29 +169,27 @@ final class Schema {
 
     private static function is_schema_ready(): bool {
         global $wpdb;
-        $table = $wpdb->prefix . 'magick_ad_stats';
+        $table = self::stats_table();
         if (!self::table_exists($table)) {
             return false;
         }
         if (!self::table_has_column($table, 'impressions')) {
             return false;
         }
-        $dim_table = $wpdb->prefix . 'magick_ad_stats_dim';
+        $dim_table = self::dim_table();
         if (!self::table_exists($dim_table)) {
             return false;
         }
-        $variant_table = $wpdb->prefix . 'magick_ad_stats_variant';
+        $variant_table = self::variant_table();
         if (!self::table_exists($variant_table)) {
             return false;
         }
-        $event_table = $wpdb->prefix . 'magick_ad_stats_event';
+        $event_table = self::event_table();
         if (!self::table_exists($event_table)) {
             return false;
         }
-        $diagnostics_enabled = (get_option('magick_ad_stats_diagnostics', '0') === '1');
-        $diagnostics_enabled = (bool) apply_filters('magick_ad_stats_diagnostics_enabled', $diagnostics_enabled);
-        if ($diagnostics_enabled) {
-            $log_table = $wpdb->prefix . 'magick_ad_stats_log';
+        if (Diagnostics::is_enabled()) {
+            $log_table = self::log_table();
             if (!self::table_exists($log_table)) {
                 return false;
             }
@@ -178,17 +198,16 @@ final class Schema {
     }
 
     public static function get_table_status(): array {
-        global $wpdb;
-        $stats_table = $wpdb->prefix . 'magick_ad_stats';
-        $log_table = $wpdb->prefix . 'magick_ad_stats_log';
-        $dim_table = $wpdb->prefix . 'magick_ad_stats_dim';
+        $stats_table = self::stats_table();
+        $log_table = self::log_table();
+        $dim_table = self::dim_table();
 
         $stats_exists = self::table_exists($stats_table);
         $stats_ready = $stats_exists && self::table_has_column($stats_table, 'impressions');
         $log_exists = self::table_exists($log_table);
-        $variant_table = $wpdb->prefix . 'magick_ad_stats_variant';
+        $variant_table = self::variant_table();
         $variant_exists = self::table_exists($variant_table);
-        $event_table = $wpdb->prefix . 'magick_ad_stats_event';
+        $event_table = self::event_table();
         $event_exists = self::table_exists($event_table);
         $dim_exists = self::table_exists($dim_table);
         $dim_ready = $dim_exists
@@ -233,5 +252,10 @@ final class Schema {
         );
         $cache[$cache_key] = !empty($value);
         return $cache[$cache_key];
+    }
+
+    private static function table_name(string $table): string {
+        global $wpdb;
+        return $wpdb->prefix . $table;
     }
 }

@@ -2,6 +2,8 @@
 
 namespace MagickAD\Utils;
 
+use MagickAD\Data\Schema;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -15,7 +17,7 @@ final class Diagnostics_Cron {
     }
 
     public static function maybe_schedule(): void {
-        if (!self::diagnostics_enabled()) {
+        if (!Diagnostics::is_enabled()) {
             self::unschedule();
             return;
         }
@@ -33,12 +35,12 @@ final class Diagnostics_Cron {
     }
 
     public static function cleanup(): void {
-        if (!self::diagnostics_enabled()) {
+        if (!Diagnostics::is_enabled()) {
             return;
         }
 
         global $wpdb;
-        $log_table = $wpdb->prefix . 'magick_ad_stats_log';
+        $log_table = Schema::log_table();
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $log_table));
         if ($exists !== $log_table) {
@@ -58,18 +60,6 @@ final class Diagnostics_Cron {
                 $cutoff
             )
         );
-    }
-
-    private static function diagnostics_enabled(): bool {
-        $enabled = (get_option('magick_ad_stats_diagnostics', '0') === '1');
-        $enabled = (bool) apply_filters('magick_ad_stats_diagnostics_enabled', $enabled);
-        $expires_at = (int) get_option('magick_ad_stats_diagnostics_expires_at', 0);
-        if ($enabled && $expires_at > 0 && current_time('timestamp') >= $expires_at) {
-            update_option('magick_ad_stats_diagnostics', '0');
-            update_option('magick_ad_stats_diagnostics_expires_at', 0);
-            $enabled = false;
-        }
-        return $enabled;
     }
 
     private static function unschedule(): void {

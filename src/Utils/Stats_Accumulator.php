@@ -227,7 +227,7 @@ final class Stats_Accumulator {
             return;
         }
 
-        $table = $wpdb->prefix . 'magick_ad_stats_dim';
+        $table = Schema::dim_table();
         foreach ($batch as $hash => $parts) {
             $parts = is_array($parts) ? $parts : array();
             $date = isset($parts[0]) ? (string) $parts[0] : '';
@@ -291,7 +291,7 @@ final class Stats_Accumulator {
             return;
         }
 
-        $table = $wpdb->prefix . 'magick_ad_stats_variant';
+        $table = Schema::variant_table();
         foreach ($batch as $hash => $parts) {
             $parts = is_array($parts) ? $parts : array();
             $date = isset($parts[0]) ? (string) $parts[0] : '';
@@ -351,7 +351,7 @@ final class Stats_Accumulator {
             return;
         }
 
-        $table = $wpdb->prefix . 'magick_ad_stats_event';
+        $table = Schema::event_table();
         foreach ($batch as $hash => $parts) {
             $parts = is_array($parts) ? $parts : array();
             $date = isset($parts[0]) ? (string) $parts[0] : '';
