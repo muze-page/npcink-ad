@@ -326,8 +326,8 @@ final class Admin {
     private function render_shortcode_help(string $title, array $examples): void {
         echo '<h2>' . esc_html($title) . '</h2>';
         echo '<p>' . esc_html__('兼容经典编辑器/复制粘贴场景，适合内容中快速插入。', 'magick-ad') . '</p>';
-        $examples = array_map('esc_html', $examples);
-        echo '<pre><code>' . implode("\n", $examples) . '</code></pre>';
+        $examples_output = implode("\n", $examples);
+        echo '<pre><code>' . esc_html($examples_output) . '</code></pre>';
     }
 
     private function render_template_help(string $title, string $example): void {
@@ -380,11 +380,13 @@ final class Admin {
     }
 
     private function get_url_param(string $key, string $fallback): string {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only debug filters.
         $value = isset($_GET[$key]) ? esc_url_raw(wp_unslash($_GET[$key])) : '';
         return $value !== '' ? $value : $fallback;
     }
 
     private function get_select_param(string $key, array $allowed, string $fallback): string {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only debug filters.
         $value = isset($_GET[$key]) ? sanitize_text_field(wp_unslash($_GET[$key])) : '';
         return in_array($value, $allowed, true) ? $value : $fallback;
     }

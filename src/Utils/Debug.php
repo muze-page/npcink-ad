@@ -17,9 +17,13 @@ final class Debug {
             return;
         }
 
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         add_action('init', array(self::class, 'log_settings'));
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         add_action('wp_head', array(self::class, 'log_wp_head'), 1);
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         add_filter('the_content', array(self::class, 'log_the_content'), 1);
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         add_action('wp_footer', array(self::class, 'log_wp_footer'), 1);
     }
 
@@ -34,7 +38,7 @@ final class Debug {
         }
 
         $settings = Settings::get_runtime_settings();
-        Logger::log('Magick AD Debug: settings=' . print_r($settings, true));
+        Logger::log('Magick AD Debug: settings=' . wp_json_encode($settings));
     }
 
     public static function log_wp_head(): void {

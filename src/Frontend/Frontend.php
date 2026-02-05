@@ -33,6 +33,7 @@ final class Frontend {
     private static ?array $behavior_config_cache = null;
 
     public function register(): void {
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_assets'));
         add_action('template_redirect', array(__CLASS__, 'handle_preview_request'));
         self::init();
@@ -142,13 +143,16 @@ final class Frontend {
     }
 
     private static function init() {
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         add_filter('the_content', array(__CLASS__, 'prepare_content_ads'), 8);
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         add_filter('the_content', array(__CLASS__, 'inject_content_ads'));
         add_filter('render_block_core/paragraph', array(__CLASS__, 'inject_content_into_paragraph'), 10, 2);
         add_action('wp_head', array(__CLASS__, 'render_head_ads'));
         add_action('wp_footer', array(__CLASS__, 'render_node_ads'), 5);
         add_action('wp_footer', array(__CLASS__, 'render_footer_ads'));
         add_action('wp_footer', array(__CLASS__, 'render_diagnose_panel'), 99);
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         add_action('wp_body_open', array(__CLASS__, 'render_body_top_ads'));
         add_action('loop_start', array(__CLASS__, 'render_loop_before_ads'));
         add_action('loop_end', array(__CLASS__, 'render_loop_after_ads'));
@@ -679,10 +683,10 @@ final class Frontend {
                 true
             );
             $config = array(
-                'type' => isset($_GET['magick_ad_node_type']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_type'])) : 'id',
-                'value' => isset($_GET['magick_ad_node_value']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_value'])) : '',
-                'match' => isset($_GET['magick_ad_node_match']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_match'])) : 'first',
-                'index' => isset($_GET['magick_ad_node_index']) ? absint(wp_unslash($_GET['magick_ad_node_index'])) : 1,
+                'type' => self::get_query_param('magick_ad_node_type', 'id'),
+                'value' => self::get_query_param('magick_ad_node_value'),
+                'match' => self::get_query_param('magick_ad_node_match', 'first'),
+                'index' => self::get_query_int('magick_ad_node_index', 1),
             );
             wp_localize_script('magick-ad-node-debug', 'MagickADNodeDebug', $config);
             return;
@@ -1535,27 +1539,22 @@ final class Frontend {
     }
 
     private static function is_preview_request(): bool {
-        $flag = isset($_GET['magick_ad_preview']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview'])) : '';
-        return $flag !== '';
+        return self::get_query_flag('magick_ad_preview');
     }
 
     private static function is_picker_request(): bool {
-        $flag = isset($_GET['magick_ad_picker']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_picker'])) : '';
-        return $flag === '1';
+        return self::get_query_param('magick_ad_picker') === '1';
     }
 
     private static function is_node_debug_request(): bool {
-        $flag = isset($_GET['magick_ad_node_debug']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_debug'])) : '';
-        return $flag === '1';
+        return self::get_query_param('magick_ad_node_debug') === '1';
     }
 
     private static function can_view_picker(): bool {
         if (!Capabilities::current_user_can_manage()) {
             return false;
         }
-        $nonce = isset($_GET['magick_ad_picker_nonce'])
-            ? sanitize_text_field(wp_unslash($_GET['magick_ad_picker_nonce']))
-            : '';
+        $nonce = self::get_query_param('magick_ad_picker_nonce');
         if (!$nonce) {
             return false;
         }
@@ -1566,9 +1565,7 @@ final class Frontend {
         if (!Capabilities::current_user_can_manage()) {
             return false;
         }
-        $nonce = isset($_GET['magick_ad_node_debug_nonce'])
-            ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_debug_nonce']))
-            : '';
+        $nonce = self::get_query_param('magick_ad_node_debug_nonce');
         if (!$nonce) {
             return false;
         }
@@ -1614,15 +1611,14 @@ final class Frontend {
     }
 
     private static function is_diagnose_request(): bool {
-        $flag = isset($_GET['magick_ad_diagnose']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_diagnose'])) : '';
-        return $flag !== '';
+        return self::get_query_flag('magick_ad_diagnose');
     }
 
     private static function can_view_diagnose(): bool {
         if (!Capabilities::current_user_can_manage()) {
             return false;
         }
-        $nonce = isset($_GET['magick_ad_diagnose_nonce']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_diagnose_nonce'])) : '';
+        $nonce = self::get_query_param('magick_ad_diagnose_nonce');
         if (!$nonce) {
             return false;
         }
@@ -1633,9 +1629,7 @@ final class Frontend {
         if (!self::is_diagnose_request() || !self::can_view_diagnose()) {
             return '';
         }
-        $device = isset($_GET['magick_ad_debug_device'])
-            ? sanitize_text_field(wp_unslash($_GET['magick_ad_debug_device']))
-            : '';
+        $device = self::get_query_param('magick_ad_debug_device');
         if (!in_array($device, array('mobile', 'tablet', 'desktop'), true)) {
             return '';
         }
@@ -1646,9 +1640,7 @@ final class Frontend {
         if (!self::is_diagnose_request() || !self::can_view_diagnose()) {
             return '';
         }
-        $login = isset($_GET['magick_ad_debug_login'])
-            ? sanitize_text_field(wp_unslash($_GET['magick_ad_debug_login']))
-            : '';
+        $login = self::get_query_param('magick_ad_debug_login');
         if (!in_array($login, array('logged-in', 'logged-out'), true)) {
             return '';
         }
@@ -1770,12 +1762,12 @@ final class Frontend {
             return;
         }
 
-        $nonce = isset($_GET['magick_ad_preview_nonce']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_nonce'])) : '';
+        $nonce = self::get_query_param('magick_ad_preview_nonce');
         if (!$nonce || !wp_verify_nonce($nonce, 'magick_ad_preview')) {
             return;
         }
 
-        $ad_id = isset($_GET['magick_ad_preview_ad']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_ad'])) : '';
+        $ad_id = self::get_query_param('magick_ad_preview_ad');
         if (!$ad_id) {
             return;
         }
@@ -1788,17 +1780,14 @@ final class Frontend {
 
         self::$preview_ad_id = $ad_id;
         self::$preview_ad = $ad;
-        $preview_force = isset($_GET['magick_ad_preview_force'])
-            ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_force']))
-            : '';
+        $preview_force = self::get_query_param('magick_ad_preview_force');
         self::$preview_force = $preview_force === '1';
         self::$preview_evaluation = self::evaluate_ad($ad);
-        $mode = isset($_GET['magick_ad_preview_mode'])
-            ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_mode']))
-            : 'shell';
+        $mode = self::get_query_param('magick_ad_preview_mode', 'shell');
         self::$preview_mode = $mode === 'page' ? 'page' : 'shell';
 
         if (self::$preview_mode === 'page') {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
             add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_preview_assets'));
             return;
         }
@@ -1810,6 +1799,7 @@ final class Frontend {
             . '<p>若规则未命中，将不会展示广告，并在顶部调试条提示原因。</p>'
             . '<p>下面是示例内容段落，用于模拟文章阅读场景。</p>'
             . '<p>继续向下滚动，查看评论区、评论框等插入位置。</p>';
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         $preview_content = apply_filters('the_content', $preview_content);
 
         show_admin_bar(false);
@@ -1824,6 +1814,7 @@ final class Frontend {
             true
         );
 
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         do_action('wp_enqueue_scripts');
 
         $ad_name = isset($ad['name']) ? $ad['name'] : '未命名广告';
@@ -1858,7 +1849,7 @@ final class Frontend {
             array(
                 'context' => $context,
                 'ad' => $ad,
-                'device' => isset($_GET['magick_ad_preview_device']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_device'])) : '',
+                'device' => self::get_query_param('magick_ad_preview_device'),
             )
         );
 
@@ -1887,6 +1878,7 @@ final class Frontend {
         echo '</head>';
         $body_classes = implode(' ', get_body_class('magick-ad-preview-body'));
         echo '<body class="' . esc_attr($body_classes) . '">';
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         do_action('wp_body_open');
         echo '<div class="magick-ad-preview-debug ' . ($allowed ? 'is-hit' : 'is-miss') . '">';
         echo '<div class="magick-ad-preview-debug__title">' . esc_html($ad_name) . '</div>';
@@ -1967,11 +1959,24 @@ final class Frontend {
             array(
                 'context' => $context,
                 'ad' => self::$preview_ad,
-                'device' => isset($_GET['magick_ad_preview_device'])
-                    ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_device']))
-                    : '',
+                'device' => self::get_query_param('magick_ad_preview_device'),
             )
         );
+    }
+
+    private static function get_query_param(string $key, string $fallback = ''): string {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only query parameter.
+        $value = isset($_GET[$key]) ? sanitize_text_field(wp_unslash($_GET[$key])) : '';
+        return $value !== '' ? $value : $fallback;
+    }
+
+    private static function get_query_flag(string $key): bool {
+        return self::get_query_param($key) !== '';
+    }
+
+    private static function get_query_int(string $key, int $fallback = 0): int {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only query parameter.
+        return isset($_GET[$key]) ? absint(wp_unslash($_GET[$key])) : $fallback;
     }
 
     private static function matches_display_mode($ad, $options) {
@@ -2858,8 +2863,9 @@ final class Frontend {
 
     private static function build_runtime_tokens(array $ad): array {
         $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
-        $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
-        $request_uri = is_string($request_uri) ? $request_uri : '';
+        $request_uri = isset($_SERVER['REQUEST_URI'])
+            ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI']))
+            : '';
         if ($request_uri !== '') {
             $parts = wp_parse_url($request_uri);
             $path = isset($parts['path']) ? $parts['path'] : '';

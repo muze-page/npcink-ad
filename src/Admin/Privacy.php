@@ -45,8 +45,8 @@ final class Privacy {
         $content .= '<h2>' . esc_html__('诊断日志（仅诊断模式）', 'magick-ad') . '</h2>';
         $content .= '<ul>';
         $content .= '<li>' . esc_html__('可能记录 page_url、user_agent、user_id（如登录）。', 'magick-ad') . '</li>';
-        /* translators: %d: retention days */
         $content .= '<li>' . sprintf(
+            /* translators: %d: retention days */
             esc_html__('默认保留 %d 天，可在系统设置中调整。', 'magick-ad'),
             $retention_days
         ) . '</li>';
@@ -93,6 +93,7 @@ final class Privacy {
 
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats_log';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
             return array(
@@ -105,14 +106,15 @@ final class Privacy {
         $limit = 100;
         $offset = ($page - 1) * $limit;
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct query on custom table.
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT id, ad_id, event_type, page_url, user_agent, created_at
-                 FROM {$table}
+                 FROM %i
                  WHERE user_id = %d
                  ORDER BY id ASC
                  LIMIT %d OFFSET %d",
+                $table,
                 $user->ID,
                 $limit,
                 $offset
@@ -170,6 +172,7 @@ final class Privacy {
 
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats_log';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
             return array(
@@ -183,10 +186,11 @@ final class Privacy {
         $page = max(1, $page);
         $limit = 100;
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct query on custom table.
         $ids = $wpdb->get_col(
             $wpdb->prepare(
-                "SELECT id FROM {$table} WHERE user_id = %d ORDER BY id ASC LIMIT %d",
+                "SELECT id FROM %i WHERE user_id = %d ORDER BY id ASC LIMIT %d",
+                $table,
                 $user->ID,
                 $limit
             )
@@ -202,14 +206,13 @@ final class Privacy {
         }
 
         $safe_ids = array_map('absint', $ids);
-        $placeholders = implode(',', array_fill(0, count($safe_ids), '%d'));
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $wpdb->query(
-            $wpdb->prepare(
-                "DELETE FROM {$table} WHERE id IN ({$placeholders})",
-                $safe_ids
-            )
-        );
+        foreach ($safe_ids as $safe_id) {
+            $wpdb->delete(
+                $table,
+                array('id' => $safe_id),
+                array('%d')
+            );
+        }
 
         return array(
             'items_removed' => true,

@@ -874,8 +874,9 @@ final class Track_Controller {
     }
 
     private static function resolve_page_hash_source(string $page_url): string {
-        $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
-        $request_uri = is_string($request_uri) ? $request_uri : '';
+        $request_uri = isset($_SERVER['REQUEST_URI'])
+            ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI']))
+            : '';
         if ($request_uri !== '') {
             $parts = wp_parse_url($request_uri);
             $path = isset($parts['path']) ? $parts['path'] : '';
@@ -1096,20 +1097,21 @@ final class Track_Controller {
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (`date`, `ad_id`, `impressions`, `clicks`)
-             VALUES (%s, %s, %d, %d)
-             ON DUPLICATE KEY UPDATE
-                impressions = impressions + VALUES(impressions),
-                clicks = clicks + VALUES(clicks)",
-            $date,
-            $ad_id,
-            $impressions,
-            $clicks
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+        $result = $wpdb->query(
+            $wpdb->prepare(
+                "INSERT INTO %i (`date`, `ad_id`, `impressions`, `clicks`)
+                 VALUES (%s, %s, %d, %d)
+                 ON DUPLICATE KEY UPDATE
+                    impressions = impressions + VALUES(impressions),
+                    clicks = clicks + VALUES(clicks)",
+                $table,
+                $date,
+                $ad_id,
+                $impressions,
+                $clicks
+            )
         );
-
-        $result = $wpdb->query($sql);
         if ($result === false) {
             return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
         }
@@ -1138,21 +1140,22 @@ final class Track_Controller {
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
-             VALUES (%s, %s, %s, %d, %d)
-             ON DUPLICATE KEY UPDATE
-                impressions = impressions + VALUES(impressions),
-                clicks = clicks + VALUES(clicks)",
-            $date,
-            $ad_id,
-            $variant_id,
-            $impressions,
-            $clicks
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+        $result = $wpdb->query(
+            $wpdb->prepare(
+                "INSERT INTO %i (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
+                 VALUES (%s, %s, %s, %d, %d)
+                 ON DUPLICATE KEY UPDATE
+                    impressions = impressions + VALUES(impressions),
+                    clicks = clicks + VALUES(clicks)",
+                $table,
+                $date,
+                $ad_id,
+                $variant_id,
+                $impressions,
+                $clicks
+            )
         );
-
-        $result = $wpdb->query($sql);
         if ($result === false) {
             return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
         }
@@ -1179,20 +1182,21 @@ final class Track_Controller {
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats_event';
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (`date`, `ad_id`, `event`, `variant_id`, `count`)
-             VALUES (%s, %s, %s, %s, %d)
-             ON DUPLICATE KEY UPDATE
-                count = count + VALUES(count)",
-            $date,
-            $ad_id,
-            $event,
-            $variant_id ?: '',
-            1
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+        $result = $wpdb->query(
+            $wpdb->prepare(
+                "INSERT INTO %i (`date`, `ad_id`, `event`, `variant_id`, `count`)
+                 VALUES (%s, %s, %s, %s, %d)
+                 ON DUPLICATE KEY UPDATE
+                    count = count + VALUES(count)",
+                $table,
+                $date,
+                $ad_id,
+                $event,
+                $variant_id ?: '',
+                1
+            )
         );
-
-        $result = $wpdb->query($sql);
         if ($result === false) {
             return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
         }
@@ -1227,8 +1231,6 @@ final class Track_Controller {
 
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats';
-        $values = array();
-        $placeholders = array();
 
         foreach ($stats_agg as $row) {
             $row = is_array($row) ? $row : array();
@@ -1239,23 +1241,25 @@ final class Track_Controller {
             if ($date === '' || $ad_id === '' || ($impressions === 0 && $clicks === 0)) {
                 continue;
             }
-            $placeholders[] = '(%s, %s, %d, %d)';
-            array_push($values, $date, $ad_id, $impressions, $clicks);
-        }
 
-        if (empty($placeholders)) {
-            return true;
-        }
-
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $sql = "INSERT INTO {$table} (`date`, `ad_id`, `impressions`, `clicks`) VALUES ";
-        $sql .= implode(', ', $placeholders);
-        $sql .= " ON DUPLICATE KEY UPDATE impressions = impressions + VALUES(impressions), clicks = clicks + VALUES(clicks)";
-
-        $prepared = $wpdb->prepare($sql, $values);
-        $result = $wpdb->query($prepared);
-        if ($result === false) {
-            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+            $result = $wpdb->query(
+                $wpdb->prepare(
+                    "INSERT INTO %i (`date`, `ad_id`, `impressions`, `clicks`)
+                     VALUES (%s, %s, %d, %d)
+                     ON DUPLICATE KEY UPDATE
+                        impressions = impressions + VALUES(impressions),
+                        clicks = clicks + VALUES(clicks)",
+                    $table,
+                    $date,
+                    $ad_id,
+                    $impressions,
+                    $clicks
+                )
+            );
+            if ($result === false) {
+                return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            }
         }
 
         return true;
@@ -1304,8 +1308,6 @@ final class Track_Controller {
 
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats_variant';
-        $values = array();
-        $placeholders = array();
 
         foreach ($variant_agg as $row) {
             $row = is_array($row) ? $row : array();
@@ -1320,23 +1322,26 @@ final class Track_Controller {
             if ($impressions === 0 && $clicks === 0) {
                 continue;
             }
-            $placeholders[] = '(%s, %s, %s, %d, %d)';
-            array_push($values, $date, $ad_id, $variant_id, $impressions, $clicks);
-        }
 
-        if (empty($placeholders)) {
-            return true;
-        }
-
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $sql = "INSERT INTO {$table} (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`) VALUES ";
-        $sql .= implode(', ', $placeholders);
-        $sql .= " ON DUPLICATE KEY UPDATE impressions = impressions + VALUES(impressions), clicks = clicks + VALUES(clicks)";
-
-        $prepared = $wpdb->prepare($sql, $values);
-        $result = $wpdb->query($prepared);
-        if ($result === false) {
-            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+            $result = $wpdb->query(
+                $wpdb->prepare(
+                    "INSERT INTO %i (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
+                     VALUES (%s, %s, %s, %d, %d)
+                     ON DUPLICATE KEY UPDATE
+                        impressions = impressions + VALUES(impressions),
+                        clicks = clicks + VALUES(clicks)",
+                    $table,
+                    $date,
+                    $ad_id,
+                    $variant_id,
+                    $impressions,
+                    $clicks
+                )
+            );
+            if ($result === false) {
+                return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            }
         }
 
         return true;
@@ -1368,8 +1373,6 @@ final class Track_Controller {
 
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats_event';
-        $values = array();
-        $placeholders = array();
 
         foreach ($event_agg as $row) {
             $row = is_array($row) ? $row : array();
@@ -1381,23 +1384,25 @@ final class Track_Controller {
             if ($date === '' || $ad_id === '' || $event === '' || $count < 1) {
                 continue;
             }
-            $placeholders[] = '(%s, %s, %s, %s, %d)';
-            array_push($values, $date, $ad_id, $event, $variant_id, $count);
-        }
 
-        if (empty($placeholders)) {
-            return true;
-        }
-
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $sql = "INSERT INTO {$table} (`date`, `ad_id`, `event`, `variant_id`, `count`) VALUES ";
-        $sql .= implode(', ', $placeholders);
-        $sql .= " ON DUPLICATE KEY UPDATE count = count + VALUES(count)";
-
-        $prepared = $wpdb->prepare($sql, $values);
-        $result = $wpdb->query($prepared);
-        if ($result === false) {
-            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+            $result = $wpdb->query(
+                $wpdb->prepare(
+                    "INSERT INTO %i (`date`, `ad_id`, `event`, `variant_id`, `count`)
+                     VALUES (%s, %s, %s, %s, %d)
+                     ON DUPLICATE KEY UPDATE
+                        count = count + VALUES(count)",
+                    $table,
+                    $date,
+                    $ad_id,
+                    $event,
+                    $variant_id,
+                    $count
+                )
+            );
+            if ($result === false) {
+                return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            }
         }
 
         return true;
@@ -1427,19 +1432,20 @@ final class Track_Controller {
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $sql = $wpdb->prepare(
-            "INSERT INTO {$table} (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`)\n             VALUES (%s, %s, %s, %s, %s, %d, %d)\n             ON DUPLICATE KEY UPDATE\n                impressions = impressions + VALUES(impressions),\n                clicks = clicks + VALUES(clicks)",
-            $date,
-            $ad_id,
-            $slot,
-            $position,
-            $container,
-            $impressions,
-            $clicks
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+        $result = $wpdb->query(
+            $wpdb->prepare(
+                "INSERT INTO %i (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`)\n                 VALUES (%s, %s, %s, %s, %s, %d, %d)\n                 ON DUPLICATE KEY UPDATE\n                    impressions = impressions + VALUES(impressions),\n                    clicks = clicks + VALUES(clicks)",
+                $table,
+                $date,
+                $ad_id,
+                $slot,
+                $position,
+                $container,
+                $impressions,
+                $clicks
+            )
         );
-
-        $result = $wpdb->query($sql);
         if ($result === false) {
             return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
         }
@@ -1499,8 +1505,6 @@ final class Track_Controller {
 
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats_dim';
-        $values = array();
-        $placeholders = array();
 
         foreach ($dim_agg as $row) {
             $row = is_array($row) ? $row : array();
@@ -1517,23 +1521,28 @@ final class Track_Controller {
             if ($slot === '' && $position === '' && $container === '') {
                 continue;
             }
-            $placeholders[] = '(%s, %s, %s, %s, %s, %d, %d)';
-            array_push($values, $date, $ad_id, $slot, $position, $container, $impressions, $clicks);
-        }
 
-        if (empty($placeholders)) {
-            return true;
-        }
-
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $sql = "INSERT INTO {$table} (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`) VALUES ";
-        $sql .= implode(', ', $placeholders);
-        $sql .= " ON DUPLICATE KEY UPDATE impressions = impressions + VALUES(impressions), clicks = clicks + VALUES(clicks)";
-
-        $prepared = $wpdb->prepare($sql, $values);
-        $result = $wpdb->query($prepared);
-        if ($result === false) {
-            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+            $result = $wpdb->query(
+                $wpdb->prepare(
+                    "INSERT INTO %i (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`)
+                     VALUES (%s, %s, %s, %s, %s, %d, %d)
+                     ON DUPLICATE KEY UPDATE
+                        impressions = impressions + VALUES(impressions),
+                        clicks = clicks + VALUES(clicks)",
+                    $table,
+                    $date,
+                    $ad_id,
+                    $slot,
+                    $position,
+                    $container,
+                    $impressions,
+                    $clicks
+                )
+            );
+            if ($result === false) {
+                return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            }
         }
 
         return true;
@@ -1588,8 +1597,6 @@ final class Track_Controller {
 
         global $wpdb;
         $log_table = $wpdb->prefix . 'magick_ad_stats_log';
-        $values = array();
-        $placeholders = array();
         $user_agent = substr(
             isset($_SERVER['HTTP_USER_AGENT'])
                 ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT']))
@@ -1609,26 +1616,19 @@ final class Track_Controller {
                 continue;
             }
             $page_url = self::sanitize_log_page_url($page_url);
-            $placeholders[] = '(%s, %s, %s, %s, %d, %s)';
-            array_push(
-                $values,
-                $ad_id,
-                $event,
-                substr($page_url, 0, 255),
-                $user_agent,
-                $user_id,
-                $created_at
+            $wpdb->insert(
+                $log_table,
+                array(
+                    'ad_id' => $ad_id,
+                    'event_type' => $event,
+                    'page_url' => substr($page_url, 0, 255),
+                    'user_agent' => $user_agent,
+                    'user_id' => $user_id,
+                    'created_at' => $created_at,
+                ),
+                array('%s', '%s', '%s', '%s', '%d', '%s')
             );
         }
-
-        if (empty($placeholders)) {
-            return;
-        }
-
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $sql = "INSERT INTO {$log_table} (`ad_id`, `event_type`, `page_url`, `user_agent`, `user_id`, `created_at`) VALUES ";
-        $sql .= implode(', ', $placeholders);
-        $wpdb->query($wpdb->prepare($sql, $values));
     }
 
     private static function sanitize_log_page_url(string $page_url): string {

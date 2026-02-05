@@ -40,6 +40,11 @@ final class Logger {
             return;
         }
 
-        error_log($message);
+        /**
+         * Allow hosts to decide how to persist debug logs.
+         *
+         * @param string $message Debug message.
+         */
+        do_action('magick_ad_log', $message);
     }
 }

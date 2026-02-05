@@ -32,7 +32,7 @@ final class Bindings {
             $param = isset($args['param']) ? sanitize_text_field($args['param']) : 'utm_source';
             $map = isset($args['map']) && is_array($args['map']) ? $args['map'] : array();
             $fallback = isset($args['fallback']) ? $args['fallback'] : '';
-            $current = isset($_GET[$param]) ? sanitize_text_field(wp_unslash($_GET[$param])) : '';
+            $current = self::get_query_param($param);
             if ($current && isset($map[$current])) {
                 return $map[$current];
             }
@@ -112,5 +112,11 @@ final class Bindings {
         }
 
         return 'request:' . wp_rand(0, 1000000);
+    }
+
+    private static function get_query_param(string $key, string $fallback = ''): string {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only query parameter.
+        $value = isset($_GET[$key]) ? sanitize_text_field(wp_unslash($_GET[$key])) : '';
+        return $value !== '' ? $value : $fallback;
     }
 }

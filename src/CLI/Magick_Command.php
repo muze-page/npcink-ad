@@ -100,23 +100,39 @@ final class Magick_Command {
         $file = isset($assoc_args['file']) ? (string) $assoc_args['file'] : '';
 
         $table = $wpdb->prefix . 'magick_ad_stats_log';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
             WP_CLI::error('Diagnostics log table not found.');
         }
 
-        $limit_sql = '';
         if ($limit > 0) {
-            $limit_sql = $wpdb->prepare(' LIMIT %d OFFSET %d', $limit, max(0, $offset));
+            $safe_offset = max(0, $offset);
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table export.
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT id, ad_id, event_type, page_url, user_agent, user_id, created_at
+                     FROM %i
+                     ORDER BY id DESC
+                     LIMIT %d OFFSET %d",
+                    $table,
+                    $limit,
+                    $safe_offset
+                ),
+                ARRAY_A
+            );
+        } else {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table export.
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT id, ad_id, event_type, page_url, user_agent, user_id, created_at
+                     FROM %i
+                     ORDER BY id DESC",
+                    $table
+                ),
+                ARRAY_A
+            );
         }
-
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $rows = $wpdb->get_results(
-            "SELECT id, ad_id, event_type, page_url, user_agent, user_id, created_at
-             FROM {$table}
-             ORDER BY id DESC{$limit_sql}",
-            ARRAY_A
-        );
 
         if (!is_array($rows)) {
             WP_CLI::error('Failed to read diagnostics logs.');
@@ -144,21 +160,29 @@ final class Magick_Command {
         if (empty($rows)) {
             return '';
         }
-
-        $handle = fopen('php://temp', 'w+');
-        if ($handle === false) {
-            return '';
-        }
-
-        fputcsv($handle, array_keys($rows[0]));
+        $lines = array();
+        $lines[] = $this->format_csv_row(array_keys($rows[0]));
         foreach ($rows as $row) {
-            fputcsv($handle, $row);
+            $lines[] = $this->format_csv_row($row);
         }
 
-        rewind($handle);
-        $output = stream_get_contents($handle);
-        fclose($handle);
+        return implode("\n", $lines);
+    }
 
-        return $output ?: '';
+    private function format_csv_row(array $row): string {
+        $escaped = array();
+        foreach ($row as $value) {
+            $escaped[] = $this->escape_csv_field($value);
+        }
+        return implode(',', $escaped);
+    }
+
+    private function escape_csv_field(mixed $value): string {
+        $string = (string) $value;
+        $string = str_replace('"', '""', $string);
+        if (preg_match('/[",\\r\\n]/', $string)) {
+            $string = '"' . $string . '"';
+        }
+        return $string;
     }
 }

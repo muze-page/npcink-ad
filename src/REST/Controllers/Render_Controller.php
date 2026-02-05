@@ -234,7 +234,6 @@ final class Render_Controller {
                 'post__in' => $post_ids,
                 'orderby' => 'post__in',
                 'no_found_rows' => true,
-                'suppress_filters' => true,
                 'update_post_term_cache' => false,
                 'update_post_meta_cache' => true,
             )

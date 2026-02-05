@@ -6,72 +6,70 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 
 global $wpdb;
 
-$table = $wpdb->prefix . 'magick_ad_stats';
-$log_table = $wpdb->prefix . 'magick_ad_stats_log';
-$dim_table = $wpdb->prefix . 'magick_ad_stats_dim';
-$variant_table = $wpdb->prefix . 'magick_ad_stats_variant';
-$event_table = $wpdb->prefix . 'magick_ad_stats_event';
-$safe_table = preg_replace('/[^A-Za-z0-9_]/', '', $table);
-$safe_log_table = preg_replace('/[^A-Za-z0-9_]/', '', $log_table);
-$safe_dim_table = preg_replace('/[^A-Za-z0-9_]/', '', $dim_table);
-$safe_variant_table = preg_replace('/[^A-Za-z0-9_]/', '', $variant_table);
-$safe_event_table = preg_replace('/[^A-Za-z0-9_]/', '', $event_table);
-// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are sanitized.
-$wpdb->query("DROP TABLE IF EXISTS {$safe_table}");
-// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are sanitized.
-$wpdb->query("DROP TABLE IF EXISTS {$safe_log_table}");
-// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are sanitized.
-$wpdb->query("DROP TABLE IF EXISTS {$safe_dim_table}");
-// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are sanitized.
-$wpdb->query("DROP TABLE IF EXISTS {$safe_variant_table}");
-// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are sanitized.
-$wpdb->query("DROP TABLE IF EXISTS {$safe_event_table}");
+$magick_ad_tables = array(
+    $wpdb->prefix . 'magick_ad_stats',
+    $wpdb->prefix . 'magick_ad_stats_log',
+    $wpdb->prefix . 'magick_ad_stats_dim',
+    $wpdb->prefix . 'magick_ad_stats_variant',
+    $wpdb->prefix . 'magick_ad_stats_event',
+);
 
-$option_like = $wpdb->esc_like('magick_ad_') . '%';
-$transient_like = $wpdb->esc_like('_transient_magick_ad_') . '%';
-$transient_timeout_like = $wpdb->esc_like('_transient_timeout_magick_ad_') . '%';
+foreach ($magick_ad_tables as $magick_ad_table) {
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Uninstall schema cleanup.
+    $wpdb->query($wpdb->prepare('DROP TABLE IF EXISTS %i', $magick_ad_table));
+}
 
+$magick_ad_option_like = $wpdb->esc_like('magick_ad_') . '%';
+$magick_ad_transient_like = $wpdb->esc_like('_transient_magick_ad_') . '%';
+$magick_ad_transient_timeout_like = $wpdb->esc_like('_transient_timeout_magick_ad_') . '%';
+
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
 $wpdb->query(
     $wpdb->prepare(
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
-        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-        $option_like
+        'DELETE FROM %i WHERE option_name LIKE %s',
+        $wpdb->options,
+        $magick_ad_option_like
     )
 );
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
 $wpdb->query(
     $wpdb->prepare(
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
-        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-        $transient_like
+        'DELETE FROM %i WHERE option_name LIKE %s',
+        $wpdb->options,
+        $magick_ad_transient_like
     )
 );
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
 $wpdb->query(
     $wpdb->prepare(
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
-        "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-        $transient_timeout_like
+        'DELETE FROM %i WHERE option_name LIKE %s',
+        $wpdb->options,
+        $magick_ad_transient_timeout_like
     )
 );
 
 if (is_multisite()) {
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
     $wpdb->query(
         $wpdb->prepare(
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
-            "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s",
-            $option_like
+            'DELETE FROM %i WHERE meta_key LIKE %s',
+            $wpdb->sitemeta,
+            $magick_ad_option_like
         )
     );
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
     $wpdb->query(
         $wpdb->prepare(
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
-            "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s",
+            'DELETE FROM %i WHERE meta_key LIKE %s',
+            $wpdb->sitemeta,
             $wpdb->esc_like('_site_transient_magick_ad_') . '%'
         )
     );
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
     $wpdb->query(
         $wpdb->prepare(
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
-            "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s",
+            'DELETE FROM %i WHERE meta_key LIKE %s',
+            $wpdb->sitemeta,
             $wpdb->esc_like('_site_transient_timeout_magick_ad_') . '%'
         )
     );
@@ -79,19 +77,19 @@ if (is_multisite()) {
 
 if (function_exists('remove_role')) {
     remove_role('magick_ad_manager');
-    $admin = get_role('administrator');
-    if ($admin?->has_cap('manage_magick_ads')) {
-        $admin->remove_cap('manage_magick_ads');
+    $magick_ad_admin = get_role('administrator');
+    if ($magick_ad_admin?->has_cap('manage_magick_ads')) {
+        $magick_ad_admin->remove_cap('manage_magick_ads');
     }
 }
 
-$ads = get_posts(array(
+$magick_ad_ads = get_posts(array(
     'post_type' => 'magick_ad',
     'post_status' => 'any',
     'numberposts' => -1,
     'fields' => 'ids',
 ));
 
-foreach ($ads as $ad_id) {
-    wp_delete_post($ad_id, true);
+foreach ($magick_ad_ads as $magick_ad_ad_id) {
+    wp_delete_post($magick_ad_ad_id, true);
 }

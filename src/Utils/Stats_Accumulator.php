@@ -188,20 +188,21 @@ final class Stats_Accumulator {
                 continue;
             }
 
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-            $sql = $wpdb->prepare(
-                "INSERT INTO {$table} (`date`, `ad_id`, `impressions`, `clicks`)
-                 VALUES (%s, %s, %d, %d)
-                 ON DUPLICATE KEY UPDATE
-                    impressions = impressions + VALUES(impressions),
-                    clicks = clicks + VALUES(clicks)",
-                $date,
-                $ad_id,
-                $impressions,
-                $clicks
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+            $result = $wpdb->query(
+                $wpdb->prepare(
+                    "INSERT INTO %i (`date`, `ad_id`, `impressions`, `clicks`)
+                     VALUES (%s, %s, %d, %d)
+                     ON DUPLICATE KEY UPDATE
+                        impressions = impressions + VALUES(impressions),
+                        clicks = clicks + VALUES(clicks)",
+                    $table,
+                    $date,
+                    $ad_id,
+                    $impressions,
+                    $clicks
+                )
             );
-
-            $result = $wpdb->query($sql);
             if ($result === false) {
                 continue;
             }
@@ -248,23 +249,24 @@ final class Stats_Accumulator {
                 continue;
             }
 
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-            $sql = $wpdb->prepare(
-                "INSERT INTO {$table} (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`)
-                 VALUES (%s, %s, %s, %s, %s, %d, %d)
-                 ON DUPLICATE KEY UPDATE
-                    impressions = impressions + VALUES(impressions),
-                    clicks = clicks + VALUES(clicks)",
-                $date,
-                $ad_id,
-                $slot,
-                $position,
-                $container,
-                $impressions,
-                $clicks
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+            $result = $wpdb->query(
+                $wpdb->prepare(
+                    "INSERT INTO %i (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`)
+                     VALUES (%s, %s, %s, %s, %s, %d, %d)
+                     ON DUPLICATE KEY UPDATE
+                        impressions = impressions + VALUES(impressions),
+                        clicks = clicks + VALUES(clicks)",
+                    $table,
+                    $date,
+                    $ad_id,
+                    $slot,
+                    $position,
+                    $container,
+                    $impressions,
+                    $clicks
+                )
             );
-
-            $result = $wpdb->query($sql);
             if ($result === false) {
                 continue;
             }
@@ -309,21 +311,22 @@ final class Stats_Accumulator {
                 continue;
             }
 
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-            $sql = $wpdb->prepare(
-                "INSERT INTO {$table} (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
-                 VALUES (%s, %s, %s, %d, %d)
-                 ON DUPLICATE KEY UPDATE
-                    impressions = impressions + VALUES(impressions),
-                    clicks = clicks + VALUES(clicks)",
-                $date,
-                $ad_id,
-                $variant_id,
-                $impressions,
-                $clicks
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+            $result = $wpdb->query(
+                $wpdb->prepare(
+                    "INSERT INTO %i (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
+                     VALUES (%s, %s, %s, %d, %d)
+                     ON DUPLICATE KEY UPDATE
+                        impressions = impressions + VALUES(impressions),
+                        clicks = clicks + VALUES(clicks)",
+                    $table,
+                    $date,
+                    $ad_id,
+                    $variant_id,
+                    $impressions,
+                    $clicks
+                )
             );
-
-            $result = $wpdb->query($sql);
             if ($result === false) {
                 continue;
             }
@@ -368,20 +371,21 @@ final class Stats_Accumulator {
                 continue;
             }
 
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-            $sql = $wpdb->prepare(
-                "INSERT INTO {$table} (`date`, `ad_id`, `event`, `variant_id`, `count`)
-                 VALUES (%s, %s, %s, %s, %d)
-                 ON DUPLICATE KEY UPDATE
-                    count = count + VALUES(count)",
-                $date,
-                $ad_id,
-                $event,
-                $variant_id,
-                $count
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
+            $result = $wpdb->query(
+                $wpdb->prepare(
+                    "INSERT INTO %i (`date`, `ad_id`, `event`, `variant_id`, `count`)
+                     VALUES (%s, %s, %s, %s, %d)
+                     ON DUPLICATE KEY UPDATE
+                        count = count + VALUES(count)",
+                    $table,
+                    $date,
+                    $ad_id,
+                    $event,
+                    $variant_id,
+                    $count
+                )
             );
-
-            $result = $wpdb->query($sql);
             if ($result === false) {
                 continue;
             }

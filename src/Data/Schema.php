@@ -36,12 +36,17 @@ final class Schema {
         $charset_collate = $wpdb->get_charset_collate();
 
         if (self::table_exists($table) && !self::table_has_column($table, 'impressions')) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
+            // phpcs:disable WordPress.DB.DirectDatabaseQuery.SchemaChange
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema change on custom table.
             $wpdb->query(
-                "ALTER TABLE {$table}
-                 ADD COLUMN impressions bigint(20) unsigned NOT NULL DEFAULT 0
-                 AFTER ad_id"
+                $wpdb->prepare(
+                    "ALTER TABLE %i
+                     ADD COLUMN impressions bigint(20) unsigned NOT NULL DEFAULT 0
+                     AFTER ad_id",
+                    $table
+                )
             );
+            // phpcs:enable WordPress.DB.DirectDatabaseQuery.SchemaChange
         }
 
         $sql = "CREATE TABLE {$table} (
@@ -201,16 +206,18 @@ final class Schema {
 
     private static function table_exists(string $table): bool {
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         return $exists === $table;
     }
 
     private static function table_has_column(string $table, string $column): bool {
         global $wpdb;
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $value = $wpdb->get_var(
             $wpdb->prepare(
-                'SHOW COLUMNS FROM ' . $table . ' LIKE %s',
+                'SHOW COLUMNS FROM %i LIKE %s',
+                $table,
                 $column
             )
         );

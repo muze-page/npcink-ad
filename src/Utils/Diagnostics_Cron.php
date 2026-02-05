@@ -39,6 +39,7 @@ final class Diagnostics_Cron {
 
         global $wpdb;
         $log_table = $wpdb->prefix . 'magick_ad_stats_log';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $log_table));
         if ($exists !== $log_table) {
             return;
@@ -49,10 +50,11 @@ final class Diagnostics_Cron {
         $retention_days = (int) apply_filters('magick_ad_stats_diagnostics_retention_days', $retention_days);
         $cutoff = wp_date('Y-m-d H:i:s', current_time('timestamp') - $retention_days * DAY_IN_SECONDS);
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cleanup custom table.
         $wpdb->query(
             $wpdb->prepare(
-                "DELETE FROM {$log_table} WHERE created_at < %s",
+                "DELETE FROM %i WHERE created_at < %s",
+                $log_table,
                 $cutoff
             )
         );

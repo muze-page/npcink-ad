@@ -1,4 +1,6 @@
 # Magick AD WP
+- 检查重复或无用的注释并移除
+- 检查不用的代码或功能并移除
 
 #### 介绍
 
@@ -6,7 +8,13 @@ WordPress 的广告插件，带流量点击图
 
 - 增量编译：pnpm run start
 - 打包：pnpm run build
+- 生成插件：pnpm run dist
 
+dist 目录中生成发布文件
+
+### CLL
+检查产出物（需要安装check插件）：
+wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table
 #### 软件架构
 
 软件架构说明

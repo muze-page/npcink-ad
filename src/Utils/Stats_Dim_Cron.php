@@ -37,16 +37,18 @@ final class Stats_Dim_Cron {
 
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats_dim';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
             return;
         }
 
         $cutoff = wp_date('Y-m-d', current_time('timestamp') - $days * DAY_IN_SECONDS);
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cleanup custom table.
         $wpdb->query(
             $wpdb->prepare(
-                "DELETE FROM {$table} WHERE `date` < %s",
+                "DELETE FROM %i WHERE `date` < %s",
+                $table,
                 $cutoff
             )
         );

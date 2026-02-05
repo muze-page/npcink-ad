@@ -26,6 +26,7 @@ final class Reports_Controller {
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats';
 
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
             $empty = self::build_empty_series($days);
@@ -34,19 +35,21 @@ final class Reports_Controller {
         }
 
         $start = self::date_for_offset($days - 1);
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-        $sql = $wpdb->prepare(
-            "SELECT `date` AS date,
-                SUM(impressions) AS views,
-                SUM(clicks) AS clicks
-             FROM {$table}
-             WHERE `date` >= %s
-             GROUP BY `date`
-             ORDER BY date ASC",
-            $start
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT `date` AS date,
+                    SUM(impressions) AS views,
+                    SUM(clicks) AS clicks
+                 FROM %i
+                 WHERE `date` >= %s
+                 GROUP BY `date`
+                 ORDER BY date ASC",
+                $table,
+                $start
+            ),
+            ARRAY_A
         );
-
-        $rows = $wpdb->get_results($sql, ARRAY_A);
         $map = array();
         foreach ($rows as $row) {
             $map[$row['date']] = array(
@@ -108,6 +111,7 @@ final class Reports_Controller {
             ? $wpdb->prefix . 'magick_ad_stats'
             : $wpdb->prefix . 'magick_ad_stats_dim';
 
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
             $empty = array();
@@ -116,35 +120,46 @@ final class Reports_Controller {
         }
 
         if ($group_by === 'ad_id') {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Whitelisted column/table.
-            $sql = $wpdb->prepare(
-                "SELECT {$column} AS dimension,
-                    SUM(impressions) AS views,
-                    SUM(clicks) AS clicks
-                 FROM {$table}
-                 WHERE `date` >= %s
-                 GROUP BY {$column}
-                 ORDER BY views DESC, clicks DESC
-                 LIMIT 50",
-                $start
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT %i AS dimension,
+                        SUM(impressions) AS views,
+                        SUM(clicks) AS clicks
+                     FROM %i
+                     WHERE `date` >= %s
+                     GROUP BY %i
+                     ORDER BY views DESC, clicks DESC
+                     LIMIT 50",
+                    $column,
+                    $table,
+                    $start,
+                    $column
+                ),
+                ARRAY_A
             );
         } else {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Whitelisted column/table.
-            $sql = $wpdb->prepare(
-                "SELECT {$column} AS dimension,
-                    SUM(impressions) AS views,
-                    SUM(clicks) AS clicks
-                 FROM {$table}
-                 WHERE `date` >= %s
-                 AND {$column} <> ''
-                 GROUP BY {$column}
-                 ORDER BY views DESC, clicks DESC
-                 LIMIT 50",
-                $start
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT %i AS dimension,
+                        SUM(impressions) AS views,
+                        SUM(clicks) AS clicks
+                     FROM %i
+                     WHERE `date` >= %s
+                     AND %i <> ''
+                     GROUP BY %i
+                     ORDER BY views DESC, clicks DESC
+                     LIMIT 50",
+                    $column,
+                    $table,
+                    $start,
+                    $column,
+                    $column
+                ),
+                ARRAY_A
             );
         }
-
-        $rows = $wpdb->get_results($sql, ARRAY_A);
         $result = array();
         foreach ($rows as $row) {
             $dimension = isset($row['dimension']) ? (string) $row['dimension'] : '';
@@ -203,6 +218,7 @@ final class Reports_Controller {
 
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats_variant';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
             $empty = array();
@@ -212,35 +228,41 @@ final class Reports_Controller {
 
         $start = self::date_for_offset($days - 1);
         if ($ad_id !== '') {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-            $sql = $wpdb->prepare(
-                "SELECT variant_id,
-                    SUM(impressions) AS impressions,
-                    SUM(clicks) AS clicks
-                 FROM {$table}
-                 WHERE `date` >= %s AND ad_id = %s
-                 GROUP BY variant_id
-                 ORDER BY impressions DESC, clicks DESC
-                 LIMIT 100",
-                $start,
-                $ad_id
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT variant_id,
+                        SUM(impressions) AS impressions,
+                        SUM(clicks) AS clicks
+                     FROM %i
+                     WHERE `date` >= %s AND ad_id = %s
+                     GROUP BY variant_id
+                     ORDER BY impressions DESC, clicks DESC
+                     LIMIT 100",
+                    $table,
+                    $start,
+                    $ad_id
+                ),
+                ARRAY_A
             );
         } else {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
-            $sql = $wpdb->prepare(
-                "SELECT ad_id, variant_id,
-                    SUM(impressions) AS impressions,
-                    SUM(clicks) AS clicks
-                 FROM {$table}
-                 WHERE `date` >= %s
-                 GROUP BY ad_id, variant_id
-                 ORDER BY impressions DESC, clicks DESC
-                 LIMIT 200",
-                $start
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT ad_id, variant_id,
+                        SUM(impressions) AS impressions,
+                        SUM(clicks) AS clicks
+                     FROM %i
+                     WHERE `date` >= %s
+                     GROUP BY ad_id, variant_id
+                     ORDER BY impressions DESC, clicks DESC
+                     LIMIT 200",
+                    $table,
+                    $start
+                ),
+                ARRAY_A
             );
         }
-
-        $rows = $wpdb->get_results($sql, ARRAY_A);
         $result = array();
         foreach ($rows as $row) {
             $result[] = array(
@@ -277,6 +299,7 @@ final class Reports_Controller {
 
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats_event';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
         if ($exists !== $table) {
             $empty = array();
@@ -291,19 +314,23 @@ final class Reports_Controller {
             'variant_id' => 'variant_id',
         );
         $column = $column_map[$group_by];
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Whitelisted column/table.
-        $sql = $wpdb->prepare(
-            "SELECT {$column} AS dimension,
-                SUM(count) AS total
-             FROM {$table}
-             WHERE `date` >= %s
-             GROUP BY {$column}
-             ORDER BY total DESC
-             LIMIT 100",
-            $start
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table report.
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT %i AS dimension,
+                    SUM(count) AS total
+                 FROM %i
+                 WHERE `date` >= %s
+                 GROUP BY %i
+                 ORDER BY total DESC
+                 LIMIT 100",
+                $column,
+                $table,
+                $start,
+                $column
+            ),
+            ARRAY_A
         );
-
-        $rows = $wpdb->get_results($sql, ARRAY_A);
         $result = array();
         foreach ($rows as $row) {
             $dimension = isset($row['dimension']) ? (string) $row['dimension'] : '';
