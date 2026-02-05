@@ -36,6 +36,13 @@ define('MAGICK_AD_DEBUG', true);
 wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table
 ```
 
+检查发布包是否有语法错误
+
+```shell
+find "wp-content/plugins/magick-ad/dist/magick-ad" -name "*.php" -print0 | xargs -0 -n 1 php -l
+
+```
+
 **系统设置（新增）**
 
 在“系统设置 → 统计与去重 / 安全与缓存”中新增了以下开关：
