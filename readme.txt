@@ -1,5 +1,5 @@
 === Magick AD ===
-Contributors: magickad
+Contributors: Npcink
 Tags: advertising, ads, marketing
 Requires at least: 6.5
 Tested up to: 6.6

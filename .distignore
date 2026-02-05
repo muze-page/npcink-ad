@@ -7,6 +7,7 @@
 /docs
 /scripts
 /.gitignore
+/.distignore
 /.DS_Store
 /README.md
 /README.en.md

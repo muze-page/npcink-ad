@@ -23,7 +23,7 @@
 
   - README 增加 License 段落
 
-- **Text Domain 不匹配**：发现 `magick-ad`，期望 `magick-ad-wp`（但同时又提示 slug 含 wp 不允许）。
+- **Text Domain 不匹配**：已统一为 `magick-ad`（WP.org 建议不含 `wp`）。
   ✅整改策略（推荐一次性定案）：
   - 如果走 WP.org：**不要用带 “wp” 的 slug / 插件名**（会触发 trademarked_term）。
   - 建议把目录名、主文件、Text Domain 统一为：`magick-ad`（或 `magick-ad-lite` / `magick-ads`）
@@ -188,5 +188,4 @@
 4. **SQL：表名/列名白名单 + prepare 规范**（尤其 Track/Reports/Privacy/Accumulator）
 5. **清理发布包：删除隐藏文件/脚本/.github**
 6. **date() → gmdate/wp_date** + i18n translators 注释
-
 
