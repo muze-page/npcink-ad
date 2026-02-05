@@ -988,6 +988,7 @@ final class Frontend {
         }
 
         if ($markup) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad markup is sanitized by mode or admin-provided.
             echo $markup;
         }
     }
@@ -1013,6 +1014,7 @@ final class Frontend {
         }
 
         if ($markup) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad markup is sanitized by mode or admin-provided.
             echo self::wrap_zone_markup($markup, 'footer');
         }
     }
@@ -1038,6 +1040,7 @@ final class Frontend {
         }
 
         if ($markup) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad markup is sanitized by mode or admin-provided.
             echo '<div id="magick-ad-stash" class="magick-ad-stash" style="display:none">' . $markup . '</div>';
         }
     }
@@ -1063,6 +1066,7 @@ final class Frontend {
         }
 
         if ($markup) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad markup is sanitized by mode or admin-provided.
             echo self::wrap_zone_markup($markup, 'top');
         }
     }
@@ -1095,6 +1099,7 @@ final class Frontend {
 
         if ($markup) {
             self::$loop_before_rendered = true;
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad markup is sanitized by mode or admin-provided.
             echo self::wrap_zone_markup($markup, 'loop-before');
         }
     }
@@ -1127,6 +1132,7 @@ final class Frontend {
 
         if ($markup) {
             self::$loop_after_rendered = true;
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad markup is sanitized by mode or admin-provided.
             echo self::wrap_zone_markup($markup, 'loop-after');
         }
     }
@@ -1184,6 +1190,7 @@ final class Frontend {
         }
 
         if ($markup) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad markup is sanitized by mode or admin-provided.
             echo self::wrap_zone_markup($markup, 'comments-top');
         }
     }
@@ -1209,6 +1216,7 @@ final class Frontend {
         }
 
         if ($markup) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad markup is sanitized by mode or admin-provided.
             echo self::wrap_zone_markup($markup, 'comments-bottom');
         }
     }
@@ -1234,6 +1242,7 @@ final class Frontend {
         }
 
         if ($markup) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad markup is sanitized by mode or admin-provided.
             echo self::wrap_zone_markup($markup, 'comment-form-before');
         }
     }
@@ -1259,6 +1268,7 @@ final class Frontend {
         }
 
         if ($markup) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad markup is sanitized by mode or admin-provided.
             echo self::wrap_zone_markup($markup, 'comment-form-after');
         }
     }
@@ -1737,8 +1747,8 @@ final class Frontend {
             echo '<div class="magick-ad-diagnose__stats">';
             foreach ($failure_labels as $reason => $label) {
                 $count = isset($failure_counts[$reason]) ? (int) $failure_counts[$reason] : 0;
-                $active = $count > 0 ? ' is-active' : '';
-                echo '<div class="magick-ad-diagnose__stat' . $active . '">';
+                $active_class = $count > 0 ? ' is-active' : '';
+                echo '<div class="magick-ad-diagnose__stat' . esc_attr($active_class) . '">';
                 echo '<div class="magick-ad-diagnose__stat-label">' . esc_html((string) $label) . '</div>';
                 echo '<div class="magick-ad-diagnose__stat-value">' . esc_html((string) $count) . '</div>';
                 echo '</div>';
@@ -1890,7 +1900,7 @@ final class Frontend {
         echo '<div class="magick-ad-preview-zone" data-magick-zone="body_top"></div>';
         echo '<article class="entry-content" id="magick-ad-preview-content">';
         echo '<div class="magick-ad-preview-zone" data-magick-zone="content_before"></div>';
-        echo $preview_content;
+        echo wp_kses_post($preview_content);
         echo '<p data-magick-paragraph="1">示例段落 1：Lorem ipsum dolor sit amet, consectetur adipiscing elit。</p>';
         echo '<p data-magick-paragraph="2">示例段落 2：Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua。</p>';
         echo '<p data-magick-paragraph="3">示例段落 3：Ut enim ad minim veniam, quis nostrud exercitation ullamco。</p>';

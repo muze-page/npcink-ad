@@ -22,6 +22,7 @@ if (version_compare(PHP_VERSION, '8.1', '<')) {
             if (!current_user_can('activate_plugins')) {
                 return;
             }
+            /* translators: 1: required PHP version, 2: current PHP version */
             $message = sprintf(
                 esc_html__(
                     'Magick AD 需要 PHP %1$s 或更高版本。当前版本：%2$s。插件已停用。',
@@ -51,6 +52,7 @@ if (version_compare($wp_version, '6.5', '<')) {
             if (!current_user_can('activate_plugins')) {
                 return;
             }
+            /* translators: 1: required WordPress version, 2: current WordPress version */
             $message = sprintf(
                 esc_html__(
                     'Magick AD 需要 WordPress %1$s 或更高版本。当前版本：%2$s。插件已停用。',

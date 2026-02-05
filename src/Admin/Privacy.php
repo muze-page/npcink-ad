@@ -45,6 +45,7 @@ final class Privacy {
         $content .= '<h2>' . esc_html__('诊断日志（仅诊断模式）', 'magick-ad') . '</h2>';
         $content .= '<ul>';
         $content .= '<li>' . esc_html__('可能记录 page_url、user_agent、user_id（如登录）。', 'magick-ad') . '</li>';
+        /* translators: %d: retention days */
         $content .= '<li>' . sprintf(
             esc_html__('默认保留 %d 天，可在系统设置中调整。', 'magick-ad'),
             $retention_days

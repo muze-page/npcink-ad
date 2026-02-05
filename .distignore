@@ -19,3 +19,4 @@
 /package.json
 /composer.json
 /build/*.map
+/dist

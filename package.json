@@ -5,6 +5,7 @@
   "scripts": {
     "start": "wp-scripts start --webpack-src-dir=assets/js --webpack-output-dir=build",
     "build": "wp-scripts build --webpack-src-dir=assets/js --webpack-output-dir=build",
+    "dist": "bash scripts/dist.sh",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "release": "bash scripts/release.sh"
