@@ -12,6 +12,7 @@ use MagickAD\Data\Slots;
 use MagickAD\Utils\TrackingStrategy;
 use MagickAD\Utils\Tracking_Signature;
 use MagickAD\Utils\Stats_Accumulator;
+use MagickAD\Utils\Stats_Queue;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -834,7 +835,7 @@ final class Track_Controller {
         $allow_unsigned = (bool) apply_filters('magick_ad_track_allow_unsigned', false);
         $require_signature = (get_option(self::OPTION_TRACK_REQUIRE_SIGNATURE, '1') === '1');
         $require_signature = (bool) apply_filters('magick_ad_track_require_signature', $require_signature, $ad_id, $event);
-        if (self::is_production_environment()) {
+        if (self::is_production_environment() || !self::is_debug_constant_enabled()) {
             $require_signature = true;
         }
 
@@ -870,6 +871,10 @@ final class Track_Controller {
             return false;
         }
         return wp_get_environment_type() === 'production';
+    }
+
+    private static function is_debug_constant_enabled(): bool {
+        return (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG);
     }
 
     private static function resolve_page_hash_source(string $page_url): string {
@@ -1016,7 +1021,7 @@ final class Track_Controller {
     }
 
     private static function get_rate_limit_fallback(): string {
-        $fallback = (string) get_option('magick_ad_rate_limit_fallback', 'transient');
+        $fallback = (string) get_option('magick_ad_rate_limit_fallback', 'off');
         $fallback = (string) apply_filters('magick_ad_track_rate_limit_fallback', $fallback);
         return $fallback === 'transient' ? 'transient' : 'off';
     }
@@ -1091,11 +1096,22 @@ final class Track_Controller {
             return true;
         }
 
-        global $wpdb;
-        $table = Schema::stats_table();
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
+        if (Stats_Queue::enqueue_stats(array(
+            array(
+                'date' => $date,
+                'ad_id' => $ad_id,
+                'impressions' => $impressions,
+                'clicks' => $clicks,
+            ),
+        ))) {
+            return true;
+        }
+
+        global $wpdb;
+        $table = Schema::stats_table();
         $result = Stats_Query::stats_upsert(
             $wpdb,
             $table,
@@ -1127,11 +1143,23 @@ final class Track_Controller {
             return true;
         }
 
-        global $wpdb;
-        $table = Schema::variant_table();
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
+        if (Stats_Queue::enqueue_variants(array(
+            array(
+                'date' => $date,
+                'ad_id' => $ad_id,
+                'variant_id' => $variant_id,
+                'impressions' => $impressions,
+                'clicks' => $clicks,
+            ),
+        ))) {
+            return true;
+        }
+
+        global $wpdb;
+        $table = Schema::variant_table();
         $result = Stats_Query::variant_upsert(
             $wpdb,
             $table,
@@ -1164,9 +1192,20 @@ final class Track_Controller {
             return true;
         }
 
+        if (Stats_Queue::enqueue_events(array(
+            array(
+                'date' => $date,
+                'ad_id' => $ad_id,
+                'event' => $event,
+                'variant_id' => $variant_id ?: '',
+                'count' => 1,
+            ),
+        ))) {
+            return true;
+        }
+
         global $wpdb;
         $table = Schema::event_table();
-
         $result = Stats_Query::event_upsert(
             $wpdb,
             $table,
@@ -1205,6 +1244,10 @@ final class Track_Controller {
                     Stats_Accumulator::record_stats($ad_id, 'click', $date, $clicks);
                 }
             }
+            return true;
+        }
+
+        if (Stats_Queue::enqueue_stats($stats_agg)) {
             return true;
         }
 
@@ -1278,6 +1321,10 @@ final class Track_Controller {
             return true;
         }
 
+        if (Stats_Queue::enqueue_variants($variant_agg)) {
+            return true;
+        }
+
         global $wpdb;
         $table = Schema::variant_table();
 
@@ -1336,6 +1383,10 @@ final class Track_Controller {
             return true;
         }
 
+        if (Stats_Queue::enqueue_events($event_agg)) {
+            return true;
+        }
+
         global $wpdb;
         $table = Schema::event_table();
 
@@ -1386,11 +1437,25 @@ final class Track_Controller {
             return true;
         }
 
-        global $wpdb;
-        $table = Schema::dim_table();
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
+        if (Stats_Queue::enqueue_dimensions(array(
+            array(
+                'date' => $date,
+                'ad_id' => $ad_id,
+                'slot' => $slot,
+                'position' => $position,
+                'container' => $container,
+                'impressions' => $impressions,
+                'clicks' => $clicks,
+            ),
+        ))) {
+            return true;
+        }
+
+        global $wpdb;
+        $table = Schema::dim_table();
         $result = Stats_Query::dim_upsert(
             $wpdb,
             $table,
@@ -1456,6 +1521,10 @@ final class Track_Controller {
                     );
                 }
             }
+            return true;
+        }
+
+        if (Stats_Queue::enqueue_dimensions($dim_agg)) {
             return true;
         }
 

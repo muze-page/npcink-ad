@@ -157,6 +157,8 @@ final class Schema {
         add_option('magick_ad_track_secret_prev', '', '', false);
         add_option('magick_ad_track_secret_rotated_at', 0, '', false);
         add_option('magick_ad_track_secret_grace_seconds', HOUR_IN_SECONDS, '', false);
+        add_option('magick_ad_stats_write_mode', 'async', '', false);
+        add_option('magick_ad_rate_limit_fallback', 'off', '', false);
         $site_domain = wp_parse_url(home_url(), PHP_URL_HOST);
         if (is_string($site_domain) && $site_domain !== '') {
             $site_domain = strtolower($site_domain);

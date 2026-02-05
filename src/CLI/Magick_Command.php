@@ -5,6 +5,7 @@ namespace MagickAD\CLI;
 use MagickAD\Data\Schema;
 use MagickAD\Data\Settings;
 use MagickAD\Utils\Stats_Accumulator;
+use MagickAD\Utils\Stats_Queue;
 use MagickAD\Utils\Tracking_Signature;
 use WP_CLI;
 
@@ -51,6 +52,7 @@ final class Magick_Command {
      */
     public function stats_flush(array $args, array $assoc_args): void {
         Stats_Accumulator::flush();
+        Stats_Queue::flush();
         if (!empty($assoc_args['quiet'])) {
             return;
         }

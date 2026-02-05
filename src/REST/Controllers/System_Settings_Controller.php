@@ -60,6 +60,11 @@ final class System_Settings_Controller {
         return in_array($value, array('ad', 'placement'), true) ? $value : 'ad';
     }
 
+    private static function sanitize_stats_write_mode($value): string {
+        $value = is_string($value) ? $value : '';
+        return in_array($value, array('sync', 'async'), true) ? $value : 'async';
+    }
+
     private static function sanitize_domain_list($value): array {
         if (is_string($value)) {
             $value = preg_split('/[\\s,;]+/', $value);
@@ -111,6 +116,9 @@ final class System_Settings_Controller {
         $diagnostics_expires_at = (int) get_option('magick_ad_stats_diagnostics_expires_at', 0);
         $stats_dim_retention_days = (int) get_option('magick_ad_stats_dim_retention_days', 30);
         $stats_dim_retention_days = self::sanitize_optional_int($stats_dim_retention_days, 30, 365);
+        $stats_write_mode = self::sanitize_stats_write_mode(
+            get_option('magick_ad_stats_write_mode', 'async')
+        );
         $slot_client_resolver = (get_option('magick_ad_slot_client_resolver', '1') === '1');
         $html_sandbox = (get_option('magick_ad_html_sandbox', '1') === '1');
         $raw_allowlist = get_option('magick_ad_html_script_allowlist', null);
@@ -134,7 +142,7 @@ final class System_Settings_Controller {
         $block_editor_enabled = (get_option('magick_ad_block_editor_enabled', '0') === '1');
 
         $tracking_require_signature = (get_option('magick_ad_track_require_signature', '1') === '1');
-        if (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'production') {
+        if (self::is_production_environment() || !self::is_debug_constant_enabled()) {
             $tracking_require_signature = true;
         }
         $tracking_secret_rotated_at = (int) get_option('magick_ad_track_secret_rotated_at', 0);
@@ -161,6 +169,7 @@ final class System_Settings_Controller {
             'stats_diagnostics_auto_off_days' => $auto_off_days,
             'stats_diagnostics_expires_at' => $diagnostics_expires_at,
             'stats_dim_retention_days' => $stats_dim_retention_days,
+            'stats_write_mode' => $stats_write_mode,
             'slot_client_resolver' => $slot_client_resolver,
             'html_sandbox' => $html_sandbox,
             'html_script_allowlist' => $html_script_allowlist,
@@ -193,6 +202,14 @@ final class System_Settings_Controller {
         return false;
     }
 
+    private static function is_production_environment(): bool {
+        return function_exists('wp_get_environment_type') && wp_get_environment_type() === 'production';
+    }
+
+    private static function is_debug_constant_enabled(): bool {
+        return (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG);
+    }
+
     public static function update(WP_REST_Request $request) {
         $params = $request->get_json_params();
         $params = is_array($params) ? $params : array();
@@ -216,7 +233,7 @@ final class System_Settings_Controller {
         $tracking_require_signature = !array_key_exists('tracking_require_signature', $params)
             ? (get_option('magick_ad_track_require_signature', '1') === '1')
             : !empty($params['tracking_require_signature']);
-        if (function_exists('wp_get_environment_type') && wp_get_environment_type() === 'production') {
+        if (self::is_production_environment() || !self::is_debug_constant_enabled()) {
             $tracking_require_signature = true;
         }
         if (!empty($params['rotate_track_secret'])) {
@@ -239,6 +256,9 @@ final class System_Settings_Controller {
             $params['stats_dim_retention_days'] ?? get_option('magick_ad_stats_dim_retention_days', 30),
             30,
             365
+        );
+        $stats_write_mode = self::sanitize_stats_write_mode(
+            $params['stats_write_mode'] ?? get_option('magick_ad_stats_write_mode', 'async')
         );
         $consent_guard_enabled = !array_key_exists('consent_guard_enabled', $params)
             ? (get_option('magick_ad_consent_guard_enabled', '0') === '1')
@@ -293,6 +313,7 @@ final class System_Settings_Controller {
         update_option('magick_ad_stats_diagnostics_retention_days', $stats_diagnostics_retention_days);
         update_option('magick_ad_stats_diagnostics_auto_off_days', $stats_diagnostics_auto_off_days);
         update_option('magick_ad_stats_dim_retention_days', $stats_dim_retention_days);
+        update_option('magick_ad_stats_write_mode', $stats_write_mode);
         update_option('magick_ad_slot_client_resolver', $slot_client_resolver ? '1' : '0');
         update_option('magick_ad_html_sandbox', $html_sandbox ? '1' : '0');
         update_option('magick_ad_html_script_allowlist', $html_script_allowlist);
@@ -333,6 +354,7 @@ final class System_Settings_Controller {
             'stats_diagnostics_auto_off_days' => $stats_diagnostics_auto_off_days,
             'stats_diagnostics_expires_at' => $expires_at,
             'stats_dim_retention_days' => $stats_dim_retention_days,
+            'stats_write_mode' => $stats_write_mode,
             'slot_client_resolver' => $slot_client_resolver,
             'html_sandbox' => $html_sandbox,
             'html_script_allowlist' => $html_script_allowlist,

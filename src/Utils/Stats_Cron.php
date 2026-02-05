@@ -11,13 +11,13 @@ final class Stats_Cron {
     private const SCHEDULE = 'magick_ad_stats_flush';
 
     public function register(): void {
-        add_action(self::HOOK, array(Stats_Accumulator::class, 'flush'));
+        add_action(self::HOOK, array(__CLASS__, 'flush'));
         add_action('init', array(__CLASS__, 'maybe_schedule'), 20);
         add_filter('cron_schedules', array(__CLASS__, 'register_schedule'));
     }
 
     public static function maybe_schedule(): void {
-        if (!Stats_Accumulator::enabled()) {
+        if (!Stats_Accumulator::enabled() && !Stats_Queue::enabled()) {
             self::unschedule();
             return;
         }
@@ -35,6 +35,11 @@ final class Stats_Cron {
             'display' => esc_html__('Magick AD stats flush', 'magick-ad'),
         );
         return $schedules;
+    }
+
+    public static function flush(): void {
+        Stats_Accumulator::flush();
+        Stats_Queue::flush();
     }
 
     private static function unschedule(): void {

@@ -242,11 +242,10 @@ final class Render_Controller {
     }
 
     private static function is_signature_required(): bool {
-        $required = (bool) apply_filters('magick_ad_render_require_signature', true);
-        if (self::is_production_environment()) {
+        if (self::is_production_environment() || !self::is_debug_constant_enabled()) {
             return true;
         }
-        return $required;
+        return (bool) apply_filters('magick_ad_render_require_signature', true);
     }
 
     private static function get_runtime_rev(): int {
@@ -286,6 +285,10 @@ final class Render_Controller {
             return false;
         }
         return wp_get_environment_type() === 'production';
+    }
+
+    private static function is_debug_constant_enabled(): bool {
+        return (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG);
     }
 
     private static function sanitize_args(array $payload): array {
@@ -514,7 +517,7 @@ final class Render_Controller {
     }
 
     private static function get_rate_limit_fallback(): string {
-        $fallback = (string) get_option('magick_ad_rate_limit_fallback', 'transient');
+        $fallback = (string) get_option('magick_ad_rate_limit_fallback', 'off');
         $fallback = (string) apply_filters('magick_ad_render_rate_limit_fallback', $fallback);
         return $fallback === 'transient' ? 'transient' : 'off';
     }
