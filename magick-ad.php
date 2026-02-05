@@ -8,6 +8,8 @@
  * Requires PHP: 8.1
  * Author: Magick AD
  * Text Domain: magick-ad
+ * License: GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
 
 if (!defined('ABSPATH')) {
@@ -74,7 +76,7 @@ define('MAGICK_AD_FILE', __FILE__);
 define('MAGICK_AD_PATH', plugin_dir_path(__FILE__));
 define('MAGICK_AD_URL', plugin_dir_url(__FILE__));
 define('MAGICK_AD_VERSION', '0.1.0');
-define('MAGICK_AD_DB_VERSION', '3');
+define('MAGICK_AD_DB_VERSION', '4');
 
 spl_autoload_register(function ($class) {
     $prefix = 'MagickAD\\';
@@ -105,9 +107,9 @@ add_filter('magick_ad_has_consent', function ($has_consent) {
     }
 
     // Fallback to a simple CMP cookie flag.
-    $cookie = isset($_COOKIE['magick_ad_consent']) ? $_COOKIE['magick_ad_consent'] : '';
-    if (is_string($cookie)) {
-        $value = strtolower(trim($cookie));
+    $cookie_raw = isset($_COOKIE['magick_ad_consent']) ? wp_unslash($_COOKIE['magick_ad_consent']) : '';
+    if (is_string($cookie_raw)) {
+        $value = strtolower(trim(sanitize_text_field($cookie_raw)));
         return in_array($value, array('1', 'true', 'yes', 'y'), true);
     }
 

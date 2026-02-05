@@ -104,6 +104,7 @@ final class Privacy {
         $limit = 100;
         $offset = ($page - 1) * $limit;
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $rows = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT id, ad_id, event_type, page_url, user_agent, created_at
@@ -181,6 +182,7 @@ final class Privacy {
         $page = max(1, $page);
         $limit = 100;
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $ids = $wpdb->get_col(
             $wpdb->prepare(
                 "SELECT id FROM {$table} WHERE user_id = %d ORDER BY id ASC LIMIT %d",
@@ -200,6 +202,7 @@ final class Privacy {
 
         $safe_ids = array_map('absint', $ids);
         $placeholders = implode(',', array_fill(0, count($safe_ids), '%d'));
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $wpdb->query(
             $wpdb->prepare(
                 "DELETE FROM {$table} WHERE id IN ({$placeholders})",

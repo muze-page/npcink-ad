@@ -4,6 +4,7 @@ namespace MagickAD\REST\Controllers;
 
 use WP_REST_Request;
 use WP_Error;
+use MagickAD\REST\Controllers\Track_Controller;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -32,7 +33,8 @@ final class Reports_Controller {
             return rest_ensure_response($empty);
         }
 
-        $start = date('Y-m-d', current_time('timestamp') - ($days - 1) * DAY_IN_SECONDS);
+        $start = self::date_for_offset($days - 1);
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $sql = $wpdb->prepare(
             "SELECT `date` AS date,
                 SUM(impressions) AS views,
@@ -56,7 +58,7 @@ final class Reports_Controller {
 
         $series = array();
         for ($i = $days - 1; $i >= 0; $i--) {
-            $date = date('Y-m-d', current_time('timestamp') - $i * DAY_IN_SECONDS);
+            $date = self::date_for_offset($i);
             if (isset($map[$date])) {
                 $series[] = $map[$date];
             } else {
@@ -94,8 +96,14 @@ final class Reports_Controller {
         }
 
         global $wpdb;
-        $start = date('Y-m-d', current_time('timestamp') - ($days - 1) * DAY_IN_SECONDS);
-        $column = $group_by;
+        $start = self::date_for_offset($days - 1);
+        $column_map = array(
+            'slot' => 'slot',
+            'position' => 'position',
+            'container' => 'container',
+            'ad_id' => 'ad_id',
+        );
+        $column = $column_map[$group_by];
         $table = $group_by === 'ad_id'
             ? $wpdb->prefix . 'magick_ad_stats'
             : $wpdb->prefix . 'magick_ad_stats_dim';
@@ -108,6 +116,7 @@ final class Reports_Controller {
         }
 
         if ($group_by === 'ad_id') {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Whitelisted column/table.
             $sql = $wpdb->prepare(
                 "SELECT {$column} AS dimension,
                     SUM(impressions) AS views,
@@ -120,6 +129,7 @@ final class Reports_Controller {
                 $start
             );
         } else {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Whitelisted column/table.
             $sql = $wpdb->prepare(
                 "SELECT {$column} AS dimension,
                     SUM(impressions) AS views,
@@ -152,10 +162,173 @@ final class Reports_Controller {
         return rest_ensure_response($result);
     }
 
+    public static function report_failures(WP_REST_Request $request) {
+        $days = absint($request->get_param('days'));
+        if (!in_array($days, array(1, 7, 30), true)) {
+            $days = 7;
+        }
+
+        $cache_key = self::build_cache_key('report_failures', array('days' => $days));
+        $cached = self::get_cached_response($cache_key);
+        if (is_array($cached)) {
+            return rest_ensure_response($cached);
+        }
+
+        $series = array();
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = self::date_for_offset($i);
+            $stats = Track_Controller::get_failure_stats($date);
+            $series[] = array_merge(array('date' => $date), $stats);
+        }
+
+        self::set_cached_response($cache_key, $series);
+        return rest_ensure_response($series);
+    }
+
+    public static function report_variants(WP_REST_Request $request) {
+        $days = absint($request->get_param('days'));
+        if (!in_array($days, array(7, 30), true)) {
+            $days = 7;
+        }
+        $ad_id = sanitize_text_field((string) $request->get_param('ad_id'));
+
+        $cache_key = self::build_cache_key('report_variants', array(
+            'days' => $days,
+            'ad_id' => $ad_id,
+        ));
+        $cached = self::get_cached_response($cache_key);
+        if (is_array($cached)) {
+            return rest_ensure_response($cached);
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'magick_ad_stats_variant';
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+        if ($exists !== $table) {
+            $empty = array();
+            self::set_cached_response($cache_key, $empty);
+            return rest_ensure_response($empty);
+        }
+
+        $start = self::date_for_offset($days - 1);
+        if ($ad_id !== '') {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
+            $sql = $wpdb->prepare(
+                "SELECT variant_id,
+                    SUM(impressions) AS impressions,
+                    SUM(clicks) AS clicks
+                 FROM {$table}
+                 WHERE `date` >= %s AND ad_id = %s
+                 GROUP BY variant_id
+                 ORDER BY impressions DESC, clicks DESC
+                 LIMIT 100",
+                $start,
+                $ad_id
+            );
+        } else {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
+            $sql = $wpdb->prepare(
+                "SELECT ad_id, variant_id,
+                    SUM(impressions) AS impressions,
+                    SUM(clicks) AS clicks
+                 FROM {$table}
+                 WHERE `date` >= %s
+                 GROUP BY ad_id, variant_id
+                 ORDER BY impressions DESC, clicks DESC
+                 LIMIT 200",
+                $start
+            );
+        }
+
+        $rows = $wpdb->get_results($sql, ARRAY_A);
+        $result = array();
+        foreach ($rows as $row) {
+            $result[] = array(
+                'ad_id' => isset($row['ad_id']) ? (string) $row['ad_id'] : $ad_id,
+                'variant_id' => (string) $row['variant_id'],
+                'impressions' => (int) $row['impressions'],
+                'clicks' => (int) $row['clicks'],
+            );
+        }
+
+        self::set_cached_response($cache_key, $result);
+        return rest_ensure_response($result);
+    }
+
+    public static function report_events(WP_REST_Request $request) {
+        $days = absint($request->get_param('days'));
+        if (!in_array($days, array(7, 30), true)) {
+            $days = 7;
+        }
+        $group_by = sanitize_text_field((string) $request->get_param('group_by'));
+        $allowed = array('event', 'ad_id', 'variant_id');
+        if (!in_array($group_by, $allowed, true)) {
+            $group_by = 'event';
+        }
+
+        $cache_key = self::build_cache_key('report_events', array(
+            'days' => $days,
+            'group_by' => $group_by,
+        ));
+        $cached = self::get_cached_response($cache_key);
+        if (is_array($cached)) {
+            return rest_ensure_response($cached);
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'magick_ad_stats_event';
+        $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+        if ($exists !== $table) {
+            $empty = array();
+            self::set_cached_response($cache_key, $empty);
+            return rest_ensure_response($empty);
+        }
+
+        $start = self::date_for_offset($days - 1);
+        $column_map = array(
+            'event' => 'event',
+            'ad_id' => 'ad_id',
+            'variant_id' => 'variant_id',
+        );
+        $column = $column_map[$group_by];
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Whitelisted column/table.
+        $sql = $wpdb->prepare(
+            "SELECT {$column} AS dimension,
+                SUM(count) AS total
+             FROM {$table}
+             WHERE `date` >= %s
+             GROUP BY {$column}
+             ORDER BY total DESC
+             LIMIT 100",
+            $start
+        );
+
+        $rows = $wpdb->get_results($sql, ARRAY_A);
+        $result = array();
+        foreach ($rows as $row) {
+            $dimension = isset($row['dimension']) ? (string) $row['dimension'] : '';
+            if ($dimension === '') {
+                continue;
+            }
+            $result[] = array(
+                'dimension' => $dimension,
+                'total' => (int) $row['total'],
+            );
+        }
+
+        self::set_cached_response($cache_key, $result);
+        return rest_ensure_response($result);
+    }
+
+    private static function date_for_offset(int $offset_days): string {
+        $timestamp = current_time('timestamp') - ($offset_days * DAY_IN_SECONDS);
+        return wp_date('Y-m-d', $timestamp);
+    }
+
     private static function build_empty_series(int $days): array {
         $series = array();
         for ($i = $days - 1; $i >= 0; $i--) {
-            $date = date('Y-m-d', current_time('timestamp') - $i * DAY_IN_SECONDS);
+            $date = self::date_for_offset($i);
             $series[] = array(
                 'date' => $date,
                 'views' => 0,

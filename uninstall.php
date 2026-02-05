@@ -9,12 +9,23 @@ global $wpdb;
 $table = $wpdb->prefix . 'magick_ad_stats';
 $log_table = $wpdb->prefix . 'magick_ad_stats_log';
 $dim_table = $wpdb->prefix . 'magick_ad_stats_dim';
+$variant_table = $wpdb->prefix . 'magick_ad_stats_variant';
+$event_table = $wpdb->prefix . 'magick_ad_stats_event';
 $safe_table = preg_replace('/[^A-Za-z0-9_]/', '', $table);
 $safe_log_table = preg_replace('/[^A-Za-z0-9_]/', '', $log_table);
 $safe_dim_table = preg_replace('/[^A-Za-z0-9_]/', '', $dim_table);
+$safe_variant_table = preg_replace('/[^A-Za-z0-9_]/', '', $variant_table);
+$safe_event_table = preg_replace('/[^A-Za-z0-9_]/', '', $event_table);
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are sanitized.
 $wpdb->query("DROP TABLE IF EXISTS {$safe_table}");
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are sanitized.
 $wpdb->query("DROP TABLE IF EXISTS {$safe_log_table}");
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are sanitized.
 $wpdb->query("DROP TABLE IF EXISTS {$safe_dim_table}");
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are sanitized.
+$wpdb->query("DROP TABLE IF EXISTS {$safe_variant_table}");
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are sanitized.
+$wpdb->query("DROP TABLE IF EXISTS {$safe_event_table}");
 
 $option_like = $wpdb->esc_like('magick_ad_') . '%';
 $transient_like = $wpdb->esc_like('_transient_magick_ad_') . '%';
@@ -22,18 +33,21 @@ $transient_timeout_like = $wpdb->esc_like('_transient_timeout_magick_ad_') . '%'
 
 $wpdb->query(
     $wpdb->prepare(
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
         $option_like
     )
 );
 $wpdb->query(
     $wpdb->prepare(
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
         $transient_like
     )
 );
 $wpdb->query(
     $wpdb->prepare(
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
         $transient_timeout_like
     )
@@ -42,18 +56,21 @@ $wpdb->query(
 if (is_multisite()) {
     $wpdb->query(
         $wpdb->prepare(
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
             "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s",
             $option_like
         )
     );
     $wpdb->query(
         $wpdb->prepare(
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
             "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s",
             $wpdb->esc_like('_site_transient_magick_ad_') . '%'
         )
     );
     $wpdb->query(
         $wpdb->prepare(
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core table name.
             "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s",
             $wpdb->esc_like('_site_transient_timeout_magick_ad_') . '%'
         )

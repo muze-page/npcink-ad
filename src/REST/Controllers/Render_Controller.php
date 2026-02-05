@@ -262,7 +262,7 @@ final class Render_Controller {
     private static function is_request_too_large(WP_REST_Request $request, int $limit): bool {
         $length = $request->get_header('content-length');
         if ($length === '' && isset($_SERVER['CONTENT_LENGTH'])) {
-            $length = (string) $_SERVER['CONTENT_LENGTH'];
+            $length = sanitize_text_field(wp_unslash((string) $_SERVER['CONTENT_LENGTH']));
         }
         if (is_numeric($length)) {
             return (int) $length > $limit;

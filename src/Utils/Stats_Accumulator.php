@@ -188,6 +188,7 @@ final class Stats_Accumulator {
                 continue;
             }
 
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
             $sql = $wpdb->prepare(
                 "INSERT INTO {$table} (`date`, `ad_id`, `impressions`, `clicks`)
                  VALUES (%s, %s, %d, %d)
@@ -247,6 +248,7 @@ final class Stats_Accumulator {
                 continue;
             }
 
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
             $sql = $wpdb->prepare(
                 "INSERT INTO {$table} (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`)
                  VALUES (%s, %s, %s, %s, %s, %d, %d)
@@ -307,6 +309,7 @@ final class Stats_Accumulator {
                 continue;
             }
 
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
             $sql = $wpdb->prepare(
                 "INSERT INTO {$table} (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
                  VALUES (%s, %s, %s, %d, %d)
@@ -365,6 +368,7 @@ final class Stats_Accumulator {
                 continue;
             }
 
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
             $sql = $wpdb->prepare(
                 "INSERT INTO {$table} (`date`, `ad_id`, `event`, `variant_id`, `count`)
                  VALUES (%s, %s, %s, %s, %d)

@@ -47,8 +47,9 @@ final class Diagnostics_Cron {
         $retention_days = (int) get_option('magick_ad_stats_diagnostics_retention_days', 7);
         $retention_days = max(1, min($retention_days, 90));
         $retention_days = (int) apply_filters('magick_ad_stats_diagnostics_retention_days', $retention_days);
-        $cutoff = date('Y-m-d H:i:s', current_time('timestamp') - $retention_days * DAY_IN_SECONDS);
+        $cutoff = wp_date('Y-m-d H:i:s', current_time('timestamp') - $retention_days * DAY_IN_SECONDS);
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $wpdb->query(
             $wpdb->prepare(
                 "DELETE FROM {$log_table} WHERE created_at < %s",

@@ -110,6 +110,7 @@ final class Magick_Command {
             $limit_sql = $wpdb->prepare(' LIMIT %d OFFSET %d', $limit, max(0, $offset));
         }
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $rows = $wpdb->get_results(
             "SELECT id, ad_id, event_type, page_url, user_agent, user_id, created_at
              FROM {$table}

@@ -27,6 +27,7 @@ namespace {
 
     if (!function_exists('magick_ad_the')) {
         function magick_ad_the(string $slot_or_id = '', array $args = array()): void {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ad HTML is user-configured output.
             echo \MagickAD\Frontend\Frontend::render_slot($slot_or_id, $args);
         }
     }

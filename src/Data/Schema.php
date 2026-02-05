@@ -36,6 +36,7 @@ final class Schema {
         $charset_collate = $wpdb->get_charset_collate();
 
         if (self::table_exists($table) && !self::table_has_column($table, 'impressions')) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
             $wpdb->query(
                 "ALTER TABLE {$table}
                  ADD COLUMN impressions bigint(20) unsigned NOT NULL DEFAULT 0
@@ -106,10 +107,15 @@ final class Schema {
         ) {$charset_collate};";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- dbDelta handles schema.
         dbDelta($sql);
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- dbDelta handles schema.
         dbDelta($log_sql);
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- dbDelta handles schema.
         dbDelta($dim_sql);
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- dbDelta handles schema.
         dbDelta($variant_sql);
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- dbDelta handles schema.
         dbDelta($event_sql);
 
         update_option(self::OPTION_KEY, MAGICK_AD_DB_VERSION, false);
@@ -201,6 +207,7 @@ final class Schema {
 
     private static function table_has_column(string $table, string $column): bool {
         global $wpdb;
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $value = $wpdb->get_var(
             $wpdb->prepare(
                 'SHOW COLUMNS FROM ' . $table . ' LIKE %s',

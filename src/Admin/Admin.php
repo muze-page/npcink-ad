@@ -298,24 +298,23 @@ final class Admin {
 
     private function get_insert_help_payload(): array {
         return array(
-            'block_title' => esc_html__('区块（Block）', 'magick-ad'),
-            'shortcode_title' => esc_html__('短代码（Shortcode）', 'magick-ad'),
-            'template_title' => esc_html__('主题模板函数（Template Tag / PHP API）', 'magick-ad'),
+            'block_title' => __('区块（Block）', 'magick-ad'),
+            'shortcode_title' => __('短代码（Shortcode）', 'magick-ad'),
+            'template_title' => __('主题模板函数（Template Tag / PHP API）', 'magick-ad'),
             'shortcode_examples' => array(
-                esc_html('[magick_ad slot="sidebar-top"]'),
-                esc_html('[magick_ad id="ad_123456"]'),
-                esc_html('[magick_ad slot="post-inline-1" class="my-ad"]'),
+                '[magick_ad slot="sidebar-top"]',
+                '[magick_ad id="ad_123456"]',
+                '[magick_ad slot="post-inline-1" class="my-ad"]',
             ),
-            'template_example' => esc_html(
+            'template_example' =>
                 "<?php if (function_exists('magick_ad_the')) : ?>\n" .
                 "  <?php magick_ad_the('sidebar-top'); ?>\n" .
-                "<?php endif; ?>"
-            ),
+                "<?php endif; ?>",
         );
     }
 
     private function render_block_help(string $title): void {
-        echo '<h2>' . $title . '</h2>';
+        echo '<h2>' . esc_html($title) . '</h2>';
         echo '<p>' . esc_html__('现代 WP 首选（Gutenberg / FSE），可在编辑器中直接插入 “Magick AD” 区块。', 'magick-ad') . '</p>';
         echo '<ol>';
         echo '<li>' . esc_html__('在区块编辑器中添加 “Magick AD” 区块。', 'magick-ad') . '</li>';
@@ -325,15 +324,16 @@ final class Admin {
     }
 
     private function render_shortcode_help(string $title, array $examples): void {
-        echo '<h2>' . $title . '</h2>';
+        echo '<h2>' . esc_html($title) . '</h2>';
         echo '<p>' . esc_html__('兼容经典编辑器/复制粘贴场景，适合内容中快速插入。', 'magick-ad') . '</p>';
+        $examples = array_map('esc_html', $examples);
         echo '<pre><code>' . implode("\n", $examples) . '</code></pre>';
     }
 
     private function render_template_help(string $title, string $example): void {
-        echo '<h2>' . $title . '</h2>';
+        echo '<h2>' . esc_html($title) . '</h2>';
         echo '<p>' . esc_html__('给主题开发者或模板文件使用，适合放在任意位置。', 'magick-ad') . '</p>';
-        echo '<pre><code>' . $example . '</code></pre>';
+        echo '<pre><code>' . esc_html($example) . '</code></pre>';
     }
 
     private function render_slot_naming_help(): void {

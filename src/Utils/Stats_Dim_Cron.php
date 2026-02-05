@@ -42,7 +42,8 @@ final class Stats_Dim_Cron {
             return;
         }
 
-        $cutoff = date('Y-m-d', current_time('timestamp') - $days * DAY_IN_SECONDS);
+        $cutoff = wp_date('Y-m-d', current_time('timestamp') - $days * DAY_IN_SECONDS);
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $wpdb->query(
             $wpdb->prepare(
                 "DELETE FROM {$table} WHERE `date` < %s",

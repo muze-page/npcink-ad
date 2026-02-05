@@ -1036,7 +1036,7 @@ final class Settings {
         if ($timestamp === false) {
             return '';
         }
-        return date('Y-m-d H:i:s', $timestamp);
+        return wp_date('Y-m-d H:i:s', $timestamp);
     }
 
     private static function sanitize_date($value): string {
@@ -1049,9 +1049,9 @@ final class Settings {
             return '';
         }
         if (preg_match('/\\d{2}:\\d{2}/', $value)) {
-            return date('Y-m-d H:i:s', $timestamp);
+            return wp_date('Y-m-d H:i:s', $timestamp);
         }
-        return date('Y-m-d', $timestamp);
+        return wp_date('Y-m-d', $timestamp);
     }
 
     private static function sanitize_ids($value): array {

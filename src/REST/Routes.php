@@ -42,6 +42,21 @@ final class Routes {
             'callback' => array(Reports_Controller::class, 'report_dimensions'),
             'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
         ));
+        register_rest_route('magick-ad/v1', '/report-failures', array(
+            'methods' => 'GET',
+            'callback' => array(Reports_Controller::class, 'report_failures'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/report-variants', array(
+            'methods' => 'GET',
+            'callback' => array(Reports_Controller::class, 'report_variants'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/report-events', array(
+            'methods' => 'GET',
+            'callback' => array(Reports_Controller::class, 'report_events'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
         register_rest_route('magick-ad/v1', '/debug', array(
             'methods' => 'GET',
             'callback' => array(Debug_Controller::class, 'get'),

@@ -160,7 +160,7 @@ final class Track_Controller {
     private static function is_request_too_large(WP_REST_Request $request, int $limit): bool {
         $length = $request->get_header('content-length');
         if ($length === '' && isset($_SERVER['CONTENT_LENGTH'])) {
-            $length = (string) $_SERVER['CONTENT_LENGTH'];
+            $length = sanitize_text_field(wp_unslash((string) $_SERVER['CONTENT_LENGTH']));
         }
         if (is_numeric($length)) {
             return (int) $length > $limit;
@@ -876,6 +876,12 @@ final class Track_Controller {
     private static function resolve_page_hash_source(string $page_url): string {
         $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
         $request_uri = is_string($request_uri) ? $request_uri : '';
+        if ($request_uri !== '') {
+            $parts = wp_parse_url($request_uri);
+            $path = isset($parts['path']) ? $parts['path'] : '';
+            $query = isset($parts['query']) ? '?' . $parts['query'] : '';
+            $request_uri = sanitize_text_field($path . $query);
+        }
         return $page_url ? $page_url : esc_url_raw(home_url($request_uri));
     }
 
@@ -1090,6 +1096,7 @@ final class Track_Controller {
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $sql = $wpdb->prepare(
             "INSERT INTO {$table} (`date`, `ad_id`, `impressions`, `clicks`)
              VALUES (%s, %s, %d, %d)
@@ -1131,6 +1138,7 @@ final class Track_Controller {
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $sql = $wpdb->prepare(
             "INSERT INTO {$table} (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`)
              VALUES (%s, %s, %s, %d, %d)
@@ -1171,6 +1179,7 @@ final class Track_Controller {
         global $wpdb;
         $table = $wpdb->prefix . 'magick_ad_stats_event';
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $sql = $wpdb->prepare(
             "INSERT INTO {$table} (`date`, `ad_id`, `event`, `variant_id`, `count`)
              VALUES (%s, %s, %s, %s, %d)
@@ -1238,6 +1247,7 @@ final class Track_Controller {
             return true;
         }
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $sql = "INSERT INTO {$table} (`date`, `ad_id`, `impressions`, `clicks`) VALUES ";
         $sql .= implode(', ', $placeholders);
         $sql .= " ON DUPLICATE KEY UPDATE impressions = impressions + VALUES(impressions), clicks = clicks + VALUES(clicks)";
@@ -1318,6 +1328,7 @@ final class Track_Controller {
             return true;
         }
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $sql = "INSERT INTO {$table} (`date`, `ad_id`, `variant_id`, `impressions`, `clicks`) VALUES ";
         $sql .= implode(', ', $placeholders);
         $sql .= " ON DUPLICATE KEY UPDATE impressions = impressions + VALUES(impressions), clicks = clicks + VALUES(clicks)";
@@ -1378,6 +1389,7 @@ final class Track_Controller {
             return true;
         }
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $sql = "INSERT INTO {$table} (`date`, `ad_id`, `event`, `variant_id`, `count`) VALUES ";
         $sql .= implode(', ', $placeholders);
         $sql .= " ON DUPLICATE KEY UPDATE count = count + VALUES(count)";
@@ -1415,6 +1427,7 @@ final class Track_Controller {
         $impressions = $event === 'impression' ? 1 : 0;
         $clicks = $event === 'click' ? 1 : 0;
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $sql = $wpdb->prepare(
             "INSERT INTO {$table} (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`)\n             VALUES (%s, %s, %s, %s, %s, %d, %d)\n             ON DUPLICATE KEY UPDATE\n                impressions = impressions + VALUES(impressions),\n                clicks = clicks + VALUES(clicks)",
             $date,
@@ -1512,6 +1525,7 @@ final class Track_Controller {
             return true;
         }
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $sql = "INSERT INTO {$table} (`date`, `ad_id`, `slot`, `position`, `container`, `impressions`, `clicks`) VALUES ";
         $sql .= implode(', ', $placeholders);
         $sql .= " ON DUPLICATE KEY UPDATE impressions = impressions + VALUES(impressions), clicks = clicks + VALUES(clicks)";
@@ -1611,6 +1625,7 @@ final class Track_Controller {
             return;
         }
 
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is a fixed suffix with prefix.
         $sql = "INSERT INTO {$log_table} (`ad_id`, `event_type`, `page_url`, `user_agent`, `user_id`, `created_at`) VALUES ";
         $sql .= implode(', ', $placeholders);
         $wpdb->query($wpdb->prepare($sql, $values));

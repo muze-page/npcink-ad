@@ -682,7 +682,7 @@ final class Frontend {
                 'type' => isset($_GET['magick_ad_node_type']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_type'])) : 'id',
                 'value' => isset($_GET['magick_ad_node_value']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_value'])) : '',
                 'match' => isset($_GET['magick_ad_node_match']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_match'])) : 'first',
-                'index' => isset($_GET['magick_ad_node_index']) ? absint($_GET['magick_ad_node_index']) : 1,
+                'index' => isset($_GET['magick_ad_node_index']) ? absint(wp_unslash($_GET['magick_ad_node_index'])) : 1,
             );
             wp_localize_script('magick-ad-node-debug', 'MagickADNodeDebug', $config);
             return;
@@ -1525,15 +1525,18 @@ final class Frontend {
     }
 
     private static function is_preview_request(): bool {
-        return isset($_GET['magick_ad_preview']);
+        $flag = isset($_GET['magick_ad_preview']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview'])) : '';
+        return $flag !== '';
     }
 
     private static function is_picker_request(): bool {
-        return isset($_GET['magick_ad_picker']) && $_GET['magick_ad_picker'] === '1';
+        $flag = isset($_GET['magick_ad_picker']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_picker'])) : '';
+        return $flag === '1';
     }
 
     private static function is_node_debug_request(): bool {
-        return isset($_GET['magick_ad_node_debug']) && $_GET['magick_ad_node_debug'] === '1';
+        $flag = isset($_GET['magick_ad_node_debug']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_node_debug'])) : '';
+        return $flag === '1';
     }
 
     private static function can_view_picker(): bool {
@@ -1601,7 +1604,8 @@ final class Frontend {
     }
 
     private static function is_diagnose_request(): bool {
-        return isset($_GET['magick_ad_diagnose']);
+        $flag = isset($_GET['magick_ad_diagnose']) ? sanitize_text_field(wp_unslash($_GET['magick_ad_diagnose'])) : '';
+        return $flag !== '';
     }
 
     private static function can_view_diagnose(): bool {
@@ -1774,7 +1778,10 @@ final class Frontend {
 
         self::$preview_ad_id = $ad_id;
         self::$preview_ad = $ad;
-        self::$preview_force = isset($_GET['magick_ad_preview_force']) && $_GET['magick_ad_preview_force'] === '1';
+        $preview_force = isset($_GET['magick_ad_preview_force'])
+            ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_force']))
+            : '';
+        self::$preview_force = $preview_force === '1';
         self::$preview_evaluation = self::evaluate_ad($ad);
         $mode = isset($_GET['magick_ad_preview_mode'])
             ? sanitize_text_field(wp_unslash($_GET['magick_ad_preview_mode']))
@@ -1846,6 +1853,7 @@ final class Frontend {
         );
 
         echo '<!doctype html>';
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core provides safe attributes.
         echo '<html ' . get_language_attributes() . '>';
         echo '<head>';
         echo '<meta charset="' . esc_attr(get_bloginfo('charset')) . '">';
@@ -2841,6 +2849,13 @@ final class Frontend {
     private static function build_runtime_tokens(array $ad): array {
         $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
         $request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
+        $request_uri = is_string($request_uri) ? $request_uri : '';
+        if ($request_uri !== '') {
+            $parts = wp_parse_url($request_uri);
+            $path = isset($parts['path']) ? $parts['path'] : '';
+            $query = isset($parts['query']) ? '?' . $parts['query'] : '';
+            $request_uri = sanitize_text_field($path . $query);
+        }
         $page_url = $request_uri !== '' ? home_url($request_uri) : home_url('/');
         return array(
             '{site_url}' => home_url('/'),
