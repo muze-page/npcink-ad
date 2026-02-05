@@ -360,6 +360,14 @@ final class Admin {
 
     private function get_debug_panel_params(): array {
         $base_url = home_url('/');
+        if (!$this->is_debug_nonce_valid()) {
+            return array(
+                'input_url' => $base_url,
+                'device' => 'auto',
+                'login_state' => 'auto',
+            );
+        }
+
         $input_url = $this->get_url_param('debug_url', $base_url);
         $device = $this->get_select_param('debug_device', self::DEBUG_DEVICES, 'auto');
         $login_state = $this->get_select_param('debug_login', self::DEBUG_LOGIN_STATES, 'auto');
@@ -400,6 +408,7 @@ final class Admin {
 
         echo '<form method="get" style="margin:16px 0 24px;">';
         echo '<input type="hidden" name="page" value="magick-ad-debug" />';
+        wp_nonce_field('magick_ad_debug_form', 'magick_ad_debug_nonce');
         echo '<table class="form-table">';
         echo '<tr><th scope="row"><label for="magick-ad-debug-url">' . esc_html__('页面 URL', 'magick-ad') . '</label></th>';
         echo '<td><input name="debug_url" id="magick-ad-debug-url" type="text" class="regular-text" value="' . esc_attr($input_url) . '" />';
@@ -422,6 +431,17 @@ final class Admin {
         echo '</table>';
         submit_button(__('生成诊断链接', 'magick-ad'));
         echo '</form>';
+    }
+
+    private function is_debug_nonce_valid(): bool {
+        if (!isset($_GET['magick_ad_debug_nonce'])) {
+            return false;
+        }
+        $nonce = sanitize_text_field(wp_unslash($_GET['magick_ad_debug_nonce']));
+        if ($nonce === '') {
+            return false;
+        }
+        return wp_verify_nonce($nonce, 'magick_ad_debug_form');
     }
 
     private function render_debug_result(string $debug_url): void {

@@ -41,13 +41,8 @@ final class Plugin {
     private function __construct() {}
 
     public function init(): void {
-        add_action('plugins_loaded', array($this, 'load_textdomain'));
         add_action('init', array($this, 'register'));
         add_action('admin_init', array($this, 'maybe_upgrade'));
-    }
-
-    public function load_textdomain(): void {
-        load_plugin_textdomain('magick-ad', false, dirname(plugin_basename(MAGICK_AD_FILE)) . '/languages');
     }
 
     public function register(): void {

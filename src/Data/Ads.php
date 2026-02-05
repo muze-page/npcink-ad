@@ -319,7 +319,7 @@ final class Ads {
 
             $date = isset($ad['date']) ? self::sanitize_datetime($ad['date']) : '';
             if ($post_data['post_status'] === 'future' && !$date) {
-                $date = date_i18n('Y-m-d H:i:s', current_time('timestamp') + HOUR_IN_SECONDS);
+                $date = wp_date('Y-m-d H:i:s', current_time('timestamp') + HOUR_IN_SECONDS);
             }
             if ($date) {
                 $post_data['post_date'] = $date;
