@@ -3703,6 +3703,7 @@ const DEFAULT_SETTINGS = {
   stats_diagnostics_auto_off_days: 7,
   stats_diagnostics_expires_at: 0,
   rate_limit_fallback: 'off',
+  stats_write_mode: 'async',
   stats_queue_metrics: {
     enabled: false,
     stats: 0,
@@ -3727,6 +3728,17 @@ const DEFAULT_SETTINGS = {
   brand_tagline: '广告配置与投放规则管理',
   manage_capability: 'manage_options'
 };
+const LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
+const LEVELS = [{
+  value: 'simple',
+  label: '简洁'
+}, {
+  value: 'advanced',
+  label: '高级'
+}, {
+  value: 'lab',
+  label: '实验室'
+}];
 const SystemSettingsPanel = ({
   onNotice
 }) => {
@@ -3735,6 +3747,16 @@ const SystemSettingsPanel = ({
   const [saving, setSaving] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [error, setError] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
   const [openSection, setOpenSection] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('tracking');
+  const [displayLevel, setDisplayLevel] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(() => {
+    if (typeof window === 'undefined') {
+      return 'simple';
+    }
+    try {
+      return window.localStorage.getItem(LEVEL_STORAGE_KEY) || 'simple';
+    } catch (err) {
+      return 'simple';
+    }
+  });
   const parseDomainList = (value = '') => value.split(/[\s,;]+/).map(item => item.trim()).filter(Boolean);
   const formatDomainList = list => Array.isArray(list) ? list.join('\n') : '';
   const formatAge = seconds => {
@@ -3761,6 +3783,8 @@ const SystemSettingsPanel = ({
   const queueOldestAge = Number(queueMetrics.oldest_age || 0);
   const queueAlertLimit = Number(queueMetrics.alert_limit || 0);
   const queueAlertAge = Number(queueMetrics.alert_age || 0);
+  const isAdvanced = displayLevel !== 'simple';
+  const isLab = displayLevel === 'lab';
   const diagnosticsExpiryLabel = (() => {
     if (!settings.stats_diagnostics_expires_at) {
       return '';
@@ -3817,6 +3841,16 @@ const SystemSettingsPanel = ({
       mounted = false;
     };
   }, []);
+  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      window.localStorage.setItem(LEVEL_STORAGE_KEY, displayLevel);
+    } catch (err) {
+      // ignore storage errors
+    }
+  }, [displayLevel]);
   const persist = next => {
     setSaving(true);
     setError(null);
@@ -3877,7 +3911,17 @@ const SystemSettingsPanel = ({
   };
   return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Card, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.CardBody, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-field__label"
-  }, "\u9690\u79C1\u4E0E\u7CFB\u7EDF\u8BBE\u7F6E"), error && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+  }, "\u9690\u79C1\u4E0E\u7CFB\u7EDF\u8BBE\u7F6E"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-settings-expiry"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("strong", null, "\u663E\u793A\u7EA7\u522B\uFF1A"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ButtonGroup, null, LEVELS.map(level => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+    key: level.value,
+    variant: displayLevel === level.value ? 'primary' : 'secondary',
+    onClick: () => setDisplayLevel(level.value),
+    disabled: loading || saving
+  }, level.label)))), isLab && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "warning",
+    isDismissible: false
+  }, "\u5B9E\u9A8C\u5BA4\u6A21\u5F0F\u4F1A\u663E\u793A\u6240\u6709\u9AD8\u7EA7\u9009\u9879\uFF0C\u8BF7\u8C28\u614E\u4FEE\u6539\u3002"), error && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
     status: "error",
     isDismissible: true
   }, error.message || '系统设置加载失败'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
@@ -3943,6 +3987,21 @@ const SystemSettingsPanel = ({
       tracking_dedupe_scope: value
     }),
     help: "\u9ED8\u8BA4\u6309\u5E7F\u544A\u53BB\u91CD\uFF1B\u5982\u9700\u6309\u4F4D\u7F6E\u7EDF\u8BA1\u8BF7\u9009\u62E9\u201C\u6309\u4F4D\u7F6E\u201D\u3002"
+  }), isAdvanced && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+    label: "\u7EDF\u8BA1\u5199\u5165\u6A21\u5F0F",
+    value: settings.stats_write_mode,
+    disabled: loading || saving,
+    options: [{
+      label: '异步写入（推荐）',
+      value: 'async'
+    }, {
+      label: '同步写入',
+      value: 'sync'
+    }],
+    onChange: value => updateSettings({
+      stats_write_mode: value
+    }),
+    help: "\u5F02\u6B65\u4F1A\u8FDB\u5165\u7EDF\u8BA1\u961F\u5217\uFF0C\u5B9A\u65F6\u6279\u91CF\u843D\u5E93\uFF1B\u540C\u6B65\u76F4\u63A5\u5199\u5E93\u3002"
   }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "magick-ad-settings-expiry"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("strong", null, "\u7EDF\u8BA1\u961F\u5217\uFF1A"), queueEnabled ? `${queueTotal} 条` : '未启用', queueEnabled && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
@@ -3950,10 +4009,10 @@ const SystemSettingsPanel = ({
   }, "\uFF08\u6700\u4E45\u7B49\u5F85 ", formatAge(queueOldestAge), "\uFF09")), queueEnabled && (queueTotal > 0 || queueOldestAge > 0) && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
     status: "info",
     isDismissible: false
-  }, "\u5F53\u524D\u961F\u5217\uFF1A\u4E3B\u8868 ", queueMetrics.stats || 0, " / \u7EF4\u5EA6", ' ', queueMetrics.dim || 0, " / \u53D8\u4F53", ' ', queueMetrics.variant || 0, " / \u4E8B\u4EF6", ' ', queueMetrics.event || 0), queueEnabled && (queueAlertLimit && queueTotal >= queueAlertLimit || queueAlertAge && queueOldestAge >= queueAlertAge) && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+  }, "\u5F53\u524D\u961F\u5217\uFF1A\u4E3B\u8868 ", queueMetrics.stats || 0, ' ', "/ \u7EF4\u5EA6 ", queueMetrics.dim || 0, " / \u53D8\u4F53", ' ', queueMetrics.variant || 0, " / \u4E8B\u4EF6", ' ', queueMetrics.event || 0), queueEnabled && (queueAlertLimit && queueTotal >= queueAlertLimit || queueAlertAge && queueOldestAge >= queueAlertAge) && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
     status: "warning",
     isDismissible: false
-  }, "\u961F\u5217\u51FA\u73B0\u79EF\u538B\uFF0C\u8BF7\u68C0\u67E5 Cron \u662F\u5426\u8FD0\u884C\u6B63\u5E38\u53CA\u6570\u636E\u5E93\u5199\u5165\u6027\u80FD\u3002")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+  }, "\u961F\u5217\u51FA\u73B0\u79EF\u538B\uFF0C\u8BF7\u68C0\u67E5 Cron \u662F\u5426\u8FD0\u884C\u6B63\u5E38\u53CA\u6570\u636E\u5E93\u5199\u5165\u6027\u80FD\u3002"))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u5B89\u5168\u4E0E\u7F13\u5B58",
     opened: openSection === 'security',
     onToggle: () => handleToggleSection('security')
@@ -3986,7 +4045,7 @@ const SystemSettingsPanel = ({
       slot_client_resolver: value
     }),
     help: "\u5F00\u542F\u540E\u4EC5\u8F93\u51FA\u5019\u9009 ID\uFF0C\u7531\u524D\u7AEF\u6309\u6743\u91CD\u51B3\u5B9A\u5C55\u793A\uFF0C\u9002\u914D\u5168\u9875\u7F13\u5B58\u573A\u666F\u3002"
-  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+  }), isAdvanced && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
     label: "\u9650\u6D41\u56DE\u9000\u7B56\u7565\uFF08\u65E0\u6301\u4E45\u5316\u7F13\u5B58\u65F6\uFF09",
     value: settings.rate_limit_fallback,
     disabled: loading || saving,
@@ -4015,7 +4074,7 @@ const SystemSettingsPanel = ({
     onClick: () => updateSettings({
       slot_client_resolver: true
     })
-  }, "\u4E00\u952E\u542F\u7528\u8F6E\u64AD"))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+  }, "\u4E00\u952E\u542F\u7528\u8F6E\u64AD"))), isAdvanced && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
     label: "Full HTML \u542F\u7528 iframe \u6C99\u7BB1",
     checked: Boolean(settings.html_sandbox),
     disabled: loading || saving,
@@ -4050,7 +4109,7 @@ const SystemSettingsPanel = ({
       trusted_proxies: parseDomainList(value)
     }),
     help: "\u4EC5\u5F53 REMOTE_ADDR \u5728\u6B64\u5217\u8868\u5185\uFF0C\u624D\u4FE1\u4EFB X-Forwarded-For/CF-Connecting-IP\u3002\u652F\u6301 CIDR\uFF0C\u6BCF\u884C\u4E00\u4E2A\u3002"
-  })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u8BCA\u65AD\u65E5\u5FD7",
     opened: openSection === 'diagnostics',
     onToggle: () => handleToggleSection('diagnostics')
@@ -4064,7 +4123,7 @@ const SystemSettingsPanel = ({
       stats_diagnostics: value
     }),
     help: "\u4EC5\u8BCA\u65AD\u65F6\u8BB0\u5F55 page_url / user_agent / user_id\u3002"
-  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+  }), isAdvanced && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
     label: "\u8BCA\u65AD\u65E5\u5FD7\u4FDD\u7559\u5929\u6570",
     type: "number",
     value: settings.stats_diagnostics_retention_days,
@@ -4085,7 +4144,7 @@ const SystemSettingsPanel = ({
   }), settings.stats_diagnostics && diagnosticsExpiryLabel && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
     status: "info",
     isDismissible: false
-  }, "\u8BCA\u65AD\u6A21\u5F0F\u5C06\u5728 ", diagnosticsExpiryLabel, " \u81EA\u52A8\u5173\u95ED\u3002")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+  }, "\u8BCA\u65AD\u6A21\u5F0F\u5C06\u5728 ", diagnosticsExpiryLabel, " \u81EA\u52A8\u5173\u95ED\u3002"))), isAdvanced && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
     title: "\u54C1\u724C\u4E0E\u6743\u9650",
     opened: openSection === 'brand',
     onToggle: () => handleToggleSection('brand')

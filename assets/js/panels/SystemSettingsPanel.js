@@ -1,6 +1,7 @@
 import { useEffect, useState } from '@wordpress/element';
 import {
     Button,
+    ButtonGroup,
     Card,
     CardBody,
     Notice,
@@ -28,6 +29,7 @@ const DEFAULT_SETTINGS = {
     stats_diagnostics_auto_off_days: 7,
     stats_diagnostics_expires_at: 0,
     rate_limit_fallback: 'off',
+    stats_write_mode: 'async',
     stats_queue_metrics: {
         enabled: false,
         stats: 0,
@@ -53,12 +55,29 @@ const DEFAULT_SETTINGS = {
     manage_capability: 'manage_options',
 };
 
+const LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
+const LEVELS = [
+    { value: 'simple', label: '简洁' },
+    { value: 'advanced', label: '高级' },
+    { value: 'lab', label: '实验室' },
+];
+
 const SystemSettingsPanel = ({ onNotice }) => {
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [openSection, setOpenSection] = useState('tracking');
+    const [displayLevel, setDisplayLevel] = useState(() => {
+        if (typeof window === 'undefined') {
+            return 'simple';
+        }
+        try {
+            return window.localStorage.getItem(LEVEL_STORAGE_KEY) || 'simple';
+        } catch (err) {
+            return 'simple';
+        }
+    });
 
     const parseDomainList = (value = '') =>
         value
@@ -96,6 +115,8 @@ const SystemSettingsPanel = ({ onNotice }) => {
     const queueOldestAge = Number(queueMetrics.oldest_age || 0);
     const queueAlertLimit = Number(queueMetrics.alert_limit || 0);
     const queueAlertAge = Number(queueMetrics.alert_age || 0);
+    const isAdvanced = displayLevel !== 'simple';
+    const isLab = displayLevel === 'lab';
 
     const diagnosticsExpiryLabel = (() => {
         if (!settings.stats_diagnostics_expires_at) {
@@ -153,6 +174,17 @@ const SystemSettingsPanel = ({ onNotice }) => {
             mounted = false;
         };
     }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage.setItem(LEVEL_STORAGE_KEY, displayLevel);
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [displayLevel]);
 
     const persist = (next) => {
         setSaving(true);
@@ -217,6 +249,30 @@ const SystemSettingsPanel = ({ onNotice }) => {
         <Card>
             <CardBody>
                 <div className="magick-ad-field__label">隐私与系统设置</div>
+                <div className="magick-ad-settings-expiry">
+                    <strong>显示级别：</strong>
+                    <ButtonGroup>
+                        {LEVELS.map((level) => (
+                            <Button
+                                key={level.value}
+                                variant={
+                                    displayLevel === level.value
+                                        ? 'primary'
+                                        : 'secondary'
+                                }
+                                onClick={() => setDisplayLevel(level.value)}
+                                disabled={loading || saving}
+                            >
+                                {level.label}
+                            </Button>
+                        ))}
+                    </ButtonGroup>
+                </div>
+                {isLab && (
+                    <Notice status="warning" isDismissible={false}>
+                        实验室模式会显示所有高级选项，请谨慎修改。
+                    </Notice>
+                )}
                 {error && (
                     <Notice status="error" isDismissible>
                         {error.message || '系统设置加载失败'}
@@ -296,33 +352,54 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             }
                             help="默认按广告去重；如需按位置统计请选择“按位置”。"
                         />
-                        <div className="magick-ad-settings-expiry">
-                            <strong>统计队列：</strong>
-                            {queueEnabled
-                                ? `${queueTotal} 条`
-                                : '未启用'}
-                            {queueEnabled && (
-                                <span className="magick-ad-settings-secret__hint">
-                                    （最久等待 {formatAge(queueOldestAge)}）
-                                </span>
-                            )}
-                        </div>
-                        {queueEnabled && (queueTotal > 0 || queueOldestAge > 0) && (
-                            <Notice status="info" isDismissible={false}>
-                                当前队列：主表 {queueMetrics.stats || 0} / 维度{' '}
-                                {queueMetrics.dim || 0} / 变体{' '}
-                                {queueMetrics.variant || 0} / 事件{' '}
-                                {queueMetrics.event || 0}
-                            </Notice>
+                        {isAdvanced && (
+                            <>
+                                <SelectControl
+                                    label="统计写入模式"
+                                    value={settings.stats_write_mode}
+                                    disabled={loading || saving}
+                                    options={[
+                                        { label: '异步写入（推荐）', value: 'async' },
+                                        { label: '同步写入', value: 'sync' },
+                                    ]}
+                                    onChange={(value) =>
+                                        updateSettings({
+                                            stats_write_mode: value,
+                                        })
+                                    }
+                                    help="异步会进入统计队列，定时批量落库；同步直接写库。"
+                                />
+                                <div className="magick-ad-settings-expiry">
+                                    <strong>统计队列：</strong>
+                                    {queueEnabled
+                                        ? `${queueTotal} 条`
+                                        : '未启用'}
+                                    {queueEnabled && (
+                                        <span className="magick-ad-settings-secret__hint">
+                                            （最久等待 {formatAge(queueOldestAge)}）
+                                        </span>
+                                    )}
+                                </div>
+                                {queueEnabled &&
+                                    (queueTotal > 0 || queueOldestAge > 0) && (
+                                        <Notice status="info" isDismissible={false}>
+                                            当前队列：主表 {queueMetrics.stats || 0}{' '}
+                                            / 维度 {queueMetrics.dim || 0} / 变体{' '}
+                                            {queueMetrics.variant || 0} / 事件{' '}
+                                            {queueMetrics.event || 0}
+                                        </Notice>
+                                    )}
+                                {queueEnabled &&
+                                    ((queueAlertLimit &&
+                                        queueTotal >= queueAlertLimit) ||
+                                        (queueAlertAge &&
+                                            queueOldestAge >= queueAlertAge)) && (
+                                        <Notice status="warning" isDismissible={false}>
+                                            队列出现积压，请检查 Cron 是否运行正常及数据库写入性能。
+                                        </Notice>
+                                    )}
+                            </>
                         )}
-                        {queueEnabled &&
-                            ((queueAlertLimit && queueTotal >= queueAlertLimit) ||
-                                (queueAlertAge &&
-                                    queueOldestAge >= queueAlertAge)) && (
-                                <Notice status="warning" isDismissible={false}>
-                                    队列出现积压，请检查 Cron 是否运行正常及数据库写入性能。
-                                </Notice>
-                            )}
                     </PanelBody>
                     <PanelBody
                         title="安全与缓存"
@@ -374,22 +451,26 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             }
                             help="开启后仅输出候选 ID，由前端按权重决定展示，适配全页缓存场景。"
                         />
-                        <SelectControl
-                            label="限流回退策略（无持久化缓存时）"
-                            value={settings.rate_limit_fallback}
-                            disabled={loading || saving}
-                            options={[
-                                { label: '关闭（推荐）', value: 'off' },
-                                {
-                                    label: '使用 transient（写入数据库）',
-                                    value: 'transient',
-                                },
-                            ]}
-                            onChange={(value) =>
-                                updateSettings({ rate_limit_fallback: value })
-                            }
-                            help="默认关闭：当没有持久化缓存时不做限流回退，避免 transient 写入压力。"
-                        />
+                        {isAdvanced && (
+                            <SelectControl
+                                label="限流回退策略（无持久化缓存时）"
+                                value={settings.rate_limit_fallback}
+                                disabled={loading || saving}
+                                options={[
+                                    { label: '关闭（推荐）', value: 'off' },
+                                    {
+                                        label: '使用 transient（写入数据库）',
+                                        value: 'transient',
+                                    },
+                                ]}
+                                onChange={(value) =>
+                                    updateSettings({
+                                        rate_limit_fallback: value,
+                                    })
+                                }
+                                help="默认关闭：当没有持久化缓存时不做限流回退，避免 transient 写入压力。"
+                            />
+                        )}
                         {settings.page_cache_detected &&
                             !settings.slot_client_resolver && (
                                 <Notice status="warning" isDismissible={false}>
@@ -411,61 +492,65 @@ const SystemSettingsPanel = ({ onNotice }) => {
                                     </div>
                                 </Notice>
                             )}
-                        <ToggleControl
-                            label="Full HTML 启用 iframe 沙箱"
-                            checked={Boolean(settings.html_sandbox)}
-                            disabled={loading || saving}
-                            onChange={(value) =>
-                                updateSettings({
-                                    html_sandbox: value,
-                                })
-                            }
-                            help="仅对 Full HTML 生效，建议保持开启以隔离第三方脚本。"
-                        />
-                        {!settings.html_sandbox && (
-                            <Notice status="warning" isDismissible={false}>
-                                已关闭沙箱：Full HTML 将直接在页面执行脚本，风险较高。
-                            </Notice>
+                        {isAdvanced && (
+                            <>
+                                <ToggleControl
+                                    label="Full HTML 启用 iframe 沙箱"
+                                    checked={Boolean(settings.html_sandbox)}
+                                    disabled={loading || saving}
+                                    onChange={(value) =>
+                                        updateSettings({
+                                            html_sandbox: value,
+                                        })
+                                    }
+                                    help="仅对 Full HTML 生效，建议保持开启以隔离第三方脚本。"
+                                />
+                                {!settings.html_sandbox && (
+                                    <Notice status="warning" isDismissible={false}>
+                                        已关闭沙箱：Full HTML 将直接在页面执行脚本，风险较高。
+                                    </Notice>
+                                )}
+                                <TextareaControl
+                                    label="脚本白名单（系统级）"
+                                    value={formatDomainList(
+                                        settings.html_script_allowlist
+                                    )}
+                                    disabled={loading || saving}
+                                    onChange={(value) =>
+                                        updateSettings({
+                                            html_script_allowlist:
+                                                parseDomainList(value),
+                                        })
+                                    }
+                                    help="默认只允许当前站点域名。每行一个域名或用逗号分隔。"
+                                />
+                                <TextareaControl
+                                    label="脚本黑名单（系统级）"
+                                    value={formatDomainList(
+                                        settings.html_script_blocklist
+                                    )}
+                                    disabled={loading || saving}
+                                    onChange={(value) =>
+                                        updateSettings({
+                                            html_script_blocklist:
+                                                parseDomainList(value),
+                                        })
+                                    }
+                                    help="系统级黑名单优先生效，命中即移除脚本。"
+                                />
+                                <TextareaControl
+                                    label="可信代理白名单"
+                                    value={formatDomainList(settings.trusted_proxies)}
+                                    disabled={loading || saving}
+                                    onChange={(value) =>
+                                        updateSettings({
+                                            trusted_proxies: parseDomainList(value),
+                                        })
+                                    }
+                                    help="仅当 REMOTE_ADDR 在此列表内，才信任 X-Forwarded-For/CF-Connecting-IP。支持 CIDR，每行一个。"
+                                />
+                            </>
                         )}
-                        <TextareaControl
-                            label="脚本白名单（系统级）"
-                            value={formatDomainList(
-                                settings.html_script_allowlist
-                            )}
-                            disabled={loading || saving}
-                            onChange={(value) =>
-                                updateSettings({
-                                    html_script_allowlist:
-                                        parseDomainList(value),
-                                })
-                            }
-                            help="默认只允许当前站点域名。每行一个域名或用逗号分隔。"
-                        />
-                        <TextareaControl
-                            label="脚本黑名单（系统级）"
-                            value={formatDomainList(
-                                settings.html_script_blocklist
-                            )}
-                            disabled={loading || saving}
-                            onChange={(value) =>
-                                updateSettings({
-                                    html_script_blocklist:
-                                        parseDomainList(value),
-                                })
-                            }
-                            help="系统级黑名单优先生效，命中即移除脚本。"
-                        />
-                        <TextareaControl
-                            label="可信代理白名单"
-                            value={formatDomainList(settings.trusted_proxies)}
-                            disabled={loading || saving}
-                            onChange={(value) =>
-                                updateSettings({
-                                    trusted_proxies: parseDomainList(value),
-                                })
-                            }
-                            help="仅当 REMOTE_ADDR 在此列表内，才信任 X-Forwarded-For/CF-Connecting-IP。支持 CIDR，每行一个。"
-                        />
                     </PanelBody>
                     <PanelBody
                         title="诊断日志"
@@ -485,89 +570,101 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             }
                             help="仅诊断时记录 page_url / user_agent / user_id。"
                         />
-                        <TextControl
-                            label="诊断日志保留天数"
-                            type="number"
-                            value={settings.stats_diagnostics_retention_days}
-                            disabled={loading || saving}
-                            onChange={(value) =>
-                                updateSettings({
-                                    stats_diagnostics_retention_days:
-                                        Number(value) || 7,
-                                })
-                            }
-                            help="超过天数会自动清理诊断日志。"
-                        />
-                        <TextControl
-                            label="诊断自动关闭天数"
-                            type="number"
-                            value={settings.stats_diagnostics_auto_off_days}
-                            disabled={loading || saving}
-                            onChange={(value) =>
-                                updateSettings({
-                                    stats_diagnostics_auto_off_days:
-                                        Number(value) || 7,
-                                })
-                            }
-                            help="开启诊断后，超过天数将自动关闭诊断模式。"
-                        />
-                        {settings.stats_diagnostics &&
-                            diagnosticsExpiryLabel && (
-                                <Notice status="info" isDismissible={false}>
-                                    诊断模式将在 {diagnosticsExpiryLabel} 自动关闭。
-                                </Notice>
-                            )}
+                        {isAdvanced && (
+                            <>
+                                <TextControl
+                                    label="诊断日志保留天数"
+                                    type="number"
+                                    value={settings.stats_diagnostics_retention_days}
+                                    disabled={loading || saving}
+                                    onChange={(value) =>
+                                        updateSettings({
+                                            stats_diagnostics_retention_days:
+                                                Number(value) || 7,
+                                        })
+                                    }
+                                    help="超过天数会自动清理诊断日志。"
+                                />
+                                <TextControl
+                                    label="诊断自动关闭天数"
+                                    type="number"
+                                    value={settings.stats_diagnostics_auto_off_days}
+                                    disabled={loading || saving}
+                                    onChange={(value) =>
+                                        updateSettings({
+                                            stats_diagnostics_auto_off_days:
+                                                Number(value) || 7,
+                                        })
+                                    }
+                                    help="开启诊断后，超过天数将自动关闭诊断模式。"
+                                />
+                                {settings.stats_diagnostics &&
+                                    diagnosticsExpiryLabel && (
+                                        <Notice status="info" isDismissible={false}>
+                                            诊断模式将在 {diagnosticsExpiryLabel} 自动关闭。
+                                        </Notice>
+                                    )}
+                            </>
+                        )}
                     </PanelBody>
-                    <PanelBody
-                        title="品牌与权限"
-                        opened={openSection === 'brand'}
-                        onToggle={() => handleToggleSection('brand')}
-                    >
-                        <TextControl
-                            label="后台名称（白标）"
-                            value={settings.brand_name}
-                            disabled={loading || saving}
-                            onChange={(value) =>
-                                updateSettings({ brand_name: value }, false)
-                            }
-                            onBlur={() =>
-                                updateSettings(
-                                    { brand_name: settings.brand_name },
-                                    true
-                                )
-                            }
-                        />
-                        <TextControl
-                            label="后台副标题"
-                            value={settings.brand_tagline}
-                            disabled={loading || saving}
-                            onChange={(value) =>
-                                updateSettings(
-                                    { brand_tagline: value },
-                                    false
-                                )
-                            }
-                            onBlur={() =>
-                                updateSettings(
-                                    { brand_tagline: settings.brand_tagline },
-                                    true
-                                )
-                            }
-                        />
-                        <SelectControl
-                            label="后台管理权限"
-                            value={settings.manage_capability}
-                            disabled={loading || saving}
-                            options={[
-                                { label: '仅管理员 (manage_options)', value: 'manage_options' },
-                                { label: 'Magick AD 管理员', value: 'manage_magick_ads' },
-                            ]}
-                            onChange={(value) =>
-                                updateSettings({ manage_capability: value })
-                            }
-                            help="切换后可能需要重新登录后台。"
-                        />
-                    </PanelBody>
+                    {isAdvanced && (
+                        <PanelBody
+                            title="品牌与权限"
+                            opened={openSection === 'brand'}
+                            onToggle={() => handleToggleSection('brand')}
+                        >
+                            <TextControl
+                                label="后台名称（白标）"
+                                value={settings.brand_name}
+                                disabled={loading || saving}
+                                onChange={(value) =>
+                                    updateSettings({ brand_name: value }, false)
+                                }
+                                onBlur={() =>
+                                    updateSettings(
+                                        { brand_name: settings.brand_name },
+                                        true
+                                    )
+                                }
+                            />
+                            <TextControl
+                                label="后台副标题"
+                                value={settings.brand_tagline}
+                                disabled={loading || saving}
+                                onChange={(value) =>
+                                    updateSettings(
+                                        { brand_tagline: value },
+                                        false
+                                    )
+                                }
+                                onBlur={() =>
+                                    updateSettings(
+                                        { brand_tagline: settings.brand_tagline },
+                                        true
+                                    )
+                                }
+                            />
+                            <SelectControl
+                                label="后台管理权限"
+                                value={settings.manage_capability}
+                                disabled={loading || saving}
+                                options={[
+                                    {
+                                        label: '仅管理员 (manage_options)',
+                                        value: 'manage_options',
+                                    },
+                                    {
+                                        label: 'Magick AD 管理员',
+                                        value: 'manage_magick_ads',
+                                    },
+                                ]}
+                                onChange={(value) =>
+                                    updateSettings({ manage_capability: value })
+                                }
+                                help="切换后可能需要重新登录后台。"
+                            />
+                        </PanelBody>
+                    )}
                 </Panel>
             </CardBody>
         </Card>

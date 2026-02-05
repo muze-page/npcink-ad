@@ -58,6 +58,16 @@ find "wp-content/plugins/magick-ad/dist/magick-ad" -name "*.php" -print0 | xargs
 - 默认告警阈值：队列长度 ≥ 300 或最久等待 ≥ 900 秒（达到 2 倍阈值为严重）。
 - 可通过过滤器调整阈值：`magick_ad_stats_queue_alert_limit`、`magick_ad_stats_queue_alert_age`。
 
+**显示级别（系统设置弹窗顶部）**
+
+系统设置弹窗提供三种显示级别，用于控制字段显示范围：
+
+- 简洁：仅展示常用核心设置，降低误操作风险。
+- 高级：展示完整的系统级设置与诊断选项。
+- 实验室：显示全部选项（包含高风险项），用于测试与排障。
+
+显示级别仅影响界面展示，不会改动已有配置值。
+
 **dist 同步脚本用法**
 
 ```shell
