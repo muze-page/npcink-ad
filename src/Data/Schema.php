@@ -206,13 +206,23 @@ final class Schema {
 
     private static function table_exists(string $table): bool {
         global $wpdb;
+        static $cache = array();
+        if (array_key_exists($table, $cache)) {
+            return $cache[$table];
+        }
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
-        return $exists === $table;
+        $cache[$table] = ($exists === $table);
+        return $cache[$table];
     }
 
     private static function table_has_column(string $table, string $column): bool {
         global $wpdb;
+        static $cache = array();
+        $cache_key = $table . '|' . $column;
+        if (array_key_exists($cache_key, $cache)) {
+            return $cache[$cache_key];
+        }
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema check.
         $value = $wpdb->get_var(
             $wpdb->prepare(
@@ -221,6 +231,7 @@ final class Schema {
                 $column
             )
         );
-        return !empty($value);
+        $cache[$cache_key] = !empty($value);
+        return $cache[$cache_key];
     }
 }

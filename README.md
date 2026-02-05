@@ -1,83 +1,40 @@
 # Magick AD WP
-- 检查重复或无用的注释并移除
-- 检查不用的代码或功能并移除
 
-#### 介绍
+WordPress 广告插件，提供广告位配置、投放条件、统计与诊断。
 
-WordPress 的广告插件，带流量点击图
+**功能**
 
-- 增量编译：pnpm run start
-- 打包：pnpm run build
-- 生成插件：pnpm run dist
+- 广告位配置（页面范围、插入位置、设备、登录状态）
+- 展示/点击统计
+- 诊断日志与导出
+- 前端渲染与追踪
 
-dist 目录中生成发布文件
+开发环境在 wp-config.php 中添加：
 
-### CLL
-检查产出物（需要安装check插件）：
-wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table
-#### 软件架构
+```php
+define('MAGICK_AD_DEBUG', true);
 
-软件架构说明
+```
 
-#### 安装教程
+**目录结构**
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+- `src/` 业务代码
+- `build/` 前端构建产物
+- `dist/` 发布包（发布用）
+- `templates/` 前端模板
 
-#### 使用说明
+**开发与构建**
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+- 开发：`pnpm run start`
+- 打包：`pnpm run build`
+- 生成发布包：`pnpm run dist`
 
-#### 参与贡献
+**插件检查**
 
-展示页面选项下，有
-全站
-仅首页
-仅文章也
-仅单页
-仅分类页
-仅标签页
-仅搜索结果页
-仅404页
-仅作者页
+- `wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table`
 
-其中，除仅文章页和仅单页外，其他展示页面的展示位置的值，可以选
-顶部
-内容前
-内容后
-底部
+**展示页面与位置**
 
-若是文章页和仅单页，则展示位置的值可选
-顶部
-内容前
-文章顶部
-位置第三段
-文章底部
-评论列表顶部
-评论框上方
-评论框下方
-评论列表底部
-内容后
-底部
-
-信息流类型广告
-Interactivity API
-如果你坚持现在用，我建议这样走：
-
-先把 弹窗/横栏 作为 Interactivity API 试点
-先只替换 关闭/ESC/遮罩/锁滚动
-追踪 / 随机 / 频控 仍保留原 JS
-验证无回归后，再扩展到全量交互
-这样可以把风险控制在一个小范围，不会牵扯全部前台逻辑。
-
-#### 特技
-
-1.  使用 Readme_XXX.md 来支持不同的语言，例如 Readme_en.md, Readme_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+- 页面范围：全站、仅首页、仅文章页、仅单页、仅分类页、仅标签页、仅搜索结果页、仅 404 页、仅作者页
+- 位置（非文章/单页）：顶部、内容前、内容后、底部
+- 位置（文章/单页）：顶部、内容前、文章顶部、位置第三段、文章底部、评论列表顶部、评论框上方、评论框下方、评论列表底部、内容后、底部

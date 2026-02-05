@@ -1,78 +1,98 @@
-/* global MagickADNodeDebug */
 (function () {
-    const cfg = typeof MagickADNodeDebug === 'object' ? MagickADNodeDebug : {};
-    const value = cfg.value || '';
+  function ready(fn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn);
+    } else {
+      fn();
+    }
+  }
+
+  function createPanel(message) {
+    var panel = document.createElement('div');
+    panel.className = 'magick-ad-node-debug-panel';
+    panel.textContent = message;
+    document.body.appendChild(panel);
+    return panel;
+  }
+
+  function normalizeValue(value) {
     if (!value) {
-        return;
+      return '';
     }
-    const type = cfg.type === 'class' ? 'class' : 'id';
-    const match = cfg.match || 'first';
-    const index = Number(cfg.index || 1) || 1;
+    return String(value).trim();
+  }
 
-    const escape = (val) => {
-        if (typeof CSS !== 'undefined' && CSS.escape) {
-            return CSS.escape(val);
-        }
-        return val.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
-    };
+  function stripPrefix(value, prefix) {
+    if (value.indexOf(prefix) === 0) {
+      return value.slice(prefix.length);
+    }
+    return value;
+  }
 
-    const selector = type === 'class' ? `.${escape(value)}` : `#${escape(value)}`;
-    const nodes = Array.from(document.querySelectorAll(selector));
-    let targets = [];
-    if (match === 'all') {
-        targets = nodes;
-    } else if (match === 'nth') {
-        if (nodes[index - 1]) {
-            targets = [nodes[index - 1]];
-        }
-    } else if (nodes[0]) {
-        targets = [nodes[0]];
+  ready(function () {
+    var config = window.MagickADNodeDebug || {};
+    var type = config.type || 'id';
+    var value = normalizeValue(config.value || '');
+    var match = config.match || 'first';
+    var index = parseInt(config.index, 10);
+    if (!index || index < 1) {
+      index = 1;
     }
 
-    const style = document.createElement('style');
+    var style = document.createElement('style');
     style.textContent =
-        '.magick-ad-node-debug-highlight{outline:2px dashed #f97316!important;outline-offset:2px;}' +
-        '.magick-ad-node-debug-badge{position:absolute;top:-22px;left:0;background:#f97316;color:#fff;font-size:11px;padding:2px 6px;border-radius:6px;z-index:999999;line-height:1.2;}' +
-        '.magick-ad-node-debug-toast{position:fixed;right:16px;top:16px;background:#111827;color:#fff;padding:8px 12px;border-radius:10px;font-size:12px;z-index:999999;}';
+      '.magick-ad-node-debug-target{outline:2px dashed #f97316 !important; outline-offset:2px !important; position:relative !important;}' +
+      '.magick-ad-node-debug-label{position:absolute;top:-10px;left:-10px;background:#f97316;color:#fff;font-size:11px;line-height:1;padding:4px 6px;border-radius:6px;z-index:99999;}' +
+      '.magick-ad-node-debug-panel{position:fixed;top:16px;left:16px;z-index:999999;background:#111827;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;box-shadow:0 8px 20px rgba(0,0,0,0.2);}';
     document.head.appendChild(style);
 
-    const toast = document.createElement('div');
-    toast.className = 'magick-ad-node-debug-toast';
-    toast.textContent = targets.length
-        ? `Magick AD：匹配 ${targets.length} 个节点 (${selector})`
-        : `Magick AD：未找到节点 ${selector}`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 5000);
-
-    if (!targets.length) {
-        console.warn('[Magick AD] node debug: no match', selector);
-        return;
+    if (!value) {
+      createPanel('未提供节点值，无法定位元素。');
+      return;
     }
 
-    const cleanups = [];
-    targets.forEach((node) => {
-        if (!(node instanceof HTMLElement)) {
-            return;
-        }
-        const originalPosition = node.style.position;
-        if (getComputedStyle(node).position === 'static') {
-            node.style.position = 'relative';
-            cleanups.push(() => {
-                node.style.position = originalPosition;
-            });
-        }
-        node.classList.add('magick-ad-node-debug-highlight');
-        const badge = document.createElement('div');
-        badge.className = 'magick-ad-node-debug-badge';
-        badge.textContent = selector;
-        node.appendChild(badge);
-        cleanups.push(() => {
-            node.classList.remove('magick-ad-node-debug-highlight');
-            badge.remove();
-        });
+    var targets = [];
+    if (type === 'id') {
+      var idValue = stripPrefix(value, '#');
+      var el = document.getElementById(idValue);
+      if (el) {
+        targets = [el];
+      }
+    } else if (type === 'class') {
+      var classValue = stripPrefix(value, '.');
+      targets = Array.prototype.slice.call(document.getElementsByClassName(classValue));
+    }
+
+    if (!targets.length) {
+      createPanel('未找到匹配的节点。');
+      return;
+    }
+
+    var selected = [];
+    if (match === 'all') {
+      selected = targets;
+    } else if (match === 'index') {
+      if (targets[index - 1]) {
+        selected = [targets[index - 1]];
+      }
+    } else {
+      selected = [targets[0]];
+    }
+
+    if (!selected.length) {
+      createPanel('未找到匹配的节点。');
+      return;
+    }
+
+    selected.forEach(function (node, idx) {
+      node.classList.add('magick-ad-node-debug-target');
+      var label = document.createElement('div');
+      label.className = 'magick-ad-node-debug-label';
+      label.textContent = '目标 ' + (idx + 1);
+      node.appendChild(label);
     });
 
-    setTimeout(() => {
-        cleanups.forEach((fn) => fn());
-    }, 8000);
+    selected[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    createPanel('已定位 ' + selected.length + ' 个节点');
+  });
 })();

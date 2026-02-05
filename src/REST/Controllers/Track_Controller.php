@@ -1568,6 +1568,7 @@ final class Track_Controller {
         $log_table = $wpdb->prefix . 'magick_ad_stats_log';
         $page_url = self::sanitize_log_page_url($page_url);
 
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
         $wpdb->insert(
             $log_table,
             array(
@@ -1616,6 +1617,7 @@ final class Track_Controller {
                 continue;
             }
             $page_url = self::sanitize_log_page_url($page_url);
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct write on custom table.
             $wpdb->insert(
                 $log_table,
                 array(

@@ -1,36 +1,23 @@
 # Magick AD WP
 
-#### Description
-WordPress 的广告插件，带流量点击图
+WordPress advertising plugin with ad placement configuration, targeting, reporting, and diagnostics.
 
-#### Software Architecture
-Software architecture description
+**Features**
+- Placement configuration (page scope, insertion position, device, login state)
+- Impression and click reporting
+- Diagnostics logs and export
+- Frontend rendering and tracking
 
-#### Installation
+**Structure**
+- `src/` application code
+- `build/` frontend build output
+- `dist/` release package
+- `templates/` frontend templates
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+**Development**
+- Dev server: `pnpm run start`
+- Build: `pnpm run build`
+- Release package: `pnpm run dist`
 
-#### Instructions
-
-1.  xxxx
-2.  xxxx
-3.  xxxx
-
-#### Contribution
-
-1.  Fork the repository
-2.  Create Feat_xxx branch
-3.  Commit your code
-4.  Create Pull Request
-
-
-#### Gitee Feature
-
-1.  You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
-2.  Gitee blog [blog.gitee.com](https://blog.gitee.com)
-3.  Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
-4.  The most valuable open source project [GVP](https://gitee.com/gvp)
-5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
-6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+**Plugin Check**
+- `wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table`

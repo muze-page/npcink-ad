@@ -9,7 +9,15 @@ if (!defined('ABSPATH')) {
 }
 
 final class Debug_Controller {
+    private static function is_debug_enabled(): bool {
+        return (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG);
+    }
+
     public static function get() {
+        if (!self::is_debug_enabled()) {
+            return rest_ensure_response(array('enabled' => false));
+        }
+
         $forced = (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) ? true : false;
         $enabled = (get_option('magick_ad_debug', '0') === '1');
         $log_settings = (get_option('magick_ad_debug_log_settings', '1') === '1');
@@ -23,6 +31,10 @@ final class Debug_Controller {
     }
 
     public static function update(WP_REST_Request $request) {
+        if (!self::is_debug_enabled()) {
+            return rest_ensure_response(array('enabled' => false));
+        }
+
         $forced = (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) ? true : false;
         $params = $request->get_json_params();
         $enabled = false;

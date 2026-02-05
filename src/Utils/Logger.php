@@ -7,16 +7,23 @@ if (!defined('ABSPATH')) {
 }
 
 final class Logger {
+    private static function is_debug_constant_enabled(): bool {
+        return (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG);
+    }
+
     public static function is_debug_enabled(): bool {
         static $enabled = null;
         if ($enabled !== null) {
             return $enabled;
         }
 
+        if (!self::is_debug_constant_enabled()) {
+            $enabled = false;
+            return $enabled;
+        }
+
         $enabled = false;
-        if (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) {
-            $enabled = true;
-        } elseif (get_option('magick_ad_debug', '0') === '1') {
+        if (get_option('magick_ad_debug', '0') === '1') {
             $enabled = true;
         }
 

@@ -15,7 +15,9 @@ final class Admin {
 
     public function register(): void {
         add_action('admin_menu', array($this, 'register_menu'));
-        add_action('admin_init', array($this, 'register_debug_settings'));
+        if ($this->is_debug_enabled()) {
+            add_action('admin_init', array($this, 'register_debug_settings'));
+        }
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
 
@@ -56,14 +58,19 @@ final class Admin {
             'previewUrl' => $this->get_preview_url(),
             'previewNonce' => wp_create_nonce('magick_ad_preview'),
             'pickerNonce' => wp_create_nonce('magick_ad_picker'),
-            'nodeDebugNonce' => wp_create_nonce('magick_ad_node_debug'),
             'branding' => $this->get_branding(),
             'canUnfilteredHtml' => current_user_can('unfiltered_html'),
             'patterns' => \MagickAD\Blocks\Patterns::export_patterns(),
-            'diagnoseUrl' => admin_url('admin.php?page=magick-ad-debug'),
             'buildVersion' => MAGICK_AD_VERSION,
             'buildTime' => $this->get_build_time(),
         );
+        if ($this->is_debug_enabled()) {
+            $data['nodeDebugNonce'] = wp_create_nonce('magick_ad_node_debug');
+            $data['diagnoseUrl'] = admin_url('admin.php?page=magick-ad-debug');
+            $data['debugEnabled'] = true;
+        } else {
+            $data['debugEnabled'] = false;
+        }
 
         wp_add_inline_script(
             $handle,
@@ -103,6 +110,10 @@ final class Admin {
             'name' => $name !== '' ? sanitize_text_field($name) : 'Magick AD',
             'tagline' => $tagline !== '' ? sanitize_text_field($tagline) : '广告配置与投放规则管理',
         );
+    }
+
+    private function is_debug_enabled(): bool {
+        return (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG);
     }
 
     private function is_app_screen(string $hook): bool {
@@ -177,7 +188,7 @@ final class Admin {
     }
 
     private function get_submenu_pages(): array {
-        return array(
+        $pages = array(
             array(
                 'page_title' => __('广告配置', 'magick-ad'),
                 'menu_title' => __('广告配置', 'magick-ad'),
@@ -201,59 +212,18 @@ final class Admin {
                 'menu_slug' => 'magick-ad-insert',
                 'callback' => array($this, 'render_insert_help'),
             ),
-            array(
+        );
+
+        if ($this->is_debug_enabled()) {
+            $pages[] = array(
                 'page_title' => __('调试面板', 'magick-ad'),
                 'menu_title' => __('调试面板', 'magick-ad'),
                 'menu_slug' => 'magick-ad-debug',
                 'callback' => array($this, 'render_debug_panel'),
-            ),
-        );
-    }
+            );
+        }
 
-    public function register_debug_settings(): void {
-        register_setting(
-            'magick_ad_debug',
-            'magick_ad_debug',
-            array(
-                'type' => 'string',
-                'sanitize_callback' => array($this, 'sanitize_debug'),
-                'default' => '0',
-            )
-        );
-
-        $this->register_debug_section();
-        $this->register_debug_field_setting();
-    }
-
-    private function register_debug_section(): void {
-        add_settings_section(
-            'magick_ad_debug_section',
-            esc_html__('调试设置', 'magick-ad'),
-            '__return_false',
-            'magick_ad_debug'
-        );
-    }
-
-    private function register_debug_field_setting(): void {
-        add_settings_field(
-            'magick_ad_debug_field',
-            esc_html__('启用调试日志', 'magick-ad'),
-            array($this, 'render_debug_field'),
-            'magick_ad_debug',
-            'magick_ad_debug_section'
-        );
-    }
-
-    public function sanitize_debug(mixed $value): string {
-        return !empty($value) ? '1' : '0';
-    }
-
-    public function render_debug_field(): void {
-        $value = get_option('magick_ad_debug', '0');
-        echo '<label>';
-        echo '<input type="checkbox" name="magick_ad_debug" value="1" ' . checked('1', $value, false) . ' />';
-        echo ' ' . esc_html__('记录调试日志到 debug.log', 'magick-ad');
-        echo '</label>';
+        return $pages;
     }
 
     public function render_app(): void {
@@ -344,7 +314,56 @@ final class Admin {
         echo '</ul>';
     }
 
+    public function register_debug_settings(): void {
+        register_setting(
+            'magick_ad_debug',
+            'magick_ad_debug',
+            array(
+                'type' => 'string',
+                'sanitize_callback' => array($this, 'sanitize_debug'),
+                'default' => '0',
+            )
+        );
+
+        $this->register_debug_section();
+        $this->register_debug_field_setting();
+    }
+
+    private function register_debug_section(): void {
+        add_settings_section(
+            'magick_ad_debug_section',
+            esc_html__('调试设置', 'magick-ad'),
+            '__return_false',
+            'magick_ad_debug'
+        );
+    }
+
+    private function register_debug_field_setting(): void {
+        add_settings_field(
+            'magick_ad_debug_field',
+            esc_html__('启用调试日志', 'magick-ad'),
+            array($this, 'render_debug_field'),
+            'magick_ad_debug',
+            'magick_ad_debug_section'
+        );
+    }
+
+    public function sanitize_debug(mixed $value): string {
+        return !empty($value) ? '1' : '0';
+    }
+
+    public function render_debug_field(): void {
+        $value = get_option('magick_ad_debug', '0');
+        echo '<label>';
+        echo '<input type="checkbox" name="magick_ad_debug" value="1" ' . checked('1', $value, false) . ' />';
+        echo ' ' . esc_html__('记录调试日志到 debug.log', 'magick-ad');
+        echo '</label>';
+    }
+
     public function render_debug_panel(): void {
+        if (!$this->is_debug_enabled()) {
+            return;
+        }
         $params = $this->get_debug_panel_params();
         $debug_url = $this->build_debug_url($params['input_url'], $params['device'], $params['login_state']);
 

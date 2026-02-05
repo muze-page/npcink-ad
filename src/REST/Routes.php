@@ -57,16 +57,18 @@ final class Routes {
             'callback' => array(Reports_Controller::class, 'report_events'),
             'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
         ));
-        register_rest_route('magick-ad/v1', '/debug', array(
-            'methods' => 'GET',
-            'callback' => array(Debug_Controller::class, 'get'),
-            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
-        ));
-        register_rest_route('magick-ad/v1', '/debug', array(
-            'methods' => 'POST',
-            'callback' => array(Debug_Controller::class, 'update'),
-            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
-        ));
+        if (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) {
+            register_rest_route('magick-ad/v1', '/debug', array(
+                'methods' => 'GET',
+                'callback' => array(Debug_Controller::class, 'get'),
+                'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+            ));
+            register_rest_route('magick-ad/v1', '/debug', array(
+                'methods' => 'POST',
+                'callback' => array(Debug_Controller::class, 'update'),
+                'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+            ));
+        }
         register_rest_route('magick-ad/v1', '/system-settings', array(
             'methods' => 'GET',
             'callback' => array(System_Settings_Controller::class, 'get'),

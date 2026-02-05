@@ -207,6 +207,7 @@ final class Privacy {
 
         $safe_ids = array_map('absint', $ids);
         foreach ($safe_ids as $safe_id) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct delete on custom table.
             $wpdb->delete(
                 $table,
                 array('id' => $safe_id),

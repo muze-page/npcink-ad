@@ -32,6 +32,10 @@ final class Frontend {
     private static ?array $content_insert_map = null;
     private static ?array $behavior_config_cache = null;
 
+    private static function is_debug_enabled(): bool {
+        return (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG);
+    }
+
     public function register(): void {
         // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_assets'));
@@ -151,7 +155,9 @@ final class Frontend {
         add_action('wp_head', array(__CLASS__, 'render_head_ads'));
         add_action('wp_footer', array(__CLASS__, 'render_node_ads'), 5);
         add_action('wp_footer', array(__CLASS__, 'render_footer_ads'));
-        add_action('wp_footer', array(__CLASS__, 'render_diagnose_panel'), 99);
+        if (self::is_debug_enabled()) {
+            add_action('wp_footer', array(__CLASS__, 'render_diagnose_panel'), 99);
+        }
         // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         add_action('wp_body_open', array(__CLASS__, 'render_body_top_ads'));
         add_action('loop_start', array(__CLASS__, 'render_loop_before_ads'));
@@ -655,7 +661,8 @@ final class Frontend {
             return;
         }
 
-        $diagnose = self::is_diagnose_request() && self::can_view_diagnose();
+        $debug_enabled = self::is_debug_enabled();
+        $diagnose = $debug_enabled && self::is_diagnose_request() && self::can_view_diagnose();
 
         if (self::is_picker_request()) {
             if (!self::can_view_picker()) {
@@ -671,7 +678,7 @@ final class Frontend {
             return;
         }
 
-        if (self::is_node_debug_request()) {
+        if ($debug_enabled && self::is_node_debug_request()) {
             if (!self::can_view_node_debug()) {
                 return;
             }
@@ -1547,6 +1554,9 @@ final class Frontend {
     }
 
     private static function is_node_debug_request(): bool {
+        if (!self::is_debug_enabled()) {
+            return false;
+        }
         return self::get_query_param('magick_ad_node_debug') === '1';
     }
 
@@ -1562,6 +1572,9 @@ final class Frontend {
     }
 
     private static function can_view_node_debug(): bool {
+        if (!self::is_debug_enabled()) {
+            return false;
+        }
         if (!Capabilities::current_user_can_manage()) {
             return false;
         }
@@ -1570,6 +1583,49 @@ final class Frontend {
             return false;
         }
         return wp_verify_nonce($nonce, 'magick_ad_node_debug');
+    }
+
+    private static function is_diagnose_request(): bool {
+        if (!self::is_debug_enabled()) {
+            return false;
+        }
+        return self::get_query_flag('magick_ad_diagnose');
+    }
+
+    private static function can_view_diagnose(): bool {
+        if (!self::is_debug_enabled()) {
+            return false;
+        }
+        if (!Capabilities::current_user_can_manage()) {
+            return false;
+        }
+        $nonce = self::get_query_param('magick_ad_diagnose_nonce');
+        if (!$nonce) {
+            return false;
+        }
+        return wp_verify_nonce($nonce, 'magick_ad_diagnose');
+    }
+
+    private static function get_debug_device_override(): string {
+        if (!self::is_diagnose_request() || !self::can_view_diagnose()) {
+            return '';
+        }
+        $device = self::get_query_param('magick_ad_debug_device');
+        if (!in_array($device, array('mobile', 'tablet', 'desktop'), true)) {
+            return '';
+        }
+        return $device;
+    }
+
+    private static function get_debug_login_override(): string {
+        if (!self::is_diagnose_request() || !self::can_view_diagnose()) {
+            return '';
+        }
+        $login = self::get_query_param('magick_ad_debug_login');
+        if (!in_array($login, array('logged-in', 'logged-out'), true)) {
+            return '';
+        }
+        return $login;
     }
 
     private static function is_preview(): bool {
@@ -1608,43 +1664,6 @@ final class Frontend {
             $labels[] = $map[$reason] ?? $reason;
         }
         return implode(' · ', $labels);
-    }
-
-    private static function is_diagnose_request(): bool {
-        return self::get_query_flag('magick_ad_diagnose');
-    }
-
-    private static function can_view_diagnose(): bool {
-        if (!Capabilities::current_user_can_manage()) {
-            return false;
-        }
-        $nonce = self::get_query_param('magick_ad_diagnose_nonce');
-        if (!$nonce) {
-            return false;
-        }
-        return wp_verify_nonce($nonce, 'magick_ad_diagnose');
-    }
-
-    private static function get_debug_device_override(): string {
-        if (!self::is_diagnose_request() || !self::can_view_diagnose()) {
-            return '';
-        }
-        $device = self::get_query_param('magick_ad_debug_device');
-        if (!in_array($device, array('mobile', 'tablet', 'desktop'), true)) {
-            return '';
-        }
-        return $device;
-    }
-
-    private static function get_debug_login_override(): string {
-        if (!self::is_diagnose_request() || !self::can_view_diagnose()) {
-            return '';
-        }
-        $login = self::get_query_param('magick_ad_debug_login');
-        if (!in_array($login, array('logged-in', 'logged-out'), true)) {
-            return '';
-        }
-        return $login;
     }
 
     public static function render_diagnose_panel(): void {
@@ -1752,6 +1771,7 @@ final class Frontend {
         echo '</div>';
         echo '</div>';
     }
+
 
     public static function handle_preview_request(): void {
         if (!self::is_preview_request()) {
@@ -1880,13 +1900,15 @@ final class Frontend {
         echo '<body class="' . esc_attr($body_classes) . '">';
         // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core hook.
         do_action('wp_body_open');
-        echo '<div class="magick-ad-preview-debug ' . ($allowed ? 'is-hit' : 'is-miss') . '">';
-        echo '<div class="magick-ad-preview-debug__title">' . esc_html($ad_name) . '</div>';
-        echo '<div class="magick-ad-preview-debug__status">' . esc_html($status_label) . '</div>';
-        if (!$allowed && $reason_text) {
-            echo '<div class="magick-ad-preview-debug__reason">原因：' . esc_html($reason_text) . '</div>';
+        if (self::is_debug_enabled()) {
+            echo '<div class="magick-ad-preview-debug ' . ($allowed ? 'is-hit' : 'is-miss') . '">';
+            echo '<div class="magick-ad-preview-debug__title">' . esc_html($ad_name) . '</div>';
+            echo '<div class="magick-ad-preview-debug__status">' . esc_html($status_label) . '</div>';
+            if (!$allowed && $reason_text) {
+                echo '<div class="magick-ad-preview-debug__reason">原因：' . esc_html($reason_text) . '</div>';
+            }
+            echo '</div>';
         }
-        echo '</div>';
         echo '<main class="magick-ad-preview-shell">';
         echo '<div class="magick-ad-preview-zone" data-magick-zone="head"><div class="magick-ad-preview-zone--label">Head 区域（仅脚本/像素）</div></div>';
         echo '<div class="magick-ad-preview-zone" data-magick-zone="body_top"></div>';

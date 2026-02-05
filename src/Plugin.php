@@ -52,7 +52,9 @@ final class Plugin {
         (new Routes())->register();
         (new Frontend())->register();
         (new Template_Tags())->register();
-        (new Debug())->register();
+        if (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) {
+            (new Debug())->register();
+        }
         (new Diagnostics_Cron())->register();
         (new Stats_Cron())->register();
         (new Stats_Dim_Cron())->register();
