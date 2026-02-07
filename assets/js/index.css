@@ -2850,6 +2850,41 @@
     color: #b91c1c;
 }
 
+.magick-ad-template-tag--usage-ad {
+    background: #eef2ff;
+    color: #3730a3;
+}
+
+.magick-ad-template-tag--usage-promo {
+    background: #ecfeff;
+    color: #155e75;
+}
+
+.magick-ad-template-tag--usage-decorative {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.magick-ad-template-tag--industry-general {
+    background: #f8fafc;
+    color: #475569;
+}
+
+.magick-ad-template-tag--industry-corporate {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.magick-ad-template-tag--industry-content {
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.magick-ad-template-tag--industry-ecommerce {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
 .magick-ad-template-floating {
     position: sticky;
     bottom: 0;

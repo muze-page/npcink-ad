@@ -12,6 +12,7 @@ if (!defined('ABSPATH')) {
 final class Blocks {
     private const CREATIVE_TYPES = array('html', 'image', 'video', 'block');
     private const CONTAINER_TYPES = array('inline', 'popup', 'banner', 'floating', 'interstitial');
+    private const USAGE_TYPES = array('ad', 'promo', 'decorative');
 
     public function register(): void {
         if (did_action('init')) {
@@ -132,6 +133,10 @@ final class Blocks {
         return in_array($value, self::CONTAINER_TYPES, true) ? $value : 'inline';
     }
 
+    private static function sanitize_usage_type(string $value): string {
+        return in_array($value, self::USAGE_TYPES, true) ? $value : 'ad';
+    }
+
     private static function build_inline_ad(array $attrs, string $creative, string $container): array {
         $html = isset($attrs['html']) ? (string) $attrs['html'] : '';
         if ($creative === 'html' && !current_user_can('unfiltered_html')) {
@@ -143,6 +148,9 @@ final class Blocks {
             'options' => array(
                 'creative_type' => $creative,
                 'container_type' => $container,
+                'usage_type' => self::sanitize_usage_type(
+                    isset($attrs['usageType']) ? (string) $attrs['usageType'] : 'ad'
+                ),
                 'display_mode' => 'show',
                 'random_strategy' => 'request',
                 'placement_hook' => 'content',

@@ -35,6 +35,21 @@ const getRiskLabel = (template) => {
     return '低风险';
 };
 
+const getUsageLabel = (template) => {
+    const usage = template.usageType || 'ad';
+    if (usage === 'decorative') return '装饰组件';
+    if (usage === 'promo') return '运营模块';
+    return '广告';
+};
+
+const getIndustryLabel = (template) => {
+    const industry = template.industry || 'general';
+    if (industry === 'corporate') return '企业站';
+    if (industry === 'content') return '内容站';
+    if (industry === 'ecommerce') return '电商站';
+    return '通用站点';
+};
+
 const TemplateThumbnail = ({ template }) => {
     const thumb = template.thumbnail || template.thumbnailUrl;
     if (thumb) {
@@ -156,6 +171,18 @@ const TemplateCard = ({
             label: getRiskLabel(template),
             className: `magick-ad-template-tag magick-ad-template-tag--risk-${
                 template.risk || 'low'
+            }`,
+        });
+        list.push({
+            label: getUsageLabel(template),
+            className: `magick-ad-template-tag magick-ad-template-tag--usage-${
+                template.usageType || 'ad'
+            }`,
+        });
+        list.push({
+            label: getIndustryLabel(template),
+            className: `magick-ad-template-tag magick-ad-template-tag--industry-${
+                template.industry || 'general'
             }`,
         });
         return list;

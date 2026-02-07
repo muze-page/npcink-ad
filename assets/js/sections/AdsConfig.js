@@ -446,6 +446,114 @@ const AdsConfig = () => {
         { label: '仅登录用户', value: 'logged-in' },
         { label: '仅未登录用户', value: 'logged-out' },
     ];
+    const usageOptions = [
+        { label: '广告（完整能力）', value: 'ad' },
+        { label: '运营模块（轻量）', value: 'promo' },
+        { label: '装饰组件（不计统计）', value: 'decorative' },
+    ];
+    const decorativePlacementHooks = new Set(['content', 'body_top', 'footer']);
+    const normalizeUsageType = (value) =>
+        ['ad', 'promo', 'decorative'].includes(value) ? value : 'ad';
+    const isDecorativeUsage = (options = {}) =>
+        normalizeUsageType(options?.usage_type || 'ad') === 'decorative';
+    const getUsageLabel = (value) => {
+        const hit = usageOptions.find((item) => item.value === value);
+        return hit?.label || '广告（完整能力）';
+    };
+
+    const enforceUsageTypeRules = (baseOptions = {}, baseContent = {}) => {
+        const nextOptions = {
+            ...baseOptions,
+            usage_type: normalizeUsageType(baseOptions?.usage_type || 'ad'),
+        };
+        const nextContent = {
+            ...baseContent,
+        };
+        const reasons = [];
+        if (nextOptions.usage_type !== 'decorative') {
+            return {
+                options: nextOptions,
+                content: nextContent,
+                changed: false,
+                reasons,
+            };
+        }
+
+        if (nextOptions.container_type !== 'inline') {
+            nextOptions.container_type = 'inline';
+            reasons.push('容器已回退为“默认嵌入”');
+        }
+        if (!decorativePlacementHooks.has(nextOptions.placement_hook || '')) {
+            nextOptions.placement_hook = 'footer';
+            nextOptions.placement_position = '';
+            nextOptions.placement_paragraph = 0;
+            reasons.push('装饰组件不支持该位置，已回退到“底部”');
+        } else if (nextOptions.placement_hook !== 'content') {
+            nextOptions.placement_position = '';
+            nextOptions.placement_paragraph = 0;
+        }
+        if (nextOptions.render_require_consent) {
+            nextOptions.render_require_consent = false;
+            reasons.push('已关闭“渲染需同意”');
+        }
+
+        const currentVariants = Array.isArray(nextContent.variants)
+            ? nextContent.variants
+            : [];
+        if (nextContent.variants_enabled || currentVariants.length > 0) {
+            nextContent.variants_enabled = false;
+            nextContent.variants_strategy = 'request';
+            nextContent.variants = [];
+            reasons.push('装饰组件已禁用 A/B 版本');
+        } else if (nextContent.variants_strategy === 'session') {
+            nextContent.variants_strategy = 'request';
+        }
+
+        const nextBehavior =
+            nextContent.behavior && typeof nextContent.behavior === 'object'
+                ? { ...nextContent.behavior }
+                : {};
+        if (
+            nextBehavior.frequency_mode !== 'none' ||
+            Number(nextBehavior.frequency_limit || 1) !== 1
+        ) {
+            nextBehavior.frequency_mode = 'none';
+            nextBehavior.frequency_limit = 1;
+            reasons.push('装饰组件已禁用频控');
+        }
+        if (Number(nextBehavior.delay || 0) !== 0) {
+            nextBehavior.delay = 0;
+        }
+        nextContent.behavior = nextBehavior;
+
+        const nextVideoSettings =
+            nextContent.video_settings &&
+            typeof nextContent.video_settings === 'object'
+                ? { ...nextContent.video_settings }
+                : {};
+        if (nextVideoSettings.track_events) {
+            nextVideoSettings.track_events = false;
+            reasons.push('装饰组件已关闭视频事件追踪');
+        }
+        nextContent.video_settings = nextVideoSettings;
+
+        const nextContainerStyle =
+            nextContent.container_style &&
+            typeof nextContent.container_style === 'object'
+                ? { ...nextContent.container_style }
+                : {};
+        if (nextContainerStyle.mode !== 'boxed') {
+            nextContainerStyle.mode = 'boxed';
+        }
+        nextContent.container_style = nextContainerStyle;
+
+        return {
+            options: nextOptions,
+            content: nextContent,
+            changed: reasons.length > 0,
+            reasons,
+        };
+    };
 
     const getOptionLabel = (options, value, fallback) => {
         const hit = (options || []).find((item) => item.value === value);
@@ -717,22 +825,38 @@ const AdsConfig = () => {
 
     const positionOptions = useMemo(() => {
         const page = selectedAd?.options?.show_page || 'all';
+        const usageType = normalizeUsageType(selectedAd?.options?.usage_type || 'ad');
+        const options = getPositionOptions(page);
+        const filteredOptions =
+            usageType === 'decorative'
+                ? options.filter(
+                      (item) => !['head', 'node'].includes(item.value)
+                  )
+                : options;
         return [
             { label: '请选择展示位置', value: '' },
-            ...getPositionOptions(page),
+            ...filteredOptions,
         ];
-    }, [selectedAd?.options?.show_page]);
+    }, [selectedAd?.options?.show_page, selectedAd?.options?.usage_type]);
 
     const targetPositionOptions = useMemo(() => {
         const targetType = selectedAd?.options?.target_type || '';
         if (!targetType) {
             return [{ label: '请选择展示位置', value: '' }];
         }
+        const usageType = normalizeUsageType(selectedAd?.options?.usage_type || 'ad');
+        const options = getPositionOptions(targetType);
+        const filteredOptions =
+            usageType === 'decorative'
+                ? options.filter(
+                      (item) => !['head', 'node'].includes(item.value)
+                  )
+                : options;
         return [
             { label: '请选择展示位置', value: '' },
-            ...getPositionOptions(targetType),
+            ...filteredOptions,
         ];
-    }, [selectedAd?.options?.target_type]);
+    }, [selectedAd?.options?.target_type, selectedAd?.options?.usage_type]);
 
     const resolvePlacement = (options) => {
         const placement = {
@@ -798,13 +922,25 @@ const AdsConfig = () => {
             ...extraOptions,
             ...placementUpdates,
         };
-        if (placementUpdates.placement_hook === 'head') {
+        const enforced = enforceUsageTypeRules(nextOptions, selectedAd.content || {});
+        const resolvedPlacement = resolvePlacement(enforced.options || {});
+        if (
+            isDecorativeUsage(selectedAd.options || {}) &&
+            resolvedPlacement.hook !== placementUpdates.placement_hook
+        ) {
+            showNotice(
+                'warning',
+                '装饰组件仅支持“顶部 / 内容前后 / 底部”位置，已自动回退。',
+                2800
+            );
+        }
+        if (resolvedPlacement.hook === 'head') {
             updateAdGroup(selectedAd.id, {
-                options: nextOptions,
+                options: enforced.options,
                 content: {
-                    ...selectedAd.content,
+                    ...enforced.content,
                     container_style: {
-                        ...(selectedAd.content?.container_style || {}),
+                        ...(enforced.content?.container_style || {}),
                         mode: 'raw',
                     },
                 },
@@ -812,7 +948,8 @@ const AdsConfig = () => {
             return;
         }
         updateAdGroup(selectedAd.id, {
-            options: nextOptions,
+            options: enforced.options,
+            content: enforced.content,
         });
     };
 
@@ -1037,6 +1174,7 @@ const AdsConfig = () => {
         }
         const options = selectedAd.options || {};
         const runtime = runtimeMeta(selectedAd);
+        const usageType = normalizeUsageType(options.usage_type || 'ad');
         const deviceRule = options.device || 'all';
         const loginRule = options.login || 'all';
         const effectiveLogin =
@@ -1093,6 +1231,8 @@ const AdsConfig = () => {
         }
         return {
             placementLabel: resolvePlacementLabel(options),
+            usageType,
+            usageLabel: getUsageLabel(usageType),
             pageLabel,
             deviceRuleLabel,
             loginRuleLabel,
@@ -1121,6 +1261,7 @@ const AdsConfig = () => {
         selectedAd?.options?.target_type,
         selectedAd?.options?.target_ids,
         selectedAd?.options?.target_values,
+        selectedAd?.options?.usage_type,
         selectedAd?.options?.placement_hook,
         selectedAd?.options?.placement_position,
         selectedAd?.options?.placement_paragraph,
@@ -1230,11 +1371,75 @@ const AdsConfig = () => {
         });
     }, [isSimpleLevel, ads, updateAdGroup]);
 
+    useEffect(() => {
+        if (!selectedAd) {
+            return;
+        }
+        const currentOptions = selectedAd.options || {};
+        const currentContent = selectedAd.content || {};
+        const enforced = enforceUsageTypeRules(currentOptions, currentContent);
+        const behavior = currentContent.behavior || {};
+        const nextBehavior = enforced.content?.behavior || {};
+        const videoSettings = currentContent.video_settings || {};
+        const nextVideoSettings = enforced.content?.video_settings || {};
+        const optionsChanged =
+            currentOptions.usage_type !== enforced.options.usage_type ||
+            currentOptions.container_type !== enforced.options.container_type ||
+            currentOptions.placement_hook !== enforced.options.placement_hook ||
+            currentOptions.placement_position !==
+                enforced.options.placement_position ||
+            Number(currentOptions.placement_paragraph || 0) !==
+                Number(enforced.options.placement_paragraph || 0) ||
+            Boolean(currentOptions.render_require_consent) !==
+                Boolean(enforced.options.render_require_consent);
+        const contentChanged =
+            Boolean(currentContent.variants_enabled) !==
+                Boolean(enforced.content?.variants_enabled) ||
+            (currentContent.variants_strategy || 'request') !==
+                (enforced.content?.variants_strategy || 'request') ||
+            (Array.isArray(currentContent.variants)
+                ? currentContent.variants.length
+                : 0) !==
+                (Array.isArray(enforced.content?.variants)
+                    ? enforced.content.variants.length
+                    : 0) ||
+            (behavior.frequency_mode || 'none') !==
+                (nextBehavior.frequency_mode || 'none') ||
+            Number(behavior.frequency_limit || 1) !==
+                Number(nextBehavior.frequency_limit || 1) ||
+            Number(behavior.delay || 0) !== Number(nextBehavior.delay || 0) ||
+            Boolean(videoSettings.track_events) !==
+                Boolean(nextVideoSettings.track_events);
+        if (!optionsChanged && !contentChanged) {
+            return;
+        }
+        updateAdGroup(selectedAd.id, {
+            options: enforced.options,
+            content: enforced.content,
+        });
+    }, [
+        selectedAd?.id,
+        selectedAd?.options?.usage_type,
+        selectedAd?.options?.container_type,
+        selectedAd?.options?.placement_hook,
+        selectedAd?.options?.placement_position,
+        selectedAd?.options?.placement_paragraph,
+        selectedAd?.options?.render_require_consent,
+        selectedAd?.content?.variants_enabled,
+        selectedAd?.content?.variants_strategy,
+        selectedAd?.content?.variants,
+        selectedAd?.content?.behavior?.frequency_mode,
+        selectedAd?.content?.behavior?.frequency_limit,
+        selectedAd?.content?.behavior?.delay,
+        selectedAd?.content?.video_settings?.track_events,
+        updateAdGroup,
+    ]);
+
     const handleUpdateOptions = (updates) => {
         if (!selectedAd) {
             return;
         }
-        const nextOptions = {
+        let nextOptions = {
             ...selectedAd.options,
             ...updates,
         };
@@ -1255,9 +1460,24 @@ const AdsConfig = () => {
                 nextOptions.html_sandbox = 'inherit';
             }
         }
+        const enforced = enforceUsageTypeRules(nextOptions, selectedAd.content || {});
+        nextOptions = enforced.options;
+        const shouldSyncContent =
+            enforced.changed || isDecorativeUsage(nextOptions);
         updateAdGroup(selectedAd.id, {
             options: nextOptions,
+            ...(shouldSyncContent ? { content: enforced.content } : {}),
         });
+        if (
+            Object.prototype.hasOwnProperty.call(updates, 'usage_type') &&
+            enforced.reasons.length > 0
+        ) {
+            showNotice(
+                'info',
+                `已按“装饰组件”规则自动收敛：${enforced.reasons.join('；')}`,
+                3200
+            );
+        }
     };
 
     const jumpToImageSettings = () => {
@@ -1550,11 +1770,17 @@ const AdsConfig = () => {
         if (!selectedAd) {
             return;
         }
+        const mergedContent = {
+            ...selectedAd.content,
+            ...updates,
+        };
+        const enforced = enforceUsageTypeRules(
+            selectedAd.options || {},
+            mergedContent
+        );
         updateAdGroup(selectedAd.id, {
-            content: {
-                ...selectedAd.content,
-                ...updates,
-            },
+            options: enforced.options,
+            content: enforced.content,
         });
     };
 
@@ -1780,6 +2006,13 @@ const AdsConfig = () => {
         if (displayLevel === 'simple') {
             return null;
         }
+        if (isDecorativeUsage(selectedAd?.options || {})) {
+            return (
+                <Notice status="info" isDismissible={false}>
+                    装饰组件不参与 A/B 版本测试。
+                </Notice>
+            );
+        }
         const variantsEnabled = Boolean(
             selectedAd.content?.variants_enabled
         );
@@ -1985,8 +2218,16 @@ const AdsConfig = () => {
         );
     };
 
-    const renderFrequencyControls = (behavior = {}) => (
-        <>
+    const renderFrequencyControls = (behavior = {}) => {
+        if (isDecorativeUsage(selectedAd?.options || {})) {
+            return (
+                <Notice status="info" isDismissible={false}>
+                    装饰组件不参与频控，系统会固定为“不限制”。
+                </Notice>
+            );
+        }
+        return (
+            <>
             <SelectControl
                 label="频控策略"
                 value={behavior.frequency_mode || 'none'}
@@ -2015,10 +2256,11 @@ const AdsConfig = () => {
                             ),
                         })
                     }
-                />
-            )}
-        </>
-    );
+                    />
+                )}
+            </>
+        );
+    };
 
     const getFrequencySummary = (behavior = {}) => {
         const mode = behavior.frequency_mode || 'none';
@@ -2040,6 +2282,7 @@ const AdsConfig = () => {
 
     const renderFrequencySummary = (behavior = {}, options = {}) => {
         const { showLink = true } = options;
+        const decorative = isDecorativeUsage(selectedAd?.options || {});
         return (
         <div className="magick-ad-right-subsection">
             <div className="magick-ad-right-subsection__title">
@@ -2047,8 +2290,13 @@ const AdsConfig = () => {
             </div>
             <div className="magick-ad-right-subsection__body">
                 <div className="magick-ad-frequency-summary">
-                    <span>频控：{getFrequencySummary(behavior)}</span>
-                    {showLink && (
+                    <span>
+                        频控：
+                        {decorative
+                            ? '装饰组件不参与频控'
+                            : getFrequencySummary(behavior)}
+                    </span>
+                    {showLink && !decorative && (
                         <Button
                             variant="link"
                             onClick={() => setPlacementTab('frequency')}
@@ -2141,6 +2389,9 @@ const AdsConfig = () => {
         const nextOptions = {
             ...selectedAd.options,
             creative_type: template.type,
+            usage_type: normalizeUsageType(
+                template.usageType || selectedAd.options?.usage_type || 'ad'
+            ),
         };
 
         if (template.containerType) {
@@ -2164,11 +2415,19 @@ const AdsConfig = () => {
             container_style: buildTemplateContainerStyleDefaults(placementHook),
             behavior: buildTemplateBehaviorDefaults(containerType),
         };
+        const enforced = enforceUsageTypeRules(nextOptions, nextContent);
 
         updateAdGroup(selectedAd.id, {
-            options: nextOptions,
-            content: nextContent,
+            options: enforced.options,
+            content: enforced.content,
         });
+        if (enforced.reasons.length > 0) {
+            showNotice(
+                'info',
+                `已按“装饰组件”规则自动收敛：${enforced.reasons.join('；')}`,
+                3200
+            );
+        }
     };
 
     const {
@@ -4058,7 +4317,16 @@ const AdsConfig = () => {
                                                                                 }
                                                                             )
                                                                         }
-                                                                        help="会向统计接口上报播放事件。"
+                                                                        disabled={isDecorativeUsage(
+                                                                            selectedAd?.options || {}
+                                                                        )}
+                                                                        help={
+                                                                            isDecorativeUsage(
+                                                                                selectedAd?.options || {}
+                                                                            )
+                                                                                ? '装饰组件不参与统计，已禁用。'
+                                                                                : '会向统计接口上报播放事件。'
+                                                                        }
                                                                     />
                                                                     <TextControl
                                                                         label="备用提示文案"
@@ -4866,7 +5134,8 @@ const AdsConfig = () => {
                     </div>
                     <div className="magick-ad-runtime-summary__line">
                         规则：位置 {runtimeContextMeta.placementLabel} · 页面{' '}
-                        {runtimeContextMeta.pageLabel} · 设备{' '}
+                        {runtimeContextMeta.pageLabel} · 用途{' '}
+                        {runtimeContextMeta.usageLabel} · 设备{' '}
                         {runtimeContextMeta.deviceRuleLabel} · 登录{' '}
                         {runtimeContextMeta.loginRuleLabel}
                     </div>
@@ -5214,6 +5483,22 @@ const AdsConfig = () => {
         <>
             <div className="magick-ad-right-section">
                 <div className="magick-ad-right-section__body">
+                <SelectControl
+                    label="用途类型"
+                    value={normalizeUsageType(selectedAd?.options?.usage_type || 'ad')}
+                    options={usageOptions}
+                    onChange={(value) =>
+                        handleUpdateOptions({
+                            usage_type: normalizeUsageType(value),
+                        })
+                    }
+                    help="“装饰组件”会自动禁用统计、频控和 A/B，并限制到非侵入位置。"
+                />
+                {isDecorativeUsage(selectedAd?.options || {}) && (
+                    <Notice status="info" isDismissible={false}>
+                        当前为“装饰组件”：仅支持顶部/内容区/底部位置，且不参与统计与频控。
+                    </Notice>
+                )}
                 {isSimpleLevel ? (
                     <Notice status="info" isDismissible={false}>
                         简洁级别已锁定为“快速模式”，仅保留页面插入与基础投放能力。
@@ -5320,13 +5605,28 @@ const AdsConfig = () => {
                                         }
                                         options={DISPLAY_PAGE_OPTIONS}
                                         onChange={(value) => {
-                                            const allowedPositions =
-                                                getPositionOptions(
-                                                    value
-                                                ).map(
-                                                    (option) =>
-                                                        option.value
+                                            const usageType =
+                                                normalizeUsageType(
+                                                    selectedAd.options
+                                                        ?.usage_type || 'ad'
                                                 );
+                                            const allowedPositions =
+                                                getPositionOptions(value)
+                                                    .filter((option) =>
+                                                        usageType ===
+                                                        'decorative'
+                                                            ? ![
+                                                                  'head',
+                                                                  'node',
+                                                              ].includes(
+                                                                  option.value
+                                                              )
+                                                            : true
+                                                    )
+                                                    .map(
+                                                        (option) =>
+                                                            option.value
+                                                    );
                                             const currentPlacement =
                                                 resolvePlacement(
                                                     selectedAd.options ||
@@ -5608,6 +5908,32 @@ const AdsConfig = () => {
                                                                             onChange={(
                                                                                 value
                                                                             ) => {
+                                                                                const usageType =
+                                                                                    normalizeUsageType(
+                                                                                        selectedAd
+                                                                                            .options
+                                                                                            ?.usage_type ||
+                                                                                            'ad'
+                                                                                    );
+                                                                                if (
+                                                                                    usageType ===
+                                                                                        'decorative' &&
+                                                                                    value !==
+                                                                                        'inline'
+                                                                                ) {
+                                                                                    showNotice(
+                                                                                        'warning',
+                                                                                        '装饰组件仅支持“默认嵌入”容器。',
+                                                                                        2600
+                                                                                    );
+                                                                                    handleUpdateOptions(
+                                                                                        {
+                                                                                            container_type:
+                                                                                                'inline',
+                                                                                        }
+                                                                                    );
+                                                                                    return;
+                                                                                }
                                                                                 if (
                                                                                     value !==
                                                                                     'inline'
@@ -6284,15 +6610,37 @@ const AdsConfig = () => {
                                                     onChange={(
                                                         value
                                                     ) => {
+                                                        const usageType =
+                                                            normalizeUsageType(
+                                                                selectedAd
+                                                                    .options
+                                                                    ?.usage_type ||
+                                                                    'ad'
+                                                            );
                                                         const allowedPositions =
                                                             getPositionOptions(
                                                                 value
-                                                            ).map(
-                                                                (
-                                                                    option
-                                                                ) =>
-                                                                    option.value
-                                                            );
+                                                            )
+                                                                .filter(
+                                                                    (
+                                                                        option
+                                                                    ) =>
+                                                                        usageType ===
+                                                                        'decorative'
+                                                                            ? ![
+                                                                                  'head',
+                                                                                  'node',
+                                                                              ].includes(
+                                                                                  option.value
+                                                                              )
+                                                                            : true
+                                                                )
+                                                                .map(
+                                                                    (
+                                                                        option
+                                                                    ) =>
+                                                                        option.value
+                                                                );
                                                         const currentPlacement =
                                                             resolvePlacement(
                                                                 selectedAd.options ||
@@ -6683,6 +7031,20 @@ const AdsConfig = () => {
                 }
                 onContainerChange={(value) => {
                     if (!selectedAd) {
+                        return;
+                    }
+                    const usageType = normalizeUsageType(
+                        selectedAd.options?.usage_type || 'ad'
+                    );
+                    if (usageType === 'decorative' && value !== 'inline') {
+                        showNotice(
+                            'warning',
+                            '装饰组件仅支持“默认嵌入”容器。',
+                            2600
+                        );
+                        handleUpdateOptions({
+                            container_type: 'inline',
+                        });
                         return;
                     }
                     if (value !== 'inline') {

@@ -769,6 +769,10 @@ final class Frontend {
             );
         }
 
+        if (!self::has_trackable_ads($ads)) {
+            return;
+        }
+
         if (!self::is_tracking_enabled()) {
             return;
         }
@@ -829,6 +833,19 @@ final class Frontend {
                 return true;
             }
             if ($delay > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static function has_trackable_ads(array $ads): bool {
+        foreach ($ads as $ad) {
+            if (!is_array($ad)) {
+                continue;
+            }
+            $options = isset($ad['options']) && is_array($ad['options']) ? $ad['options'] : array();
+            if (self::resolve_usage_type($options) !== 'decorative') {
                 return true;
             }
         }
@@ -2553,6 +2570,14 @@ final class Frontend {
         };
     }
 
+    private static function resolve_usage_type(array $options): string {
+        $type = $options['usage_type'] ?? 'ad';
+        return match ($type) {
+            'ad', 'promo', 'decorative' => $type,
+            default => 'ad',
+        };
+    }
+
     private static function build_body_by_type(string $content_type, array $content, array $options, array $ad): string {
         return match ($content_type) {
             'block' => self::build_block_body($content),
@@ -3351,11 +3376,16 @@ final class Frontend {
         $display_mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
         $random_strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
         $render_profile = self::resolve_render_profile($options);
+        $usage_type = self::resolve_usage_type($options);
         $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
 
         $data_attrs = ' data-ad-id="' . esc_attr($ad_id) . '" data-ad-position="' . esc_attr($position) . '"';
         $data_attrs .= ' data-ad-container="' . esc_attr($container_type) . '"';
+        $data_attrs .= ' data-ad-usage="' . esc_attr($usage_type) . '"';
         $data_attrs .= ' data-ad-render-profile="' . esc_attr($render_profile) . '"';
+        if ($usage_type === 'decorative') {
+            $data_attrs .= ' data-ad-track="0"';
+        }
 
         $slot = '';
         if (!empty($ad['_slot']) && is_string($ad['_slot'])) {
@@ -3415,7 +3445,7 @@ final class Frontend {
         if ($lock_scroll) {
             $data_attrs .= ' data-ad-lock-scroll="1"';
         }
-        if ($frequency_mode && $frequency_mode !== 'none') {
+        if ($usage_type !== 'decorative' && $frequency_mode && $frequency_mode !== 'none') {
             $data_attrs .= ' data-ad-freq-mode="' . esc_attr($frequency_mode) . '"';
             $data_attrs .= ' data-ad-freq-limit="' . esc_attr($frequency_limit) . '"';
         }
@@ -3440,7 +3470,7 @@ final class Frontend {
             if (isset($video_settings['poster_mode']) && $video_settings['poster_mode'] === 'auto') {
                 $data_attrs .= ' data-ad-video-poster-auto="1"';
             }
-            if (!empty($video_settings['track_events'])) {
+            if ($usage_type !== 'decorative' && !empty($video_settings['track_events'])) {
                 $data_attrs .= ' data-ad-video-track="1"';
             }
         }

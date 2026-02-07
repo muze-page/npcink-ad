@@ -41,6 +41,14 @@
             "type": "string",
             "default": "low"
         },
+        "templateIndustry": {
+            "type": "string",
+            "default": "general"
+        },
+        "usageType": {
+            "type": "string",
+            "default": "ad"
+        },
         "templateVersion": {
             "type": "number",
             "default": 1

@@ -15,6 +15,7 @@ final class Settings {
     private const RUNTIME_CACHE_GROUP = 'magick_ad';
     private const RUNTIME_CACHE_PREFIX = 'magick_ad_runtime_settings_';
     private const RUNTIME_LOCK_KEY = 'magick_ad_runtime_lock';
+    private const USAGE_TYPES = array('ad', 'promo', 'decorative');
 
     public static function get_settings(): array {
         return Ads::get_settings();
@@ -660,6 +661,11 @@ final class Settings {
                 array('quick', 'design', 'expert'),
                 'design'
             ),
+            'usage_type' => self::sanitize_choice(
+                isset($options['usage_type']) ? $options['usage_type'] : 'ad',
+                self::USAGE_TYPES,
+                'ad'
+            ),
             'device' => self::sanitize_choice(
                 isset($options['device']) ? $options['device'] : 'all',
                 array('all', 'mobile', 'tablet', 'desktop'),
@@ -988,6 +994,41 @@ final class Settings {
 
         if (($sanitized_options['placement_hook'] ?? '') === 'head') {
             $sanitized_content['container_style']['mode'] = 'raw';
+        }
+
+        if (($sanitized_options['usage_type'] ?? 'ad') === 'decorative') {
+            $sanitized_options['container_type'] = 'inline';
+            if (!isset($sanitized_content['container_style']) || !is_array($sanitized_content['container_style'])) {
+                $sanitized_content['container_style'] = array();
+            }
+            $sanitized_content['container_style']['mode'] = 'boxed';
+            if (!in_array(
+                (string) ($sanitized_options['placement_hook'] ?? ''),
+                array('content', 'body_top', 'footer'),
+                true
+            )) {
+                $sanitized_options['placement_hook'] = 'footer';
+                $sanitized_options['placement_position'] = '';
+                $sanitized_options['placement_paragraph'] = 0;
+            }
+            if (($sanitized_options['placement_hook'] ?? '') !== 'content') {
+                $sanitized_options['placement_position'] = '';
+                $sanitized_options['placement_paragraph'] = 0;
+            }
+            $sanitized_options['render_require_consent'] = false;
+            $sanitized_content['variants_enabled'] = false;
+            $sanitized_content['variants_strategy'] = 'request';
+            $sanitized_content['variants'] = array();
+            if (!isset($sanitized_content['behavior']) || !is_array($sanitized_content['behavior'])) {
+                $sanitized_content['behavior'] = array();
+            }
+            $sanitized_content['behavior']['frequency_mode'] = 'none';
+            $sanitized_content['behavior']['frequency_limit'] = 1;
+            $sanitized_content['behavior']['delay'] = 0;
+            if (!isset($sanitized_content['video_settings']) || !is_array($sanitized_content['video_settings'])) {
+                $sanitized_content['video_settings'] = array();
+            }
+            $sanitized_content['video_settings']['track_events'] = false;
         }
 
         $reserve_height = isset($sanitized_content['container_style']['reserve_height'])

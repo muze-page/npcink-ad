@@ -29,6 +29,7 @@ const createAdGroupTemplate = (
         html_sandbox: 'inherit',
         render_profile: 'minimal',
         editor_mode: 'design',
+        usage_type: 'ad',
         placement_hook: 'footer',
         placement_position: '',
         placement_paragraph: 0,
@@ -303,6 +304,9 @@ const normalizeAd = (ad: unknown): Ad => {
             editor_mode: ['quick', 'design', 'expert'].includes(options.editor_mode)
                 ? options.editor_mode
                 : 'design',
+            usage_type: ['ad', 'promo', 'decorative'].includes(options.usage_type)
+                ? options.usage_type
+                : 'ad',
             placement_hook: placement.hook || 'footer',
             placement_position:
                 placement.hook === 'content' ? placement.position || 'before' : '',

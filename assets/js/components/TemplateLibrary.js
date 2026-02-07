@@ -16,12 +16,14 @@ const TemplateLibrary = ({
     containerOptions,
     categoryOptions,
     scenarioOptions,
+    industryOptions,
     deviceOptions,
     riskOptions,
     creativeFilter,
     containerFilter,
     categoryFilter,
     scenarioFilter,
+    industryFilter,
     deviceFilter,
     riskFilter,
     onFilterChange,
@@ -197,6 +199,21 @@ const TemplateLibrary = ({
                             options={scenarioOptions}
                             onChange={(value) =>
                                 onFilterChange?.('scenario', value)
+                            }
+                        />
+                    </div>
+
+                    <div className="magick-ad-template-filter-select magick-ad-template-filter-field">
+                        <span className="magick-ad-template-filter-label">
+                            行业
+                        </span>
+                        <SelectControl
+                            label="行业"
+                            hideLabelFromVision
+                            value={industryFilter}
+                            options={industryOptions}
+                            onChange={(value) =>
+                                onFilterChange?.('industry', value)
                             }
                         />
                     </div>

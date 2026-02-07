@@ -14,8 +14,10 @@ final class Template_Migrator {
     private const OPTION_SCHEMA_MIGRATED_AT = 'magick_ad_template_schema_migrated_at';
     private const CREATIVE_TYPES = array('html', 'image', 'video', 'block');
     private const CONTAINER_TYPES = array('inline', 'popup', 'banner', 'floating', 'interstitial');
+    private const USAGE_TYPES = array('ad', 'promo', 'decorative');
     private const DEVICES = array('all', 'mobile', 'tablet', 'desktop');
     private const RISKS = array('low', 'medium', 'high');
+    private const INDUSTRIES = array('general', 'corporate', 'content', 'ecommerce');
 
     public static function maybe_migrate(): void {
         self::maybe_migrate_legacy_templates();
@@ -176,6 +178,12 @@ final class Template_Migrator {
         if (isset($next['risk']) && !isset($next['templateRisk'])) {
             $next['templateRisk'] = $next['risk'];
         }
+        if (isset($next['industry']) && !isset($next['templateIndustry'])) {
+            $next['templateIndustry'] = $next['industry'];
+        }
+        if (isset($next['usage_type']) && !isset($next['usageType'])) {
+            $next['usageType'] = $next['usage_type'];
+        }
 
         $type = isset($next['creativeType']) ? (string) $next['creativeType'] : '';
         if ($type === 'visual') {
@@ -213,6 +221,25 @@ final class Template_Migrator {
             $risk = 'low';
         }
         $next['templateRisk'] = $risk;
+        $industry = isset($next['templateIndustry']) ? (string) $next['templateIndustry'] : 'general';
+        $industry_alias = array(
+            '通用' => 'general',
+            '企业站' => 'corporate',
+            '内容站' => 'content',
+            '电商站' => 'ecommerce',
+        );
+        if (isset($industry_alias[$industry])) {
+            $industry = $industry_alias[$industry];
+        }
+        if (!in_array($industry, self::INDUSTRIES, true)) {
+            $industry = 'general';
+        }
+        $next['templateIndustry'] = $industry;
+        $usage_type = isset($next['usageType']) ? (string) $next['usageType'] : 'ad';
+        if (!in_array($usage_type, self::USAGE_TYPES, true)) {
+            $usage_type = 'ad';
+        }
+        $next['usageType'] = $usage_type;
 
         $next['imageId'] = isset($next['imageId']) ? absint($next['imageId']) : 0;
         $next['imageUrl'] = isset($next['imageUrl']) ? esc_url_raw((string) $next['imageUrl']) : '';
@@ -228,7 +255,9 @@ final class Template_Migrator {
             $next['category'],
             $next['scenario'],
             $next['device'],
-            $next['risk']
+            $next['risk'],
+            $next['industry'],
+            $next['usage_type']
         );
 
         return $next;
@@ -238,6 +267,8 @@ final class Template_Migrator {
         $attrs = array(
             'creativeType' => $type ?: 'html',
             'templateVersion' => Patterns::TEMPLATE_SCHEMA_VERSION,
+            'templateIndustry' => 'general',
+            'usageType' => 'ad',
         );
 
         if ($type === 'image') {

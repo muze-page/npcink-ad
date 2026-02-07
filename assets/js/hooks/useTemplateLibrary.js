@@ -9,6 +9,8 @@ const FAVORITES_KEY = 'magick_ad_template_favorites';
 const PINNED_KEY = 'magick_ad_template_pins';
 const DEVICE_OPTIONS = ['all', 'mobile', 'tablet', 'desktop'];
 const RISK_OPTIONS = ['low', 'medium', 'high'];
+const USAGE_OPTIONS = ['ad', 'promo', 'decorative'];
+const INDUSTRY_OPTIONS = ['general', 'corporate', 'content', 'ecommerce'];
 const TEMPLATE_SCHEMA_VERSION = (() => {
     if (typeof window === 'undefined') {
         return 2;
@@ -25,6 +27,28 @@ const sanitizeDevice = (value) =>
 
 const sanitizeRisk = (value) =>
     RISK_OPTIONS.includes(value) ? value : 'low';
+
+const sanitizeUsageType = (value) =>
+    USAGE_OPTIONS.includes(value) ? value : 'ad';
+
+const sanitizeIndustry = (value) => {
+    const map = {
+        general: 'general',
+        通用: 'general',
+        all: 'general',
+        corporate: 'corporate',
+        企业站: 'corporate',
+        content: 'content',
+        内容站: 'content',
+        ecommerce: 'ecommerce',
+        电商站: 'ecommerce',
+    };
+    if (typeof value !== 'string') {
+        return 'general';
+    }
+    const next = map[value.trim()] || value.trim();
+    return INDUSTRY_OPTIONS.includes(next) ? next : 'general';
+};
 
 const normalizeTemplateAttrs = (sourceAttrs) => {
     const attrs =
@@ -46,6 +70,9 @@ const normalizeTemplateAttrs = (sourceAttrs) => {
         if (attrs.imageAlt === undefined) {
             attrs.imageAlt = attrs.image.alt || '';
         }
+    }
+    if (attrs.usageType === undefined && attrs.usage_type !== undefined) {
+        attrs.usageType = attrs.usage_type;
     }
 
     const legacyType = typeof attrs.creativeType === 'string' ? attrs.creativeType : '';
@@ -75,6 +102,9 @@ const normalizeTemplateAttrs = (sourceAttrs) => {
     if (!attrs.templateRisk && attrs.risk) {
         attrs.templateRisk = attrs.risk;
     }
+    if (!attrs.templateIndustry && attrs.industry) {
+        attrs.templateIndustry = attrs.industry;
+    }
 
     attrs.templateVersion = Math.max(
         TEMPLATE_SCHEMA_VERSION,
@@ -90,23 +120,42 @@ const normalizeTemplateAttrs = (sourceAttrs) => {
     attrs.templateRisk = RISK_OPTIONS.includes(attrs.templateRisk)
         ? attrs.templateRisk
         : 'low';
+    attrs.templateIndustry = sanitizeIndustry(attrs.templateIndustry);
+    attrs.usageType = sanitizeUsageType(attrs.usageType);
 
     return attrs;
 };
 
 const getDefaultMeta = ({ type = 'html', containerType = 'inline', source = 'core' }) => {
+    const inferIndustry = (scenario = '') => {
+        const text = String(scenario || '');
+        if (/(转化|促销|优惠|活动|下单|成交)/.test(text)) {
+            return 'ecommerce';
+        }
+        if (/(内容|教程|课程|博客|视频)/.test(text)) {
+            return 'content';
+        }
+        if (/(品牌|公告|企业|服务|客服|订阅)/.test(text)) {
+            return 'corporate';
+        }
+        return 'general';
+    };
+
     if (source === 'user') {
         return {
             scenario: '自定义',
             device: 'all',
             risk: 'medium',
+            industry: 'general',
         };
     }
     if (containerType === 'interstitial') {
+        const scenario = '活动促销';
         return {
-            scenario: '活动促销',
+            scenario,
             device: 'all',
             risk: 'high',
+            industry: inferIndustry(scenario),
         };
     }
     if (
@@ -114,37 +163,47 @@ const getDefaultMeta = ({ type = 'html', containerType = 'inline', source = 'cor
         containerType === 'banner' ||
         containerType === 'floating'
     ) {
+        const scenario = '转化引导';
         return {
-            scenario: '转化引导',
+            scenario,
             device: 'all',
             risk: 'medium',
+            industry: inferIndustry(scenario),
         };
     }
     if (type === 'video') {
+        const scenario = '内容运营';
         return {
-            scenario: '内容运营',
+            scenario,
             device: 'all',
             risk: 'medium',
+            industry: inferIndustry(scenario),
         };
     }
     if (type === 'block') {
+        const scenario = '内容运营';
         return {
-            scenario: '内容运营',
+            scenario,
             device: 'desktop',
             risk: 'low',
+            industry: inferIndustry(scenario),
         };
     }
     if (type === 'html') {
+        const scenario = '通用推广';
         return {
-            scenario: '通用推广',
+            scenario,
             device: 'all',
             risk: 'low',
+            industry: inferIndustry(scenario),
         };
     }
+    const scenario = '通用推广';
     return {
-        scenario: '通用推广',
+        scenario,
         device: 'all',
         risk: 'low',
+        industry: inferIndustry(scenario),
     };
 };
 
@@ -161,6 +220,9 @@ const normalizeTemplateMeta = (meta, fallback = {}) => {
             sourceMeta.device || fallbackMeta.device || 'all'
         ),
         risk: sanitizeRisk(sourceMeta.risk || fallbackMeta.risk || 'low'),
+        industry: sanitizeIndustry(
+            sourceMeta.industry || fallbackMeta.industry || 'general'
+        ),
     };
 };
 
@@ -174,6 +236,7 @@ const withTemplateMeta = (template, meta, fallbackMeta = null) => {
         scenario: normalized.scenario,
         device: normalized.device,
         risk: normalized.risk,
+        industry: normalized.industry,
     };
 };
 
@@ -219,16 +282,23 @@ const extractTemplateFromContent = (content) => {
             : '';
     const risk =
         typeof attrs.templateRisk === 'string' ? attrs.templateRisk : '';
+    const industry =
+        typeof attrs.templateIndustry === 'string'
+            ? sanitizeIndustry(attrs.templateIndustry)
+            : 'general';
+    const usageType = sanitizeUsageType(attrs.usageType);
 
     if (type === 'image') {
         return {
             type,
             containerType,
+            usageType,
             version: Number(attrs.templateVersion || 1),
             category,
             scenario,
             device,
             risk,
+            industry,
             data: {
                 image: {
                     id: Number(attrs.imageId || 0),
@@ -245,11 +315,13 @@ const extractTemplateFromContent = (content) => {
         return {
             type,
             containerType,
+            usageType,
             version: Number(attrs.templateVersion || 1),
             category,
             scenario,
             device,
             risk,
+            industry,
             data: {
                 video_url: attrs.videoUrl || '',
             },
@@ -260,11 +332,13 @@ const extractTemplateFromContent = (content) => {
         return {
             type,
             containerType,
+            usageType,
             version: Number(attrs.templateVersion || 1),
             category,
             scenario,
             device,
             risk,
+            industry,
             data: {
                 blocks: attrs.blocks || '',
             },
@@ -274,11 +348,13 @@ const extractTemplateFromContent = (content) => {
     return {
         type: 'html',
         containerType,
+        usageType,
         version: Number(attrs.templateVersion || 1),
         category,
         scenario,
         device,
         risk,
+        industry,
         data: {
             html: attrs.html || '',
         },
@@ -315,16 +391,23 @@ const extractTemplateFromContentLoose = (content) => {
             typeof attrs.templateRisk === 'string'
                 ? attrs.templateRisk
                 : '';
+        const industry =
+            typeof attrs.templateIndustry === 'string'
+                ? sanitizeIndustry(attrs.templateIndustry)
+                : 'general';
+        const usageType = sanitizeUsageType(attrs.usageType);
 
         if (type === 'image') {
             return {
                 type,
                 containerType,
+                usageType,
                 version: Number(attrs.templateVersion || 1),
                 category,
                 scenario,
                 device,
                 risk,
+                industry,
                 data: {
                     image: {
                         id: Number(attrs.imageId || 0),
@@ -341,11 +424,13 @@ const extractTemplateFromContentLoose = (content) => {
             return {
                 type,
                 containerType,
+                usageType,
                 version: Number(attrs.templateVersion || 1),
                 category,
                 scenario,
                 device,
                 risk,
+                industry,
                 data: {
                     video_url: attrs.videoUrl || '',
                 },
@@ -356,11 +441,13 @@ const extractTemplateFromContentLoose = (content) => {
             return {
                 type,
                 containerType,
+                usageType,
                 version: Number(attrs.templateVersion || 1),
                 category,
                 scenario,
                 device,
                 risk,
+                industry,
                 data: {
                     blocks: attrs.blocks || '',
                 },
@@ -370,11 +457,13 @@ const extractTemplateFromContentLoose = (content) => {
         return {
             type: 'html',
             containerType,
+            usageType,
             version: Number(attrs.templateVersion || 1),
             category,
             scenario,
             device,
             risk,
+            industry,
             data: {
                 html: attrs.html || '',
             },
@@ -388,12 +477,16 @@ const buildPatternContent = (
     type,
     data,
     containerType = 'inline',
-    category = ''
+    category = '',
+    usageType = 'ad',
+    industry = 'general'
 ) => {
     const attrs = {
         creativeType: type,
         containerType,
         templateVersion: TEMPLATE_SCHEMA_VERSION,
+        usageType: sanitizeUsageType(usageType),
+        templateIndustry: sanitizeIndustry(industry),
     };
     if (category) {
         attrs.templateCategory = category;
@@ -492,6 +585,7 @@ const useTemplateLibrary = ({
                         scenario: '',
                         device: 'all',
                         risk: 'low',
+                        industry: 'general',
                     })
                 );
             });
@@ -544,6 +638,7 @@ const useTemplateLibrary = ({
                     content,
                     ...extracted,
                 };
+                template.usageType = sanitizeUsageType(template.usageType);
                 variationTemplates.push(withTemplateMeta(template, extracted));
             });
         } catch (err) {
@@ -575,8 +670,17 @@ const useTemplateLibrary = ({
                     pattern?.meta ||
                     fallbackMetaMap.get(pattern.name || '') ||
                     {};
+                const usageType = sanitizeUsageType(
+                    extracted.usageType ||
+                        patternMeta?.usageType ||
+                        patternMeta?.usage_type ||
+                        'ad'
+                );
                 return withTemplateMeta(
-                    template,
+                    {
+                        ...template,
+                        usageType,
+                    },
                     {
                         ...patternMeta,
                         scenario:
@@ -591,6 +695,10 @@ const useTemplateLibrary = ({
                             extracted.risk ||
                             patternMeta?.risk ||
                             'low',
+                        industry:
+                            extracted.industry ||
+                            patternMeta?.industry ||
+                            'general',
                     },
                     getDefaultMeta(template)
                 );
@@ -621,12 +729,14 @@ const useTemplateLibrary = ({
                         content,
                         ...extracted,
                     };
+                    template.usageType = sanitizeUsageType(template.usageType);
                     return withTemplateMeta(
                         template,
                         {
                             scenario: extracted.scenario || '自定义',
                             device: extracted.device || 'all',
                             risk: extracted.risk || 'medium',
+                            industry: extracted.industry || 'general',
                         },
                         getDefaultMeta(template)
                     );
@@ -839,7 +949,9 @@ const useTemplateLibrary = ({
                     type,
                     data,
                     containerType,
-                    category
+                    category,
+                    selectedAd?.options?.usage_type || 'ad',
+                    'general'
                 );
                 await apiFetch({
                     path: '/wp/v2/wp_block',

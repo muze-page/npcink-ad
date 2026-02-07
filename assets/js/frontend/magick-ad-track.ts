@@ -107,6 +107,12 @@ import type { TrackBatchItem, TrackConfig, TrackPayload } from '../types';
         if (!element) {
             return null;
         }
+        if (
+            element.getAttribute('data-ad-track') === '0' ||
+            element.getAttribute('data-ad-usage') === 'decorative'
+        ) {
+            return null;
+        }
         const adId = element.getAttribute('data-ad-id');
         if (!adId) {
             return null;
@@ -480,6 +486,13 @@ import type { TrackBatchItem, TrackConfig, TrackPayload } from '../types';
 
     const initAdElement = (element) => {
         if (!element || element.dataset.adInitialized === '1') {
+            return;
+        }
+        if (
+            element.getAttribute('data-ad-track') === '0' ||
+            element.getAttribute('data-ad-usage') === 'decorative'
+        ) {
+            element.dataset.adInitialized = '1';
             return;
         }
         element.dataset.adInitialized = '1';

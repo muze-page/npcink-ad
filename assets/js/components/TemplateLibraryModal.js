@@ -15,6 +15,13 @@ const RISK_LABELS = {
     high: '高风险',
 };
 
+const INDUSTRY_LABELS = {
+    general: '通用站点',
+    corporate: '企业站',
+    content: '内容站',
+    ecommerce: '电商站',
+};
+
 const TemplateLibraryModal = ({
     isOpen,
     type,
@@ -72,6 +79,7 @@ const TemplateLibraryModal = ({
     const [creativeFilter, setCreativeFilter] = useState(initialCreativeFilter);
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [scenarioFilter, setScenarioFilter] = useState('all');
+    const [industryFilter, setIndustryFilter] = useState('all');
     const [deviceFilter, setDeviceFilter] = useState('all');
     const [riskFilter, setRiskFilter] = useState('all');
     const [query, setQuery] = useState('');
@@ -116,6 +124,9 @@ const TemplateLibraryModal = ({
     const hasUnmarkedScenario = visibleTemplates.some(
         (item) => !item.scenario || !item.scenario.trim()
     );
+    const hasUnmarkedIndustry = visibleTemplates.some(
+        (item) => !item.industry || !item.industry.trim()
+    );
     const scenarioOptions = [
         { label: '全部', value: 'all' },
         ...Array.from(
@@ -137,6 +148,16 @@ const TemplateLibraryModal = ({
         { label: DEVICE_LABELS.mobile, value: 'mobile' },
         { label: DEVICE_LABELS.tablet, value: 'tablet' },
         { label: DEVICE_LABELS.desktop, value: 'desktop' },
+    ];
+    const industryOptions = [
+        { label: '全部', value: 'all' },
+        { label: INDUSTRY_LABELS.general, value: 'general' },
+        { label: INDUSTRY_LABELS.corporate, value: 'corporate' },
+        { label: INDUSTRY_LABELS.content, value: 'content' },
+        { label: INDUSTRY_LABELS.ecommerce, value: 'ecommerce' },
+        ...(hasUnmarkedIndustry
+            ? [{ label: '未标注', value: '未标注' }]
+            : []),
     ];
     const riskOptions = [
         { label: '全部', value: 'all' },
@@ -197,6 +218,18 @@ const TemplateLibraryModal = ({
         return list.filter((item) => (item.scenario || '') === scenarioFilter);
     };
 
+    const filterByIndustry = (list) => {
+        if (industryFilter === 'all') {
+            return list;
+        }
+        if (industryFilter === '未标注') {
+            return list.filter((item) => !item.industry || !item.industry.trim());
+        }
+        return list.filter(
+            (item) => (item.industry || 'general') === industryFilter
+        );
+    };
+
     const filterByDevice = (list) => {
         if (deviceFilter === 'all') {
             return list;
@@ -248,11 +281,13 @@ const TemplateLibraryModal = ({
                 filterByFavorites(
                     filterByRisk(
                         filterByDevice(
-                            filterByScenario(
-                                filterByQuery(
-                                    filterByCategory(
-                                        filterByContainer(
-                                            filterByCreative(list)
+                            filterByIndustry(
+                                filterByScenario(
+                                    filterByQuery(
+                                        filterByCategory(
+                                            filterByContainer(
+                                                filterByCreative(list)
+                                            )
                                         )
                                     )
                                 )
@@ -268,6 +303,7 @@ const TemplateLibraryModal = ({
         containerFilter !== 'all' ||
         categoryFilter !== 'all' ||
         scenarioFilter !== 'all' ||
+        industryFilter !== 'all' ||
         deviceFilter !== 'all' ||
         riskFilter !== 'all' ||
         query.trim() !== '' ||
@@ -278,6 +314,7 @@ const TemplateLibraryModal = ({
         setContainerFilter('all');
         setCategoryFilter('all');
         setScenarioFilter('all');
+        setIndustryFilter('all');
         setDeviceFilter('all');
         setRiskFilter('all');
         setQuery('');
@@ -308,6 +345,11 @@ const TemplateLibraryModal = ({
     if (scenarioFilter !== 'all') {
         activeFilterTags.push(`场景：${scenarioFilter}`);
     }
+    if (industryFilter !== 'all') {
+        activeFilterTags.push(
+            `行业：${INDUSTRY_LABELS[industryFilter] || industryFilter}`
+        );
+    }
     if (deviceFilter !== 'all') {
         activeFilterTags.push(`设备：${DEVICE_LABELS[deviceFilter] || deviceFilter}`);
     }
@@ -329,6 +371,7 @@ const TemplateLibraryModal = ({
             containerFilter,
             categoryFilter,
             scenarioFilter,
+            industryFilter,
             deviceFilter,
             riskFilter,
             query,
@@ -347,6 +390,7 @@ const TemplateLibraryModal = ({
             containerFilter,
             categoryFilter,
             scenarioFilter,
+            industryFilter,
             deviceFilter,
             riskFilter,
             query,
@@ -366,6 +410,8 @@ const TemplateLibraryModal = ({
             setCategoryFilter(value);
         } else if (group === 'scenario') {
             setScenarioFilter(value);
+        } else if (group === 'industry') {
+            setIndustryFilter(value);
         } else if (group === 'device') {
             setDeviceFilter(value);
         } else if (group === 'risk') {
@@ -403,12 +449,14 @@ const TemplateLibraryModal = ({
                         : []),
                 ]}
                 scenarioOptions={scenarioOptions}
+                industryOptions={industryOptions}
                 deviceOptions={deviceOptions}
                 riskOptions={riskOptions}
                 creativeFilter={creativeFilter}
                 containerFilter={containerFilter}
                 categoryFilter={categoryFilter}
                 scenarioFilter={scenarioFilter}
+                industryFilter={industryFilter}
                 deviceFilter={deviceFilter}
                 riskFilter={riskFilter}
                 onFilterChange={handleFilterChange}

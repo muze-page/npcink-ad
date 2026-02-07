@@ -92,6 +92,7 @@ export type RenderProfile = 'inherit' | 'minimal' | 'isolated';
 export type HtmlLoadStrategy = 'immediate' | 'delay' | 'viewport';
 export type VariantStrategy = 'request' | 'session';
 export type EditorMode = 'quick' | 'design' | 'expert';
+export type UsageType = 'ad' | 'promo' | 'decorative';
 export type DeviceType = 'all' | 'mobile' | 'tablet' | 'desktop';
 export type LoginType = 'all' | 'logged-in' | 'logged-out';
 export type ShowPage =
@@ -282,6 +283,7 @@ export interface AdOptions {
     html_sandbox?: HtmlSandboxMode;
     render_profile?: RenderProfile;
     editor_mode: EditorMode;
+    usage_type: UsageType;
     placement_hook: string;
     placement_position: string;
     placement_paragraph: number;
