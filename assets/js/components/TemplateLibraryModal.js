@@ -2,6 +2,19 @@ import { Modal, Notice, TabPanel } from '@wordpress/components';
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import TemplateLibrary from './TemplateLibrary';
 
+const DEVICE_LABELS = {
+    all: '全端',
+    mobile: '移动优先',
+    tablet: '平板优先',
+    desktop: '桌面优先',
+};
+
+const RISK_LABELS = {
+    low: '低风险',
+    medium: '中风险',
+    high: '高风险',
+};
+
 const TemplateLibraryModal = ({
     isOpen,
     type,
@@ -58,6 +71,9 @@ const TemplateLibraryModal = ({
     const [containerFilter, setContainerFilter] = useState('all');
     const [creativeFilter, setCreativeFilter] = useState(initialCreativeFilter);
     const [categoryFilter, setCategoryFilter] = useState('all');
+    const [scenarioFilter, setScenarioFilter] = useState('all');
+    const [deviceFilter, setDeviceFilter] = useState('all');
+    const [riskFilter, setRiskFilter] = useState('all');
     const [query, setQuery] = useState('');
     const [onlyFavorites, setOnlyFavorites] = useState(false);
     const [selectionMode, setSelectionMode] = useState(false);
@@ -97,6 +113,37 @@ const TemplateLibraryModal = ({
     const hasUncategorized = visibleTemplates.some(
         (item) => !item.category || !item.category.trim()
     );
+    const hasUnmarkedScenario = visibleTemplates.some(
+        (item) => !item.scenario || !item.scenario.trim()
+    );
+    const scenarioOptions = [
+        { label: '全部', value: 'all' },
+        ...Array.from(
+            new Set(
+                visibleTemplates
+                    .map((item) => item.scenario)
+                    .filter((item) => item && item.trim())
+            )
+        ).map((scenario) => ({
+            label: scenario,
+            value: scenario,
+        })),
+        ...(hasUnmarkedScenario
+            ? [{ label: '未标注', value: '未标注' }]
+            : []),
+    ];
+    const deviceOptions = [
+        { label: '全部', value: 'all' },
+        { label: DEVICE_LABELS.mobile, value: 'mobile' },
+        { label: DEVICE_LABELS.tablet, value: 'tablet' },
+        { label: DEVICE_LABELS.desktop, value: 'desktop' },
+    ];
+    const riskOptions = [
+        { label: '全部', value: 'all' },
+        { label: RISK_LABELS.low, value: 'low' },
+        { label: RISK_LABELS.medium, value: 'medium' },
+        { label: RISK_LABELS.high, value: 'high' },
+    ];
 
     const selectedIds = Array.isArray(selected) ? selected : [];
     const favoriteList = Array.isArray(favoriteIds) ? favoriteIds : [];
@@ -140,6 +187,30 @@ const TemplateLibraryModal = ({
         });
     };
 
+    const filterByScenario = (list) => {
+        if (scenarioFilter === 'all') {
+            return list;
+        }
+        if (scenarioFilter === '未标注') {
+            return list.filter((item) => !item.scenario || !item.scenario.trim());
+        }
+        return list.filter((item) => (item.scenario || '') === scenarioFilter);
+    };
+
+    const filterByDevice = (list) => {
+        if (deviceFilter === 'all') {
+            return list;
+        }
+        return list.filter((item) => (item.device || 'all') === deviceFilter);
+    };
+
+    const filterByRisk = (list) => {
+        if (riskFilter === 'all') {
+            return list;
+        }
+        return list.filter((item) => (item.risk || 'low') === riskFilter);
+    };
+
     const filterByFavorites = (list) => {
         if (!onlyFavorites) {
             return list;
@@ -175,9 +246,17 @@ const TemplateLibraryModal = ({
         applyCategoryColors(
             sortByPinned(
                 filterByFavorites(
-                    filterByQuery(
-                        filterByCategory(
-                            filterByContainer(filterByCreative(list))
+                    filterByRisk(
+                        filterByDevice(
+                            filterByScenario(
+                                filterByQuery(
+                                    filterByCategory(
+                                        filterByContainer(
+                                            filterByCreative(list)
+                                        )
+                                    )
+                                )
+                            )
                         )
                     )
                 )
@@ -188,6 +267,9 @@ const TemplateLibraryModal = ({
         creativeFilter !== initialCreativeFilter ||
         containerFilter !== 'all' ||
         categoryFilter !== 'all' ||
+        scenarioFilter !== 'all' ||
+        deviceFilter !== 'all' ||
+        riskFilter !== 'all' ||
         query.trim() !== '' ||
         onlyFavorites;
 
@@ -195,6 +277,9 @@ const TemplateLibraryModal = ({
         setCreativeFilter(initialCreativeFilter);
         setContainerFilter('all');
         setCategoryFilter('all');
+        setScenarioFilter('all');
+        setDeviceFilter('all');
+        setRiskFilter('all');
         setQuery('');
         setOnlyFavorites(false);
     };
@@ -220,6 +305,15 @@ const TemplateLibraryModal = ({
     if (categoryFilter !== 'all') {
         activeFilterTags.push(`分类：${categoryFilter}`);
     }
+    if (scenarioFilter !== 'all') {
+        activeFilterTags.push(`场景：${scenarioFilter}`);
+    }
+    if (deviceFilter !== 'all') {
+        activeFilterTags.push(`设备：${DEVICE_LABELS[deviceFilter] || deviceFilter}`);
+    }
+    if (riskFilter !== 'all') {
+        activeFilterTags.push(`风险：${RISK_LABELS[riskFilter] || riskFilter}`);
+    }
     if (query.trim() !== '') {
         activeFilterTags.push(`关键词：${query.trim()}`);
     }
@@ -234,6 +328,9 @@ const TemplateLibraryModal = ({
             creativeFilter,
             containerFilter,
             categoryFilter,
+            scenarioFilter,
+            deviceFilter,
+            riskFilter,
             query,
             onlyFavorites,
             favoriteList,
@@ -249,6 +346,9 @@ const TemplateLibraryModal = ({
             creativeFilter,
             containerFilter,
             categoryFilter,
+            scenarioFilter,
+            deviceFilter,
+            riskFilter,
             query,
             onlyFavorites,
             favoriteList,
@@ -264,6 +364,12 @@ const TemplateLibraryModal = ({
             setContainerFilter(value);
         } else if (group === 'category') {
             setCategoryFilter(value);
+        } else if (group === 'scenario') {
+            setScenarioFilter(value);
+        } else if (group === 'device') {
+            setDeviceFilter(value);
+        } else if (group === 'risk') {
+            setRiskFilter(value);
         }
     };
 
@@ -296,9 +402,15 @@ const TemplateLibraryModal = ({
                         ? [{ label: '未分类', value: '未分类' }]
                         : []),
                 ]}
+                scenarioOptions={scenarioOptions}
+                deviceOptions={deviceOptions}
+                riskOptions={riskOptions}
                 creativeFilter={creativeFilter}
                 containerFilter={containerFilter}
                 categoryFilter={categoryFilter}
+                scenarioFilter={scenarioFilter}
+                deviceFilter={deviceFilter}
+                riskFilter={riskFilter}
                 onFilterChange={handleFilterChange}
                 onlyFavorites={onlyFavorites}
                 onToggleFavoritesOnly={setOnlyFavorites}

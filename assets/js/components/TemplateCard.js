@@ -20,6 +20,21 @@ const getContainerLabel = (template) => {
 const getSourceLabel = (template) =>
     template.source === 'user' ? '我的模板' : '系统预设';
 
+const getDeviceLabel = (template) => {
+    const device = template.device || 'all';
+    if (device === 'mobile') return '移动优先';
+    if (device === 'tablet') return '平板优先';
+    if (device === 'desktop') return '桌面优先';
+    return '全端';
+};
+
+const getRiskLabel = (template) => {
+    const risk = template.risk || 'low';
+    if (risk === 'high') return '高风险';
+    if (risk === 'medium') return '中风险';
+    return '低风险';
+};
+
 const TemplateThumbnail = ({ template }) => {
     const thumb = template.thumbnail || template.thumbnailUrl;
     if (thumb) {
@@ -127,6 +142,22 @@ const TemplateCard = ({
                 },
             });
         }
+        if (template.scenario) {
+            list.push({
+                label: template.scenario,
+                className: 'magick-ad-template-tag magick-ad-template-tag--scenario',
+            });
+        }
+        list.push({
+            label: getDeviceLabel(template),
+            className: 'magick-ad-template-tag magick-ad-template-tag--device',
+        });
+        list.push({
+            label: getRiskLabel(template),
+            className: `magick-ad-template-tag magick-ad-template-tag--risk-${
+                template.risk || 'low'
+            }`,
+        });
         return list;
     }, [template]);
 

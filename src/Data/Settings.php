@@ -412,6 +412,71 @@ final class Settings {
         return $value;
     }
 
+    private static function default_non_critical_delay(string $container_type): int {
+        $delay = in_array($container_type, array('popup', 'banner', 'floating', 'interstitial'), true)
+            ? 1
+            : 0;
+        $delay = (int) apply_filters('magick_ad_default_non_critical_delay', $delay, $container_type);
+        if ($delay < 0) {
+            $delay = 0;
+        }
+        if ($delay > 120) {
+            $delay = 120;
+        }
+        return $delay;
+    }
+
+    private static function default_reserve_height(string $container_type, string $creative_type, array $content): int {
+        if ($container_type !== 'inline') {
+            return 0;
+        }
+
+        if ($creative_type === 'video') {
+            return 0;
+        }
+
+        if ($creative_type === 'image') {
+            $image = isset($content['image']) && is_array($content['image'])
+                ? $content['image']
+                : array();
+            $width = isset($image['width']) ? absint($image['width']) : 0;
+            $height = isset($image['height']) ? absint($image['height']) : 0;
+            if ($width > 0 && $height > 0) {
+                return 0;
+            }
+        }
+
+        if ($creative_type === 'html') {
+            $ratio = isset($content['html_placeholder_ratio'])
+                ? (string) $content['html_placeholder_ratio']
+                : '';
+            if ($ratio !== '' && preg_match('/^\\d{1,3}:\\d{1,3}$/', $ratio)) {
+                return 0;
+            }
+        }
+
+        $fallback = match ($creative_type) {
+            'image' => 180,
+            'block' => 160,
+            default => 120,
+        };
+
+        $fallback = (int) apply_filters(
+            'magick_ad_default_reserve_height',
+            $fallback,
+            $container_type,
+            $creative_type,
+            $content
+        );
+        if ($fallback < 0) {
+            $fallback = 0;
+        }
+        if ($fallback > 2000) {
+            $fallback = 2000;
+        }
+        return $fallback;
+    }
+
     private static function normalize_placement(array $options): array {
         $hook = isset($options['placement_hook']) ? (string) $options['placement_hook'] : '';
         $position = isset($options['placement_position']) ? (string) $options['placement_position'] : '';
@@ -647,6 +712,7 @@ final class Settings {
         $sanitized_options['placement_hook'] = $placement['hook'];
         $sanitized_options['placement_position'] = $placement['position'];
         $sanitized_options['placement_paragraph'] = $placement['paragraph'];
+        $default_delay = self::default_non_critical_delay((string) $sanitized_options['container_type']);
 
         $raw_blocks = isset($content['blocks']) && is_string($content['blocks']) ? $content['blocks'] : '';
         $blocks_value = $raw_blocks;
@@ -907,7 +973,7 @@ final class Settings {
                     'none'
                 ),
                 'frequency_limit' => isset($behavior['frequency_limit']) ? max(1, absint($behavior['frequency_limit'])) : 1,
-                'delay' => isset($behavior['delay']) ? absint($behavior['delay']) : 0,
+                'delay' => array_key_exists('delay', $behavior) ? absint($behavior['delay']) : $default_delay,
             ),
             'image_settings' => array(
                 'watermark' => !empty($content['image_settings']['watermark']),
@@ -923,6 +989,18 @@ final class Settings {
         if (($sanitized_options['placement_hook'] ?? '') === 'head') {
             $sanitized_content['container_style']['mode'] = 'raw';
         }
+
+        $reserve_height = isset($sanitized_content['container_style']['reserve_height'])
+            ? absint($sanitized_content['container_style']['reserve_height'])
+            : 0;
+        if ($reserve_height <= 0) {
+            $reserve_height = self::default_reserve_height(
+                (string) ($sanitized_options['container_type'] ?? 'inline'),
+                (string) ($sanitized_options['creative_type'] ?? 'html'),
+                $sanitized_content
+            );
+        }
+        $sanitized_content['container_style']['reserve_height'] = $reserve_height;
 
         return array(
             'id' => isset($ad['id']) ? sanitize_text_field($ad['id']) : '',

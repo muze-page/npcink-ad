@@ -15,9 +15,15 @@ const TemplateLibrary = ({
     creativeOptions,
     containerOptions,
     categoryOptions,
+    scenarioOptions,
+    deviceOptions,
+    riskOptions,
     creativeFilter,
     containerFilter,
     categoryFilter,
+    scenarioFilter,
+    deviceFilter,
+    riskFilter,
     onFilterChange,
     onlyFavorites,
     onToggleFavoritesOnly,
@@ -176,6 +182,51 @@ const TemplateLibrary = ({
                             options={categoryOptions}
                             onChange={(value) =>
                                 onFilterChange?.('category', value)
+                            }
+                        />
+                    </div>
+
+                    <div className="magick-ad-template-filter-select magick-ad-template-filter-field">
+                        <span className="magick-ad-template-filter-label">
+                            场景
+                        </span>
+                        <SelectControl
+                            label="场景"
+                            hideLabelFromVision
+                            value={scenarioFilter}
+                            options={scenarioOptions}
+                            onChange={(value) =>
+                                onFilterChange?.('scenario', value)
+                            }
+                        />
+                    </div>
+
+                    <div className="magick-ad-template-filter-select magick-ad-template-filter-field">
+                        <span className="magick-ad-template-filter-label">
+                            设备建议
+                        </span>
+                        <SelectControl
+                            label="设备建议"
+                            hideLabelFromVision
+                            value={deviceFilter}
+                            options={deviceOptions}
+                            onChange={(value) =>
+                                onFilterChange?.('device', value)
+                            }
+                        />
+                    </div>
+
+                    <div className="magick-ad-template-filter-select magick-ad-template-filter-field">
+                        <span className="magick-ad-template-filter-label">
+                            风险
+                        </span>
+                        <SelectControl
+                            label="风险"
+                            hideLabelFromVision
+                            value={riskFilter}
+                            options={riskOptions}
+                            onChange={(value) =>
+                                onFilterChange?.('risk', value)
                             }
                         />
                     </div>

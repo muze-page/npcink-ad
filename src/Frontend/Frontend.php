@@ -585,6 +585,7 @@ final class Frontend {
             'consentBannerEnabled' => $consent_banner_enabled,
             'consentBannerText' => $consent_banner_text,
             'consentBannerButton' => $consent_banner_button,
+            'defaultNonCriticalDelay' => self::default_non_critical_delay('popup'),
             'renderUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ad')),
             'renderBatchUrl' => esc_url_raw(rest_url('magick-ad/v1/render-ads')),
             'observeMutations' => (bool) apply_filters('magick_ad_behavior_observe_mutations', false),
@@ -821,7 +822,7 @@ final class Frontend {
             $options = isset($ad['options']) ? $ad['options'] : array();
             $container = isset($options['container_type']) ? $options['container_type'] : 'inline';
             $behavior = isset($ad['content']['behavior']) ? $ad['content']['behavior'] : array();
-            $delay = isset($behavior['delay']) ? absint($behavior['delay']) : 0;
+            $delay = self::resolve_behavior_delay($behavior, (string) $container);
             if (in_array($container, array('popup', 'interstitial'), true)) {
                 return true;
             }
@@ -845,7 +846,7 @@ final class Frontend {
             if (in_array($container, array('popup', 'interstitial'), true)) {
                 return true;
             }
-            if (!empty($behavior['delay'])) {
+            if (self::resolve_behavior_delay($behavior, (string) $container) > 0) {
                 return true;
             }
             $frequency_mode = isset($behavior['frequency_mode']) ? (string) $behavior['frequency_mode'] : 'none';
@@ -1439,7 +1440,10 @@ final class Frontend {
         if (in_array($container, array('popup', 'interstitial'), true)) {
             self::$container_index['has_popup'] = 1;
         }
-        if (!empty($ad['content']['behavior']['delay'])) {
+        $behavior = isset($ad['content']['behavior']) && is_array($ad['content']['behavior'])
+            ? $ad['content']['behavior']
+            : array();
+        if (self::resolve_behavior_delay($behavior, (string) $container) > 0) {
             self::$container_index['has_delay'] = 1;
         }
     }
@@ -2305,7 +2309,7 @@ final class Frontend {
         $data_attrs = self::build_data_attributes($ad, $options, $content, $position, $container_type);
         $data_attrs .= ' data-wp-interactive="magick-ad"';
         $unit_class = self::build_unit_class($ad, $options, $position, $container_type);
-        $inner_style = self::build_inner_style($content, $content_type);
+        $inner_style = self::build_inner_style($content, $content_type, $container_type);
 
         return '<div class="' . esc_attr($unit_class) . '"' . $data_attrs . '><div class="magick-ad-unit__inner"' . $inner_style . '>' . $body . '</div></div>';
     }
@@ -3387,7 +3391,7 @@ final class Frontend {
             $data_attrs .= self::build_node_data_attributes($options);
         }
 
-        $delay = isset($behavior['delay']) ? absint($behavior['delay']) : 0;
+        $delay = self::resolve_behavior_delay($behavior, $container_type);
         $animation = isset($behavior['animation']) ? $behavior['animation'] : 'none';
         $close_on_esc = array_key_exists('close_on_esc', $behavior) ? (bool) $behavior['close_on_esc'] : true;
         $close_on_overlay = array_key_exists('close_on_overlay', $behavior) ? (bool) $behavior['close_on_overlay'] : true;
@@ -3501,9 +3505,75 @@ final class Frontend {
         return $profile;
     }
 
-    private static function build_inner_style(array $content, string $content_type): string {
+    private static function default_non_critical_delay(string $container_type): int {
+        $delay = in_array($container_type, array('popup', 'banner', 'floating', 'interstitial'), true)
+            ? 1
+            : 0;
+        $delay = (int) apply_filters('magick_ad_default_non_critical_delay', $delay, $container_type);
+        if ($delay < 0) {
+            return 0;
+        }
+        if ($delay > 120) {
+            return 120;
+        }
+        return $delay;
+    }
+
+    private static function resolve_behavior_delay(array $behavior, string $container_type): int {
+        if (array_key_exists('delay', $behavior)) {
+            $delay = absint($behavior['delay']);
+        } else {
+            $delay = self::default_non_critical_delay($container_type);
+        }
+        if ($delay > 120) {
+            $delay = 120;
+        }
+        return $delay;
+    }
+
+    private static function resolve_reserve_height(array $content, string $content_type, string $container_type): int {
         $container_style = isset($content['container_style']) ? $content['container_style'] : array();
         $reserve_height = isset($container_style['reserve_height']) ? absint($container_style['reserve_height']) : 0;
+        if ($reserve_height > 0) {
+            return $reserve_height;
+        }
+        if ($container_type !== 'inline') {
+            return 0;
+        }
+
+        if ($content_type === 'image' && self::get_image_aspect_ratio($content) !== '') {
+            return 0;
+        }
+        if ($content_type === 'video' && self::get_video_aspect_ratio($content) !== '') {
+            return 0;
+        }
+        if ($content_type === 'html' && self::get_html_placeholder_ratio($content) !== '') {
+            return 0;
+        }
+
+        $fallback = match ($content_type) {
+            'image' => 180,
+            'block' => 160,
+            default => 120,
+        };
+        $fallback = (int) apply_filters(
+            'magick_ad_default_reserve_height',
+            $fallback,
+            $container_type,
+            $content_type,
+            $content
+        );
+        if ($fallback < 0) {
+            return 0;
+        }
+        if ($fallback > 2000) {
+            return 2000;
+        }
+        return $fallback;
+    }
+
+    private static function build_inner_style(array $content, string $content_type, string $container_type): string {
+        $reserve_height = self::resolve_reserve_height($content, $content_type, $container_type);
         $styles = array();
         if ($reserve_height > 0) {
             $styles[] = 'min-height:' . $reserve_height . 'px';

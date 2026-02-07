@@ -8,6 +8,8 @@ if (!defined('ABSPATH')) {
 
 final class Patterns {
     private const CATEGORY = 'magick-ad';
+    private const DEVICES = array('all', 'mobile', 'tablet', 'desktop');
+    private const RISKS = array('low', 'medium', 'high');
 
     public function register(): void {
         if (did_action('init')) {
@@ -31,6 +33,7 @@ final class Patterns {
                 'description' => $args['description'] ?? '',
                 'categories' => $args['categories'] ?? array(),
                 'content' => $args['content'] ?? '',
+                'meta' => $pattern['meta'] ?? array(),
             );
         }
 
@@ -82,14 +85,44 @@ final class Patterns {
         );
     }
 
-    private function pattern(string $name, array $args): array {
+    private function pattern(string $name, array $args, array $meta = array()): array {
         if (!isset($args['categories'])) {
             $args['categories'] = array(self::CATEGORY);
         }
 
+        $meta = $this->sanitize_meta($meta);
+        $keywords = isset($args['keywords']) && is_array($args['keywords'])
+            ? $args['keywords']
+            : array();
+        if ($meta['scenario'] !== '') {
+            $keywords[] = $meta['scenario'];
+        }
+        $keywords[] = $meta['device'];
+        $keywords[] = $meta['risk'];
+        $args['keywords'] = array_values(array_unique(array_filter($keywords)));
+
         return array(
             'name' => $name,
             'args' => $args,
+            'meta' => $meta,
+        );
+    }
+
+    private function sanitize_meta(array $meta): array {
+        $scenario = isset($meta['scenario']) ? sanitize_text_field((string) $meta['scenario']) : '';
+        $device = isset($meta['device']) ? (string) $meta['device'] : 'all';
+        if (!in_array($device, self::DEVICES, true)) {
+            $device = 'all';
+        }
+        $risk = isset($meta['risk']) ? (string) $meta['risk'] : 'low';
+        if (!in_array($risk, self::RISKS, true)) {
+            $risk = 'low';
+        }
+
+        return array(
+            'scenario' => $scenario,
+            'device' => $device,
+            'risk' => $risk,
         );
     }
 
@@ -119,6 +152,11 @@ final class Patterns {
                     'templateCategory' => '联盟广告',
                     'html' => '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXX" data-ad-slot="1234567890" data-ad-format="auto" data-full-width-responsive="true"></ins>',
                 )),
+            ),
+            array(
+                'scenario' => '转化引导',
+                'device' => 'all',
+                'risk' => 'medium',
             )
         );
 
@@ -137,6 +175,11 @@ final class Patterns {
                             : 'background:linear-gradient(135deg,#2563eb,#22d3ee);'
                     ),
                 )),
+            ),
+            array(
+                'scenario' => '品牌曝光',
+                'device' => 'all',
+                'risk' => 'low',
             )
         );
 
@@ -152,6 +195,11 @@ final class Patterns {
                         ? '<div style="position:relative;width:100%;padding-top:56.25%;overflow:hidden;border-radius:10px;background:#000;"><iframe src="https://www.youtube.com/embed/aqz-KE-bpKQ" title="Video" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>'
                         : $this->media_placeholder_html('视频占位（请替换链接）'),
                 )),
+            ),
+            array(
+                'scenario' => '内容运营',
+                'device' => 'all',
+                'risk' => 'medium',
             )
         );
 
@@ -165,6 +213,11 @@ final class Patterns {
                     'templateCategory' => '通用',
                     'html' => '<div class="magick-ad-banner-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;border:1px solid #d0d7de;border-radius:12px;background:#f8fafc;"><div><strong style="display:block;font-size:16px;color:#0f172a;">这里可以放置一条重点信息</strong><span style="font-size:13px;color:#475569;">适合文章中部、列表顶部或专题页。</span></div><a href="#" style="display:inline-block;padding:8px 14px;border-radius:999px;background:#2563eb;color:#ffffff;text-decoration:none;font-size:13px;">查看详情</a></div>',
                 )),
+            ),
+            array(
+                'scenario' => '公告通知',
+                'device' => 'all',
+                'risk' => 'low',
             )
         );
 
@@ -178,6 +231,11 @@ final class Patterns {
                     'templateCategory' => '通用',
                     'html' => '<article style="padding:18px;border:1px solid #e2e8f0;border-radius:14px;background:#ffffff;box-shadow:0 8px 20px rgba(15,23,42,.08);"><span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;">推荐</span><h3 style="margin:12px 0 8px;font-size:20px;line-height:1.35;color:#0f172a;">用一张卡片介绍你的重点内容</h3><p style="margin:0 0 14px;font-size:14px;color:#475569;">可用于课程报名、产品更新、下载入口或会员权益说明。</p><a href="#" style="display:inline-block;padding:9px 14px;border-radius:10px;background:#0f172a;color:#ffffff;text-decoration:none;font-size:13px;">立即了解</a></article>',
                 )),
+            ),
+            array(
+                'scenario' => '转化引导',
+                'device' => 'all',
+                'risk' => 'low',
             )
         );
 
@@ -191,6 +249,11 @@ final class Patterns {
                     'templateCategory' => '通用',
                     'html' => '<div class="magick-ad-custom-slot">在此粘贴你的 HTML / JS 代码</div>',
                 )),
+            ),
+            array(
+                'scenario' => '开发扩展',
+                'device' => 'all',
+                'risk' => 'high',
             )
         );
 
@@ -212,6 +275,11 @@ final class Patterns {
                             : $placeholders['banner'],
                         'imageAlt' => '通用横幅占位图',
                     )),
+                ),
+                array(
+                    'scenario' => '品牌曝光',
+                    'device' => 'all',
+                    'risk' => 'low',
                 )
             ),
             $this->pattern(
@@ -227,6 +295,11 @@ final class Patterns {
                             : $placeholders['square'],
                         'imageAlt' => '通用方图占位图',
                     )),
+                ),
+                array(
+                    'scenario' => '内容运营',
+                    'device' => 'all',
+                    'risk' => 'low',
                 )
             ),
         );
@@ -254,6 +327,11 @@ final class Patterns {
                             'templateCategory' => '视频',
                             'html' => $placeholder,
                         )),
+                ),
+                array(
+                    'scenario' => '内容运营',
+                    'device' => 'all',
+                    'risk' => 'medium',
                 )
             ),
             $this->pattern(
@@ -274,6 +352,11 @@ final class Patterns {
                             'templateCategory' => '视频',
                             'html' => $placeholder,
                         )),
+                ),
+                array(
+                    'scenario' => '品牌曝光',
+                    'device' => 'desktop',
+                    'risk' => 'medium',
                 )
             ),
         );
@@ -297,6 +380,11 @@ final class Patterns {
                         'templateCategory' => '通用',
                         'blocks' => '<!-- wp:heading {"level":3} --><h3>用简洁文案引导用户下一步操作</h3><!-- /wp:heading --><!-- wp:paragraph --><p>可替换为注册、咨询、下载、加入社群等任意行动目标。</p><!-- /wp:paragraph --><!-- wp:buttons --><div class="wp-block-buttons"><div class="wp-block-button"><a class="wp-block-button__link">立即开始</a></div></div><!-- /wp:buttons -->',
                     )),
+                ),
+                array(
+                    'scenario' => '转化引导',
+                    'device' => 'all',
+                    'risk' => 'low',
                 )
             ),
             $this->pattern(
@@ -312,6 +400,11 @@ final class Patterns {
                             $image_url
                         ),
                     )),
+                ),
+                array(
+                    'scenario' => '内容运营',
+                    'device' => 'desktop',
+                    'risk' => 'low',
                 )
             ),
         );
@@ -327,9 +420,14 @@ final class Patterns {
                     'content' => $this->build_ad_block(array(
                         'creativeType' => 'html',
                         'containerType' => 'popup',
-                        'templateCategory' => '通用',
-                        'html' => '<div style="text-align:center;max-width:420px;margin:0 auto;"><h3 style="margin:0 0 10px;">欢迎查看本周重点内容</h3><p style="margin:0 0 14px;color:#475569;">这段文案可替换为订阅提醒、优惠领取或功能更新通知。</p><a href="#" style="display:inline-block;padding:9px 14px;border-radius:999px;background:#2563eb;color:#fff;text-decoration:none;">继续查看</a></div>',
-                    )),
+                    'templateCategory' => '通用',
+                    'html' => '<div style="text-align:center;max-width:420px;margin:0 auto;"><h3 style="margin:0 0 10px;">欢迎查看本周重点内容</h3><p style="margin:0 0 14px;color:#475569;">这段文案可替换为订阅提醒、优惠领取或功能更新通知。</p><a href="#" style="display:inline-block;padding:9px 14px;border-radius:999px;background:#2563eb;color:#fff;text-decoration:none;">继续查看</a></div>',
+                )),
+                ),
+                array(
+                    'scenario' => '订阅留资',
+                    'device' => 'all',
+                    'risk' => 'medium',
                 )
             ),
             $this->pattern(
@@ -340,9 +438,14 @@ final class Patterns {
                     'content' => $this->build_ad_block(array(
                         'creativeType' => 'html',
                         'containerType' => 'banner',
-                        'templateCategory' => '通用',
-                        'html' => '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span><strong>公告：</strong>这里放置一条不会过时的通用提示文案。</span><a href="#" style="display:inline-block;padding:6px 12px;border-radius:999px;background:#0f172a;color:#fff;text-decoration:none;font-size:12px;">查看</a></div>',
-                    )),
+                    'templateCategory' => '通用',
+                    'html' => '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span><strong>公告：</strong>这里放置一条不会过时的通用提示文案。</span><a href="#" style="display:inline-block;padding:6px 12px;border-radius:999px;background:#0f172a;color:#fff;text-decoration:none;font-size:12px;">查看</a></div>',
+                )),
+                ),
+                array(
+                    'scenario' => '公告通知',
+                    'device' => 'all',
+                    'risk' => 'medium',
                 )
             ),
             $this->pattern(
@@ -359,6 +462,11 @@ final class Patterns {
                             : $placeholders['floating'],
                         'imageAlt' => '悬浮位占位图',
                     )),
+                ),
+                array(
+                    'scenario' => '客服触达',
+                    'device' => 'mobile',
+                    'risk' => 'medium',
                 )
             ),
             $this->pattern(
@@ -369,9 +477,14 @@ final class Patterns {
                     'content' => $this->build_ad_block(array(
                         'creativeType' => 'html',
                         'containerType' => 'interstitial',
-                        'templateCategory' => '通用',
-                        'html' => '<div style="text-align:center;max-width:560px;margin:0 auto;"><p style="margin:0 0 8px;font-size:13px;color:#64748b;">重点提示</p><h2 style="margin:0 0 12px;font-size:28px;line-height:1.3;color:#0f172a;">在全屏中展示你的核心信息</h2><p style="margin:0 0 16px;font-size:15px;color:#475569;">适合用于新功能发布、活动引导或重要公告。</p><a href="#" style="display:inline-block;padding:10px 18px;border-radius:999px;background:#0f172a;color:#ffffff;text-decoration:none;">查看详情</a></div>',
-                    )),
+                    'templateCategory' => '通用',
+                    'html' => '<div style="text-align:center;max-width:560px;margin:0 auto;"><p style="margin:0 0 8px;font-size:13px;color:#64748b;">重点提示</p><h2 style="margin:0 0 12px;font-size:28px;line-height:1.3;color:#0f172a;">在全屏中展示你的核心信息</h2><p style="margin:0 0 16px;font-size:15px;color:#475569;">适合用于新功能发布、活动引导或重要公告。</p><a href="#" style="display:inline-block;padding:10px 18px;border-radius:999px;background:#0f172a;color:#ffffff;text-decoration:none;">查看详情</a></div>',
+                )),
+                ),
+                array(
+                    'scenario' => '活动促销',
+                    'device' => 'all',
+                    'risk' => 'high',
                 )
             ),
         );

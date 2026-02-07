@@ -2,8 +2,13 @@
 
 namespace MagickAD\Admin;
 
+use MagickAD\Data\Settings;
 use MagickAD\Data\Schema;
 use MagickAD\Utils\Diagnostics;
+use MagickAD\Utils\Diagnostics_Cron;
+use MagickAD\Utils\Stats_Accumulator;
+use MagickAD\Utils\Stats_Cron;
+use MagickAD\Utils\Stats_Dim_Cron;
 use MagickAD\Utils\Stats_Queue;
 
 if (!defined('ABSPATH')) {
@@ -28,6 +33,14 @@ final class Site_Health {
         $tests['direct']['magick_ad_stats_tables'] = array(
             'label' => __('Magick AD: 统计表就绪状态', 'magick-ad'),
             'test' => array($this, 'test_stats_tables'),
+        );
+        $tests['direct']['magick_ad_node_placement'] = array(
+            'label' => __('Magick AD: 节点插入可用性', 'magick-ad'),
+            'test' => array($this, 'test_node_placement'),
+        );
+        $tests['direct']['magick_ad_cron_health'] = array(
+            'label' => __('Magick AD: Cron 任务健康度', 'magick-ad'),
+            'test' => array($this, 'test_cron_health'),
         );
         $tests['direct']['magick_ad_stats_queue'] = array(
             'label' => __('Magick AD: 统计队列积压', 'magick-ad'),
@@ -126,6 +139,102 @@ final class Site_Health {
         );
     }
 
+    public function test_node_placement(): array {
+        $metrics = self::collect_node_metrics();
+
+        if ($metrics['count'] <= 0) {
+            return array(
+                'label' => __('未检测到节点插入广告。', 'magick-ad'),
+                'status' => 'good',
+                'badge' => array(
+                    'label' => __('Magick AD', 'magick-ad'),
+                    'color' => 'blue',
+                ),
+                'description' => '<p>' . esc_html__('当前站点未使用节点插入，不存在目标节点兼容风险。', 'magick-ad') . '</p>',
+                'test' => 'magick_ad_node_placement',
+            );
+        }
+
+        $status = 'good';
+        $label = __('节点插入配置可用。', 'magick-ad');
+        $description = sprintf(
+            /* translators: %d: node ads count. */
+            __('已检测到 %d 个节点插入广告。', 'magick-ad'),
+            $metrics['count']
+        );
+
+        if (!$metrics['interactivity_ready']) {
+            $status = 'critical';
+            $label = __('节点插入脚本未就绪。', 'magick-ad');
+            $description = __('未找到前端交互脚本，节点插入广告无法落位。请确认插件构建产物完整并清理缓存后重试。', 'magick-ad');
+        } elseif (!empty($metrics['invalid'])) {
+            $status = count($metrics['invalid']) >= $metrics['count'] ? 'critical' : 'recommended';
+            $label = __('节点插入存在配置问题。', 'magick-ad');
+            $description = __('请检查以下广告的节点目标配置（类型/值/插入策略）：', 'magick-ad')
+                . ' '
+                . implode('；', $metrics['invalid']);
+            $description .= ' ' . __('建议修复后再发布。', 'magick-ad');
+        }
+
+        return array(
+            'label' => $label,
+            'status' => $status,
+            'badge' => array(
+                'label' => __('Magick AD', 'magick-ad'),
+                'color' => 'blue',
+            ),
+            'description' => '<p>' . esc_html($description) . '</p>',
+            'test' => 'magick_ad_node_placement',
+        );
+    }
+
+    public function test_cron_health(): array {
+        $checks = self::collect_cron_checks();
+        $missing_critical = array();
+        $missing_optional = array();
+        $descriptions = array();
+
+        foreach ($checks as $check) {
+            $scheduled = !empty($check['next']);
+            $line = $check['label'] . '：' . ($scheduled
+                ? self::format_next_run((int) $check['next'])
+                : __('未计划', 'magick-ad'));
+            $descriptions[] = $line;
+
+            if (!$scheduled && !empty($check['required']) && ($check['severity'] ?? '') === 'critical') {
+                $missing_critical[] = $check['label'];
+            } elseif (!$scheduled && !empty($check['required'])) {
+                $missing_optional[] = $check['label'];
+            }
+        }
+
+        $status = 'good';
+        $label = __('Cron 任务状态正常。', 'magick-ad');
+        if (!empty($missing_critical)) {
+            $status = 'critical';
+            $label = __('关键 Cron 任务缺失。', 'magick-ad');
+        } elseif (!empty($missing_optional)) {
+            $status = 'recommended';
+            $label = __('部分 Cron 任务未计划。', 'magick-ad');
+        }
+
+        $description = implode('；', $descriptions);
+        if (!empty($missing_critical) || !empty($missing_optional)) {
+            $description .= ' ' . __('建议动作：确认 WP-Cron 可执行，访问一次站点首页触发调度，或使用服务器 Crontab 调用 wp-cron.php。', 'magick-ad');
+        }
+
+        return array(
+            'label' => $label,
+            'status' => $status,
+            'badge' => array(
+                'label' => __('Magick AD', 'magick-ad'),
+                'color' => 'blue',
+            ),
+            'description' => '<p>' . esc_html($description) . '</p>',
+            'test' => 'magick_ad_cron_health',
+        );
+    }
+
     public function test_stats_queue(): array {
         $metrics = Stats_Queue::get_metrics();
 
@@ -175,9 +284,114 @@ final class Site_Health {
         );
     }
 
+    private static function collect_node_metrics(): array {
+        $runtime = Settings::get_runtime_settings();
+        $ads = isset($runtime['ads']) && is_array($runtime['ads']) ? $runtime['ads'] : array();
+        $count = 0;
+        $invalid = array();
+
+        foreach ($ads as $index => $ad) {
+            if (!is_array($ad)) {
+                continue;
+            }
+            $options = isset($ad['options']) && is_array($ad['options']) ? $ad['options'] : array();
+            if (($options['placement_hook'] ?? '') !== 'node') {
+                continue;
+            }
+
+            $count++;
+            $ad_id = isset($ad['id']) && is_string($ad['id']) && $ad['id'] !== ''
+                ? $ad['id']
+                : '#' . (string) ($index + 1);
+
+            $node_type = isset($options['node_target_type']) ? (string) $options['node_target_type'] : '';
+            $node_value = isset($options['node_target_value']) ? (string) $options['node_target_value'] : '';
+            $insert_mode = isset($options['node_insert']) ? (string) $options['node_insert'] : '';
+            $match_mode = isset($options['node_match']) ? (string) $options['node_match'] : '';
+            $fallback = isset($options['node_fallback']) ? (string) $options['node_fallback'] : '';
+
+            $is_valid = in_array($node_type, array('id', 'class'), true)
+                && preg_match('/^[A-Za-z_][A-Za-z0-9_-]*$/', $node_value)
+                && in_array($insert_mode, array('append', 'prepend', 'before', 'after'), true)
+                && in_array($match_mode, array('first', 'nth', 'all'), true)
+                && in_array($fallback, array('hide', 'footer'), true);
+
+            if (!$is_valid) {
+                $invalid[] = $ad_id;
+            }
+        }
+
+        $interactivity_ready = file_exists(MAGICK_AD_PATH . 'build/magick-ad-interactivity.js')
+            || file_exists(MAGICK_AD_PATH . 'assets/magick-ad-interactivity.js');
+
+        return array(
+            'count' => $count,
+            'invalid' => $invalid,
+            'interactivity_ready' => $interactivity_ready,
+        );
+    }
+
+    private static function collect_cron_checks(): array {
+        $stats_required = Stats_Accumulator::enabled() || Stats_Queue::enabled();
+        $diagnostics_required = Diagnostics::is_enabled();
+        $dim_retention_days = (int) get_option('magick_ad_stats_dim_retention_days', 30);
+        $dim_required = $dim_retention_days > 0;
+
+        return array(
+            array(
+                'label' => __('统计落库刷新', 'magick-ad'),
+                'hook' => Stats_Cron::HOOK,
+                'required' => $stats_required,
+                'severity' => 'critical',
+                'next' => (int) wp_next_scheduled(Stats_Cron::HOOK),
+            ),
+            array(
+                'label' => __('维度清理', 'magick-ad'),
+                'hook' => Stats_Dim_Cron::HOOK,
+                'required' => $dim_required,
+                'severity' => 'recommended',
+                'next' => (int) wp_next_scheduled(Stats_Dim_Cron::HOOK),
+            ),
+            array(
+                'label' => __('诊断日志清理', 'magick-ad'),
+                'hook' => Diagnostics_Cron::HOOK,
+                'required' => $diagnostics_required,
+                'severity' => 'recommended',
+                'next' => (int) wp_next_scheduled(Diagnostics_Cron::HOOK),
+            ),
+        );
+    }
+
+    private static function format_next_run(int $timestamp): string {
+        if ($timestamp <= 0) {
+            return __('未计划', 'magick-ad');
+        }
+        $now = current_time('timestamp');
+        if ($timestamp <= $now) {
+            return wp_date('Y-m-d H:i:s', $timestamp);
+        }
+        return sprintf(
+            /* translators: 1: datetime string, 2: relative time */
+            __('%1$s（约 %2$s 后）', 'magick-ad'),
+            wp_date('Y-m-d H:i:s', $timestamp),
+            human_time_diff($now, $timestamp)
+        );
+    }
+
     public function register_debug_info(array $info): array {
         $table_status = Schema::get_table_status();
         $queue_metrics = Stats_Queue::get_metrics();
+        $node_metrics = self::collect_node_metrics();
+        $cron_checks = self::collect_cron_checks();
+
+        $cron_map = array();
+        foreach ($cron_checks as $check) {
+            $hook = isset($check['hook']) ? (string) $check['hook'] : '';
+            if ($hook === '') {
+                continue;
+            }
+            $cron_map[$hook] = (int) ($check['next'] ?? 0);
+        }
         $info['magick_ad'] = array(
             'label' => __('Magick AD', 'magick-ad'),
             'fields' => array(
@@ -200,6 +414,10 @@ final class Site_Health {
                 'tracking_require_consent' => array(
                     'label' => __('需要同意后统计', 'magick-ad'),
                     'value' => (get_option('magick_ad_tracking_require_consent', '0') === '1') ? 'yes' : 'no',
+                ),
+                'consent_hook_registered' => array(
+                    'label' => __('同意钩子已注册', 'magick-ad'),
+                    'value' => has_filter('magick_ad_has_consent') ? 'yes' : 'no',
                 ),
                 'slot_client_resolver' => array(
                     'label' => __('缓存友好 Slot 轮播', 'magick-ad'),
@@ -236,6 +454,30 @@ final class Site_Health {
                 'stats_queue_oldest' => array(
                     'label' => __('统计队列最久等待', 'magick-ad'),
                     'value' => self::format_age((int) ($queue_metrics['oldest_age'] ?? 0)),
+                ),
+                'node_ads_count' => array(
+                    'label' => __('节点插入广告数量', 'magick-ad'),
+                    'value' => (string) ($node_metrics['count'] ?? 0),
+                ),
+                'node_ads_invalid' => array(
+                    'label' => __('节点配置异常数量', 'magick-ad'),
+                    'value' => (string) count($node_metrics['invalid'] ?? array()),
+                ),
+                'node_interactivity_ready' => array(
+                    'label' => __('节点插入脚本就绪', 'magick-ad'),
+                    'value' => !empty($node_metrics['interactivity_ready']) ? 'yes' : 'no',
+                ),
+                'cron_stats_flush_next' => array(
+                    'label' => __('统计刷新任务下次执行', 'magick-ad'),
+                    'value' => self::format_next_run((int) ($cron_map[Stats_Cron::HOOK] ?? 0)),
+                ),
+                'cron_dim_cleanup_next' => array(
+                    'label' => __('维度清理任务下次执行', 'magick-ad'),
+                    'value' => self::format_next_run((int) ($cron_map[Stats_Dim_Cron::HOOK] ?? 0)),
+                ),
+                'cron_log_cleanup_next' => array(
+                    'label' => __('诊断清理任务下次执行', 'magick-ad'),
+                    'value' => self::format_next_run((int) ($cron_map[Diagnostics_Cron::HOOK] ?? 0)),
                 ),
             ),
         );

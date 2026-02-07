@@ -52,18 +52,28 @@ const DEFAULT_SETTINGS = {
     brand_name: 'Magick AD',
     brand_tagline: '广告配置与投放规则管理',
     manage_capability: 'manage_options',
+    compatibility_checks: {
+        checks: {},
+        status: 'unknown',
+    },
 };
 
 const LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
 const normalizeLevel = (value) =>
     value === 'advanced' || value === 'lab' ? value : 'simple';
+const normalizeCheckStatus = (value) => {
+    if (value === 'critical' || value === 'recommended' || value === 'good') {
+        return value;
+    }
+    return 'unknown';
+};
 
 const SystemSettingsPanel = ({ onNotice }) => {
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
-    const [openSection, setOpenSection] = useState('tracking');
+    const [openSection, setOpenSection] = useState('compatibility');
     const [displayLevel] = useState(() => {
         if (typeof window === 'undefined') {
             return 'simple';
@@ -117,8 +127,71 @@ const SystemSettingsPanel = ({ onNotice }) => {
     const queueOldestAge = Number(queueMetrics.oldest_age || 0);
     const queueAlertLimit = Number(queueMetrics.alert_limit || 0);
     const queueAlertAge = Number(queueMetrics.alert_age || 0);
+    const siteHealthUrl =
+        window?.MagickAD?.siteHealthUrl || '/wp-admin/site-health.php?tab=direct';
     const isAdvanced = displayLevel !== 'simple';
     const isLab = displayLevel === 'lab';
+    const queueStatus =
+        queueEnabled &&
+        ((queueAlertLimit && queueTotal >= queueAlertLimit * 2) ||
+            (queueAlertAge && queueOldestAge >= queueAlertAge * 2))
+            ? 'critical'
+            : queueEnabled &&
+                ((queueAlertLimit && queueTotal >= queueAlertLimit) ||
+                    (queueAlertAge && queueOldestAge >= queueAlertAge))
+              ? 'recommended'
+              : 'good';
+
+    const queueSummary = queueEnabled
+        ? `队列 ${queueTotal} 条，最久等待 ${formatAge(queueOldestAge)}。`
+        : '队列未启用（当前非异步写入或启用了其他聚合策略）。';
+
+    const backendChecks = settings.compatibility_checks?.checks || {};
+    const checkCards = [
+        {
+            key: 'node',
+            title: '节点插入',
+            status: normalizeCheckStatus(backendChecks.node?.status),
+            summary:
+                backendChecks.node?.summary ||
+                '请在站点健康中检查节点目标选择器与回退策略。',
+            action:
+                backendChecks.node?.action ||
+                '若节点可能变化，建议回退策略选择 footer。',
+        },
+        {
+            key: 'cron',
+            title: 'Cron 任务',
+            status: normalizeCheckStatus(backendChecks.cron?.status),
+            summary:
+                backendChecks.cron?.summary ||
+                '请在站点健康中确认统计刷新和清理任务已计划。',
+            action:
+                backendChecks.cron?.action ||
+                '若缺失任务，请启用 WP-Cron 或服务器 Crontab。',
+        },
+        {
+            key: 'queue',
+            title: '统计队列',
+            status: normalizeCheckStatus(backendChecks.queue?.status || queueStatus),
+            summary: backendChecks.queue?.summary || queueSummary,
+            action:
+                backendChecks.queue?.action ||
+                '出现积压时请优先检查 Cron 与数据库写入性能。',
+        },
+        {
+            key: 'consent',
+            title: '同意钩子',
+            status: normalizeCheckStatus(backendChecks.consent?.status),
+            summary: backendChecks.consent?.summary
+                || (settings.tracking_require_consent
+                    ? '已开启同意门控，请确认 magick_ad_has_consent 已接入。'
+                    : '未开启同意门控。'),
+            action:
+                backendChecks.consent?.action ||
+                '若启用同意门控但无钩子，默认视为未同意且不写统计。',
+        },
+    ];
 
     const secretRotatedLabel = (() => {
         if (!settings.tracking_secret_rotated_at) {
@@ -243,6 +316,46 @@ const SystemSettingsPanel = ({ onNotice }) => {
                     </Notice>
                 )}
                 <Panel>
+                    <PanelBody
+                        title="兼容体检"
+                        opened={openSection === 'compatibility'}
+                        onToggle={() => handleToggleSection('compatibility')}
+                    >
+                        <Notice status="info" isDismissible={false}>
+                            建议先完成兼容体检，再调整统计与安全参数。
+                        </Notice>
+                        <div className="magick-ad-compatibility-grid">
+                            {checkCards.map((card) => (
+                                <div
+                                    key={card.key}
+                                    className={`magick-ad-compatibility-card is-${card.status}`}
+                                >
+                                    <div className="magick-ad-compatibility-card__head">
+                                        <strong>{card.title}</strong>
+                                        <span className="magick-ad-compatibility-card__status">
+                                            {card.status === 'good'
+                                                ? '正常'
+                                                : card.status === 'recommended'
+                                                  ? '建议处理'
+                                                  : card.status === 'critical'
+                                                    ? '高风险'
+                                                    : '待检查'}
+                                        </span>
+                                    </div>
+                                    <p>{card.summary}</p>
+                                    <p className="description">{card.action}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <Button
+                            variant="secondary"
+                            href={siteHealthUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            打开站点健康（Magick AD）
+                        </Button>
+                    </PanelBody>
                     <PanelBody
                         title="统计与去重"
                         opened={openSection === 'tracking'}

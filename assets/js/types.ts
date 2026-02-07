@@ -66,6 +66,7 @@ export interface BehaviorConfig {
     renderUrl?: string;
     renderBatchUrl?: string;
     nonce?: string;
+    defaultNonCriticalDelay?: number;
     requireConsent?: boolean | string | number;
     hasConsent?: boolean | string | number;
     consentGuardEnabled?: boolean | string | number;

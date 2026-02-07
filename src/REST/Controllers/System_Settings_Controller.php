@@ -3,6 +3,7 @@
 namespace MagickAD\REST\Controllers;
 
 use WP_REST_Request;
+use MagickAD\Admin\Site_Health;
 use MagickAD\Utils\TrackingStrategy;
 use MagickAD\Utils\Tracking_Signature;
 use MagickAD\Utils\Diagnostics_Cron;
@@ -106,6 +107,58 @@ final class System_Settings_Controller {
         return $items;
     }
 
+    private static function normalize_health_status($value): string {
+        $value = is_string($value) ? $value : '';
+        if (in_array($value, array('good', 'recommended', 'critical'), true)) {
+            return $value;
+        }
+        return 'recommended';
+    }
+
+    private static function summarize_health_test(array $test): array {
+        $status = self::normalize_health_status($test['status'] ?? '');
+        $label = isset($test['label']) ? wp_strip_all_tags((string) $test['label']) : '';
+        $description = isset($test['description'])
+            ? wp_strip_all_tags((string) $test['description'])
+            : '';
+
+        return array(
+            'status' => $status,
+            'summary' => $label,
+            'action' => $description,
+        );
+    }
+
+    private static function merge_health_status(array $statuses): string {
+        if (in_array('critical', $statuses, true)) {
+            return 'critical';
+        }
+        if (in_array('recommended', $statuses, true)) {
+            return 'recommended';
+        }
+        return 'good';
+    }
+
+    private static function get_compatibility_checks(): array {
+        $site_health = new Site_Health();
+        $checks = array(
+            'node' => self::summarize_health_test($site_health->test_node_placement()),
+            'cron' => self::summarize_health_test($site_health->test_cron_health()),
+            'queue' => self::summarize_health_test($site_health->test_stats_queue()),
+            'consent' => self::summarize_health_test($site_health->test_consent_hook()),
+        );
+
+        return array(
+            'status' => self::merge_health_status(array(
+                $checks['node']['status'],
+                $checks['cron']['status'],
+                $checks['queue']['status'],
+                $checks['consent']['status'],
+            )),
+            'checks' => $checks,
+        );
+    }
+
     private static function get_site_domain(): string {
         $host = wp_parse_url(home_url(), PHP_URL_HOST);
         if (!is_string($host) || $host === '') {
@@ -202,6 +255,7 @@ final class System_Settings_Controller {
             'settings_level' => self::sanitize_settings_level(
                 get_option('magick_ad_settings_level', 'simple')
             ),
+            'compatibility_checks' => self::get_compatibility_checks(),
         );
 
         return rest_ensure_response($settings);
@@ -398,6 +452,7 @@ final class System_Settings_Controller {
             'brand_tagline' => $brand_tagline,
             'manage_capability' => $manage_capability,
             'settings_level' => $settings_level,
+            'compatibility_checks' => self::get_compatibility_checks(),
         ));
     }
 }

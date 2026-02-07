@@ -60,6 +60,7 @@ final class Admin {
             'previewUrl' => $this->get_preview_url(),
             'previewNonce' => wp_create_nonce('magick_ad_preview'),
             'pickerNonce' => wp_create_nonce('magick_ad_picker'),
+            'siteHealthUrl' => admin_url('site-health.php?tab=direct'),
             'branding' => $this->get_branding(),
             'canUnfilteredHtml' => current_user_can('unfiltered_html'),
             'patterns' => \MagickAD\Blocks\Patterns::export_patterns(),

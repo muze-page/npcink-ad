@@ -7,6 +7,100 @@ import { store as coreStore } from '@wordpress/core-data';
 const MAGICK_BLOCK = 'magick-ad/ad';
 const FAVORITES_KEY = 'magick_ad_template_favorites';
 const PINNED_KEY = 'magick_ad_template_pins';
+const DEVICE_OPTIONS = ['all', 'mobile', 'tablet', 'desktop'];
+const RISK_OPTIONS = ['low', 'medium', 'high'];
+
+const sanitizeScenario = (value) =>
+    typeof value === 'string' ? value.trim() : '';
+
+const sanitizeDevice = (value) =>
+    DEVICE_OPTIONS.includes(value) ? value : 'all';
+
+const sanitizeRisk = (value) =>
+    RISK_OPTIONS.includes(value) ? value : 'low';
+
+const getDefaultMeta = ({ type = 'html', containerType = 'inline', source = 'core' }) => {
+    if (source === 'user') {
+        return {
+            scenario: '自定义',
+            device: 'all',
+            risk: 'medium',
+        };
+    }
+    if (containerType === 'interstitial') {
+        return {
+            scenario: '活动促销',
+            device: 'all',
+            risk: 'high',
+        };
+    }
+    if (
+        containerType === 'popup' ||
+        containerType === 'banner' ||
+        containerType === 'floating'
+    ) {
+        return {
+            scenario: '转化引导',
+            device: 'all',
+            risk: 'medium',
+        };
+    }
+    if (type === 'video') {
+        return {
+            scenario: '内容运营',
+            device: 'all',
+            risk: 'medium',
+        };
+    }
+    if (type === 'block') {
+        return {
+            scenario: '内容运营',
+            device: 'desktop',
+            risk: 'low',
+        };
+    }
+    if (type === 'html') {
+        return {
+            scenario: '通用推广',
+            device: 'all',
+            risk: 'low',
+        };
+    }
+    return {
+        scenario: '通用推广',
+        device: 'all',
+        risk: 'low',
+    };
+};
+
+const normalizeTemplateMeta = (meta, fallback = {}) => {
+    const sourceMeta = meta && typeof meta === 'object' ? meta : {};
+    const fallbackMeta =
+        fallback && typeof fallback === 'object' ? fallback : {};
+
+    return {
+        scenario: sanitizeScenario(
+            sourceMeta.scenario || fallbackMeta.scenario || ''
+        ),
+        device: sanitizeDevice(
+            sourceMeta.device || fallbackMeta.device || 'all'
+        ),
+        risk: sanitizeRisk(sourceMeta.risk || fallbackMeta.risk || 'low'),
+    };
+};
+
+const withTemplateMeta = (template, meta, fallbackMeta = null) => {
+    const normalized = normalizeTemplateMeta(
+        meta,
+        fallbackMeta || getDefaultMeta(template)
+    );
+    return {
+        ...template,
+        scenario: normalized.scenario,
+        device: normalized.device,
+        risk: normalized.risk,
+    };
+};
 
 const walkBlocks = (blocks, matcher) => {
     for (const block of blocks) {
@@ -40,12 +134,25 @@ const extractTemplateFromContent = (content) => {
         typeof attrs.templateCategory === 'string'
             ? attrs.templateCategory
             : '';
+    const scenario =
+        typeof attrs.templateScenario === 'string'
+            ? attrs.templateScenario
+            : '';
+    const device =
+        typeof attrs.templateDevice === 'string'
+            ? attrs.templateDevice
+            : '';
+    const risk =
+        typeof attrs.templateRisk === 'string' ? attrs.templateRisk : '';
 
     if (type === 'image') {
         return {
             type,
             containerType,
             category,
+            scenario,
+            device,
+            risk,
             data: {
                 image: {
                     id: Number(attrs.imageId || 0),
@@ -63,6 +170,9 @@ const extractTemplateFromContent = (content) => {
             type,
             containerType,
             category,
+            scenario,
+            device,
+            risk,
             data: {
                 video_url: attrs.videoUrl || '',
             },
@@ -74,6 +184,9 @@ const extractTemplateFromContent = (content) => {
             type,
             containerType,
             category,
+            scenario,
+            device,
+            risk,
             data: {
                 blocks: attrs.blocks || '',
             },
@@ -84,6 +197,9 @@ const extractTemplateFromContent = (content) => {
         type: 'html',
         containerType,
         category,
+        scenario,
+        device,
+        risk,
         data: {
             html: attrs.html || '',
         },
@@ -108,12 +224,27 @@ const extractTemplateFromContentLoose = (content) => {
             typeof attrs.templateCategory === 'string'
                 ? attrs.templateCategory
                 : '';
+        const scenario =
+            typeof attrs.templateScenario === 'string'
+                ? attrs.templateScenario
+                : '';
+        const device =
+            typeof attrs.templateDevice === 'string'
+                ? attrs.templateDevice
+                : '';
+        const risk =
+            typeof attrs.templateRisk === 'string'
+                ? attrs.templateRisk
+                : '';
 
         if (type === 'image') {
             return {
                 type,
                 containerType,
                 category,
+                scenario,
+                device,
+                risk,
                 data: {
                     image: {
                         id: Number(attrs.imageId || 0),
@@ -131,6 +262,9 @@ const extractTemplateFromContentLoose = (content) => {
                 type,
                 containerType,
                 category,
+                scenario,
+                device,
+                risk,
                 data: {
                     video_url: attrs.videoUrl || '',
                 },
@@ -142,6 +276,9 @@ const extractTemplateFromContentLoose = (content) => {
                 type,
                 containerType,
                 category,
+                scenario,
+                device,
+                risk,
                 data: {
                     blocks: attrs.blocks || '',
                 },
@@ -152,6 +289,9 @@ const extractTemplateFromContentLoose = (content) => {
             type: 'html',
             containerType,
             category,
+            scenario,
+            device,
+            risk,
             data: {
                 html: attrs.html || '',
             },
@@ -249,6 +389,27 @@ const useTemplateLibrary = ({
     }, [pinnedIds]);
 
     const loadTemplates = useCallback(async (type) => {
+        const fallbackMetaMap = new Map();
+        if (
+            typeof window !== 'undefined' &&
+            Array.isArray(window.MagickAD?.patterns)
+        ) {
+            window.MagickAD.patterns.forEach((pattern) => {
+                const name = pattern?.name || '';
+                if (!name) {
+                    return;
+                }
+                fallbackMetaMap.set(
+                    name,
+                    normalizeTemplateMeta(pattern?.meta, {
+                        scenario: '',
+                        device: 'all',
+                        risk: 'low',
+                    })
+                );
+            });
+        }
+
         let corePatterns = [];
         try {
             const patterns = select(coreStore)?.getBlockPatterns?.();
@@ -288,14 +449,15 @@ const useTemplateLibrary = ({
                 if (!extracted) {
                     return;
                 }
-                variationTemplates.push({
+                const template = {
                     id: `variation-${variation.name || variation.title}`,
                     name: variation.title || '模板变体',
                     description: variation.description || '',
                     source: 'core',
                     content,
                     ...extracted,
-                });
+                };
+                variationTemplates.push(withTemplateMeta(template, extracted));
             });
         } catch (err) {
             // ignore variations
@@ -314,7 +476,7 @@ const useTemplateLibrary = ({
                 if (!extracted) {
                     return null;
                 }
-                return {
+                const template = {
                     id: pattern.name || pattern.title,
                     name: pattern.title,
                     description: pattern.description || '',
@@ -322,6 +484,29 @@ const useTemplateLibrary = ({
                     content: pattern.content,
                     ...extracted,
                 };
+                const patternMeta =
+                    pattern?.meta ||
+                    fallbackMetaMap.get(pattern.name || '') ||
+                    {};
+                return withTemplateMeta(
+                    template,
+                    {
+                        ...patternMeta,
+                        scenario:
+                            extracted.scenario ||
+                            patternMeta?.scenario ||
+                            '',
+                        device:
+                            extracted.device ||
+                            patternMeta?.device ||
+                            'all',
+                        risk:
+                            extracted.risk ||
+                            patternMeta?.risk ||
+                            'low',
+                    },
+                    getDefaultMeta(template)
+                );
             })
             .filter(Boolean);
 
@@ -341,7 +526,7 @@ const useTemplateLibrary = ({
                     if (!extracted) {
                         return null;
                     }
-                    return {
+                    const template = {
                         id: `user-${post.id}`,
                         name: post.title?.rendered || post.title || '',
                         description: '',
@@ -349,6 +534,15 @@ const useTemplateLibrary = ({
                         content,
                         ...extracted,
                     };
+                    return withTemplateMeta(
+                        template,
+                        {
+                            scenario: extracted.scenario || '自定义',
+                            device: extracted.device || 'all',
+                            risk: extracted.risk || 'medium',
+                        },
+                        getDefaultMeta(template)
+                    );
                 })
                 .filter(Boolean);
         } catch (err) {

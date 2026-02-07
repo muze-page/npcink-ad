@@ -29,6 +29,39 @@ import type { BehaviorConfig } from '../types';
         behaviorConfig.consentBannerButton.trim()
             ? behaviorConfig.consentBannerButton.trim()
             : '同意';
+    const defaultNonCriticalDelay = (() => {
+        const value = Number(behaviorConfig.defaultNonCriticalDelay ?? 1);
+        if (!Number.isFinite(value)) {
+            return 1;
+        }
+        if (value < 0) {
+            return 0;
+        }
+        if (value > 120) {
+            return 120;
+        }
+        return value;
+    })();
+    const nonCriticalContainers = new Set([
+        'popup',
+        'banner',
+        'floating',
+        'interstitial',
+    ]);
+    const resolveDelaySeconds = (ad) => {
+        if (!ad) {
+            return 0;
+        }
+        const rawDelay = Number(ad.getAttribute('data-ad-delay'));
+        if (Number.isFinite(rawDelay) && rawDelay > 0) {
+            return rawDelay;
+        }
+        const container = ad.getAttribute('data-ad-container') || 'inline';
+        if (nonCriticalContainers.has(container)) {
+            return defaultNonCriticalDelay;
+        }
+        return 0;
+    };
 
     const setConsentCookie = () => {
         const maxAge = 60 * 60 * 24 * 365;
@@ -280,7 +313,7 @@ import type { BehaviorConfig } from '../types';
                 return;
             }
 
-            const delay = Number(ad.getAttribute('data-ad-delay') || 0);
+            const delay = resolveDelaySeconds(ad);
             if (delay > 0) {
                 hideFallbackAd(ad);
                 window.setTimeout(() => {
@@ -1008,7 +1041,7 @@ import type { BehaviorConfig } from '../types';
         }
         ad.dataset.adBehaviorInitialized = '1';
 
-        const delay = Number(ad.getAttribute('data-ad-delay') || 0);
+        const delay = resolveDelaySeconds(ad);
         const animation = ad.getAttribute('data-ad-anim');
         const randomMode = ad.getAttribute('data-ad-random') || '';
 
