@@ -20,7 +20,29 @@ fi
 
 echo "[release-gate] 3/5 Optional E2E matrix"
 if [[ -n "${MAGICK_AD_E2E_PREVIEW_PATH:-}" ]]; then
-  pnpm exec playwright install chromium
+  PLAYWRIGHT_CACHE_DIR="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/Library/Caches/ms-playwright}"
+  CHROMIUM_EXECUTABLE="$(pnpm exec node -e "const fs=require('fs');const { chromium }=require('@playwright/test');const p=chromium.executablePath();process.stdout.write(p);" 2>/dev/null || true)"
+  HAS_CHROMIUM=0
+  HAS_CHROMIUM_SHELL=0
+
+  if [[ -n "$CHROMIUM_EXECUTABLE" && -x "$CHROMIUM_EXECUTABLE" ]]; then
+    HAS_CHROMIUM=1
+  fi
+
+  for shell_path in "$PLAYWRIGHT_CACHE_DIR"/chromium_headless_shell-*/chrome-headless-shell-*/chrome-headless-shell; do
+    if [[ -x "$shell_path" ]]; then
+      HAS_CHROMIUM_SHELL=1
+      break
+    fi
+  done
+
+  if [[ "$HAS_CHROMIUM" -eq 1 && "$HAS_CHROMIUM_SHELL" -eq 1 ]]; then
+    echo "[release-gate] Playwright Chromium already installed, skip install"
+  else
+    echo "[release-gate] Playwright Chromium not found, installing..."
+    pnpm exec playwright install chromium
+  fi
+
   pnpm run test:e2e
 else
   echo "[release-gate] MAGICK_AD_E2E_PREVIEW_PATH not set, skip e2e"

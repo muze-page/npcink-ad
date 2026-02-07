@@ -34,8 +34,13 @@ for (const scenario of MATRIX_CASES) {
             await setConsentCookie(page.context(), previewPath, '1');
         }
 
-        await page.goto(previewPath, { waitUntil: 'networkidle' });
-        await page.waitForSelector(adSelector, { timeout: 10000 });
+        // Avoid flaky navigation stalls caused by slow third-party media.
+        await page.route('https://pd.w.org/**', (route) => route.abort());
+
+        await page.goto(previewPath, { waitUntil: 'domcontentloaded' });
+        await expect(page.locator(adSelector).first()).toBeVisible({
+            timeout: 15000,
+        });
 
         if (resolverMode === '1') {
             const resolver = await page.$(resolverSelector);
