@@ -62,30 +62,36 @@ import {
 } from '../constants/options';
 import { cleanForSlug } from '@wordpress/url';
 import apiFetch from '@wordpress/api-fetch';
-
-const SETTINGS_LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
-const DISPLAY_LEVEL_LABELS = {
-    simple: '简洁',
-    advanced: '高级',
-    lab: '实验室',
-};
-const normalizeDisplayLevel = (value) =>
-    value === 'advanced' || value === 'lab' ? value : 'simple';
-const readDisplayLevel = () => {
-    if (typeof window === 'undefined') {
-        return 'simple';
-    }
-    try {
-        const fromBoot = window.MagickAD?.settingsLevel;
-        if (fromBoot) {
-            return normalizeDisplayLevel(fromBoot);
-        }
-        const level = window.localStorage?.getItem(SETTINGS_LEVEL_STORAGE_KEY);
-        return normalizeDisplayLevel(level);
-    } catch (err) {
-        return 'simple';
-    }
-};
+import {
+    DISPLAY_LEVEL_LABELS,
+    normalizeDisplayLevel,
+    readDisplayLevel,
+} from './ads-config/display-level';
+import {
+    formatDateFromDate,
+    formatDateTimeLocalInput,
+    formatDateTimeStorage,
+    formatEndDateTimeLocalInput,
+    isFutureDate,
+} from './ads-config/date-time';
+import {
+    resolveStatus,
+    runtimeMeta,
+    statusMeta,
+} from './ads-config/runtime-status';
+import {
+    enforceUsageTypeRules,
+    getUsageLabel,
+    isDecorativeUsage,
+    normalizeUsageType,
+    usageOptions,
+} from './ads-config/usage-type';
+import { deviceOptions, loginOptions } from './ads-config/audience-options';
+import {
+    buildTemplateBehaviorDefaults,
+    buildTemplateContainerStyleDefaults,
+    getCreativeTemplateData,
+} from './ads-config/template-defaults';
 
 const AdsConfig = () => {
     const headerStorageKey = 'magick_ad_header_collapsed';
@@ -238,322 +244,6 @@ const AdsConfig = () => {
         typeof window !== 'undefined' &&
         window.MagickAD &&
         window.MagickAD.canUnfilteredHtml;
-
-    const pad = (value) => String(value).padStart(2, '0');
-
-    const parseDateTime = (value) => {
-        if (!value) {
-            return null;
-        }
-        const normalized = value.includes('T')
-            ? value.replace('T', ' ')
-            : value;
-        const [datePart, timePart = ''] = normalized.split(' ');
-        const [year, month, day] = datePart.split('-').map(Number);
-        if (!year || !month || !day) {
-            return null;
-        }
-        const [hour = 0, minute = 0, second = 0] =
-            timePart.split(':').map(Number);
-        return new Date(year, month - 1, day, hour, minute, second);
-    };
-
-    const formatDateTimeLocalInput = (value) => {
-        const date = parseDateTime(value);
-        if (!date) {
-            return '';
-        }
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-            date.getDate()
-        )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    };
-
-    const formatDateTimeStorage = (value) => {
-        if (!value) {
-            return '';
-        }
-        if (value.includes('T')) {
-            const [datePart, timePart] = value.split('T');
-            const [hour = '00', minute = '00'] = timePart.split(':');
-            return `${datePart} ${pad(hour)}:${pad(minute)}:00`;
-        }
-        return value.length === 16 ? `${value}:00` : value;
-    };
-
-    const formatEndDateTimeLocalInput = (value) => {
-        if (!value) {
-            return '';
-        }
-        const date = parseDateTime(value);
-        if (!date) {
-            return '';
-        }
-        if (!value.includes('T') && !value.includes(':')) {
-            date.setHours(23, 59, 0, 0);
-        }
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-            date.getDate()
-        )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    };
-
-    const formatDateFromDate = (date) =>
-        `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-            date.getDate()
-        )} ${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
-
-    const isFutureDate = (value) => {
-        const date = parseDateTime(value);
-        if (!date) {
-            return false;
-        }
-        return date.getTime() > Date.now();
-    };
-
-    const resolveStatus = (ad) => {
-        if (!ad) {
-            return 'draft';
-        }
-        const enabled = ad?.options?.enabled !== false;
-        if (!enabled) {
-            return 'draft';
-        }
-        return ad.status || 'publish';
-    };
-
-    const statusMeta = (ad) => {
-        const status = resolveStatus(ad);
-        if (status === 'future') {
-            return { label: '已排期', className: 'is-scheduled' };
-        }
-        if (status === 'pending') {
-            return { label: '待审核', className: 'is-pending' };
-        }
-        if (status === 'publish') {
-            return { label: '已发布', className: 'is-enabled' };
-        }
-        return { label: '已停用', className: 'is-disabled' };
-    };
-
-    const formatDateTimeDisplay = (value) => {
-        const date = parseDateTime(value);
-        if (!date) {
-            return '';
-        }
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-            date.getDate()
-        )} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    };
-
-    const runtimeMeta = (ad) => {
-        if (!ad) {
-            return {
-                code: 'unknown',
-                label: '未知',
-                className: 'is-pending',
-                blocked: true,
-                message: '当前状态未知，请刷新后重试。',
-            };
-        }
-
-        const options = ad.options || {};
-        if (options.enabled === false) {
-            return {
-                code: 'option_disabled',
-                label: '已停用',
-                className: 'is-disabled',
-                blocked: true,
-                message: '当前不会展示：广告已停用。',
-            };
-        }
-
-        const status = ad.status || 'publish';
-        if (status === 'pending') {
-            return {
-                code: 'status_pending',
-                label: '待审核',
-                className: 'is-pending',
-                blocked: true,
-                message: '当前不会展示：发布状态为待审核。',
-            };
-        }
-        if (status === 'future') {
-            const dateText = formatDateTimeDisplay(ad.date);
-            return {
-                code: 'status_future',
-                label: '已排期',
-                className: 'is-scheduled',
-                blocked: true,
-                message: dateText
-                    ? `当前不会展示：发布排期未到（${dateText}）。`
-                    : '当前不会展示：发布状态为已排期。',
-            };
-        }
-        if (status !== 'publish') {
-            return {
-                code: 'status_unpublished',
-                label: '未发布',
-                className: 'is-disabled',
-                blocked: true,
-                message: '当前不会展示：发布状态不是“已发布”。',
-            };
-        }
-
-        const now = Date.now();
-        const startDate = parseDateTime(options.start_date);
-        if (startDate && startDate.getTime() > now) {
-            return {
-                code: 'schedule_not_started',
-                label: '未到开始时间',
-                className: 'is-scheduled',
-                blocked: true,
-                message: `当前不会展示：将于 ${formatDateTimeDisplay(
-                    options.start_date
-                )} 生效。`,
-            };
-        }
-
-        const endDate = parseDateTime(options.end_date);
-        if (endDate && endDate.getTime() < now) {
-            return {
-                code: 'schedule_expired',
-                label: '已过期',
-                className: 'is-disabled',
-                blocked: true,
-                message: `当前不会展示：已于 ${formatDateTimeDisplay(
-                    options.end_date
-                )} 过期。`,
-            };
-        }
-
-        return {
-            code: 'active',
-            label: '生效中',
-            className: 'is-enabled',
-            blocked: false,
-            message: '当前满足发布与排期条件。',
-        };
-    };
-
-    const deviceOptions = [
-        { label: '全部设备', value: 'all' },
-        { label: '仅移动端', value: 'mobile' },
-        { label: '仅平板', value: 'tablet' },
-        { label: '仅桌面端', value: 'desktop' },
-    ];
-
-    const loginOptions = [
-        { label: '全部用户', value: 'all' },
-        { label: '仅登录用户', value: 'logged-in' },
-        { label: '仅未登录用户', value: 'logged-out' },
-    ];
-    const usageOptions = [
-        { label: '广告（完整能力）', value: 'ad' },
-        { label: '运营模块（轻量）', value: 'promo' },
-        { label: '装饰组件（不计统计）', value: 'decorative' },
-    ];
-    const decorativePlacementHooks = new Set(['content', 'body_top', 'footer']);
-    const normalizeUsageType = (value) =>
-        ['ad', 'promo', 'decorative'].includes(value) ? value : 'ad';
-    const isDecorativeUsage = (options = {}) =>
-        normalizeUsageType(options?.usage_type || 'ad') === 'decorative';
-    const getUsageLabel = (value) => {
-        const hit = usageOptions.find((item) => item.value === value);
-        return hit?.label || '广告（完整能力）';
-    };
-
-    const enforceUsageTypeRules = (baseOptions = {}, baseContent = {}) => {
-        const nextOptions = {
-            ...baseOptions,
-            usage_type: normalizeUsageType(baseOptions?.usage_type || 'ad'),
-        };
-        const nextContent = {
-            ...baseContent,
-        };
-        const reasons = [];
-        if (nextOptions.usage_type !== 'decorative') {
-            return {
-                options: nextOptions,
-                content: nextContent,
-                changed: false,
-                reasons,
-            };
-        }
-
-        if (nextOptions.container_type !== 'inline') {
-            nextOptions.container_type = 'inline';
-            reasons.push('容器已回退为“默认嵌入”');
-        }
-        if (!decorativePlacementHooks.has(nextOptions.placement_hook || '')) {
-            nextOptions.placement_hook = 'footer';
-            nextOptions.placement_position = '';
-            nextOptions.placement_paragraph = 0;
-            reasons.push('装饰组件不支持该位置，已回退到“底部”');
-        } else if (nextOptions.placement_hook !== 'content') {
-            nextOptions.placement_position = '';
-            nextOptions.placement_paragraph = 0;
-        }
-        if (nextOptions.render_require_consent) {
-            nextOptions.render_require_consent = false;
-            reasons.push('已关闭“渲染需同意”');
-        }
-
-        const currentVariants = Array.isArray(nextContent.variants)
-            ? nextContent.variants
-            : [];
-        if (nextContent.variants_enabled || currentVariants.length > 0) {
-            nextContent.variants_enabled = false;
-            nextContent.variants_strategy = 'request';
-            nextContent.variants = [];
-            reasons.push('装饰组件已禁用 A/B 版本');
-        } else if (nextContent.variants_strategy === 'session') {
-            nextContent.variants_strategy = 'request';
-        }
-
-        const nextBehavior =
-            nextContent.behavior && typeof nextContent.behavior === 'object'
-                ? { ...nextContent.behavior }
-                : {};
-        if (
-            nextBehavior.frequency_mode !== 'none' ||
-            Number(nextBehavior.frequency_limit || 1) !== 1
-        ) {
-            nextBehavior.frequency_mode = 'none';
-            nextBehavior.frequency_limit = 1;
-            reasons.push('装饰组件已禁用频控');
-        }
-        if (Number(nextBehavior.delay || 0) !== 0) {
-            nextBehavior.delay = 0;
-        }
-        nextContent.behavior = nextBehavior;
-
-        const nextVideoSettings =
-            nextContent.video_settings &&
-            typeof nextContent.video_settings === 'object'
-                ? { ...nextContent.video_settings }
-                : {};
-        if (nextVideoSettings.track_events) {
-            nextVideoSettings.track_events = false;
-            reasons.push('装饰组件已关闭视频事件追踪');
-        }
-        nextContent.video_settings = nextVideoSettings;
-
-        const nextContainerStyle =
-            nextContent.container_style &&
-            typeof nextContent.container_style === 'object'
-                ? { ...nextContent.container_style }
-                : {};
-        if (nextContainerStyle.mode !== 'boxed') {
-            nextContainerStyle.mode = 'boxed';
-        }
-        nextContent.container_style = nextContainerStyle;
-
-        return {
-            options: nextOptions,
-            content: nextContent,
-            changed: reasons.length > 0,
-            reasons,
-        };
-    };
 
     const getOptionLabel = (options, value, fallback) => {
         const hit = (options || []).find((item) => item.value === value);
@@ -2309,77 +1999,6 @@ const AdsConfig = () => {
         </div>
         );
     };
-
-    const getCreativeTemplateData = (type, ad) => {
-        const content = ad?.content || {};
-        if (type === 'image') {
-            return {
-                image: content.image || {
-                    id: 0,
-                    url: '',
-                    alt: '',
-                    width: 0,
-                    height: 0,
-                },
-                link: content.link || '',
-                link_target: Boolean(content.link_target),
-                image_settings: content.image_settings || {},
-            };
-        }
-        if (type === 'video') {
-            return {
-                video_url: content.video_url || '',
-            };
-        }
-        if (type === 'block') {
-            return {
-                blocks: content.blocks || '',
-            };
-        }
-        return {
-            html: content.html || '',
-        };
-    };
-
-    const getTemplateDefaultDelay = (containerType) =>
-        ['popup', 'banner', 'floating', 'interstitial'].includes(containerType)
-            ? 300
-            : 0;
-
-    const buildTemplateBehaviorDefaults = (containerType = 'inline') => ({
-        animation: 'none',
-        close_button: containerType !== 'inline',
-        close_on_esc: true,
-        close_on_overlay: true,
-        lock_scroll: false,
-        frequency_mode: 'none',
-        frequency_limit: 1,
-        delay: getTemplateDefaultDelay(containerType),
-    });
-
-    const buildTemplateContainerStyleDefaults = (placementHook = '') => ({
-        mode: placementHook === 'head' ? 'raw' : 'boxed',
-        max_width: 100,
-        max_width_unit: '%',
-        reserve_height: 0,
-        padding_top: 0,
-        padding_right: 0,
-        padding_bottom: 0,
-        padding_left: 0,
-        background: 'transparent',
-        radius: 0,
-        shadow: 'none',
-        badge_enabled: false,
-        badge_type: 'text',
-        badge_text: '广告',
-        badge_color: '#1d2327',
-        badge_image: {
-            id: 0,
-            url: '',
-            alt: '',
-        },
-        layout: '',
-    });
 
     const applyTemplate = (template) => {
         if (!selectedAd || !template) {
