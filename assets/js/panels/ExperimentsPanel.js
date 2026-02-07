@@ -1,16 +1,40 @@
 import { useEffect, useState } from '@wordpress/element';
-import { Card, CardBody, Notice, ToggleControl } from '@wordpress/components';
+import {
+    Button,
+    ButtonGroup,
+    Card,
+    CardBody,
+    Notice,
+    ToggleControl,
+} from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
 
 const DEFAULT_SETTINGS = {
     block_editor_enabled: false,
 };
 
+const LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
+const LEVELS = [
+    { value: 'simple', label: '简洁' },
+    { value: 'advanced', label: '高级' },
+    { value: 'lab', label: '实验室' },
+];
+
 const ExperimentsPanel = ({ onNotice }) => {
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
+    const [displayLevel, setDisplayLevel] = useState(() => {
+        if (typeof window === 'undefined') {
+            return 'simple';
+        }
+        try {
+            return window.localStorage.getItem(LEVEL_STORAGE_KEY) || 'simple';
+        } catch (err) {
+            return 'simple';
+        }
+    });
 
     useEffect(() => {
         let mounted = true;
@@ -34,6 +58,22 @@ const ExperimentsPanel = ({ onNotice }) => {
             mounted = false;
         };
     }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage.setItem(LEVEL_STORAGE_KEY, displayLevel);
+            window.dispatchEvent(
+                new CustomEvent('magick-ad-display-level-updated', {
+                    detail: { level: displayLevel },
+                })
+            );
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [displayLevel]);
 
     const persist = (next) => {
         setSaving(true);
@@ -65,6 +105,30 @@ const ExperimentsPanel = ({ onNotice }) => {
         <Card>
             <CardBody>
                 <div className="magick-ad-field__label">实验与高级</div>
+                <div className="magick-ad-settings-expiry">
+                    <strong>显示级别：</strong>
+                    <ButtonGroup>
+                        {LEVELS.map((level) => (
+                            <Button
+                                key={level.value}
+                                variant={
+                                    displayLevel === level.value
+                                        ? 'primary'
+                                        : 'secondary'
+                                }
+                                onClick={() => setDisplayLevel(level.value)}
+                                disabled={loading || saving}
+                            >
+                                {level.label}
+                            </Button>
+                        ))}
+                    </ButtonGroup>
+                </div>
+                {displayLevel === 'lab' && (
+                    <Notice status="warning" isDismissible={false}>
+                        实验室模式会显示所有高级选项，请谨慎修改。
+                    </Notice>
+                )}
                 {error && (
                     <Notice status="error" isDismissible>
                         {error.message || '设置加载失败'}

@@ -1,7 +1,6 @@
 import { useEffect, useState } from '@wordpress/element';
 import {
     Button,
-    ButtonGroup,
     Card,
     CardBody,
     Notice,
@@ -56,11 +55,6 @@ const DEFAULT_SETTINGS = {
 };
 
 const LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
-const LEVELS = [
-    { value: 'simple', label: '简洁' },
-    { value: 'advanced', label: '高级' },
-    { value: 'lab', label: '实验室' },
-];
 
 const SystemSettingsPanel = ({ onNotice }) => {
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -68,7 +62,7 @@ const SystemSettingsPanel = ({ onNotice }) => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [openSection, setOpenSection] = useState('tracking');
-    const [displayLevel, setDisplayLevel] = useState(() => {
+    const [displayLevel] = useState(() => {
         if (typeof window === 'undefined') {
             return 'simple';
         }
@@ -118,17 +112,6 @@ const SystemSettingsPanel = ({ onNotice }) => {
     const isAdvanced = displayLevel !== 'simple';
     const isLab = displayLevel === 'lab';
 
-    const diagnosticsExpiryLabel = (() => {
-        if (!settings.stats_diagnostics_expires_at) {
-            return '';
-        }
-        const date = new Date(settings.stats_diagnostics_expires_at * 1000);
-        if (Number.isNaN(date.getTime())) {
-            return '';
-        }
-        return date.toLocaleString();
-    })();
-
     const secretRotatedLabel = (() => {
         if (!settings.tracking_secret_rotated_at) {
             return '';
@@ -174,17 +157,6 @@ const SystemSettingsPanel = ({ onNotice }) => {
             mounted = false;
         };
     }, []);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return;
-        }
-        try {
-            window.localStorage.setItem(LEVEL_STORAGE_KEY, displayLevel);
-        } catch (err) {
-            // ignore storage errors
-        }
-    }, [displayLevel]);
 
     const persist = (next) => {
         setSaving(true);
@@ -249,25 +221,9 @@ const SystemSettingsPanel = ({ onNotice }) => {
         <Card>
             <CardBody>
                 <div className="magick-ad-field__label">隐私与系统设置</div>
-                <div className="magick-ad-settings-expiry">
-                    <strong>显示级别：</strong>
-                    <ButtonGroup>
-                        {LEVELS.map((level) => (
-                            <Button
-                                key={level.value}
-                                variant={
-                                    displayLevel === level.value
-                                        ? 'primary'
-                                        : 'secondary'
-                                }
-                                onClick={() => setDisplayLevel(level.value)}
-                                disabled={loading || saving}
-                            >
-                                {level.label}
-                            </Button>
-                        ))}
-                    </ButtonGroup>
-                </div>
+                <Notice status="info" isDismissible={false}>
+                    显示级别入口已调整到“实验与高级”标签页。
+                </Notice>
                 {isLab && (
                     <Notice status="warning" isDismissible={false}>
                         实验室模式会显示所有高级选项，请谨慎修改。
@@ -549,61 +505,6 @@ const SystemSettingsPanel = ({ onNotice }) => {
                                     }
                                     help="仅当 REMOTE_ADDR 在此列表内，才信任 X-Forwarded-For/CF-Connecting-IP。支持 CIDR，每行一个。"
                                 />
-                            </>
-                        )}
-                    </PanelBody>
-                    <PanelBody
-                        title="诊断日志"
-                        opened={openSection === 'diagnostics'}
-                        onToggle={() => handleToggleSection('diagnostics')}
-                    >
-                        <div className="magick-ad-settings-expiry">
-                            <strong>诊断到期时间：</strong>
-                            {diagnosticsExpiryLabel ? diagnosticsExpiryLabel : '未启用'}
-                        </div>
-                        <ToggleControl
-                            label="启用统计诊断日志"
-                            checked={Boolean(settings.stats_diagnostics)}
-                            disabled={loading || saving}
-                            onChange={(value) =>
-                                updateSettings({ stats_diagnostics: value })
-                            }
-                            help="仅诊断时记录 page_url / user_agent / user_id。"
-                        />
-                        {isAdvanced && (
-                            <>
-                                <TextControl
-                                    label="诊断日志保留天数"
-                                    type="number"
-                                    value={settings.stats_diagnostics_retention_days}
-                                    disabled={loading || saving}
-                                    onChange={(value) =>
-                                        updateSettings({
-                                            stats_diagnostics_retention_days:
-                                                Number(value) || 7,
-                                        })
-                                    }
-                                    help="超过天数会自动清理诊断日志。"
-                                />
-                                <TextControl
-                                    label="诊断自动关闭天数"
-                                    type="number"
-                                    value={settings.stats_diagnostics_auto_off_days}
-                                    disabled={loading || saving}
-                                    onChange={(value) =>
-                                        updateSettings({
-                                            stats_diagnostics_auto_off_days:
-                                                Number(value) || 7,
-                                        })
-                                    }
-                                    help="开启诊断后，超过天数将自动关闭诊断模式。"
-                                />
-                                {settings.stats_diagnostics &&
-                                    diagnosticsExpiryLabel && (
-                                        <Notice status="info" isDismissible={false}>
-                                            诊断模式将在 {diagnosticsExpiryLabel} 自动关闭。
-                                        </Notice>
-                                    )}
                             </>
                         )}
                     </PanelBody>

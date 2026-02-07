@@ -63,6 +63,19 @@ import {
 import { cleanForSlug } from '@wordpress/url';
 import apiFetch from '@wordpress/api-fetch';
 
+const SETTINGS_LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
+const readDisplayLevel = () => {
+    if (typeof window === 'undefined') {
+        return 'simple';
+    }
+    try {
+        const level = window.localStorage?.getItem(SETTINGS_LEVEL_STORAGE_KEY);
+        return level === 'advanced' || level === 'lab' ? level : 'simple';
+    } catch (err) {
+        return 'simple';
+    }
+};
+
 const AdsConfig = () => {
     const headerStorageKey = 'magick_ad_header_collapsed';
     const quickPanelStorageKey = 'magick_ad_panel_quick';
@@ -202,6 +215,7 @@ const AdsConfig = () => {
     const [pickerClasses, setPickerClasses] = useState([]);
     const [pickerLabel, setPickerLabel] = useState('');
     const [debugEnabled, setDebugEnabled] = useState(false);
+    const [displayLevel, setDisplayLevel] = useState(() => readDisplayLevel());
     const branding =
         (typeof window !== 'undefined' && window.MagickAD?.branding) || {
             name: 'Magick AD',
@@ -514,6 +528,27 @@ const AdsConfig = () => {
             // ignore storage errors
         }
     }, [quickPanelOpen]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const syncDisplayLevel = () => {
+            setDisplayLevel(readDisplayLevel());
+        };
+        window.addEventListener('storage', syncDisplayLevel);
+        window.addEventListener(
+            'magick-ad-display-level-updated',
+            syncDisplayLevel
+        );
+        return () => {
+            window.removeEventListener('storage', syncDisplayLevel);
+            window.removeEventListener(
+                'magick-ad-display-level-updated',
+                syncDisplayLevel
+            );
+        };
+    }, []);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -1292,6 +1327,9 @@ const AdsConfig = () => {
 
     const renderVariantSection = (type) => {
         if (!selectedAd) {
+            return null;
+        }
+        if (displayLevel === 'simple') {
             return null;
         }
         const variantsEnabled = Boolean(
