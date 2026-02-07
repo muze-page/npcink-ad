@@ -54,4 +54,92 @@ wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table
 find "wp-content/plugins/magick-ad/dist/magick-ad" -name "*.php" -print0 | xargs -0 -n 1 php -l
 ```
 
-未设置 MAGICK_AD_E2E_PREVIEW_PATH，因此未执行真实页面 E2E（门禁脚本按预期跳过）。 是啥意思？
+检查PHP错误
+
+```shell
+cd "/Users/muze/Local Sites/magick-ad/app/public/wp-content/plugins/magick-ad"
+
+find . -type f -name "*.php" \
+  ! -path "./dist/*" \
+  ! -path "./vendor/*" \
+  ! -path "./node_modules/*" \
+  -print0 | xargs -0 -n1 php -l
+
+```
+
+## E2E
+
+它帮你确认“功能真实可用 + 关键链路不炸 + 改造没引入明显回归”。
+预览地址：http://magick-ad.local/
+
+```shell
+MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" pnpm run test:e2e
+
+```
+
+跑完整门禁（含构建、可选 E2E、打包）：
+
+```shell
+MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" bash scripts/release-gate.sh
+
+```
+
+本地如果想让 `tracking runtime` 在页面首屏就加载（不走延迟触发），可临时加过滤器：
+
+```php
+<?php
+/**
+ * 本地 E2E：强制 magick-ad-track 立即加载
+ * 建议放到 wp-content/mu-plugins/magick-ad-e2e-force-track.php
+ * 仅用于本地/测试环境，不建议生产启用。
+ */
+add_filter('magick_ad_track_defer', static function ($defer) {
+    return false;
+}, 10, 4);
+```
+
+加完后再跑 E2E，可避免因为延迟加载导致的 `window.magickAdTrack` 未就绪问题。
+
+可以，给你一套可直接复制的分场景命令（在插件根目录执行）。
+
+```bash
+# 公共变量
+BASE="http://magick-ad.local/"
+```
+
+```bash
+# 场景 A：无同意（期望被门控）
+MAGICK_AD_E2E_PREVIEW_PATH="$BASE" \
+MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
+MAGICK_AD_E2E_HAS_CONSENT=0 \
+pnpm exec playwright test tests/e2e/tracking-advanced.spec.js -g "respects consent guard"
+```
+
+```bash
+# 场景 B：已同意（期望可写统计）
+MAGICK_AD_E2E_PREVIEW_PATH="$BASE" \
+MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
+MAGICK_AD_E2E_HAS_CONSENT=1 \
+pnpm exec playwright test tests/e2e/tracking-advanced.spec.js -g "respects consent guard"
+```
+
+```bash
+# 场景 C：兼容矩阵（10 组：桌面/平板/手机 + 带同意/无同意）
+MAGICK_AD_E2E_PREVIEW_PATH="$BASE" \
+MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
+pnpm exec playwright test tests/e2e/compatibility-matrix.spec.js
+```
+
+```bash
+# 场景 D：完整 E2E（你当前环境）
+MAGICK_AD_E2E_PREVIEW_PATH="$BASE" \
+MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
+pnpm run test:e2e
+```
+
+```bash
+# 场景 E：完整发布门禁（构建 + E2E + 打包）
+MAGICK_AD_E2E_PREVIEW_PATH="$BASE" \
+MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
+bash scripts/release-gate.sh
+```

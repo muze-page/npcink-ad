@@ -3,6 +3,7 @@ const {
     previewPath,
     getTrackUrl,
     getAdPayload,
+    setConsentCookie,
 } = require('./helpers');
 
 const expectSignature =
@@ -68,14 +69,7 @@ test('track endpoint respects consent guard (optional)', async ({
 
     await page.goto(previewPath, { waitUntil: 'networkidle' });
     if (hasConsentCookie) {
-        await page.context().addCookies([
-            {
-                name: 'magick_ad_consent',
-                value: '1',
-                url: previewPath,
-                path: '/',
-            },
-        ]);
+        await setConsentCookie(page.context(), previewPath, '1');
     }
     const adData = await getAdPayload(page);
     test.skip(!adData || !adData.ad_id, 'Ad payload not found');

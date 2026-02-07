@@ -739,6 +739,7 @@ final class Frontend {
         $track_handle = 'magick-ad-track';
         $container_index = self::get_container_index();
         $defer = self::has_deferred_ads($ads, $container_index);
+        $defer = (bool) apply_filters('magick_ad_track_defer', $defer, $ads, $container_index, $force);
         $diagnostics_enabled = Diagnostics::is_enabled();
         $behavior_config = self::get_behavior_config();
         $consent_banner_enabled = !empty($behavior_config['consentBannerEnabled']);
@@ -800,7 +801,7 @@ final class Frontend {
             wp_localize_script($track_handle, 'MagickADTrack', $track_config);
             wp_add_inline_script(
                 $track_handle,
-                '(function(){var cfg=window.MagickADTrack||{};var loaded=false;var load=function(){if(loaded){return;}loaded=true;window.MagickADTrackLoaded=true;var s=document.createElement("script");s.src=cfg.scriptUrl;s.defer=true;document.head.appendChild(s);cleanup();};var events=["scroll","mousemove","touchstart","keydown","pointerdown"];var onEvent=function(){load();};var cleanup=function(){events.forEach(function(ev){window.removeEventListener(ev,onEvent,{passive:true});});};events.forEach(function(ev){window.addEventListener(ev,onEvent,{passive:true});});if(\"requestIdleCallback\" in window){requestIdleCallback(load,{timeout:1500});}else{setTimeout(load,800);} })();'
+                '(function(){var cfg=window.MagickADTrack||{};var loaded=false;var load=function(){if(loaded){return;}loaded=true;window.MagickADTrackLoaded=true;var s=document.createElement("script");s.src=cfg.scriptUrl;s.defer=true;document.head.appendChild(s);cleanup();};var events=["scroll","mousemove","touchstart","keydown","pointerdown"];var onEvent=function(){load();};var cleanup=function(){events.forEach(function(ev){window.removeEventListener(ev,onEvent,{passive:true});});};events.forEach(function(ev){window.addEventListener(ev,onEvent,{passive:true});});if("requestIdleCallback" in window){requestIdleCallback(load,{timeout:1500});}else{setTimeout(load,800);} })();'
             );
         } else {
             wp_enqueue_script(
@@ -2045,18 +2046,14 @@ final class Frontend {
         $uid = wp_generate_uuid4();
         $expires = time() + MONTH_IN_SECONDS;
         $secure = is_ssl();
-        setcookie(
-            name: 'magick_ad_uid',
-            value: $uid,
-            options: array(
-                'expires' => $expires,
-                'path' => COOKIEPATH ?: '/',
-                'domain' => COOKIE_DOMAIN ?: '',
-                'secure' => $secure,
-                'httponly' => true,
-                'samesite' => 'Lax',
-            )
-        );
+        setcookie('magick_ad_uid', $uid, array(
+            'expires' => $expires,
+            'path' => COOKIEPATH ?: '/',
+            'domain' => COOKIE_DOMAIN ?: '',
+            'secure' => $secure,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ));
         $_COOKIE['magick_ad_uid'] = $uid;
     }
 
@@ -2483,7 +2480,7 @@ final class Frontend {
         if (!$requires) {
             return true;
         }
-        return (bool) apply_filters('magick_ad_has_consent', false);
+        return self::has_consent();
     }
 
     private static function maybe_hydrate_ad(array $ad): array {

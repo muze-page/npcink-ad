@@ -38,10 +38,46 @@ const getAdPayload = async (page) => {
     }, adSelector);
 };
 
+const setConsentCookie = async (context, previewUrl, value = '1') => {
+    if (!previewUrl) {
+        return;
+    }
+    await context.addCookies([
+        {
+            name: 'magick_ad_consent',
+            value,
+            url: previewUrl,
+        },
+    ]);
+};
+
+const clickAdTarget = async (page, selector) => {
+    const interactiveSelector = [
+        `${selector} a:not(.magick-ad-close)`,
+        `${selector} button:not(.magick-ad-close)`,
+        `${selector} [role="button"]:not(.magick-ad-close)`,
+    ].join(', ');
+
+    const interactiveTargets = page.locator(interactiveSelector);
+    const targetCount = await interactiveTargets.count();
+    for (let i = 0; i < targetCount; i += 1) {
+        const target = interactiveTargets.nth(i);
+        if (!(await target.isVisible())) {
+            continue;
+        }
+        await target.click({ force: true });
+        return;
+    }
+
+    await page.locator(selector).first().click({ force: true });
+};
+
 module.exports = {
     previewPath,
     adSelector,
     resolverSelector,
     getTrackUrl,
     getAdPayload,
+    setConsentCookie,
+    clickAdTarget,
 };

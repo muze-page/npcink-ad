@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { previewPath, adSelector } = require('./helpers');
+const { previewPath, adSelector, clickAdTarget } = require('./helpers');
 
 const storageState = process.env.MAGICK_AD_E2E_STORAGE_STATE;
 
@@ -17,8 +17,8 @@ test.describe('logged-in click tracking (optional)', () => {
         );
 
         await page.goto(previewPath, { waitUntil: 'networkidle' });
-        await page.waitForSelector(adSelector);
-        await page.click(adSelector);
+        await page.waitForSelector(adSelector, { timeout: 10000 });
+        await clickAdTarget(page, adSelector);
 
         const request = await requestPromise;
         const data = request.postData() || '';

@@ -912,18 +912,14 @@ final class Track_Controller {
     private static function get_cookie_viewer_key(): string {
         if (!isset($_COOKIE['magick_ad_uid']) || !is_string($_COOKIE['magick_ad_uid'])) {
             $uid = wp_generate_uuid4();
-            setcookie(
-                name: 'magick_ad_uid',
-                value: $uid,
-                options: array(
-                    'expires' => time() + MONTH_IN_SECONDS,
-                    'path' => COOKIEPATH ?: '/',
-                    'domain' => COOKIE_DOMAIN ?: '',
-                    'secure' => is_ssl(),
-                    'httponly' => true,
-                    'samesite' => 'Lax',
-                )
-            );
+            setcookie('magick_ad_uid', $uid, array(
+                'expires' => time() + MONTH_IN_SECONDS,
+                'path' => COOKIEPATH ?: '/',
+                'domain' => COOKIE_DOMAIN ?: '',
+                'secure' => is_ssl(),
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ));
             $_COOKIE['magick_ad_uid'] = $uid;
         }
         return isset($_COOKIE['magick_ad_uid']) && is_string($_COOKIE['magick_ad_uid'])

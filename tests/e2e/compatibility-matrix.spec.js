@@ -5,6 +5,7 @@ const {
     resolverSelector,
     getTrackUrl,
     getAdPayload,
+    setConsentCookie,
 } = require('./helpers');
 
 const resolverMode = process.env.MAGICK_AD_E2E_EXPECT_RESOLVER;
@@ -30,14 +31,7 @@ for (const scenario of MATRIX_CASES) {
         await page.context().clearCookies();
 
         if (scenario.consent) {
-            await page.context().addCookies([
-                {
-                    name: 'magick_ad_consent',
-                    value: '1',
-                    url: previewPath,
-                    path: '/',
-                },
-            ]);
+            await setConsentCookie(page.context(), previewPath, '1');
         }
 
         await page.goto(previewPath, { waitUntil: 'networkidle' });
