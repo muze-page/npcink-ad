@@ -9,10 +9,12 @@ use MagickAD\Data\Schema;
 use MagickAD\Data\Stats_Query;
 use MagickAD\Utils\Diagnostics;
 use MagickAD\Data\Slots;
+use MagickAD\Utils\Consent;
 use MagickAD\Utils\TrackingStrategy;
 use MagickAD\Utils\Tracking_Signature;
 use MagickAD\Utils\Stats_Accumulator;
 use MagickAD\Utils\Stats_Queue;
+use MagickAD\Utils\Stats_Cron;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -701,7 +703,7 @@ final class Track_Controller {
     }
 
     private static function has_consent(): bool {
-        return (bool) apply_filters('magick_ad_has_consent', false);
+        return Consent::has_consent(false);
     }
 
     private static function is_valid_signature(
@@ -1016,6 +1018,8 @@ final class Track_Controller {
             'rate_limited',
             'deduped',
             'no_consent',
+            'db_degraded',
+            'db_drop',
         );
         return in_array($reason, $allowed, true) ? $reason : '';
     }
@@ -1121,7 +1125,14 @@ final class Track_Controller {
             $clicks
         );
         if ($result === false) {
-            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            return self::handle_write_failure('stats', array(
+                array(
+                    'date' => $date,
+                    'ad_id' => $ad_id,
+                    'impressions' => $impressions,
+                    'clicks' => $clicks,
+                ),
+            ));
         }
 
         return true;
@@ -1170,7 +1181,15 @@ final class Track_Controller {
             $clicks
         );
         if ($result === false) {
-            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            return self::handle_write_failure('variant', array(
+                array(
+                    'date' => $date,
+                    'ad_id' => $ad_id,
+                    'variant_id' => $variant_id,
+                    'impressions' => $impressions,
+                    'clicks' => $clicks,
+                ),
+            ));
         }
 
         return true;
@@ -1216,7 +1235,15 @@ final class Track_Controller {
             1
         );
         if ($result === false) {
-            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            return self::handle_write_failure('event', array(
+                array(
+                    'date' => $date,
+                    'ad_id' => $ad_id,
+                    'event' => $event,
+                    'variant_id' => $variant_id ?: '',
+                    'count' => 1,
+                ),
+            ));
         }
 
         return true;
@@ -1273,7 +1300,7 @@ final class Track_Controller {
                 $clicks
             );
             if ($result === false) {
-                return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+                return self::handle_write_failure('stats', array($row));
             }
         }
 
@@ -1352,7 +1379,7 @@ final class Track_Controller {
                 $clicks
             );
             if ($result === false) {
-                return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+                return self::handle_write_failure('variant', array($row));
             }
         }
 
@@ -1411,7 +1438,7 @@ final class Track_Controller {
                 $count
             );
             if ($result === false) {
-                return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+                return self::handle_write_failure('event', array($row));
             }
         }
 
@@ -1468,7 +1495,17 @@ final class Track_Controller {
             $clicks
         );
         if ($result === false) {
-            return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+            return self::handle_write_failure('dim', array(
+                array(
+                    'date' => $date,
+                    'ad_id' => $ad_id,
+                    'slot' => $slot,
+                    'position' => $position,
+                    'container' => $container,
+                    'impressions' => $impressions,
+                    'clicks' => $clicks,
+                ),
+            ));
         }
 
         return true;
@@ -1559,11 +1596,56 @@ final class Track_Controller {
                 $clicks
             );
             if ($result === false) {
-                return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+                return self::handle_write_failure('dim', array($row));
             }
         }
 
         return true;
+    }
+
+    private static function handle_write_failure(string $target, array $rows): WP_Error|true {
+        $rows = self::normalize_fallback_rows($rows);
+        if (empty($rows)) {
+            return true;
+        }
+
+        $queued = match ($target) {
+            'stats' => Stats_Queue::enqueue_stats_fallback($rows),
+            'dim' => Stats_Queue::enqueue_dimensions_fallback($rows),
+            'variant' => Stats_Queue::enqueue_variants_fallback($rows),
+            'event' => Stats_Queue::enqueue_events_fallback($rows),
+            default => false,
+        };
+
+        if ($queued) {
+            self::record_track_failure('db_degraded');
+            Stats_Cron::maybe_schedule();
+            return true;
+        }
+
+        $fail_open = (bool) apply_filters(
+            'magick_ad_track_fail_open_on_db_error',
+            true,
+            $target,
+            $rows
+        );
+        if ($fail_open) {
+            self::record_track_failure('db_drop');
+            return true;
+        }
+
+        return new WP_Error('magick_ad_db_error', 'DB insert failed', array('status' => 500));
+    }
+
+    private static function normalize_fallback_rows(array $rows): array {
+        $normalized = array();
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $normalized[] = $row;
+        }
+        return $normalized;
     }
 
     private static function write_log(string $ad_id, string $event, string $page_url, int $user_id): void {

@@ -9,6 +9,13 @@ const FAVORITES_KEY = 'magick_ad_template_favorites';
 const PINNED_KEY = 'magick_ad_template_pins';
 const DEVICE_OPTIONS = ['all', 'mobile', 'tablet', 'desktop'];
 const RISK_OPTIONS = ['low', 'medium', 'high'];
+const TEMPLATE_SCHEMA_VERSION = (() => {
+    if (typeof window === 'undefined') {
+        return 2;
+    }
+    const value = Number(window?.MagickAD?.templateSchemaVersion || 2);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 2;
+})();
 
 const sanitizeScenario = (value) =>
     typeof value === 'string' ? value.trim() : '';
@@ -18,6 +25,74 @@ const sanitizeDevice = (value) =>
 
 const sanitizeRisk = (value) =>
     RISK_OPTIONS.includes(value) ? value : 'low';
+
+const normalizeTemplateAttrs = (sourceAttrs) => {
+    const attrs =
+        sourceAttrs && typeof sourceAttrs === 'object' ? { ...sourceAttrs } : {};
+
+    if (attrs.videoUrl === undefined && attrs.video_url !== undefined) {
+        attrs.videoUrl = attrs.video_url;
+    }
+    if (attrs.linkTarget === undefined && attrs.link_target !== undefined) {
+        attrs.linkTarget = attrs.link_target;
+    }
+    if (attrs.image && typeof attrs.image === 'object') {
+        if (attrs.imageId === undefined) {
+            attrs.imageId = attrs.image.id || 0;
+        }
+        if (attrs.imageUrl === undefined) {
+            attrs.imageUrl = attrs.image.url || '';
+        }
+        if (attrs.imageAlt === undefined) {
+            attrs.imageAlt = attrs.image.alt || '';
+        }
+    }
+
+    const legacyType = typeof attrs.creativeType === 'string' ? attrs.creativeType : '';
+    attrs.creativeType =
+        legacyType === 'visual'
+            ? 'block'
+            : legacyType === 'code'
+              ? 'html'
+              : ['html', 'image', 'video', 'block'].includes(legacyType)
+                ? legacyType
+                : 'html';
+    attrs.containerType = ['inline', 'popup', 'banner', 'floating', 'interstitial'].includes(
+        attrs.containerType
+    )
+        ? attrs.containerType
+        : 'inline';
+
+    if (!attrs.templateCategory && attrs.category) {
+        attrs.templateCategory = attrs.category;
+    }
+    if (!attrs.templateScenario && attrs.scenario) {
+        attrs.templateScenario = attrs.scenario;
+    }
+    if (!attrs.templateDevice && attrs.device) {
+        attrs.templateDevice = attrs.device;
+    }
+    if (!attrs.templateRisk && attrs.risk) {
+        attrs.templateRisk = attrs.risk;
+    }
+
+    attrs.templateVersion = Math.max(
+        TEMPLATE_SCHEMA_VERSION,
+        Number(attrs.templateVersion || 1)
+    );
+    attrs.templateScenario =
+        typeof attrs.templateScenario === 'string'
+            ? attrs.templateScenario
+            : '';
+    attrs.templateDevice = DEVICE_OPTIONS.includes(attrs.templateDevice)
+        ? attrs.templateDevice
+        : 'all';
+    attrs.templateRisk = RISK_OPTIONS.includes(attrs.templateRisk)
+        ? attrs.templateRisk
+        : 'low';
+
+    return attrs;
+};
 
 const getDefaultMeta = ({ type = 'html', containerType = 'inline', source = 'core' }) => {
     if (source === 'user') {
@@ -127,7 +202,7 @@ const extractTemplateFromContent = (content) => {
         return null;
     }
 
-    const attrs = magickBlock.attributes || {};
+    const attrs = normalizeTemplateAttrs(magickBlock.attributes || {});
     const type = attrs.creativeType || 'html';
     const containerType = attrs.containerType || 'inline';
     const category =
@@ -149,6 +224,7 @@ const extractTemplateFromContent = (content) => {
         return {
             type,
             containerType,
+            version: Number(attrs.templateVersion || 1),
             category,
             scenario,
             device,
@@ -169,6 +245,7 @@ const extractTemplateFromContent = (content) => {
         return {
             type,
             containerType,
+            version: Number(attrs.templateVersion || 1),
             category,
             scenario,
             device,
@@ -183,6 +260,7 @@ const extractTemplateFromContent = (content) => {
         return {
             type,
             containerType,
+            version: Number(attrs.templateVersion || 1),
             category,
             scenario,
             device,
@@ -196,6 +274,7 @@ const extractTemplateFromContent = (content) => {
     return {
         type: 'html',
         containerType,
+        version: Number(attrs.templateVersion || 1),
         category,
         scenario,
         device,
@@ -217,7 +296,7 @@ const extractTemplateFromContentLoose = (content) => {
         return null;
     }
     try {
-        const attrs = JSON.parse(match[1]);
+        const attrs = normalizeTemplateAttrs(JSON.parse(match[1]));
         const type = attrs.creativeType || 'html';
         const containerType = attrs.containerType || 'inline';
         const category =
@@ -241,6 +320,7 @@ const extractTemplateFromContentLoose = (content) => {
             return {
                 type,
                 containerType,
+                version: Number(attrs.templateVersion || 1),
                 category,
                 scenario,
                 device,
@@ -261,6 +341,7 @@ const extractTemplateFromContentLoose = (content) => {
             return {
                 type,
                 containerType,
+                version: Number(attrs.templateVersion || 1),
                 category,
                 scenario,
                 device,
@@ -275,6 +356,7 @@ const extractTemplateFromContentLoose = (content) => {
             return {
                 type,
                 containerType,
+                version: Number(attrs.templateVersion || 1),
                 category,
                 scenario,
                 device,
@@ -288,6 +370,7 @@ const extractTemplateFromContentLoose = (content) => {
         return {
             type: 'html',
             containerType,
+            version: Number(attrs.templateVersion || 1),
             category,
             scenario,
             device,
@@ -307,7 +390,11 @@ const buildPatternContent = (
     containerType = 'inline',
     category = ''
 ) => {
-    const attrs = { creativeType: type, containerType };
+    const attrs = {
+        creativeType: type,
+        containerType,
+        templateVersion: TEMPLATE_SCHEMA_VERSION,
+    };
     if (category) {
         attrs.templateCategory = category;
     }

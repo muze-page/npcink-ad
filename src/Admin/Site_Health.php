@@ -10,6 +10,7 @@ use MagickAD\Utils\Stats_Accumulator;
 use MagickAD\Utils\Stats_Cron;
 use MagickAD\Utils\Stats_Dim_Cron;
 use MagickAD\Utils\Stats_Queue;
+use MagickAD\Utils\Consent;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -75,19 +76,42 @@ final class Site_Health {
     public function test_consent_hook(): array {
         $requires_consent = (get_option('magick_ad_tracking_require_consent', '0') === '1');
         $has_hook = (bool) has_filter('magick_ad_has_consent');
+        $signal_summary = Consent::detect_signal_summary();
+        $detected = $signal_summary['detected'] ?? null;
+        $signals = isset($signal_summary['signals']) && is_array($signal_summary['signals'])
+            ? $signal_summary['signals']
+            : array();
+        $active_signals = 0;
+        foreach ($signals as $value) {
+            $normalized = is_scalar($value) ? trim((string) $value) : '';
+            if ($normalized !== '' && $normalized !== '0' && strtolower($normalized) !== 'false') {
+                $active_signals++;
+            }
+        }
 
         if (!$requires_consent) {
             $status = 'good';
             $label = __('未启用同意门控。', 'magick-ad');
             $description = __('如需合规控制 Cookie/统计写入，请开启“需要同意”并接入 magick_ad_has_consent。', 'magick-ad');
-        } elseif ($has_hook) {
+        } elseif ($detected === true) {
             $status = 'good';
-            $label = __('已启用同意门控，且检测到同意钩子。', 'magick-ad');
-            $description = __('magick_ad_has_consent 已接入站点同意逻辑。', 'magick-ad');
+            $label = __('已检测到同意信号。', 'magick-ad');
+            $description = __('同意门控已启用，当前请求环境已识别到同意状态。', 'magick-ad');
+        } elseif ($has_hook) {
+            $status = 'recommended';
+            $label = __('已启用同意门控，未检测到明确同意。', 'magick-ad');
+            $description = __('已检测到同意钩子，但当前环境尚未识别到同意信号。请在已同意状态下复测。', 'magick-ad');
         } else {
             $status = 'recommended';
             $label = __('已启用同意门控，但未检测到同意钩子。', 'magick-ad');
             $description = __('当前将默认视为未同意，Track 不写入且前端不会使用存储。请接入 magick_ad_has_consent。', 'magick-ad');
+        }
+        if ($requires_consent && $active_signals > 0) {
+            $description .= ' ' . sprintf(
+                /* translators: %d: count of detected consent signals. */
+                __('当前检测到 %d 个同意信号来源。', 'magick-ad'),
+                $active_signals
+            );
         }
 
         return array(
@@ -237,8 +261,21 @@ final class Site_Health {
 
     public function test_stats_queue(): array {
         $metrics = Stats_Queue::get_metrics();
+        $fallback_pending = !empty($metrics['fallback_pending']);
 
         if (empty($metrics['enabled'])) {
+            if ($fallback_pending) {
+                return array(
+                    'label' => __('统计队列回退待回收。', 'magick-ad'),
+                    'status' => 'recommended',
+                    'badge' => array(
+                        'label' => __('Magick AD', 'magick-ad'),
+                        'color' => 'blue',
+                    ),
+                    'description' => '<p>' . esc_html__('当前处于同步写入/缓存累计模式，但历史回退队列仍有待处理数据。请保持 Cron 正常执行直到回收完成。', 'magick-ad') . '</p>',
+                    'test' => 'magick_ad_stats_queue',
+                );
+            }
             return array(
                 'label' => __('统计队列未启用。', 'magick-ad'),
                 'status' => 'good',
@@ -332,7 +369,7 @@ final class Site_Health {
     }
 
     private static function collect_cron_checks(): array {
-        $stats_required = Stats_Accumulator::enabled() || Stats_Queue::enabled();
+        $stats_required = Stats_Accumulator::enabled() || Stats_Queue::enabled() || Stats_Queue::has_pending();
         $diagnostics_required = Diagnostics::is_enabled();
         $dim_retention_days = (int) get_option('magick_ad_stats_dim_retention_days', 30);
         $dim_required = $dim_retention_days > 0;
@@ -383,6 +420,7 @@ final class Site_Health {
         $queue_metrics = Stats_Queue::get_metrics();
         $node_metrics = self::collect_node_metrics();
         $cron_checks = self::collect_cron_checks();
+        $consent_summary = Consent::detect_signal_summary();
 
         $cron_map = array();
         foreach ($cron_checks as $check) {
@@ -419,6 +457,12 @@ final class Site_Health {
                     'label' => __('同意钩子已注册', 'magick-ad'),
                     'value' => has_filter('magick_ad_has_consent') ? 'yes' : 'no',
                 ),
+                'consent_detected_in_request' => array(
+                    'label' => __('当前请求检测到同意', 'magick-ad'),
+                    'value' => (($consent_summary['detected'] ?? null) === true)
+                        ? 'yes'
+                        : ((($consent_summary['detected'] ?? null) === false) ? 'no' : 'unknown'),
+                ),
                 'slot_client_resolver' => array(
                     'label' => __('缓存友好 Slot 轮播', 'magick-ad'),
                     'value' => (get_option('magick_ad_slot_client_resolver', '1') === '1') ? 'yes' : 'no',
@@ -446,6 +490,10 @@ final class Site_Health {
                 'stats_queue_enabled' => array(
                     'label' => __('统计队列启用', 'magick-ad'),
                     'value' => !empty($queue_metrics['enabled']) ? 'yes' : 'no',
+                ),
+                'stats_queue_fallback_pending' => array(
+                    'label' => __('统计回退队列待回收', 'magick-ad'),
+                    'value' => !empty($queue_metrics['fallback_pending']) ? 'yes' : 'no',
                 ),
                 'stats_queue_total' => array(
                     'label' => __('统计队列长度', 'magick-ad'),

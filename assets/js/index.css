@@ -3122,6 +3122,92 @@
     margin-bottom: 0;
 }
 
+.magick-ad-compatibility-report {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.magick-ad-compatibility-overall {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    border: 1px solid #dcdcde;
+    border-radius: 10px;
+    background: #fff;
+    padding: 10px 12px;
+}
+
+.magick-ad-compatibility-overall strong {
+    color: #1d2327;
+    font-size: 13px;
+}
+
+.magick-ad-compatibility-overall span {
+    color: #50575e;
+    font-size: 12px;
+}
+
+.magick-ad-compatibility-overall.is-good {
+    border-color: #9dd5b5;
+    background: #f1fcf5;
+}
+
+.magick-ad-compatibility-overall.is-recommended {
+    border-color: #facc8f;
+    background: #fff9ef;
+}
+
+.magick-ad-compatibility-overall.is-critical {
+    border-color: #f5b2b2;
+    background: #fff5f5;
+}
+
+.magick-ad-compatibility-report__section h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: #1d2327;
+}
+
+.magick-ad-compatibility-report__kv {
+    border: 1px solid #dcdcde;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.magick-ad-compatibility-report__row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    background: #fff;
+    border-top: 1px solid #f0f0f1;
+}
+
+.magick-ad-compatibility-report__row:first-child {
+    border-top: 0;
+}
+
+.magick-ad-compatibility-report__row span {
+    color: #50575e;
+    font-size: 12px;
+}
+
+.magick-ad-compatibility-report__row code {
+    color: #1d2327;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+@media (max-width: 782px) {
+    .magick-ad-compatibility-report__row {
+        grid-template-columns: 1fr;
+    }
+}
+
 .magick-ad-node-debug-actions {
     display: flex;
     gap: 8px;

@@ -29,6 +29,22 @@
             "type": "string",
             "default": ""
         },
+        "templateScenario": {
+            "type": "string",
+            "default": ""
+        },
+        "templateDevice": {
+            "type": "string",
+            "default": "all"
+        },
+        "templateRisk": {
+            "type": "string",
+            "default": "low"
+        },
+        "templateVersion": {
+            "type": "number",
+            "default": 1
+        },
         "blocks": {
             "type": "string",
             "default": ""

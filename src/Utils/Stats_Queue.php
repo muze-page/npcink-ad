@@ -35,11 +35,29 @@ final class Stats_Queue {
         );
     }
 
+    public static function enqueue_stats_fallback(array $rows): bool {
+        return self::enqueue_rows(
+            self::OPTION_STATS,
+            $rows,
+            array('date', 'ad_id', 'impressions', 'clicks'),
+            true
+        );
+    }
+
     public static function enqueue_variants(array $rows): bool {
         return self::enqueue_rows(
             self::OPTION_VARIANT,
             $rows,
             array('date', 'ad_id', 'variant_id', 'impressions', 'clicks')
+        );
+    }
+
+    public static function enqueue_variants_fallback(array $rows): bool {
+        return self::enqueue_rows(
+            self::OPTION_VARIANT,
+            $rows,
+            array('date', 'ad_id', 'variant_id', 'impressions', 'clicks'),
+            true
         );
     }
 
@@ -51,6 +69,15 @@ final class Stats_Queue {
         );
     }
 
+    public static function enqueue_events_fallback(array $rows): bool {
+        return self::enqueue_rows(
+            self::OPTION_EVENT,
+            $rows,
+            array('date', 'ad_id', 'event', 'variant_id', 'count'),
+            true
+        );
+    }
+
     public static function enqueue_dimensions(array $rows): bool {
         return self::enqueue_rows(
             self::OPTION_DIM,
@@ -59,8 +86,24 @@ final class Stats_Queue {
         );
     }
 
+    public static function enqueue_dimensions_fallback(array $rows): bool {
+        return self::enqueue_rows(
+            self::OPTION_DIM,
+            $rows,
+            array('date', 'ad_id', 'slot', 'position', 'container', 'impressions', 'clicks'),
+            true
+        );
+    }
+
+    public static function has_pending(): bool {
+        return count(self::get_queue(self::OPTION_STATS))
+            + count(self::get_queue(self::OPTION_DIM))
+            + count(self::get_queue(self::OPTION_VARIANT))
+            + count(self::get_queue(self::OPTION_EVENT)) > 0;
+    }
+
     public static function flush(): void {
-        if (!self::enabled()) {
+        if (!self::enabled() && !self::has_pending()) {
             return;
         }
 
@@ -107,6 +150,7 @@ final class Stats_Queue {
 
         return array(
             'enabled' => self::enabled(),
+            'fallback_pending' => !self::enabled() && array_sum($counts) > 0,
             'stats' => $counts['stats'],
             'dim' => $counts['dim'],
             'variant' => $counts['variant'],
@@ -288,13 +332,22 @@ final class Stats_Queue {
         self::set_queue(self::OPTION_DIM, $queue);
     }
 
-    private static function enqueue_rows(string $option, array $rows, array $fields): bool {
-        if (!self::enabled() || empty($rows)) {
+    private static function enqueue_rows(string $option, array $rows, array $fields, bool $force = false): bool {
+        if ((!self::enabled() && !$force) || empty($rows)) {
             return false;
         }
 
         $queue = self::get_queue($option);
-        if (count($queue) >= self::queue_limit()) {
+        $limit = self::queue_limit($force);
+        if (count($queue) >= $limit) {
+            if (!$force) {
+                return false;
+            }
+            $target = max(1, $limit - 1);
+            $queue = self::prune_queue_to_limit($queue, $target);
+        }
+
+        if (count($queue) >= $limit) {
             return false;
         }
 
@@ -343,8 +396,27 @@ final class Stats_Queue {
             $queue[$key] = $existing;
         }
 
+        if ($force && count($queue) > $limit) {
+            $queue = self::prune_queue_to_limit($queue, $limit);
+        }
+
         self::set_queue($option, $queue);
         return true;
+    }
+
+    private static function prune_queue_to_limit(array $queue, int $limit): array {
+        if ($limit < 1 || count($queue) <= $limit) {
+            return $queue;
+        }
+        uasort(
+            $queue,
+            static function ($a, $b) {
+                $a_ts = is_array($a) ? (int) ($a['queued_at'] ?? 0) : 0;
+                $b_ts = is_array($b) ? (int) ($b['queued_at'] ?? 0) : 0;
+                return $a_ts <=> $b_ts;
+            }
+        );
+        return array_slice($queue, -1 * $limit, null, true);
     }
 
     private static function build_key(array $data, array $fields): string {
@@ -400,7 +472,11 @@ final class Stats_Queue {
         update_option($option, $queue, false);
     }
 
-    private static function queue_limit(): int {
+    private static function queue_limit(bool $force = false): int {
+        if ($force) {
+            $limit = (int) apply_filters('magick_ad_stats_fallback_queue_limit', 2000);
+            return max(200, $limit);
+        }
         $limit = (int) apply_filters('magick_ad_stats_queue_limit', 500);
         return max(50, $limit);
     }

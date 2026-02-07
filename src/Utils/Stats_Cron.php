@@ -17,7 +17,11 @@ final class Stats_Cron {
     }
 
     public static function maybe_schedule(): void {
-        if (!Stats_Accumulator::enabled() && !Stats_Queue::enabled()) {
+        $needs_stats_flush = Stats_Accumulator::enabled()
+            || Stats_Queue::enabled()
+            || Stats_Queue::has_pending();
+
+        if (!$needs_stats_flush) {
             self::unschedule();
             return;
         }

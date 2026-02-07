@@ -10,6 +10,7 @@ final class Patterns {
     private const CATEGORY = 'magick-ad';
     private const DEVICES = array('all', 'mobile', 'tablet', 'desktop');
     private const RISKS = array('low', 'medium', 'high');
+    public const TEMPLATE_SCHEMA_VERSION = 2;
 
     public function register(): void {
         if (did_action('init')) {
@@ -55,6 +56,9 @@ final class Patterns {
     }
 
     private function build_ad_block(array $attrs): string {
+        if (!isset($attrs['templateVersion'])) {
+            $attrs['templateVersion'] = self::TEMPLATE_SCHEMA_VERSION;
+        }
         $json = wp_json_encode($attrs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         return sprintf('<!-- wp:magick-ad/ad %s /-->', $json ? $json : '{}');
     }
@@ -118,11 +122,18 @@ final class Patterns {
         if (!in_array($risk, self::RISKS, true)) {
             $risk = 'low';
         }
+        $version = isset($meta['version']) && is_numeric($meta['version'])
+            ? (int) $meta['version']
+            : self::TEMPLATE_SCHEMA_VERSION;
+        if ($version < 1) {
+            $version = 1;
+        }
 
         return array(
             'scenario' => $scenario,
             'device' => $device,
             'risk' => $risk,
+            'version' => $version,
         );
     }
 

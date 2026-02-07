@@ -5,6 +5,7 @@ namespace MagickAD\Frontend;
 use MagickAD\Data\Ads;
 use MagickAD\Data\Settings;
 use MagickAD\REST\Controllers\Track_Controller;
+use MagickAD\Utils\Consent;
 use MagickAD\Utils\Diagnostics;
 use MagickAD\Utils\Capabilities;
 
@@ -2018,7 +2019,7 @@ final class Frontend {
     }
 
     private static function has_consent(): bool {
-        return (bool) apply_filters('magick_ad_has_consent', false);
+        return Consent::has_consent(false);
     }
 
     private static function maybe_init_random_cookie(): void {

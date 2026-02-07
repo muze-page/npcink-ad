@@ -61,9 +61,11 @@ final class Admin {
             'previewNonce' => wp_create_nonce('magick_ad_preview'),
             'pickerNonce' => wp_create_nonce('magick_ad_picker'),
             'siteHealthUrl' => admin_url('site-health.php?tab=direct'),
+            'compatibilityUrl' => admin_url('admin.php?page=magick-ad-compat'),
             'branding' => $this->get_branding(),
             'canUnfilteredHtml' => current_user_can('unfiltered_html'),
             'patterns' => \MagickAD\Blocks\Patterns::export_patterns(),
+            'templateSchemaVersion' => \MagickAD\Blocks\Patterns::TEMPLATE_SCHEMA_VERSION,
             'buildVersion' => MAGICK_AD_VERSION,
             'buildTime' => $this->get_build_time(),
             'displayReasonCatalog' => \MagickAD\Utils\Diagnostics::get_ad_display_reason_catalog(),
@@ -132,13 +134,20 @@ final class Admin {
                 'toplevel_page_magick-ad',
                 'magick-ad_page_magick-ad',
                 'magick-ad_page_magick-ad-report',
+                'magick-ad_page_magick-ad-compat',
             ),
             true
         );
     }
 
     private function get_initial_tab(string $hook): string {
-        return str_contains($hook, 'magick-ad-report') ? 'report' : 'ads';
+        if (str_contains($hook, 'magick-ad-compat')) {
+            return 'compatibility';
+        }
+        if (str_contains($hook, 'magick-ad-report')) {
+            return 'report';
+        }
+        return 'ads';
     }
 
     private function get_admin_asset(): array {
@@ -217,6 +226,12 @@ final class Admin {
                 'page_title' => __('统计看板', 'magick-ad'),
                 'menu_title' => __('统计看板', 'magick-ad'),
                 'menu_slug' => 'magick-ad-report',
+                'callback' => array($this, 'render_app'),
+            );
+            $pages[] = array(
+                'page_title' => __('兼容报告', 'magick-ad'),
+                'menu_title' => __('兼容报告', 'magick-ad'),
+                'menu_slug' => 'magick-ad-compat',
                 'callback' => array($this, 'render_app'),
             );
         }

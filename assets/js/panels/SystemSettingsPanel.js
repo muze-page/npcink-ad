@@ -129,6 +129,9 @@ const SystemSettingsPanel = ({ onNotice }) => {
     const queueAlertAge = Number(queueMetrics.alert_age || 0);
     const siteHealthUrl =
         window?.MagickAD?.siteHealthUrl || '/wp-admin/site-health.php?tab=direct';
+    const compatibilityUrl =
+        window?.MagickAD?.compatibilityUrl ||
+        '/wp-admin/admin.php?page=magick-ad-compat';
     const isAdvanced = displayLevel !== 'simple';
     const isLab = displayLevel === 'lab';
     const queueStatus =
@@ -354,6 +357,13 @@ const SystemSettingsPanel = ({ onNotice }) => {
                             rel="noreferrer"
                         >
                             打开站点健康（Magick AD）
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            href={compatibilityUrl}
+                            style={{ marginLeft: 8 }}
+                        >
+                            打开兼容报告
                         </Button>
                     </PanelBody>
                     <PanelBody

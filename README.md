@@ -1,99 +1,57 @@
 # Magick AD WP
 
-WordPress 广告插件，提供广告位配置、投放条件、统计与诊断。
+WordPress 广告插件，提供广告投放配置、前端渲染、统计追踪、兼容体检与调试能力。
 
-**功能**
+## 文档入口
 
-- 广告位配置（页面范围、插入位置、设备、登录状态）
-- 展示/点击统计
-- 诊断日志与导出
-- 前端渲染与追踪
+- 快速上手：`docs/quickstart.md`
+- 兼容指引：`docs/compatibility-guide.md`
+- 排障手册：`docs/troubleshooting.md`
+- 架构总览：`docs/architecture-overview.md`
 
-开发环境在 wp-config.php 中添加：
-调试用
+## 主要能力
 
-```php
-define('MAGICK_AD_DEBUG', true);
+- 广告配置：页面范围、插入位置、设备、登录态与展示规则
+- 模板库：系统预设 + 自定义模板（支持分类、收藏、置顶）
+- 统计追踪：曝光/点击、维度统计、失败原因码
+- 可靠性：异步队列 + 写入失败回退队列 + Cron 回收
+- 兼容体检：节点插入、Cron、队列、同意门控检查
+- 兼容报告：后台一键导出 JSON/Markdown
 
+## 开发命令
+
+```bash
+pnpm install
+pnpm run start
+pnpm run build
+pnpm run dist
+pnpm run release
 ```
 
-**目录结构**
+## 发布门禁
 
-- `src/` 业务代码
-- `build/` 前端构建产物
-- `dist/` 发布包（发布用）
-- `templates/` 前端模板
+```bash
+bash scripts/release-gate.sh
+```
 
-**开发与构建**
+门禁默认执行：
 
-- 开发：`pnpm run start`
-- 打包：`pnpm run build`
-- 生成发布包：`pnpm run dist`
+- 前端构建
+- PHP 语法检查（本机有 `php` 时）
+- 可选 E2E（设置 `MAGICK_AD_E2E_PREVIEW_PATH` 时）
+- 生成并校验发布 zip
 
-**插件检查**
+## 回滚脚本
 
-```shell
+```bash
+bash scripts/rollback.sh <release-zip> <plugin-target-dir>
+```
+
+## 发布包检查（可选）
+
+```bash
 wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table
-```
-
-检查发布包是否有语法错误
-
-```shell
 find "wp-content/plugins/magick-ad/dist/magick-ad" -name "*.php" -print0 | xargs -0 -n 1 php -l
-
 ```
 
-**系统设置（新增）**
-
-在“系统设置 → 统计与去重 / 安全与缓存”中新增了以下开关：
-
-- `rate_limit_fallback`：限流回退策略。可选 `off`（默认）或 `transient`。当站点没有持久化对象缓存时，`transient` 会写入数据库；默认关闭以避免写入压力。
-- `stats_write_mode`：统计写入模式。可选 `async`（默认）或 `sync`。`async` 会进入统计队列，由 Cron 批量落库；`sync` 直接写库。
-
-**队列观测与报警**
-
-在“系统设置 → 统计与去重”会显示队列长度与最久等待时间，且在积压时给出提示。Site Health 也新增了“统计队列积压”检查。
-
-- 队列启用条件：`stats_write_mode=async` 且未启用持久化对象缓存。
-- 默认告警阈值：队列长度 ≥ 300 或最久等待 ≥ 900 秒（达到 2 倍阈值为严重）。
-- 可通过过滤器调整阈值：`magick_ad_stats_queue_alert_limit`、`magick_ad_stats_queue_alert_age`。
-
-**显示级别（系统设置弹窗顶部）**
-
-系统设置弹窗提供三种显示级别，用于控制字段显示范围：
-
-- 简洁：仅展示常用核心设置，降低误操作风险。
-- 高级：展示完整的系统级设置与诊断选项。
-- 实验室：显示全部选项（包含高风险项），用于测试与排障。
-
-显示级别仅影响界面展示，不会改动已有配置值。
-
-**dist 同步脚本用法**
-
-```shell
-scripts/sync-dist.sh
-```
-
-它的用途：**把开发目录的源码和资源一键同步到 `dist/magick-ad/`**，避免你每次手动 `cp` 一堆文件。
-
-具体做了这些事：
-
-- 同步 `src/`、`assets/`、`templates/` 到 `dist/magick-ad/`。
-- 复制根文件：`magick-ad.php`、`uninstall.php`、`readme.txt`、`LICENSE`。
-- 不会重建 `build/`，只做“同步”，适合你手工改 PHP/资产后快速更新发布产物。
-
-什么时候用：
-
-- 你改了 PHP 或资产，希望 `dist` 版本立刻跟上。
-- 准备跑 `wp plugin check dist/...` 前，确保检查的是最新代码。
-
-它不会做的事：
-
-- 不会编译前端（`build/` 还是你自己跑构建）。
-- 不会清理 `dist` 以外的东西。
-
-**展示页面与位置**
-
-- 页面范围：全站、仅首页、仅文章页、仅单页、仅分类页、仅标签页、仅搜索结果页、仅 404 页、仅作者页
-- 位置（非文章/单页）：顶部、内容前、内容后、底部
-- 位置（文章/单页）：顶部、内容前、文章顶部、位置第三段、文章底部、评论列表顶部、评论框上方、评论框下方、评论列表底部、内容后、底部
+未设置 MAGICK_AD_E2E_PREVIEW_PATH，因此未执行真实页面 E2E（门禁脚本按预期跳过）。 是啥意思？

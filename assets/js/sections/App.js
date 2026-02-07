@@ -3,6 +3,9 @@ import { Notice } from '@wordpress/components';
 import AdsConfig from './AdsConfig';
 
 const Dashboard = lazy(() => import('../Dashboard'));
+const CompatibilityReportPanel = lazy(
+    () => import('../panels/CompatibilityReportPanel')
+);
 const SETTINGS_LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
 const readDisplayLevel = () => {
     if (typeof window === 'undefined') {
@@ -41,6 +44,21 @@ const App = () => {
         return (
             <Suspense fallback={<Notice status="info">加载中…</Notice>}>
                 <Dashboard />
+            </Suspense>
+        );
+    }
+
+    if (initialTab === 'compatibility') {
+        if (readDisplayLevel() === 'simple') {
+            return (
+                <Notice status="info" isDismissible={false}>
+                    简洁模式已隐藏兼容报告。请在“系统与调试设置 → 实验与高级”切换为“高级/实验室”后使用。
+                </Notice>
+            );
+        }
+        return (
+            <Suspense fallback={<Notice status="info">加载中…</Notice>}>
+                <CompatibilityReportPanel />
             </Suspense>
         );
     }

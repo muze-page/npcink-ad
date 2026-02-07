@@ -4,6 +4,7 @@ namespace MagickAD\REST;
 
 use MagickAD\REST\Controllers\Debug_Controller;
 use MagickAD\REST\Controllers\Reports_Controller;
+use MagickAD\REST\Controllers\Compatibility_Report_Controller;
 use MagickAD\REST\Controllers\Render_Controller;
 use MagickAD\REST\Controllers\Settings_Controller;
 use MagickAD\REST\Controllers\System_Settings_Controller;
@@ -55,6 +56,11 @@ final class Routes {
         register_rest_route('magick-ad/v1', '/report-events', array(
             'methods' => 'GET',
             'callback' => array(Reports_Controller::class, 'report_events'),
+            'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
+        ));
+        register_rest_route('magick-ad/v1', '/compatibility-report', array(
+            'methods' => 'GET',
+            'callback' => array(Compatibility_Report_Controller::class, 'get'),
             'permission_callback' => array(Capabilities::class, 'rest_can_manage'),
         ));
         if (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) {
