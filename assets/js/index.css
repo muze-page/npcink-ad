@@ -2303,6 +2303,76 @@
     gap: 16px;
 }
 
+.magick-ad-template-modal-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.magick-ad-template-overview-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    background: #f6f7f7;
+}
+
+.magick-ad-template-overview-item strong {
+    font-size: 16px;
+    color: #1d2327;
+}
+
+.magick-ad-template-overview-item span {
+    font-size: 12px;
+    color: #50575e;
+}
+
+.magick-ad-template-overview-item.is-highlight {
+    border-color: #2271b1;
+    background: #f0f6fc;
+}
+
+.magick-ad-template-headline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 2px 0;
+}
+
+.magick-ad-template-headline__main h3 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.35;
+}
+
+.magick-ad-template-headline__main .description {
+    margin: 4px 0 0;
+}
+
+.magick-ad-template-headline__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.magick-ad-template-counter {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 16px;
+    border: 1px solid #dcdcde;
+    background: #fff;
+    color: #2c3338;
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .magick-ad-template-actions-row {
     display: flex;
     align-items: center;
@@ -2319,6 +2389,24 @@
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.magick-ad-template-active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.magick-ad-template-active-filter {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 1px solid #dcdcde;
+    background: #ffffff;
+    color: #50575e;
+    font-size: 11px;
 }
 
 .magick-ad-template-filter-row {
@@ -2405,30 +2493,30 @@
     border-radius: 16px;
     background: #ffffff;
     overflow: hidden;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .magick-ad-template-card-new:hover {
     transform: translateY(-2px);
-    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
-    border-color: #c7d2fe;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+    border-color: #8c8f94;
 }
 
 .magick-ad-template-card-new.is-selected {
-    border-color: #2563eb;
-    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.2);
+    border-color: #2271b1;
+    box-shadow: 0 8px 18px rgba(34, 113, 177, 0.2);
 }
 
 .magick-ad-template-media {
     position: relative;
-    height: 140px;
+    height: 132px;
     background: #f1f5f9;
 }
 
 .magick-ad-template-thumb {
     width: 100%;
-    height: 140px;
+    height: 132px;
     object-fit: cover;
     display: block;
 }
@@ -2487,19 +2575,30 @@
 
 .magick-ad-template-body {
     padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .magick-ad-template-title {
     font-size: 15px;
     font-weight: 600;
     color: #111827;
-    margin-bottom: 6px;
+    margin-bottom: 0;
 }
 
 .magick-ad-template-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+}
+
+.magick-ad-template-description {
+    margin: 0;
+    font-size: 12px;
+    color: #646970;
+    line-height: 1.45;
+    min-height: 34px;
 }
 
 .magick-ad-template-tag {
@@ -2511,6 +2610,11 @@
     font-weight: 600;
     background: #f3f4f6;
     color: #1f2937;
+}
+
+.magick-ad-template-tag--source {
+    background: #f6f7f7;
+    color: #3c434a;
 }
 
 .magick-ad-template-tag--soft {
@@ -2548,6 +2652,35 @@
     align-items: center;
     justify-content: space-between;
     box-shadow: 0 16px 32px rgba(15, 23, 42, 0.3);
+}
+
+.magick-ad-template-card-footer {
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.magick-ad-template-card-footer__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.magick-ad-template-pill-btn {
+    min-height: 26px;
+    padding: 0 8px;
+    font-size: 11px;
+}
+
+.magick-ad-template-pill-btn.is-active {
+    color: #2271b1;
+    background: #f0f6fc;
+}
+
+.magick-ad-template-empty-state {
+    margin-top: 4px;
 }
 
 .magick-ad-template-floating-actions {
@@ -2613,6 +2746,25 @@
 }
 
 @media (max-width: 960px) {
+    .magick-ad-template-headline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .magick-ad-template-headline__meta {
+        justify-content: space-between;
+    }
+
+    .magick-ad-template-actions-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .magick-ad-template-actions-left,
+    .magick-ad-template-actions-right {
+        justify-content: space-between;
+    }
+
     .magick-ad-template-filter-row {
         flex-direction: column;
         align-items: stretch;

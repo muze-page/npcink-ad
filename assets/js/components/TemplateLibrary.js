@@ -36,6 +36,13 @@ const TemplateLibrary = ({
     onTogglePinned,
     categories,
     onUpdateCategories,
+    title,
+    description,
+    totalCount,
+    filteredCount,
+    hasActiveFilters,
+    activeFilterTags,
+    onResetFilters,
 }) => {
     const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -59,6 +66,28 @@ const TemplateLibrary = ({
 
     return (
         <div className="magick-ad-template-library">
+            <div className="magick-ad-template-headline">
+                <div className="magick-ad-template-headline__main">
+                    <h3>{title || '模板库'}</h3>
+                    {description && (
+                        <p className="description">{description}</p>
+                    )}
+                </div>
+                <div className="magick-ad-template-headline__meta">
+                    <span className="magick-ad-template-counter">
+                        已匹配 {filteredCount} / {totalCount || templates.length}
+                    </span>
+                    {hasActiveFilters && (
+                        <Button
+                            variant="tertiary"
+                            onClick={() => onResetFilters?.()}
+                        >
+                            重置筛选
+                        </Button>
+                    )}
+                </div>
+            </div>
+
             <div className="magick-ad-template-actions-row">
                 <div className="magick-ad-template-actions-left">
                     <Button variant="secondary" onClick={onImport}>
@@ -83,6 +112,20 @@ const TemplateLibrary = ({
                     </Button>
                 </div>
             </div>
+
+            {Array.isArray(activeFilterTags) &&
+                activeFilterTags.length > 0 && (
+                    <div className="magick-ad-template-active-filters">
+                        {activeFilterTags.map((tag) => (
+                            <span
+                                key={tag}
+                                className="magick-ad-template-active-filter"
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
 
             <div className="magick-ad-template-filter-row">
                 <div className="magick-ad-template-search">
@@ -153,22 +196,24 @@ const TemplateLibrary = ({
                 </div>
             </div>
 
-            <div className="magick-ad-template-gallery">
-                {templates.map((template) => (
-                    <TemplateCard
-                        key={template.id}
-                        template={template}
-                        isSelected={selectedIds.includes(template.id)}
-                        selectionMode={selectionMode}
-                        onApply={onApply}
-                        onToggleSelect={onToggleSelect}
-                        onToggleFavorite={onToggleFavorite}
-                        onTogglePinned={onTogglePinned}
-                        isFavorite={favoriteIds.includes(template.id)}
-                        isPinned={pinnedIds.includes(template.id)}
-                    />
-                ))}
-            </div>
+            {templates.length > 0 && (
+                <div className="magick-ad-template-gallery">
+                    {templates.map((template) => (
+                        <TemplateCard
+                            key={template.id}
+                            template={template}
+                            isSelected={selectedIds.includes(template.id)}
+                            selectionMode={selectionMode}
+                            onApply={onApply}
+                            onToggleSelect={onToggleSelect}
+                            onToggleFavorite={onToggleFavorite}
+                            onTogglePinned={onTogglePinned}
+                            isFavorite={favoriteIds.includes(template.id)}
+                            isPinned={pinnedIds.includes(template.id)}
+                        />
+                    ))}
+                </div>
+            )}
 
             {selectedIds.length > 0 && (
                 <div className="magick-ad-template-floating">

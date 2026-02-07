@@ -1,4 +1,4 @@
-import { useMemo, useState } from '@wordpress/element';
+import { useMemo } from '@wordpress/element';
 import { Button, CheckboxControl } from '@wordpress/components';
 
 const getLabel = (template) => {
@@ -16,6 +16,9 @@ const getContainerLabel = (template) => {
     if (type === 'interstitial') return '插屏';
     return '默认嵌入';
 };
+
+const getSourceLabel = (template) =>
+    template.source === 'user' ? '我的模板' : '系统预设';
 
 const TemplateThumbnail = ({ template }) => {
     const thumb = template.thumbnail || template.thumbnailUrl;
@@ -102,8 +105,6 @@ const TemplateCard = ({
     isFavorite,
     isPinned,
 }) => {
-    const [hovered, setHovered] = useState(false);
-
     const tags = useMemo(() => {
         const list = [
             {
@@ -115,6 +116,10 @@ const TemplateCard = ({
             {
                 label: getContainerLabel(template),
                 className: 'magick-ad-template-tag magick-ad-template-tag--soft',
+            },
+            {
+                label: getSourceLabel(template),
+                className: 'magick-ad-template-tag magick-ad-template-tag--source',
             },
         ];
         if (template.category) {
@@ -134,30 +139,13 @@ const TemplateCard = ({
             className={`magick-ad-template-card-new ${
                 isSelected ? 'is-selected' : ''
             }`}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
         >
             <div className="magick-ad-template-media">
                 <TemplateThumbnail template={template} />
-                {(hovered || isSelected) && (
-                    <div className="magick-ad-template-actions">
-                        <Button
-                            variant="primary"
-                            size="small"
-                            onClick={() =>
-                                selectionMode
-                                    ? onToggleSelect?.(template.id)
-                                    : onApply?.(template)
-                            }
-                        >
-                            {selectionMode ? '选择' : '应用'}
-                        </Button>
-                    </div>
-                )}
-                {(selectionMode || isSelected) && (
+                {selectionMode && (
                     <div
                         className={`magick-ad-template-select ${
-                            hovered || isSelected ? 'is-visible' : ''
+                            selectionMode ? 'is-visible' : ''
                         }`}
                     >
                         <CheckboxControl
@@ -167,34 +155,13 @@ const TemplateCard = ({
                         />
                     </div>
                 )}
-                {(hovered || isPinned || isFavorite) && (
-                    <div className="magick-ad-template-corner-actions">
-                        <button
-                            type="button"
-                            className={`magick-ad-template-icon-btn ${
-                                isPinned ? 'is-active' : ''
-                            }`}
-                            aria-label="置顶"
-                            onClick={() => onTogglePinned?.(template.id)}
-                        >
-                            ⌘
-                        </button>
-                        <button
-                            type="button"
-                            className={`magick-ad-template-icon-btn ${
-                                isFavorite ? 'is-active' : ''
-                            }`}
-                            aria-label="收藏"
-                            onClick={() => onToggleFavorite?.(template.id)}
-                        >
-                            ★
-                        </button>
-                    </div>
-                )}
             </div>
             <div className="magick-ad-template-body">
                 <div className="magick-ad-template-title">
                     {template.name || template.title}
+                </div>
+                <div className="magick-ad-template-description">
+                    {template.description || '模板内容可应用后继续编辑。'}
                 </div>
                 <div className="magick-ad-template-tags">
                     {tags.map((tag) => (
@@ -206,6 +173,51 @@ const TemplateCard = ({
                             {tag.label}
                         </span>
                     ))}
+                </div>
+                <div className="magick-ad-template-card-footer">
+                    <div className="magick-ad-template-card-footer__meta">
+                        <Button
+                            variant="tertiary"
+                            size="small"
+                            className={`magick-ad-template-pill-btn ${
+                                isPinned ? 'is-active' : ''
+                            }`}
+                            onClick={() => onTogglePinned?.(template.id)}
+                        >
+                            {isPinned ? '已置顶' : '置顶'}
+                        </Button>
+                        <Button
+                            variant="tertiary"
+                            size="small"
+                            className={`magick-ad-template-pill-btn ${
+                                isFavorite ? 'is-active' : ''
+                            }`}
+                            onClick={() => onToggleFavorite?.(template.id)}
+                        >
+                            {isFavorite ? '已收藏' : '收藏'}
+                        </Button>
+                    </div>
+                    <Button
+                        variant={
+                            selectionMode
+                                ? isSelected
+                                    ? 'primary'
+                                    : 'secondary'
+                                : 'primary'
+                        }
+                        size="small"
+                        onClick={() =>
+                            selectionMode
+                                ? onToggleSelect?.(template.id)
+                                : onApply?.(template)
+                        }
+                    >
+                        {selectionMode
+                            ? isSelected
+                                ? '已选择'
+                                : '选择'
+                            : '应用模板'}
+                    </Button>
                 </div>
             </div>
         </div>

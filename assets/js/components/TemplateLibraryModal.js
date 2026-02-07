@@ -36,6 +36,7 @@ const TemplateLibraryModal = ({
     const [query, setQuery] = useState('');
     const [onlyFavorites, setOnlyFavorites] = useState(false);
     const [selectionMode, setSelectionMode] = useState(false);
+    const initialCreativeFilter = type || 'all';
 
     useEffect(() => {
         if (type) {
@@ -158,6 +159,54 @@ const TemplateLibraryModal = ({
             )
         );
 
+    const hasActiveFilters =
+        creativeFilter !== initialCreativeFilter ||
+        containerFilter !== 'all' ||
+        categoryFilter !== 'all' ||
+        query.trim() !== '' ||
+        onlyFavorites;
+
+    const resetFilters = () => {
+        setCreativeFilter(initialCreativeFilter);
+        setContainerFilter('all');
+        setCategoryFilter('all');
+        setQuery('');
+        setOnlyFavorites(false);
+    };
+
+    const activeFilterTags = [];
+    if (creativeFilter !== initialCreativeFilter) {
+        const creativeLabel =
+            [
+                { label: '全部', value: 'all' },
+                { label: '代码/HTML', value: 'html' },
+                { label: '图片', value: 'image' },
+                { label: '视频', value: 'video' },
+                { label: '可视化', value: 'block' },
+            ].find((item) => item.value === creativeFilter)?.label || creativeFilter;
+        activeFilterTags.push(`创意：${creativeLabel}`);
+    }
+    if (containerFilter !== 'all') {
+        const containerLabel =
+            [
+                { label: '默认嵌入', value: 'inline' },
+                { label: '弹窗', value: 'popup' },
+                { label: '横栏', value: 'banner' },
+                { label: '悬浮', value: 'floating' },
+                { label: '插屏', value: 'interstitial' },
+            ].find((item) => item.value === containerFilter)?.label || containerFilter;
+        activeFilterTags.push(`容器：${containerLabel}`);
+    }
+    if (categoryFilter !== 'all') {
+        activeFilterTags.push(`分类：${categoryFilter}`);
+    }
+    if (query.trim() !== '') {
+        activeFilterTags.push(`关键词：${query.trim()}`);
+    }
+    if (onlyFavorites) {
+        activeFilterTags.push('仅收藏');
+    }
+
     const filteredPresets = useMemo(
         () => buildFilteredList(systemTemplates),
         [
@@ -202,7 +251,7 @@ const TemplateLibraryModal = ({
         selectedIds.forEach((id) => onToggleSelect?.(id));
     };
 
-    const renderLibrary = (list) => (
+    const renderLibrary = (list, context) => (
         <>
             <TemplateLibrary
                 templates={list}
@@ -256,11 +305,22 @@ const TemplateLibraryModal = ({
                 onTogglePinned={onTogglePinned}
                 categories={availableCategories}
                 onUpdateCategories={onUpdateCategories}
+                title={context?.title || '模板'}
+                description={context?.description || ''}
+                totalCount={context?.totalCount || 0}
+                filteredCount={list.length}
+                hasActiveFilters={hasActiveFilters}
+                activeFilterTags={activeFilterTags}
+                onResetFilters={resetFilters}
             />
             {list.length === 0 && (
-                <Notice status="info" isDismissible={false}>
-                    暂无模板。
-                </Notice>
+                <div className="magick-ad-template-empty-state">
+                    <Notice status="info" isDismissible={false}>
+                        {hasActiveFilters
+                            ? '当前筛选条件下暂无匹配模板。'
+                            : context?.emptyText || '暂无模板。'}
+                    </Notice>
+                </div>
             )}
         </>
     );
@@ -273,17 +333,55 @@ const TemplateLibraryModal = ({
             className="magick-ad-modal magick-ad-template-modal"
         >
             <div className="magick-ad-template-shell">
+                <div className="magick-ad-template-modal-overview">
+                    <div className="magick-ad-template-overview-item">
+                        <strong>{safeTemplates.length}</strong>
+                        <span>模板总数</span>
+                    </div>
+                    <div className="magick-ad-template-overview-item">
+                        <strong>{favoriteList.length}</strong>
+                        <span>收藏模板</span>
+                    </div>
+                    <div className="magick-ad-template-overview-item">
+                        <strong>{pinnedList.length}</strong>
+                        <span>置顶模板</span>
+                    </div>
+                    {selectedIds.length > 0 && (
+                        <div className="magick-ad-template-overview-item is-highlight">
+                            <strong>{selectedIds.length}</strong>
+                            <span>已选择</span>
+                        </div>
+                    )}
+                </div>
                 <TabPanel
                     className="magick-ad-template-tabs"
                     tabs={[
-                        { name: 'preset', title: '系统预设' },
-                        { name: 'user', title: '我的模板' },
+                        {
+                            name: 'preset',
+                            title: `系统预设 (${systemTemplates.length})`,
+                        },
+                        {
+                            name: 'user',
+                            title: `我的模板 (${userTemplates.length})`,
+                        },
                     ]}
                 >
                     {(tab) =>
                         tab.name === 'preset'
-                            ? renderLibrary(filteredPresets)
-                            : renderLibrary(filteredUsers)
+                            ? renderLibrary(filteredPresets, {
+                                  title: '系统预设模板',
+                                  description:
+                                      '内置场景模板，适合快速应用并微调。',
+                                  totalCount: systemTemplates.length,
+                                  emptyText: '暂无系统预设模板。',
+                              })
+                            : renderLibrary(filteredUsers, {
+                                  title: '我的模板',
+                                  description:
+                                      '你保存或导入的模板，支持收藏、置顶与批量导出。',
+                                  totalCount: userTemplates.length,
+                                  emptyText: '还没有我的模板，可先从当前广告存为模板。',
+                              })
                     }
                 </TabPanel>
             </div>
