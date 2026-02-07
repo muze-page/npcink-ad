@@ -4373,7 +4373,6 @@ const AdsConfig = () => {
   const [placementModalOpen, setPlacementModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [previewModalOpen, setPreviewModalOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const [placementTab, setPlacementTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)('placement');
-  const [advancedOpen, setAdvancedOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
   const readPanelState = (key, fallback) => {
     if (typeof window === 'undefined') {
       return fallback;
@@ -4388,7 +4387,7 @@ const AdsConfig = () => {
       return fallback;
     }
   };
-  const [quickPanelOpen, setQuickPanelOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(() => readPanelState(quickPanelStorageKey, 'quick'));
+  const [quickPanelOpen, setQuickPanelOpen] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(() => readPanelState(quickPanelStorageKey, 'placement'));
   const [containerTab, setContainerTab] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_1__.useState)(() => {
     const allowed = new Set(['base', 'size', 'spacing', 'appearance', 'badge']);
     const stored = readPanelState(containerTabStorageKey, 'base');
@@ -7000,74 +6999,442 @@ const AdsConfig = () => {
   }, renderAdvancedControls({
     includePreview: false
   })));
-  const renderPlacementSection = () => {
-    var _selectedAd$content$c;
-    return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-right-section"
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-right-section__body"
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-mode-switch"
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-mode-switch__label"
-    }, "\u7F16\u8F91\u6A21\u5F0F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ButtonGroup, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-      variant: "secondary",
-      isPressed: effectiveEditorMode === 'quick',
-      onClick: () => updateEditorMode('quick')
-    }, "\u5FEB\u901F\u6A21\u5F0F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-      variant: "secondary",
-      isPressed: effectiveEditorMode === 'design',
-      onClick: () => updateEditorMode('design')
-    }, "\u8BBE\u8BA1\u6A21\u5F0F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-      variant: "secondary",
-      isPressed: effectiveEditorMode === 'expert',
-      onClick: () => {
-        if (!canUnfilteredHtml) {
-          showNotice('error', '当前账号无 unfiltered_html 权限，无法启用专家模式。', 3500);
-          return;
+  const renderPlacementSection = () => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-right-section"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-right-section__body"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-mode-switch"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "magick-ad-mode-switch__label"
+  }, "\u7F16\u8F91\u6A21\u5F0F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ButtonGroup, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+    variant: "secondary",
+    isPressed: effectiveEditorMode === 'quick',
+    onClick: () => updateEditorMode('quick')
+  }, "\u5FEB\u901F\u6A21\u5F0F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+    variant: "secondary",
+    isPressed: effectiveEditorMode === 'design',
+    onClick: () => updateEditorMode('design')
+  }, "\u8BBE\u8BA1\u6A21\u5F0F"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+    variant: "secondary",
+    isPressed: effectiveEditorMode === 'expert',
+    onClick: () => {
+      if (!canUnfilteredHtml) {
+        showNotice('error', '当前账号无 unfiltered_html 权限，无法启用专家模式。', 3500);
+        return;
+      }
+      updateEditorMode('expert');
+    },
+    disabled: !canUnfilteredHtml
+  }, "\u4E13\u5BB6\u6A21\u5F0F"))), editorModeRaw === 'expert' && !canUnfilteredHtml && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "warning",
+    isDismissible: false
+  }, "\u4E13\u5BB6\u6A21\u5F0F\u9700\u8981 unfiltered_html \u6743\u9650\uFF0C\u5DF2\u56DE\u9000\u4E3A\u8BBE\u8BA1\u6A21\u5F0F\u3002"), effectiveEditorMode === 'quick' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+    title: "\u9875\u9762\u63D2\u5165",
+    opened: quickPanelOpen === 'placement',
+    onToggle: () => setQuickPanelOpen(prev => prev === 'placement' ? null : 'placement')
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "info",
+    isDismissible: false
+  }, "\u5FEB\u901F\u6A21\u5F0F\u4EC5\u4FDD\u7559\u9875\u9762\u63D2\u5165\u80FD\u529B\uFF1B\u6837\u5F0F\u3001\u9891\u63A7\u4E0E\u9AD8\u7EA7\u80FD\u529B\u8BF7\u5207\u6362\u5230\u8BBE\u8BA1\u6A21\u5F0F/\u4E13\u5BB6\u6A21\u5F0F\u3002"), showValidation && !resolvePlacement(selectedAd.options || {}).hook && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+    status: "error",
+    isDismissible: false
+  }, "\u8BF7\u5148\u9009\u62E9\u5C55\u793A\u4F4D\u7F6E"), selectedAd.options?.ad_type === 'global' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+    label: "\u5C55\u793A\u9875\u9762",
+    value: selectedAd.options?.show_page || 'all',
+    options: _constants_options__WEBPACK_IMPORTED_MODULE_31__.DISPLAY_PAGE_OPTIONS,
+    onChange: value => {
+      const allowedPositions = (0,_constants_options__WEBPACK_IMPORTED_MODULE_31__.getPositionOptions)(value).map(option => option.value);
+      const currentPlacement = resolvePlacement(selectedAd.options || {});
+      const currentValue = placementToSlotValue(currentPlacement);
+      const nextPosition = allowedPositions.includes(currentValue) ? currentValue : '';
+      applyPlacementSelection(nextPosition, {
+        show_page: value
+      });
+    }
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+    label: "\u5C55\u793A\u4F4D\u7F6E",
+    value: placementToSlotValue(resolvePlacement(selectedAd.options || {})),
+    options: positionOptions,
+    onChange: value => applyPlacementSelection(value)
+  })), selectedAd.options?.ad_type === 'targeted' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+    label: "\u5C55\u793A\u7C7B\u578B",
+    value: selectedAd.options?.target_type || '',
+    options: _constants_options__WEBPACK_IMPORTED_MODULE_31__.TARGET_TYPE_OPTIONS,
+    onChange: value => handleUpdateOptions({
+      target_type: value,
+      target_values: []
+    })
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.FormTokenField, {
+    label: "\u5C55\u793A\u9875\u9762",
+    value: selectedAd.options?.target_values || [],
+    onChange: value => handleUpdateOptions({
+      target_values: value
+    }),
+    suggestions: selectedAd.options?.target_suggestions || [],
+    help: selectedAd.options?.target_type ? '支持输入并搜索添加多个目标' : '请先选择展示类型',
+    disabled: !selectedAd.options?.target_type
+  })), renderNodePlacement())), effectiveEditorMode !== 'quick' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
+    className: "magick-ad-right-tabs",
+    tabs: [{
+      name: 'container',
+      title: '容器'
+    }, {
+      name: 'behavior',
+      title: '交互'
+    }, {
+      name: 'placement',
+      title: '投放'
+    }, {
+      name: 'frequency',
+      title: '频控与高级'
+    }],
+    initialTabName: placementTab,
+    onSelect: name => setPlacementTab(name),
+    key: placementTab
+  }, tab => {
+    const containerStyle = selectedAd.content?.container_style || {};
+    const behavior = selectedAd.content?.behavior || {};
+    const isInlineContainer = (selectedAd.options?.container_type || 'inline') === 'inline';
+    if (tab.name === 'frequency') {
+      return renderFrequencyAdvancedTab(behavior, {
+        showAdvanced: isExpertMode
+      });
+    }
+    if (tab.name === 'container') {
+      return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+        title: (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+          className: "magick-ad-panel-title"
+        }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", null, "\u5BB9\u5668\u5916\u89C2"), !isHeadPlacement && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Dropdown, {
+          className: "magick-ad-panel-note",
+          position: "bottom right",
+          renderToggle: ({
+            isOpen,
+            onToggle
+          }) => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+            className: "magick-ad-panel-note__trigger",
+            icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_9__["default"],
+            label: "\u8BF4\u660E",
+            variant: "tertiary",
+            size: "small",
+            "aria-expanded": isOpen,
+            onClick: event => {
+              event.stopPropagation();
+              onToggle();
+            }
+          }),
+          renderContent: ({
+            onClose
+          }) => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-panel-note__content"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", null, "\u5BB9\u5668\u5916\u89C2\u4EC5\u4F5C\u7528\u4E8E\u5305\u88F9\u5C42\uFF08div\uFF09\uFF0C\u4E0D\u4F1A\u5F71\u54CD\u56FE\u7247\u672C\u4F53\u3002 \u56FE\u7247\u5C3A\u5BF8\u3001\u5706\u89D2\u4E0E\u5916\u8FB9\u8DDD\u8BF7\u5728\u201C\u56FE\u7247\u914D\u7F6E\u201D\u91CC\u8C03\u6574\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+            variant: "secondary",
+            size: "small",
+            onClick: event => {
+              event.stopPropagation();
+              jumpToImageSettings();
+              onClose();
+            }
+          }, "\u53BB\u56FE\u7247\u914D\u7F6E"))
+        })),
+        initialOpen: true
+      }, isHeadPlacement && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+        status: "warning",
+        isDismissible: false
+      }, "Head \u4F4D\u7F6E\u4EC5\u5141\u8BB8\u8F93\u51FA <script>\u3001<style>\u3001<meta>\u3001 <link> \u7B49\u6807\u7B7E\uFF0C\u5DF2\u5F3A\u5236\u5207\u6362\u4E3A\u201C\u539F\u59CB\u8F93\u51FA\u201D\u6A21\u5F0F\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+        label: "\u5BB9\u5668\u6A21\u5F0F",
+        value: "raw",
+        options: [{
+          label: '原始输出',
+          value: 'raw'
+        }],
+        disabled: true
+      })), !isHeadPlacement && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
+        className: "magick-ad-sub-tabs",
+        tabs: [{
+          name: 'base',
+          title: '基础'
+        }, {
+          name: 'size',
+          title: '尺寸'
+        }, {
+          name: 'spacing',
+          title: '间距'
+        }, {
+          name: 'appearance',
+          title: '外观'
+        }, {
+          name: 'badge',
+          title: '角标'
+        }],
+        initialTabName: containerTab,
+        onSelect: name => setContainerTab(name)
+      }, subTab => {
+        if (subTab.name === 'base') {
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u5BB9\u5668\u7C7B\u578B",
+            value: selectedAd.options?.container_type || 'inline',
+            options: [{
+              label: '默认嵌入',
+              value: 'inline'
+            }, {
+              label: '弹窗',
+              value: 'popup'
+            }, {
+              label: '吸顶/吸底横栏',
+              value: 'banner'
+            }, {
+              label: '角落悬浮',
+              value: 'floating'
+            }, {
+              label: '全屏插屏',
+              value: 'interstitial'
+            }],
+            onChange: value => {
+              if (value !== 'inline') {
+                handleUpdateOptions({
+                  container_type: value,
+                  placement_hook: 'footer',
+                  placement_position: '',
+                  placement_paragraph: 0
+                });
+                return;
+              }
+              handleUpdateOptions({
+                container_type: value
+              });
+            },
+            help: "\u5BB9\u5668\u51B3\u5B9A\u5C55\u793A\u5F62\u6001\uFF0C\u6295\u653E\u4F4D\u7F6E\u4ECD\u7531\u201C\u6295\u653E\u201D\u9875\u7B7E\u63A7\u5236\u3002"
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u5BB9\u5668\u6A21\u5F0F",
+            value: containerStyle.mode || 'boxed',
+            options: [{
+              label: '包裹容器',
+              value: 'boxed'
+            }, {
+              label: '原始输出',
+              value: 'raw'
+            }],
+            onChange: value => handleUpdateContainerStyle({
+              mode: value
+            }),
+            disabled: !isExpertMode,
+            help: isExpertMode ? '' : '设计模式下仅允许包裹容器，切换到专家模式可修改。'
+          }), containerStyle.mode === 'raw' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+            status: "info",
+            isDismissible: false
+          }, "\u539F\u59CB\u6A21\u5F0F\u4E0D\u4F1A\u5E94\u7528\u5BB9\u5668\u6837\u5F0F\u3002"));
         }
-        updateEditorMode('expert');
-      },
-      disabled: !canUnfilteredHtml
-    }, "\u4E13\u5BB6\u6A21\u5F0F"))), editorModeRaw === 'expert' && !canUnfilteredHtml && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-      status: "warning",
+        if (containerStyle.mode === 'raw') {
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+            status: "info",
+            isDismissible: false
+          }, "\u5F53\u524D\u4E3A\u539F\u59CB\u8F93\u51FA\u6A21\u5F0F\uFF0C\u5C3A\u5BF8/\u5916\u89C2\u8BBE\u7F6E\u4E0D\u4F1A\u751F\u6548\u3002");
+        }
+        if (subTab.name === 'size') {
+          var _containerStyle$max_w;
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u6700\u5927\u5BBD\u5EA6",
+            min: containerStyle.max_width_unit === 'px' ? 320 : 50,
+            max: containerStyle.max_width_unit === 'px' ? 1200 : 100,
+            value: (_containerStyle$max_w = containerStyle.max_width) !== null && _containerStyle$max_w !== void 0 ? _containerStyle$max_w : 100,
+            onChange: value => handleUpdateContainerStyle({
+              max_width: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u5BBD\u5EA6\u5355\u4F4D",
+            value: containerStyle.max_width_unit || '%',
+            options: [{
+              label: '百分比 (%)',
+              value: '%'
+            }, {
+              label: '像素 (px)',
+              value: 'px'
+            }],
+            onChange: value => handleUpdateContainerStyle({
+              max_width_unit: value
+            })
+          }));
+        }
+        if (subTab.name === 'spacing') {
+          var _containerStyle$paddi, _containerStyle$paddi2, _containerStyle$paddi3, _containerStyle$paddi4;
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u4E0A\u5185\u8FB9\u8DDD",
+            min: 0,
+            max: 60,
+            value: (_containerStyle$paddi = containerStyle.padding_top) !== null && _containerStyle$paddi !== void 0 ? _containerStyle$paddi : 0,
+            onChange: value => handleUpdateContainerStyle({
+              padding_top: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u4E0B\u5185\u8FB9\u8DDD",
+            min: 0,
+            max: 60,
+            value: (_containerStyle$paddi2 = containerStyle.padding_bottom) !== null && _containerStyle$paddi2 !== void 0 ? _containerStyle$paddi2 : 0,
+            onChange: value => handleUpdateContainerStyle({
+              padding_bottom: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u5DE6\u5185\u8FB9\u8DDD",
+            min: 0,
+            max: 60,
+            value: (_containerStyle$paddi3 = containerStyle.padding_left) !== null && _containerStyle$paddi3 !== void 0 ? _containerStyle$paddi3 : 0,
+            onChange: value => handleUpdateContainerStyle({
+              padding_left: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u53F3\u5185\u8FB9\u8DDD",
+            min: 0,
+            max: 60,
+            value: (_containerStyle$paddi4 = containerStyle.padding_right) !== null && _containerStyle$paddi4 !== void 0 ? _containerStyle$paddi4 : 0,
+            onChange: value => handleUpdateContainerStyle({
+              padding_right: Number(value)
+            })
+          }));
+        }
+        if (subTab.name === 'appearance') {
+          var _containerStyle$radiu;
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u80CC\u666F\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
+            color: containerStyle.background || 'transparent',
+            onChangeComplete: value => handleUpdateContainerStyle({
+              background: formatColorValue(value)
+            }),
+            enableAlpha: true
+          })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+            label: "\u5706\u89D2",
+            min: 0,
+            max: 50,
+            value: (_containerStyle$radiu = containerStyle.radius) !== null && _containerStyle$radiu !== void 0 ? _containerStyle$radiu : 0,
+            onChange: value => handleUpdateContainerStyle({
+              radius: Number(value)
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+            label: "\u9634\u5F71",
+            value: containerStyle.shadow || 'none',
+            options: _constants_options__WEBPACK_IMPORTED_MODULE_31__.SHADOW_OPTIONS,
+            onChange: value => handleUpdateContainerStyle({
+              shadow: value
+            })
+          }));
+        }
+        if (subTab.name === 'badge') {
+          return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+            label: "\u663E\u793A\u89D2\u6807",
+            checked: Boolean(containerStyle.badge_enabled),
+            onChange: value => handleUpdateContainerStyle({
+              badge_enabled: value
+            })
+          }), containerStyle.badge_enabled && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u89D2\u6807\u7C7B\u578B"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ButtonGroup, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+            variant: "secondary",
+            isPressed: (containerStyle.badge_type || 'text') === 'text',
+            onClick: () => handleUpdateContainerStyle({
+              badge_type: 'text'
+            })
+          }, "\u6587\u672C"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
+            variant: "secondary",
+            isPressed: containerStyle.badge_type === 'image',
+            onClick: () => handleUpdateContainerStyle({
+              badge_type: 'image'
+            })
+          }, "\u56FE\u7247"))), (containerStyle.badge_type || 'text') === 'text' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
+            label: "\u89D2\u6807\u6587\u672C",
+            value: containerStyle.badge_text || '广告',
+            onChange: value => handleUpdateContainerStyle({
+              badge_text: value
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u89D2\u6807\u989C\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
+            color: containerStyle.badge_color || '#1d2327',
+            onChangeComplete: value => handleUpdateContainerStyle({
+              badge_color: formatColorValue(value)
+            })
+          }))) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+            className: "magick-ad-field"
+          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__label"
+          }, "\u89D2\u6807\u56FE\u7247"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
+            value: containerStyle.badge_image || {},
+            onChange: value => handleUpdateContainerStyle({
+              badge_image: value,
+              badge_type: 'image'
+            })
+          }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+            className: "magick-ad-field__help"
+          }, "\u63A8\u8350\u5C3A\u5BF8\uFF1A56\xD728 \u6216 64\xD732\uFF082x\uFF09\uFF1B \u683C\u5F0F\uFF1APNG/SVG\uFF08\u900F\u660E\u80CC\u666F\uFF09\uFF0C\u5EFA\u8BAE \u2264 100KB\u3002"))));
+        }
+        return null;
+      }))));
+    }
+    if (tab.name === 'behavior') {
+      var _behavior$delay;
+      return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+        title: "\u4EA4\u4E92\u884C\u4E3A",
+        initialOpen: true
+      }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
+        label: "\u8FDB\u573A\u52A8\u753B",
+        value: behavior.animation || 'none',
+        options: _constants_options__WEBPACK_IMPORTED_MODULE_31__.ANIMATION_OPTIONS,
+        onChange: value => handleUpdateBehavior({
+          animation: value
+        })
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+        label: "\u663E\u793A\u5173\u95ED\u6309\u94AE",
+        checked: Boolean(behavior.close_button),
+        onChange: value => handleUpdateBehavior({
+          close_button: value
+        }),
+        help: "\u9ED8\u8BA4\u5173\u95ED\u3002\u5F00\u542F\u540E\u5728\u5E7F\u544A\u53F3\u4E0A\u89D2\u663E\u793A\u5173\u95ED\u6309\u94AE\u3002"
+      }), isExpertMode && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+        label: "ESC \u5173\u95ED",
+        checked: behavior.close_on_esc !== false,
+        onChange: value => handleUpdateBehavior({
+          close_on_esc: value
+        }),
+        help: "\u9ED8\u8BA4\u5F00\u542F\u3002\u5F39\u7A97/\u6A2A\u680F\u53EF\u7528\uFF0C\u6309 ESC \u5173\u95ED\u3002"
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+        label: "\u70B9\u51FB\u906E\u7F69\u5173\u95ED",
+        checked: behavior.close_on_overlay !== false,
+        onChange: value => handleUpdateBehavior({
+          close_on_overlay: value
+        }),
+        help: "\u9ED8\u8BA4\u5F00\u542F\u3002\u4EC5\u5F39\u7A97/\u63D2\u5C4F\u6709\u6548\uFF0C\u70B9\u51FB\u906E\u7F69\u5173\u95ED\u3002"
+      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
+        label: "\u6253\u5F00\u65F6\u9501\u5B9A\u6EDA\u52A8",
+        checked: Boolean(behavior.lock_scroll),
+        onChange: value => handleUpdateBehavior({
+          lock_scroll: value
+        }),
+        help: "\u9ED8\u8BA4\u5173\u95ED\u3002\u4EC5\u5F39\u7A97/\u63D2\u5C4F\u53EF\u7528\uFF0C\u6253\u5F00\u65F6\u9501\u5B9A\u9875\u9762\u6EDA\u52A8\u3002"
+      })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
+        label: "\u5EF6\u8FDF\u663E\u793A\uFF08\u79D2\uFF09",
+        min: 0,
+        max: 30,
+        value: (_behavior$delay = behavior.delay) !== null && _behavior$delay !== void 0 ? _behavior$delay : 0,
+        onChange: value => handleUpdateBehavior({
+          delay: Number(value)
+        }),
+        help: "\u9ED8\u8BA4 0 \u79D2\u3002\u4EC5\u5BF9\u5F39\u7A97/\u6A2A\u680F/\u63D2\u5C4F\u751F\u6548\u3002"
+      })));
+    }
+    return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, !isInlineContainer && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
+      status: "info",
       isDismissible: false
-    }, "\u4E13\u5BB6\u6A21\u5F0F\u9700\u8981 unfiltered_html \u6743\u9650\uFF0C\u5DF2\u56DE\u9000\u4E3A\u8BBE\u8BA1\u6A21\u5F0F\u3002"), effectiveEditorMode === 'quick' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-      title: "\u5FEB\u901F\u8BBE\u7F6E",
-      opened: quickPanelOpen === 'quick',
-      onToggle: () => setQuickPanelOpen(prev => prev === 'quick' ? null : 'quick')
-    }, isHeadPlacement && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-      status: "warning",
-      isDismissible: false
-    }, "Head \u4F4D\u7F6E\u4EC5\u5141\u8BB8\u539F\u59CB\u8F93\u51FA\uFF0C\u5BB9\u5668\u6837\u5F0F\u5C06\u88AB\u5FFD\u7565\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-field"
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-      className: "magick-ad-field__label"
-    }, "\u4E3B\u8272"), !isHeadPlacement && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
-      color: selectedAd.content?.container_style?.background || 'transparent',
-      onChangeComplete: value => handleUpdateContainerStyle({
-        background: formatColorValue(value)
-      }),
-      enableAlpha: true
-    })), !isHeadPlacement && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-      label: "\u5706\u89D2",
-      min: 0,
-      max: 50,
-      value: (_selectedAd$content$c = selectedAd.content?.container_style?.radius) !== null && _selectedAd$content$c !== void 0 ? _selectedAd$content$c : 0,
-      onChange: value => handleUpdateContainerStyle({
-        radius: Number(value)
-      })
-    }), selectedAd.options?.creative_type === 'image' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-      label: "\u6309\u94AE\u6587\u6848",
-      value: selectedAd.content?.cta_text || '',
-      onChange: value => handleUpdateContent({
-        cta_text: value
-      }),
-      help: "\u56FE\u7247\u5E7F\u544A\u5C06\u5C55\u793A\u4E00\u4E2A\u6309\u94AE\uFF08\u9700\u8BBE\u7F6E\u8DF3\u8F6C\u94FE\u63A5\uFF09\u3002"
-    })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
+    }, "\u5F53\u524D\u5BB9\u5668\u4E3A\u201C\u975E\u5D4C\u5165\u201D\u6A21\u5F0F\uFF0C\u5C55\u793A\u4F4D\u7F6E\u5C06\u56FA\u5B9A\u5728\u9875\u811A\u8F93\u51FA\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
       title: "\u5C55\u793A\u4F4D\u7F6E",
-      opened: quickPanelOpen === 'placement',
-      onToggle: () => setQuickPanelOpen(prev => prev === 'placement' ? null : 'placement')
+      initialOpen: true
     }, showValidation && !resolvePlacement(selectedAd.options || {}).hook && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
       status: "error",
       isDismissible: false
@@ -7106,432 +7473,8 @@ const AdsConfig = () => {
       suggestions: selectedAd.options?.target_suggestions || [],
       help: selectedAd.options?.target_type ? '支持输入并搜索添加多个目标' : '请先选择展示类型',
       disabled: !selectedAd.options?.target_type
-    })), renderDeviceLoginControls(), isExpertMode && renderNodePlacement(), renderFrequencySummary(selectedAd.content?.behavior || {}, {
-      showLink: false
-    }))), effectiveEditorMode !== 'quick' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
-      className: "magick-ad-right-tabs",
-      tabs: [{
-        name: 'container',
-        title: '容器'
-      }, {
-        name: 'behavior',
-        title: '交互'
-      }, {
-        name: 'placement',
-        title: '投放'
-      }, {
-        name: 'frequency',
-        title: '频控与高级'
-      }],
-      initialTabName: placementTab,
-      onSelect: name => setPlacementTab(name),
-      key: placementTab
-    }, tab => {
-      const containerStyle = selectedAd.content?.container_style || {};
-      const behavior = selectedAd.content?.behavior || {};
-      const isInlineContainer = (selectedAd.options?.container_type || 'inline') === 'inline';
-      if (tab.name === 'frequency') {
-        return renderFrequencyAdvancedTab(behavior, {
-          showAdvanced: isExpertMode
-        });
-      }
-      if (tab.name === 'container') {
-        return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-          title: (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-            className: "magick-ad-panel-title"
-          }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", null, "\u5BB9\u5668\u5916\u89C2"), !isHeadPlacement && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Dropdown, {
-            className: "magick-ad-panel-note",
-            position: "bottom right",
-            renderToggle: ({
-              isOpen,
-              onToggle
-            }) => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-              className: "magick-ad-panel-note__trigger",
-              icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_9__["default"],
-              label: "\u8BF4\u660E",
-              variant: "tertiary",
-              size: "small",
-              "aria-expanded": isOpen,
-              onClick: event => {
-                event.stopPropagation();
-                onToggle();
-              }
-            }),
-            renderContent: ({
-              onClose
-            }) => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-              className: "magick-ad-panel-note__content"
-            }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", null, "\u5BB9\u5668\u5916\u89C2\u4EC5\u4F5C\u7528\u4E8E\u5305\u88F9\u5C42\uFF08div\uFF09\uFF0C\u4E0D\u4F1A\u5F71\u54CD\u56FE\u7247\u672C\u4F53\u3002 \u56FE\u7247\u5C3A\u5BF8\u3001\u5706\u89D2\u4E0E\u5916\u8FB9\u8DDD\u8BF7\u5728\u201C\u56FE\u7247\u914D\u7F6E\u201D\u91CC\u8C03\u6574\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-              variant: "secondary",
-              size: "small",
-              onClick: event => {
-                event.stopPropagation();
-                jumpToImageSettings();
-                onClose();
-              }
-            }, "\u53BB\u56FE\u7247\u914D\u7F6E"))
-          })),
-          initialOpen: true
-        }, isHeadPlacement && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-          status: "warning",
-          isDismissible: false
-        }, "Head \u4F4D\u7F6E\u4EC5\u5141\u8BB8\u8F93\u51FA <script>\u3001<style>\u3001<meta>\u3001 <link> \u7B49\u6807\u7B7E\uFF0C\u5DF2\u5F3A\u5236\u5207\u6362\u4E3A\u201C\u539F\u59CB\u8F93\u51FA\u201D\u6A21\u5F0F\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-          label: "\u5BB9\u5668\u6A21\u5F0F",
-          value: "raw",
-          options: [{
-            label: '原始输出',
-            value: 'raw'
-          }],
-          disabled: true
-        })), !isHeadPlacement && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TabPanel, {
-          className: "magick-ad-sub-tabs",
-          tabs: [{
-            name: 'base',
-            title: '基础'
-          }, {
-            name: 'size',
-            title: '尺寸'
-          }, {
-            name: 'spacing',
-            title: '间距'
-          }, {
-            name: 'appearance',
-            title: '外观'
-          }, {
-            name: 'badge',
-            title: '角标'
-          }],
-          initialTabName: containerTab,
-          onSelect: name => setContainerTab(name)
-        }, subTab => {
-          if (subTab.name === 'base') {
-            return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-              label: "\u5BB9\u5668\u7C7B\u578B",
-              value: selectedAd.options?.container_type || 'inline',
-              options: [{
-                label: '默认嵌入',
-                value: 'inline'
-              }, {
-                label: '弹窗',
-                value: 'popup'
-              }, {
-                label: '吸顶/吸底横栏',
-                value: 'banner'
-              }, {
-                label: '角落悬浮',
-                value: 'floating'
-              }, {
-                label: '全屏插屏',
-                value: 'interstitial'
-              }],
-              onChange: value => {
-                if (value !== 'inline') {
-                  handleUpdateOptions({
-                    container_type: value,
-                    placement_hook: 'footer',
-                    placement_position: '',
-                    placement_paragraph: 0
-                  });
-                  return;
-                }
-                handleUpdateOptions({
-                  container_type: value
-                });
-              },
-              help: "\u5BB9\u5668\u51B3\u5B9A\u5C55\u793A\u5F62\u6001\uFF0C\u6295\u653E\u4F4D\u7F6E\u4ECD\u7531\u201C\u6295\u653E\u201D\u9875\u7B7E\u63A7\u5236\u3002"
-            }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-              label: "\u5BB9\u5668\u6A21\u5F0F",
-              value: containerStyle.mode || 'boxed',
-              options: [{
-                label: '包裹容器',
-                value: 'boxed'
-              }, {
-                label: '原始输出',
-                value: 'raw'
-              }],
-              onChange: value => handleUpdateContainerStyle({
-                mode: value
-              }),
-              disabled: !isExpertMode,
-              help: isExpertMode ? '' : '设计模式下仅允许包裹容器，切换到专家模式可修改。'
-            }), containerStyle.mode === 'raw' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-              status: "info",
-              isDismissible: false
-            }, "\u539F\u59CB\u6A21\u5F0F\u4E0D\u4F1A\u5E94\u7528\u5BB9\u5668\u6837\u5F0F\u3002"));
-          }
-          if (containerStyle.mode === 'raw') {
-            return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-              status: "info",
-              isDismissible: false
-            }, "\u5F53\u524D\u4E3A\u539F\u59CB\u8F93\u51FA\u6A21\u5F0F\uFF0C\u5C3A\u5BF8/\u5916\u89C2\u8BBE\u7F6E\u4E0D\u4F1A\u751F\u6548\u3002");
-          }
-          if (subTab.name === 'size') {
-            var _containerStyle$max_w;
-            return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-              className: "magick-ad-field"
-            }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-              label: "\u6700\u5927\u5BBD\u5EA6",
-              min: containerStyle.max_width_unit === 'px' ? 320 : 50,
-              max: containerStyle.max_width_unit === 'px' ? 1200 : 100,
-              value: (_containerStyle$max_w = containerStyle.max_width) !== null && _containerStyle$max_w !== void 0 ? _containerStyle$max_w : 100,
-              onChange: value => handleUpdateContainerStyle({
-                max_width: Number(value)
-              })
-            }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-              label: "\u5BBD\u5EA6\u5355\u4F4D",
-              value: containerStyle.max_width_unit || '%',
-              options: [{
-                label: '百分比 (%)',
-                value: '%'
-              }, {
-                label: '像素 (px)',
-                value: 'px'
-              }],
-              onChange: value => handleUpdateContainerStyle({
-                max_width_unit: value
-              })
-            }));
-          }
-          if (subTab.name === 'spacing') {
-            var _containerStyle$paddi, _containerStyle$paddi2, _containerStyle$paddi3, _containerStyle$paddi4;
-            return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-              label: "\u4E0A\u5185\u8FB9\u8DDD",
-              min: 0,
-              max: 60,
-              value: (_containerStyle$paddi = containerStyle.padding_top) !== null && _containerStyle$paddi !== void 0 ? _containerStyle$paddi : 0,
-              onChange: value => handleUpdateContainerStyle({
-                padding_top: Number(value)
-              })
-            }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-              label: "\u4E0B\u5185\u8FB9\u8DDD",
-              min: 0,
-              max: 60,
-              value: (_containerStyle$paddi2 = containerStyle.padding_bottom) !== null && _containerStyle$paddi2 !== void 0 ? _containerStyle$paddi2 : 0,
-              onChange: value => handleUpdateContainerStyle({
-                padding_bottom: Number(value)
-              })
-            }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-              label: "\u5DE6\u5185\u8FB9\u8DDD",
-              min: 0,
-              max: 60,
-              value: (_containerStyle$paddi3 = containerStyle.padding_left) !== null && _containerStyle$paddi3 !== void 0 ? _containerStyle$paddi3 : 0,
-              onChange: value => handleUpdateContainerStyle({
-                padding_left: Number(value)
-              })
-            }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-              label: "\u53F3\u5185\u8FB9\u8DDD",
-              min: 0,
-              max: 60,
-              value: (_containerStyle$paddi4 = containerStyle.padding_right) !== null && _containerStyle$paddi4 !== void 0 ? _containerStyle$paddi4 : 0,
-              onChange: value => handleUpdateContainerStyle({
-                padding_right: Number(value)
-              })
-            }));
-          }
-          if (subTab.name === 'appearance') {
-            var _containerStyle$radiu;
-            return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-              className: "magick-ad-field"
-            }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-              className: "magick-ad-field__label"
-            }, "\u80CC\u666F\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
-              color: containerStyle.background || 'transparent',
-              onChangeComplete: value => handleUpdateContainerStyle({
-                background: formatColorValue(value)
-              }),
-              enableAlpha: true
-            })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-              label: "\u5706\u89D2",
-              min: 0,
-              max: 50,
-              value: (_containerStyle$radiu = containerStyle.radius) !== null && _containerStyle$radiu !== void 0 ? _containerStyle$radiu : 0,
-              onChange: value => handleUpdateContainerStyle({
-                radius: Number(value)
-              })
-            }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-              label: "\u9634\u5F71",
-              value: containerStyle.shadow || 'none',
-              options: _constants_options__WEBPACK_IMPORTED_MODULE_31__.SHADOW_OPTIONS,
-              onChange: value => handleUpdateContainerStyle({
-                shadow: value
-              })
-            }));
-          }
-          if (subTab.name === 'badge') {
-            return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-              label: "\u663E\u793A\u89D2\u6807",
-              checked: Boolean(containerStyle.badge_enabled),
-              onChange: value => handleUpdateContainerStyle({
-                badge_enabled: value
-              })
-            }), containerStyle.badge_enabled && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-              className: "magick-ad-field"
-            }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-              className: "magick-ad-field__label"
-            }, "\u89D2\u6807\u7C7B\u578B"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ButtonGroup, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-              variant: "secondary",
-              isPressed: (containerStyle.badge_type || 'text') === 'text',
-              onClick: () => handleUpdateContainerStyle({
-                badge_type: 'text'
-              })
-            }, "\u6587\u672C"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-              variant: "secondary",
-              isPressed: containerStyle.badge_type === 'image',
-              onClick: () => handleUpdateContainerStyle({
-                badge_type: 'image'
-              })
-            }, "\u56FE\u7247"))), (containerStyle.badge_type || 'text') === 'text' ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-              label: "\u89D2\u6807\u6587\u672C",
-              value: containerStyle.badge_text || '广告',
-              onChange: value => handleUpdateContainerStyle({
-                badge_text: value
-              })
-            }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-              className: "magick-ad-field"
-            }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-              className: "magick-ad-field__label"
-            }, "\u89D2\u6807\u989C\u8272"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ColorPicker, {
-              color: containerStyle.badge_color || '#1d2327',
-              onChangeComplete: value => handleUpdateContainerStyle({
-                badge_color: formatColorValue(value)
-              })
-            }))) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-              className: "magick-ad-field"
-            }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-              className: "magick-ad-field__label"
-            }, "\u89D2\u6807\u56FE\u7247"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_components_ImagePicker__WEBPACK_IMPORTED_MODULE_14__["default"], {
-              value: containerStyle.badge_image || {},
-              onChange: value => handleUpdateContainerStyle({
-                badge_image: value,
-                badge_type: 'image'
-              })
-            }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
-              className: "magick-ad-field__help"
-            }, "\u63A8\u8350\u5C3A\u5BF8\uFF1A56\xD728 \u6216 64\xD732\uFF082x\uFF09\uFF1B \u683C\u5F0F\uFF1APNG/SVG\uFF08\u900F\u660E\u80CC\u666F\uFF09\uFF0C\u5EFA\u8BAE \u2264 100KB\u3002"))));
-          }
-          return null;
-        }))));
-      }
-      if (tab.name === 'behavior') {
-        var _behavior$delay;
-        return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-          title: "\u4EA4\u4E92\u884C\u4E3A",
-          initialOpen: true
-        }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-          label: "\u8FDB\u573A\u52A8\u753B",
-          value: behavior.animation || 'none',
-          options: _constants_options__WEBPACK_IMPORTED_MODULE_31__.ANIMATION_OPTIONS,
-          onChange: value => handleUpdateBehavior({
-            animation: value
-          })
-        }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-          label: "\u663E\u793A\u5173\u95ED\u6309\u94AE",
-          checked: Boolean(behavior.close_button),
-          onChange: value => handleUpdateBehavior({
-            close_button: value
-          }),
-          help: "\u9ED8\u8BA4\u5173\u95ED\u3002\u5F00\u542F\u540E\u5728\u5E7F\u544A\u53F3\u4E0A\u89D2\u663E\u793A\u5173\u95ED\u6309\u94AE\u3002"
-        }), isExpertMode && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-          label: "ESC \u5173\u95ED",
-          checked: behavior.close_on_esc !== false,
-          onChange: value => handleUpdateBehavior({
-            close_on_esc: value
-          }),
-          help: "\u9ED8\u8BA4\u5F00\u542F\u3002\u5F39\u7A97/\u6A2A\u680F\u53EF\u7528\uFF0C\u6309 ESC \u5173\u95ED\u3002"
-        }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-          label: "\u70B9\u51FB\u906E\u7F69\u5173\u95ED",
-          checked: behavior.close_on_overlay !== false,
-          onChange: value => handleUpdateBehavior({
-            close_on_overlay: value
-          }),
-          help: "\u9ED8\u8BA4\u5F00\u542F\u3002\u4EC5\u5F39\u7A97/\u63D2\u5C4F\u6709\u6548\uFF0C\u70B9\u51FB\u906E\u7F69\u5173\u95ED\u3002"
-        }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-          label: "\u6253\u5F00\u65F6\u9501\u5B9A\u6EDA\u52A8",
-          checked: Boolean(behavior.lock_scroll),
-          onChange: value => handleUpdateBehavior({
-            lock_scroll: value
-          }),
-          help: "\u9ED8\u8BA4\u5173\u95ED\u3002\u4EC5\u5F39\u7A97/\u63D2\u5C4F\u53EF\u7528\uFF0C\u6253\u5F00\u65F6\u9501\u5B9A\u9875\u9762\u6EDA\u52A8\u3002"
-        })), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.RangeControl, {
-          label: "\u5EF6\u8FDF\u663E\u793A\uFF08\u79D2\uFF09",
-          min: 0,
-          max: 30,
-          value: (_behavior$delay = behavior.delay) !== null && _behavior$delay !== void 0 ? _behavior$delay : 0,
-          onChange: value => handleUpdateBehavior({
-            delay: Number(value)
-          }),
-          help: "\u9ED8\u8BA4 0 \u79D2\u3002\u4EC5\u5BF9\u5F39\u7A97/\u6A2A\u680F/\u63D2\u5C4F\u751F\u6548\u3002"
-        })));
-      }
-      return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Panel, null, !isInlineContainer && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-        status: "info",
-        isDismissible: false
-      }, "\u5F53\u524D\u5BB9\u5668\u4E3A\u201C\u975E\u5D4C\u5165\u201D\u6A21\u5F0F\uFF0C\u5C55\u793A\u4F4D\u7F6E\u5C06\u56FA\u5B9A\u5728\u9875\u811A\u8F93\u51FA\u3002"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-        title: "\u5C55\u793A\u4F4D\u7F6E",
-        initialOpen: true
-      }, showValidation && !resolvePlacement(selectedAd.options || {}).hook && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Notice, {
-        status: "error",
-        isDismissible: false
-      }, "\u8BF7\u5148\u9009\u62E9\u5C55\u793A\u4F4D\u7F6E"), selectedAd.options?.ad_type === 'global' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u5C55\u793A\u9875\u9762",
-        value: selectedAd.options?.show_page || 'all',
-        options: _constants_options__WEBPACK_IMPORTED_MODULE_31__.DISPLAY_PAGE_OPTIONS,
-        onChange: value => {
-          const allowedPositions = (0,_constants_options__WEBPACK_IMPORTED_MODULE_31__.getPositionOptions)(value).map(option => option.value);
-          const currentPlacement = resolvePlacement(selectedAd.options || {});
-          const currentValue = placementToSlotValue(currentPlacement);
-          const nextPosition = allowedPositions.includes(currentValue) ? currentValue : '';
-          applyPlacementSelection(nextPosition, {
-            show_page: value
-          });
-        }
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u5C55\u793A\u4F4D\u7F6E",
-        value: placementToSlotValue(resolvePlacement(selectedAd.options || {})),
-        options: positionOptions,
-        onChange: value => applyPlacementSelection(value)
-      })), selectedAd.options?.ad_type === 'targeted' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-        label: "\u5C55\u793A\u7C7B\u578B",
-        value: selectedAd.options?.target_type || '',
-        options: _constants_options__WEBPACK_IMPORTED_MODULE_31__.TARGET_TYPE_OPTIONS,
-        onChange: value => handleUpdateOptions({
-          target_type: value,
-          target_values: []
-        })
-      }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.FormTokenField, {
-        label: "\u5C55\u793A\u9875\u9762",
-        value: selectedAd.options?.target_values || [],
-        onChange: value => handleUpdateOptions({
-          target_values: value
-        }),
-        suggestions: selectedAd.options?.target_suggestions || [],
-        help: selectedAd.options?.target_type ? '支持输入并搜索添加多个目标' : '请先选择展示类型',
-        disabled: !selectedAd.options?.target_type
-      })), renderDeviceLoginControls(), isExpertMode && renderNodePlacement(), renderFrequencySummary(behavior)));
-    }))), effectiveEditorMode === 'quick' && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-right-section"
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-right-section__header"
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-right-section__title"
-    }, "\u9891\u63A7")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-right-section__body"
-    }, renderFrequencyControls(selectedAd.content?.behavior || {}))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-right-section"
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-right-section__header"
-    }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-right-section__title"
-    }, "\u9AD8\u7EA7\u8BBE\u7F6E"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-      className: "magick-ad-collapse-toggle",
-      icon: advancedOpen ? _wordpress_icons__WEBPACK_IMPORTED_MODULE_5__["default"] : _wordpress_icons__WEBPACK_IMPORTED_MODULE_4__["default"],
-      label: advancedOpen ? '折叠' : '展开',
-      variant: "tertiary",
-      onClick: () => setAdvancedOpen(prev => !prev)
-    })), advancedOpen && (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-      className: "magick-ad-right-section__body"
-    }, renderAdvancedControls()))));
-  };
+    })), renderDeviceLoginControls(), isExpertMode && renderNodePlacement(), renderFrequencySummary(behavior)));
+  }))));
   const toolbarActions = selectedAd ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(react__WEBPACK_IMPORTED_MODULE_0__.Fragment, null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
     className: "magick-ad-toolbar-toggle",
     icon: _wordpress_icons__WEBPACK_IMPORTED_MODULE_10__["default"],

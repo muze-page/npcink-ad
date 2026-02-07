@@ -147,7 +147,6 @@ const AdsConfig = () => {
     const [placementModalOpen, setPlacementModalOpen] = useState(false);
     const [previewModalOpen, setPreviewModalOpen] = useState(false);
     const [placementTab, setPlacementTab] = useState('placement');
-    const [advancedOpen, setAdvancedOpen] = useState(false);
     const readPanelState = (key, fallback) => {
         if (typeof window === 'undefined') {
             return fallback;
@@ -164,7 +163,7 @@ const AdsConfig = () => {
     };
 
     const [quickPanelOpen, setQuickPanelOpen] = useState(() =>
-        readPanelState(quickPanelStorageKey, 'quick')
+        readPanelState(quickPanelStorageKey, 'placement')
     );
     const [containerTab, setContainerTab] = useState(() => {
         const allowed = new Set([
@@ -4620,85 +4619,7 @@ const AdsConfig = () => {
                 {effectiveEditorMode === 'quick' && (
                     <Panel>
                         <PanelBody
-                            title="快速设置"
-                            opened={quickPanelOpen === 'quick'}
-                            onToggle={() =>
-                                setQuickPanelOpen((prev) =>
-                                    prev === 'quick' ? null : 'quick'
-                                )
-                            }
-                        >
-                            {isHeadPlacement && (
-                                <Notice
-                                    status="warning"
-                                    isDismissible={false}
-                                >
-                                    Head
-                                    位置仅允许原始输出，容器样式将被忽略。
-                                </Notice>
-                            )}
-                            <div className="magick-ad-field">
-                                <p className="magick-ad-field__label">
-                                    主色
-                                </p>
-                                {!isHeadPlacement && (
-                                    <ColorPicker
-                                        color={
-                                            selectedAd.content
-                                                ?.container_style
-                                                ?.background ||
-                                            'transparent'
-                                        }
-                                        onChangeComplete={(value) =>
-                                            handleUpdateContainerStyle(
-                                                {
-                                                    background:
-                                                        formatColorValue(
-                                                            value
-                                                        ),
-                                                }
-                                            )
-                                        }
-                                        enableAlpha
-                                    />
-                                )}
-                            </div>
-                            {!isHeadPlacement && (
-                                <RangeControl
-                                    label="圆角"
-                                    min={0}
-                                    max={50}
-                                    value={
-                                        selectedAd.content
-                                            ?.container_style
-                                            ?.radius ?? 0
-                                    }
-                                    onChange={(value) =>
-                                        handleUpdateContainerStyle({
-                                            radius: Number(value),
-                                        })
-                                    }
-                                />
-                            )}
-                            {selectedAd.options?.creative_type ===
-                                'image' && (
-                                <TextControl
-                                    label="按钮文案"
-                                    value={
-                                        selectedAd.content
-                                            ?.cta_text || ''
-                                    }
-                                    onChange={(value) =>
-                                        handleUpdateContent({
-                                            cta_text: value,
-                                        })
-                                    }
-                                    help="图片广告将展示一个按钮（需设置跳转链接）。"
-                                />
-                            )}
-                        </PanelBody>
-                        <PanelBody
-                            title="展示位置"
+                            title="页面插入"
                             opened={quickPanelOpen === 'placement'}
                             onToggle={() =>
                                 setQuickPanelOpen((prev) =>
@@ -4708,6 +4629,9 @@ const AdsConfig = () => {
                                 )
                             }
                         >
+                            <Notice status="info" isDismissible={false}>
+                                快速模式仅保留页面插入能力；样式、频控与高级能力请切换到设计模式/专家模式。
+                            </Notice>
                             {showValidation &&
                                 !resolvePlacement(
                                     selectedAd.options || {}
@@ -4828,12 +4752,7 @@ const AdsConfig = () => {
                                     />
                                 </>
                             )}
-                            {renderDeviceLoginControls()}
-                            {isExpertMode && renderNodePlacement()}
-                            {renderFrequencySummary(
-                                selectedAd.content?.behavior || {},
-                                { showLink: false }
-                            )}
+                            {renderNodePlacement()}
                         </PanelBody>
                     </Panel>
                 )}
@@ -5798,45 +5717,6 @@ const AdsConfig = () => {
                 )}
             </div>
         </div>
-
-        {effectiveEditorMode === 'quick' && (
-            <>
-                <div className="magick-ad-right-section">
-                    <div className="magick-ad-right-section__header">
-                        <div className="magick-ad-right-section__title">
-                            频控
-                        </div>
-                    </div>
-                    <div className="magick-ad-right-section__body">
-                        {renderFrequencyControls(
-                            selectedAd.content?.behavior || {}
-                        )}
-                    </div>
-                </div>
-
-                <div className="magick-ad-right-section">
-                    <div className="magick-ad-right-section__header">
-                        <div className="magick-ad-right-section__title">
-                            高级设置
-                        </div>
-                        <Button
-                            className="magick-ad-collapse-toggle"
-                            icon={advancedOpen ? chevronUp : chevronDown}
-                            label={advancedOpen ? '折叠' : '展开'}
-                            variant="tertiary"
-                            onClick={() =>
-                                setAdvancedOpen((prev) => !prev)
-                            }
-                        />
-                    </div>
-                    {advancedOpen && (
-                        <div className="magick-ad-right-section__body">
-                            {renderAdvancedControls()}
-                        </div>
-                    )}
-                </div>
-            </>
-        )}
         </>
     );
 
