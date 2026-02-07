@@ -16,6 +16,41 @@
     padding: 0;
 }
 
+.magick-ad-profile--inherit .magick-ad-html-container,
+.magick-ad-profile--inherit .magick-ad-html-content,
+.magick-ad-profile--inherit .magick-ad-block {
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+}
+
+.magick-ad-profile--inherit .magick-ad-cta,
+.magick-ad-profile--inherit .magick-ad-block__cta {
+    margin-top: 0.5em;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    text-decoration: underline;
+}
+
+.magick-ad-profile--isolated .magick-ad-unit__inner,
+.magick-ad-profile--isolated .magick-ad-html-container,
+.magick-ad-profile--isolated .magick-ad-html-content {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #111827;
+    line-height: 1.5;
+}
+
+.magick-ad-profile--isolated .magick-ad-html-content,
+.magick-ad-profile--isolated .magick-ad-html-content * {
+    box-sizing: border-box;
+}
+
+.magick-ad-profile--isolated .magick-ad-html-content :where(h1, h2, h3, h4, h5, h6, p, ul, ol) {
+    margin: 0 0 0.75em;
+}
+
 .magick-ad-placement--node-compact {
     margin: 0 !important;
 }

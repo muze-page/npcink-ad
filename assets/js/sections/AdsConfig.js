@@ -228,6 +228,7 @@ const AdsConfig = () => {
     const [debugEnabled, setDebugEnabled] = useState(false);
     const [displayLevel, setDisplayLevel] = useState(() => readDisplayLevel());
     const [displayLevelSaving, setDisplayLevelSaving] = useState(false);
+    const isSimpleLevel = displayLevel === 'simple';
     const branding =
         (typeof window !== 'undefined' && window.MagickAD?.branding) || {
             name: 'Magick AD',
@@ -482,12 +483,13 @@ const AdsConfig = () => {
 
     const editorModeRaw =
         selectedAd?.options?.editor_mode || storedEditorMode || 'design';
-    const effectiveEditorMode =
-        editorModeRaw === 'expert' && !canUnfilteredHtml
-            ? 'design'
-            : editorModeRaw;
+    const effectiveEditorMode = isSimpleLevel
+        ? 'quick'
+        : editorModeRaw === 'expert' && !canUnfilteredHtml
+          ? 'design'
+          : editorModeRaw;
     const isQuickMode = effectiveEditorMode === 'quick';
-    const isExpertMode = effectiveEditorMode === 'expert';
+    const isExpertMode = !isSimpleLevel && effectiveEditorMode === 'expert';
 
     useEffect(() => {
         setPlacementTab('placement');
@@ -813,15 +815,107 @@ const AdsConfig = () => {
         );
     }, [ads]);
 
+    const buildSimpleLevelPatch = (ad) => {
+        if (!ad) {
+            return null;
+        }
+        const options = ad.options || {};
+        const content = ad.content || {};
+        const optionPatch = {};
+        const contentPatch = {};
+
+        if (options.editor_mode !== 'quick') {
+            optionPatch.editor_mode = 'quick';
+        }
+        if (options.creative_type === 'block') {
+            optionPatch.creative_type = 'html';
+            if (
+                (!content.html || !String(content.html).trim()) &&
+                typeof content.blocks === 'string' &&
+                content.blocks.trim()
+            ) {
+                contentPatch.html = content.blocks;
+            }
+        }
+        if (options.placement_hook === 'node') {
+            optionPatch.placement_hook = 'footer';
+            optionPatch.placement_position = '';
+            optionPatch.placement_paragraph = 0;
+        }
+        if (options.html_mode === 'full') {
+            optionPatch.html_mode = 'safe';
+        }
+        if (options.html_sandbox === 'disable') {
+            optionPatch.html_sandbox = 'inherit';
+        }
+
+        if (content.variants_enabled) {
+            contentPatch.variants_enabled = false;
+        }
+        if (content.variants_strategy === 'session') {
+            contentPatch.variants_strategy = 'request';
+        }
+        if (Array.isArray(content.variants) && content.variants.length > 0) {
+            contentPatch.variants = [];
+        }
+        if (
+            typeof content.custom_js === 'string' &&
+            content.custom_js.trim() !== ''
+        ) {
+            contentPatch.custom_js = '';
+        }
+
+        const hasOptionPatch = Object.keys(optionPatch).length > 0;
+        const hasContentPatch = Object.keys(contentPatch).length > 0;
+        if (!hasOptionPatch && !hasContentPatch) {
+            return null;
+        }
+        return {
+            ...(hasOptionPatch ? { options: { ...options, ...optionPatch } } : {}),
+            ...(hasContentPatch ? { content: { ...content, ...contentPatch } } : {}),
+        };
+    };
+
+    useEffect(() => {
+        if (!isSimpleLevel || !Array.isArray(ads) || ads.length === 0) {
+            return;
+        }
+        ads.forEach((ad) => {
+            const patch = buildSimpleLevelPatch(ad);
+            if (!patch) {
+                return;
+            }
+            updateAdGroup(ad.id, patch);
+        });
+    }, [isSimpleLevel, ads, updateAdGroup]);
+
     const handleUpdateOptions = (updates) => {
         if (!selectedAd) {
             return;
         }
+        const nextOptions = {
+            ...selectedAd.options,
+            ...updates,
+        };
+        if (isSimpleLevel) {
+            nextOptions.editor_mode = 'quick';
+            if (nextOptions.creative_type === 'block') {
+                nextOptions.creative_type = 'html';
+            }
+            if (nextOptions.placement_hook === 'node') {
+                nextOptions.placement_hook = 'footer';
+                nextOptions.placement_position = '';
+                nextOptions.placement_paragraph = 0;
+            }
+            if (nextOptions.html_mode === 'full') {
+                nextOptions.html_mode = 'safe';
+            }
+            if (nextOptions.html_sandbox === 'disable') {
+                nextOptions.html_sandbox = 'inherit';
+            }
+        }
         updateAdGroup(selectedAd.id, {
-            options: {
-                ...selectedAd.options,
-                ...updates,
-            },
+            options: nextOptions,
         });
     };
 
@@ -831,15 +925,16 @@ const AdsConfig = () => {
     };
 
     const updateEditorMode = (mode) => {
-        setStoredEditorMode(mode);
+        const nextMode = isSimpleLevel ? 'quick' : mode;
+        setStoredEditorMode(nextMode);
         if (typeof window !== 'undefined') {
             try {
-                window.localStorage?.setItem(editorModeStorageKey, mode);
+                window.localStorage?.setItem(editorModeStorageKey, nextMode);
             } catch (err) {
                 // ignore storage errors
             }
         }
-        handleUpdateOptions({ editor_mode: mode });
+        handleUpdateOptions({ editor_mode: nextMode });
     };
 
     const openNodePicker = () => {
@@ -2162,7 +2257,7 @@ const AdsConfig = () => {
         { name: 'html', title: '代码/HTML' },
         { name: 'image', title: '图片' },
         { name: 'video', title: '视频' },
-        ...(isBlockEditorEnabled
+        ...(displayLevel !== 'simple' && isBlockEditorEnabled
             ? [{ name: 'block', title: '可视化设计' }]
             : []),
     ];
@@ -4606,56 +4701,62 @@ const AdsConfig = () => {
     const renderPlacementSection = () => (
         <>
             <div className="magick-ad-right-section">
-            <div className="magick-ad-right-section__body">
-                <div className="magick-ad-mode-switch">
-                    <div className="magick-ad-mode-switch__label">
-                        编辑模式
-                    </div>
-                    <ButtonGroup>
-                        <Button
-                            variant="secondary"
-                            isPressed={
-                                effectiveEditorMode === 'quick'
-                            }
-                            onClick={() =>
-                                updateEditorMode('quick')
-                            }
-                        >
-                            快速模式
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            isPressed={
-                                effectiveEditorMode === 'design'
-                            }
-                            onClick={() =>
-                                updateEditorMode('design')
-                            }
-                        >
-                            设计模式
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            isPressed={
-                                effectiveEditorMode === 'expert'
-                            }
-                            onClick={() => {
-                                if (!canUnfilteredHtml) {
-                                    showNotice(
-                                        'error',
-                                        '当前账号无 unfiltered_html 权限，无法启用专家模式。',
-                                        3500
-                                    );
-                                    return;
+                <div className="magick-ad-right-section__body">
+                {isSimpleLevel ? (
+                    <Notice status="info" isDismissible={false}>
+                        简洁级别已锁定为“快速模式”，仅保留页面插入与基础投放能力。
+                    </Notice>
+                ) : (
+                    <div className="magick-ad-mode-switch">
+                        <div className="magick-ad-mode-switch__label">
+                            编辑模式
+                        </div>
+                        <ButtonGroup>
+                            <Button
+                                variant="secondary"
+                                isPressed={
+                                    effectiveEditorMode === 'quick'
                                 }
-                                updateEditorMode('expert');
-                            }}
-                            disabled={!canUnfilteredHtml}
-                        >
-                            专家模式
-                        </Button>
-                    </ButtonGroup>
-                </div>
+                                onClick={() =>
+                                    updateEditorMode('quick')
+                                }
+                            >
+                                快速模式
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                isPressed={
+                                    effectiveEditorMode === 'design'
+                                }
+                                onClick={() =>
+                                    updateEditorMode('design')
+                                }
+                            >
+                                设计模式
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                isPressed={
+                                    effectiveEditorMode === 'expert'
+                                }
+                                onClick={() => {
+                                    if (!canUnfilteredHtml) {
+                                        showNotice(
+                                            'error',
+                                            '当前账号无 unfiltered_html 权限，无法启用专家模式。',
+                                            3500
+                                        );
+                                        return;
+                                    }
+                                    updateEditorMode('expert');
+                                }}
+                                disabled={!canUnfilteredHtml}
+                            >
+                                专家模式
+                            </Button>
+                        </ButtonGroup>
+                    </div>
+                )}
                 {editorModeRaw === 'expert' &&
                     !canUnfilteredHtml && (
                         <Notice
@@ -4680,7 +4781,9 @@ const AdsConfig = () => {
                             }
                         >
                             <Notice status="info" isDismissible={false}>
-                                快速模式仅保留页面插入能力；样式、频控与高级能力请切换到设计模式/专家模式。
+                                {isSimpleLevel
+                                    ? '简洁级别仅保留页面插入能力。'
+                                    : '快速模式仅保留页面插入能力；样式、频控与高级能力请切换到设计模式/专家模式。'}
                             </Notice>
                             {showValidation &&
                                 !resolvePlacement(
@@ -4802,7 +4905,7 @@ const AdsConfig = () => {
                                     />
                                 </>
                             )}
-                            {renderNodePlacement()}
+                            {!isSimpleLevel && renderNodePlacement()}
                         </PanelBody>
                     </Panel>
                 )}
@@ -5020,11 +5123,11 @@ const AdsConfig = () => {
                                                                             }}
                                                                             help="容器决定展示形态，投放位置仍由“投放”页签控制。"
                                                                         />
-                                                    <SelectControl
-                                                        label="容器模式"
-                                                        value={
-                                                            containerStyle.mode ||
-                                                            'boxed'
+                                                                        <SelectControl
+                                                                            label="容器模式"
+                                                                            value={
+                                                                                containerStyle.mode ||
+                                                                                'boxed'
                                                         }
                                                         options={[
                                                             {
@@ -5052,6 +5155,40 @@ const AdsConfig = () => {
                                                                 : '设计模式下仅允许包裹容器，切换到专家模式可修改。'
                                                         }
                                                     />
+                                                                        <SelectControl
+                                                                            label="渲染风格"
+                                                                            value={
+                                                                                selectedAd
+                                                                                    .options
+                                                                                    ?.render_profile ||
+                                                                                'minimal'
+                                                                            }
+                                                                            options={[
+                                                                                {
+                                                                                    label: '平衡默认（minimal）',
+                                                                                    value: 'minimal',
+                                                                                },
+                                                                                {
+                                                                                    label: '跟随主题（inherit）',
+                                                                                    value: 'inherit',
+                                                                                },
+                                                                                {
+                                                                                    label: '隔离稳定（isolated）',
+                                                                                    value: 'isolated',
+                                                                                },
+                                                                            ]}
+                                                                            onChange={(
+                                                                                value
+                                                                            ) =>
+                                                                                handleUpdateOptions(
+                                                                                    {
+                                                                                        render_profile:
+                                                                                            value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                            help="跨站点模板推荐使用 isolated，最大限度降低主题样式干扰。"
+                                                                        />
                                                     {containerStyle.mode ===
                                                         'raw' && (
                                                         <Notice
@@ -5937,19 +6074,21 @@ const AdsConfig = () => {
                     >
                         {headerCollapsed ? '展开' : '收起'}
                     </Button>
-                    <Button
-                        className="magick-ad-header__btn"
-                        icon={external}
-                        variant="secondary"
-                        onClick={() => {
-                            const url = window?.MagickAD?.diagnoseUrl || '';
-                            if (url) {
-                                window.open(url, '_blank', 'noopener');
-                            }
-                        }}
-                    >
-                        调试面板
-                    </Button>
+                    {!isSimpleLevel && (
+                        <Button
+                            className="magick-ad-header__btn"
+                            icon={external}
+                            variant="secondary"
+                            onClick={() => {
+                                const url = window?.MagickAD?.diagnoseUrl || '';
+                                if (url) {
+                                    window.open(url, '_blank', 'noopener');
+                                }
+                            }}
+                        >
+                            调试面板
+                        </Button>
+                    )}
                     <DropdownMenu
                         className="magick-ad-header__level-switch"
                         icon={null}
@@ -6345,8 +6484,15 @@ const AdsConfig = () => {
                             { name: 'system', title: '系统设置' },
                             { name: 'consent', title: '同意与合规' },
                             { name: 'insert', title: '插入入口' },
-                            { name: 'experiments', title: '实验与高级' },
-                            { name: 'debug', title: '调试设置' },
+                            ...(!isSimpleLevel
+                                ? [
+                                      {
+                                          name: 'experiments',
+                                          title: '实验与高级',
+                                      },
+                                      { name: 'debug', title: '调试设置' },
+                                  ]
+                                : []),
                         ]}
                         initialTabName="system"
                     >
@@ -6364,9 +6510,9 @@ const AdsConfig = () => {
                                     <ExperimentsPanel
                                         onNotice={showNotice}
                                     />
-                                ) : (
+                                ) : tab.name === 'debug' ? (
                                     <DebugPanel onNotice={showNotice} />
-                                )}
+                                ) : null}
                             </div>
                         )}
                     </TabPanel>

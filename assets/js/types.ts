@@ -87,6 +87,7 @@ export type DisplayMode = 'show' | 'random' | 'hide';
 export type RandomStrategy = 'request' | 'session' | 'cookie';
 export type HtmlMode = 'safe' | 'full';
 export type HtmlSandboxMode = 'inherit' | 'enable' | 'disable';
+export type RenderProfile = 'inherit' | 'minimal' | 'isolated';
 export type HtmlLoadStrategy = 'immediate' | 'delay' | 'viewport';
 export type VariantStrategy = 'request' | 'session';
 export type EditorMode = 'quick' | 'design' | 'expert';
@@ -278,6 +279,7 @@ export interface AdOptions {
     random_strategy: RandomStrategy;
     html_mode: HtmlMode;
     html_sandbox?: HtmlSandboxMode;
+    render_profile?: RenderProfile;
     editor_mode: EditorMode;
     placement_hook: string;
     placement_position: string;

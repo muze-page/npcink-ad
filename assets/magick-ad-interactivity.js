@@ -1107,6 +1107,75 @@
         }
     };
 
+    const emitNodePlacementResult = (
+        unit,
+        result,
+        reason,
+        extras = {}
+    ) => {
+        if (!unit) {
+            return;
+        }
+        unit.dataset.nodeResult = result || '';
+        if (reason) {
+            unit.dataset.nodeReason = reason;
+        } else {
+            delete unit.dataset.nodeReason;
+        }
+        window.dispatchEvent(
+            new CustomEvent('magick-ad-node-placement', {
+                detail: {
+                    adId: unit.getAttribute('data-ad-id') || '',
+                    result: result || '',
+                    reason: reason || '',
+                    nodeType:
+                        unit.getAttribute('data-ad-node-type') || 'id',
+                    nodeValue:
+                        unit.getAttribute('data-ad-node-value') || '',
+                    fallback:
+                        unit.getAttribute('data-ad-node-fallback') ||
+                        'hide',
+                    ...extras,
+                },
+            })
+        );
+    };
+
+    const fallbackNodePlacement = (
+        unit,
+        fallback,
+        reason,
+        extras = {}
+    ) => {
+        if (!unit) {
+            return;
+        }
+        if (fallback === 'footer') {
+            const zone = ensureFooterZone();
+            const inserted = insertElement(zone, unit, 'append');
+            if (inserted) {
+                unit.dataset.nodeInserted = '1';
+                emitNodePlacementResult(
+                    unit,
+                    'fallback_footer',
+                    reason,
+                    extras
+                );
+                return;
+            }
+            emitNodePlacementResult(
+                unit,
+                'fallback_footer_failed',
+                'footer_insert_failed',
+                extras
+            );
+            unit.remove();
+            return;
+        }
+        emitNodePlacementResult(unit, 'fallback_hidden', reason, extras);
+        unit.remove();
+    };
+
     const placeNodeAds = () => {
         const stash = document.getElementById('magick-ad-stash');
         if (!stash) {
@@ -1140,7 +1209,7 @@
             }
 
             if (!value) {
-                unit.remove();
+                fallbackNodePlacement(unit, fallback, 'missing_target_value');
                 return;
             }
 
@@ -1154,7 +1223,13 @@
                 targets = Array.from(
                     document.getElementsByClassName(value)
                 );
+            } else {
+                fallbackNodePlacement(unit, fallback, 'invalid_target_type');
+                return;
             }
+            targets = targets.filter(
+                (target) => target && !stash.contains(target)
+            );
 
             if (matchMode === 'nth') {
                 const target = targets[index - 1];
@@ -1164,26 +1239,58 @@
             }
 
             if (!targets.length) {
-                if (fallback === 'footer') {
-                    const zone = ensureFooterZone();
-                    insertElement(zone, unit, 'append');
-                    unit.dataset.nodeInserted = '1';
-                    return;
-                }
-                unit.remove();
+                fallbackNodePlacement(
+                    unit,
+                    fallback,
+                    matchMode === 'nth' ? 'nth_not_found' : 'target_not_found'
+                );
                 return;
             }
 
             if (matchMode === 'all' && targets.length > 1) {
+                let insertedCount = 0;
                 targets.forEach((target, idx) => {
                     const node = idx === 0 ? unit : unit.cloneNode(true);
+                    const inserted = insertElement(target, node, insertMode);
+                    if (!inserted) {
+                        emitNodePlacementResult(
+                            node,
+                            'insert_failed',
+                            'insert_failed',
+                            { targetIndex: idx + 1 }
+                        );
+                        if (node !== unit) {
+                            node.remove();
+                        }
+                        return;
+                    }
+                    insertedCount += 1;
                     node.dataset.nodeInserted = '1';
-                    insertElement(target, node, insertMode);
+                    emitNodePlacementResult(node, 'inserted', '', {
+                        targetIndex: idx + 1,
+                    });
                 });
+                if (insertedCount === 0) {
+                    fallbackNodePlacement(unit, fallback, 'insert_failed');
+                    return;
+                }
+                if (insertedCount < targets.length && unit.isConnected) {
+                    emitNodePlacementResult(unit, 'inserted_partial', '', {
+                        insertedCount,
+                        targetCount: targets.length,
+                    });
+                }
             } else {
                 const target = targets[0];
-                insertElement(target, unit, insertMode);
+                const inserted = insertElement(target, unit, insertMode);
+                if (!inserted) {
+                    fallbackNodePlacement(unit, fallback, 'insert_failed');
+                    return;
+                }
                 unit.dataset.nodeInserted = '1';
+                emitNodePlacementResult(unit, 'inserted', '', {
+                    targetCount: 1,
+                });
             }
         });
 

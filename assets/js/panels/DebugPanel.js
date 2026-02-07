@@ -1,4 +1,4 @@
-import { useEffect, useState } from '@wordpress/element';
+import { useEffect, useMemo, useState } from '@wordpress/element';
 import {
     Button,
     Card,
@@ -38,6 +38,17 @@ const DebugPanel = ({ onNotice }) => {
     const [diagnosticsSaving, setDiagnosticsSaving] = useState(false);
     const [diagnosticsError, setDiagnosticsError] = useState(null);
     const [openSection, setOpenSection] = useState('debug');
+    const reasonCatalog = useMemo(() => {
+        const source = window?.MagickAD?.displayReasonCatalog;
+        if (!source || typeof source !== 'object') {
+            return [];
+        }
+        return Object.entries(source).map(([code, item]) => ({
+            code,
+            label: item?.label || code,
+            description: item?.description || '',
+        }));
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -310,6 +321,25 @@ const DebugPanel = ({ onNotice }) => {
                             <Notice status="info" isDismissible={false}>
                                 诊断模式将在 {diagnosticsExpiryLabel} 自动关闭。
                             </Notice>
+                        )}
+                        {reasonCatalog.length > 0 && (
+                            <div className="magick-ad-debug-reason-codes">
+                                <strong>未展示原因码（标准）</strong>
+                                <div className="magick-ad-debug-reason-codes__list">
+                                    {reasonCatalog.map((item) => (
+                                        <div
+                                            className="magick-ad-debug-reason-codes__item"
+                                            key={item.code}
+                                        >
+                                            <code>{item.code}</code>
+                                            <span>{item.label}</span>
+                                            {item.description && (
+                                                <small>{item.description}</small>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         )}
                         <div className="magick-ad-debug-actions">
                             <Button

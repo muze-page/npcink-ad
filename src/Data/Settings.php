@@ -273,6 +273,14 @@ final class Settings {
                     array('status' => 400)
                 );
             }
+            $render_profile = isset($options['render_profile']) ? $options['render_profile'] : 'minimal';
+            if (!in_array($render_profile, array('inherit', 'minimal', 'isolated'), true)) {
+                return new WP_Error(
+                    'magick_ad_invalid_render_profile',
+                    'render_profile is invalid.',
+                    array('status' => 400)
+                );
+            }
             if ($options['placement_hook'] === 'content') {
                 $position = isset($options['placement_position']) ? $options['placement_position'] : '';
                 if (!$position) {
@@ -576,6 +584,11 @@ final class Settings {
                 isset($options['html_sandbox']) ? $options['html_sandbox'] : 'inherit',
                 array('inherit', 'enable', 'disable'),
                 'inherit'
+            ),
+            'render_profile' => self::sanitize_choice(
+                isset($options['render_profile']) ? $options['render_profile'] : 'minimal',
+                array('inherit', 'minimal', 'isolated'),
+                'minimal'
             ),
             'editor_mode' => self::sanitize_choice(
                 isset($options['editor_mode']) ? $options['editor_mode'] : 'design',

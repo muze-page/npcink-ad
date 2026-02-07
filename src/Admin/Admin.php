@@ -65,8 +65,9 @@ final class Admin {
             'patterns' => \MagickAD\Blocks\Patterns::export_patterns(),
             'buildVersion' => MAGICK_AD_VERSION,
             'buildTime' => $this->get_build_time(),
+            'displayReasonCatalog' => \MagickAD\Utils\Diagnostics::get_ad_display_reason_catalog(),
         );
-        if ($this->is_debug_enabled()) {
+        if ($this->is_debug_enabled() && $this->get_settings_level() !== 'simple') {
             $data['nodeDebugNonce'] = wp_create_nonce('magick_ad_node_debug');
             $data['diagnoseUrl'] = admin_url('admin.php?page=magick-ad-debug');
             $data['debugEnabled'] = true;
@@ -195,6 +196,7 @@ final class Admin {
     }
 
     private function get_submenu_pages(): array {
+        $level = $this->get_settings_level();
         $pages = array(
             array(
                 'page_title' => __('广告配置', 'magick-ad'),
@@ -209,7 +211,7 @@ final class Admin {
             ),
         );
 
-        if ($this->get_settings_level() !== 'simple') {
+        if ($level !== 'simple') {
             $pages[] = array(
                 'page_title' => __('统计看板', 'magick-ad'),
                 'menu_title' => __('统计看板', 'magick-ad'),
@@ -218,7 +220,7 @@ final class Admin {
             );
         }
 
-        if ($this->is_debug_enabled()) {
+        if ($this->is_debug_enabled() && $level !== 'simple') {
             $pages[] = array(
                 'page_title' => __('调试面板', 'magick-ad'),
                 'menu_title' => __('调试面板', 'magick-ad'),

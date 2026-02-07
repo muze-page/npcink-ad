@@ -31,17 +31,21 @@ const TemplateLibraryModal = ({
         return null;
     }
 
+    const runtimeLevel = window?.MagickAD?.settingsLevel || 'simple';
+    const allowVisualTemplateType =
+        showVisualTemplateType && runtimeLevel !== 'simple';
+
     const creativeOptions = useMemo(
         () => [
             { label: '全部', value: 'all' },
             { label: '代码/HTML', value: 'html' },
             { label: '图片', value: 'image' },
             { label: '视频', value: 'video' },
-            ...(showVisualTemplateType
+            ...(allowVisualTemplateType
                 ? [{ label: '可视化', value: 'block' }]
                 : []),
         ],
-        [showVisualTemplateType]
+        [allowVisualTemplateType]
     );
     const allowedCreativeValues = useMemo(
         () => new Set(creativeOptions.map((item) => item.value)),
@@ -63,7 +67,7 @@ const TemplateLibraryModal = ({
     }, [type, allowedCreativeValues]);
 
     const safeTemplates = Array.isArray(templates) ? templates : [];
-    const visibleTemplates = showVisualTemplateType
+    const visibleTemplates = allowVisualTemplateType
         ? safeTemplates
         : safeTemplates.filter((item) => item.type !== 'block');
     const systemTemplates = visibleTemplates.filter((item) => item.source === 'core');

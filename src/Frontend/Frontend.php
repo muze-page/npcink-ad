@@ -1499,44 +1499,48 @@ final class Frontend {
         $ad_type = isset($options['ad_type']) ? $options['ad_type'] : 'global';
 
         if (isset($ad['status']) && $ad['status'] !== 'publish') {
-            $reasons[] = 'status';
+            $reasons[] = 'status_unpublished';
         }
 
         if (isset($options['enabled']) && !$options['enabled']) {
-            $reasons[] = 'disabled';
+            $reasons[] = 'option_disabled';
+        }
+
+        if (!empty($options['render_require_consent']) && !self::has_consent()) {
+            $reasons[] = 'consent_required';
         }
 
         if (self::is_before_start($options)) {
-            $reasons[] = 'not_started';
+            $reasons[] = 'schedule_not_started';
         }
 
         if (self::is_expired($options)) {
-            $reasons[] = 'expired';
+            $reasons[] = 'schedule_expired';
         }
 
         $mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
         if ($mode === 'hide') {
-            $reasons[] = 'display_mode=hide';
+            $reasons[] = 'display_mode_hidden';
         }
         if ($mode === 'random' && !self::matches_display_mode($ad, $options)) {
-            $reasons[] = 'display_mode=random_hidden';
+            $reasons[] = 'display_mode_random_miss';
         }
 
         if ($ad_type === 'targeted') {
             if (!self::matches_targeting($options)) {
-                $reasons[] = 'targeting';
+                $reasons[] = 'targeting_mismatch';
             }
         } else {
             if (!self::matches_show_page($options)) {
-                $reasons[] = 'show_page';
+                $reasons[] = 'show_page_mismatch';
             }
         }
 
         if (!self::matches_device($options)) {
-            $reasons[] = 'device';
+            $reasons[] = 'device_mismatch';
         }
         if (!self::matches_login($options)) {
-            $reasons[] = 'login';
+            $reasons[] = 'login_mismatch';
         }
 
         return array(
@@ -1647,21 +1651,9 @@ final class Frontend {
         if (empty($reasons)) {
             return '';
         }
-        $map = array(
-            'disabled' => '未启用',
-            'not_started' => '未到开始时间',
-            'expired' => '已过期',
-            'status' => '未发布/排期中',
-            'display_mode=hide' => '展示模式=隐藏',
-            'display_mode=random_hidden' => '随机模式未命中',
-            'targeting' => '定向条件不匹配',
-            'show_page' => '展示页面不匹配',
-            'device' => '设备不匹配',
-            'login' => '登录状态不匹配',
-        );
         $labels = array();
         foreach ($reasons as $reason) {
-            $labels[] = $map[$reason] ?? $reason;
+            $labels[] = Diagnostics::get_ad_display_reason_label($reason);
         }
         return implode(' · ', $labels);
     }
@@ -1702,6 +1694,7 @@ final class Frontend {
                     'no_consent' => '未同意',
                 ),
             ),
+            'ad_reason_labels' => Diagnostics::get_ad_display_reason_labels(),
         );
 
         foreach ($ads as $ad) {
@@ -3355,10 +3348,12 @@ final class Frontend {
         $behavior = isset($content['behavior']) ? $content['behavior'] : array();
         $display_mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
         $random_strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
+        $render_profile = self::resolve_render_profile($options);
         $ad_id = isset($ad['id']) ? (string) $ad['id'] : '';
 
         $data_attrs = ' data-ad-id="' . esc_attr($ad_id) . '" data-ad-position="' . esc_attr($position) . '"';
         $data_attrs .= ' data-ad-container="' . esc_attr($container_type) . '"';
+        $data_attrs .= ' data-ad-render-profile="' . esc_attr($render_profile) . '"';
 
         $slot = '';
         if (!empty($ad['_slot']) && is_string($ad['_slot'])) {
@@ -3477,9 +3472,11 @@ final class Frontend {
         $display_mode = isset($options['display_mode']) ? $options['display_mode'] : 'show';
         $random_strategy = isset($options['random_strategy']) ? $options['random_strategy'] : 'request';
         $placement_hook = isset($options['placement_hook']) ? $options['placement_hook'] : '';
+        $render_profile = self::resolve_render_profile($options);
 
         $container_class = 'magick-ad-container--' . esc_attr($container_type);
-        $unit_class = 'magick-ad-unit magick-ad-unit--' . esc_attr($position) . ' ' . $container_class;
+        $profile_class = 'magick-ad-profile--' . esc_attr($render_profile);
+        $unit_class = 'magick-ad-unit magick-ad-unit--' . esc_attr($position) . ' ' . $container_class . ' ' . $profile_class;
         if ($placement_hook === 'node' && (!isset($options['node_compact']) || $options['node_compact'])) {
             $unit_class .= ' magick-ad-placement--node-compact';
         }
@@ -3494,6 +3491,14 @@ final class Frontend {
             }
         }
         return $unit_class;
+    }
+
+    private static function resolve_render_profile(array $options): string {
+        $profile = isset($options['render_profile']) ? (string) $options['render_profile'] : 'minimal';
+        if (!in_array($profile, array('inherit', 'minimal', 'isolated'), true)) {
+            return 'minimal';
+        }
+        return $profile;
     }
 
     private static function build_inner_style(array $content, string $content_type): string {

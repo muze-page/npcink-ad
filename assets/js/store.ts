@@ -27,6 +27,7 @@ const createAdGroupTemplate = (
         random_strategy: 'request',
         html_mode: 'safe',
         html_sandbox: 'inherit',
+        render_profile: 'minimal',
         editor_mode: 'design',
         placement_hook: 'footer',
         placement_position: '',
@@ -294,6 +295,11 @@ const normalizeAd = (ad: unknown): Ad => {
             )
                 ? options.html_sandbox
                 : 'inherit',
+            render_profile: ['inherit', 'minimal', 'isolated'].includes(
+                options.render_profile
+            )
+                ? options.render_profile
+                : 'minimal',
             editor_mode: ['quick', 'design', 'expert'].includes(options.editor_mode)
                 ? options.editor_mode
                 : 'design',
