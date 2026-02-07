@@ -447,6 +447,14 @@ const AdsConfig = () => {
         { label: '仅未登录用户', value: 'logged-out' },
     ];
 
+    const getOptionLabel = (options, value, fallback) => {
+        const hit = (options || []).find((item) => item.value === value);
+        if (hit && hit.label) {
+            return hit.label;
+        }
+        return fallback || value || '';
+    };
+
     const renderDeviceLoginControls = () => (
         <>
             <SelectControl
@@ -469,6 +477,18 @@ const AdsConfig = () => {
                     })
                 }
             />
+            {runtimeContextMeta?.deviceMismatch && (
+                <Notice status="warning" isDismissible={false}>
+                    当前模拟设备为“{runtimeContextMeta.currentDeviceLabel}”，
+                    但广告限制为“{runtimeContextMeta.deviceRuleLabel}”，预计不会展示。
+                </Notice>
+            )}
+            {runtimeContextMeta?.loginMismatch && (
+                <Notice status="warning" isDismissible={false}>
+                    当前模拟登录态为“{runtimeContextMeta.currentLoginLabel}”，
+                    但广告限制为“{runtimeContextMeta.loginRuleLabel}”，预计不会展示。
+                </Notice>
+            )}
         </>
     );
 
@@ -892,6 +912,227 @@ const AdsConfig = () => {
 
         return updates;
     };
+
+    const resolvePlacementLabel = (options = {}) => {
+        const placement = resolvePlacement(options);
+        if (placement.hook === 'head') {
+            return 'Head (脚本/像素)';
+        }
+        if (placement.hook === 'body_top') {
+            return '顶部';
+        }
+        if (placement.hook === 'footer') {
+            return '底部';
+        }
+        if (placement.hook === 'node') {
+            return '指定节点';
+        }
+        if (placement.hook === 'comments_top') {
+            return '评论列表顶部';
+        }
+        if (placement.hook === 'comments_bottom') {
+            return '评论列表底部';
+        }
+        if (placement.hook === 'comment_form_before') {
+            return '评论框上方';
+        }
+        if (placement.hook === 'comment_form_after') {
+            return '评论框下方';
+        }
+        if (placement.hook === 'content') {
+            if (placement.position === 'before') {
+                return '内容前';
+            }
+            if (placement.position === 'after') {
+                return '内容后';
+            }
+            if (placement.position === 'paragraph') {
+                return `第 ${placement.paragraph || 3} 段后`;
+            }
+        }
+        return '未设置';
+    };
+
+    const getEffectBaseUrl = () => {
+        const fallback =
+            window?.MagickAD?.previewUrl || window.location.origin;
+        const preferred =
+            typeof previewTarget === 'string' && previewTarget.trim()
+                ? previewTarget.trim()
+                : fallback;
+        let url;
+        try {
+            url = new URL(preferred, window.location.origin);
+        } catch (err) {
+            url = new URL(fallback, window.location.origin);
+        }
+        if (url.origin !== window.location.origin) {
+            url = new URL(fallback, window.location.origin);
+        }
+        return url;
+    };
+
+    const stripEffectParams = (url) => {
+        [
+            'magick_ad_preview',
+            'magick_ad_preview_ad',
+            'magick_ad_preview_nonce',
+            'magick_ad_preview_device',
+            'magick_ad_preview_mode',
+            'magick_ad_preview_force',
+            'magick_ad_diagnose',
+            'magick_ad_diagnose_nonce',
+            'magick_ad_debug_device',
+            'magick_ad_debug_login',
+        ].forEach((key) => url.searchParams.delete(key));
+    };
+
+    const buildRuntimePreviewUrl = () => {
+        const previewNonce = window?.MagickAD?.previewNonce;
+        if (!previewNonce || !selectedAd?.id) {
+            return '';
+        }
+        const url = getEffectBaseUrl();
+        stripEffectParams(url);
+        url.searchParams.set('magick_ad_preview', '1');
+        url.searchParams.set('magick_ad_preview_ad', selectedAd.id);
+        url.searchParams.set('magick_ad_preview_nonce', previewNonce);
+        url.searchParams.set('magick_ad_preview_device', devicePreview);
+        if (
+            (typeof previewTarget === 'string' && previewTarget.trim()) ||
+            previewUsePage
+        ) {
+            url.searchParams.set('magick_ad_preview_mode', 'page');
+        }
+        return url.toString();
+    };
+
+    const buildRuntimeDiagnoseUrl = () => {
+        const diagnoseNonce = window?.MagickAD?.diagnoseNonce;
+        if (!diagnoseNonce) {
+            return '';
+        }
+        const url = getEffectBaseUrl();
+        stripEffectParams(url);
+        const debugDevice = ['mobile', 'tablet', 'desktop'].includes(
+            devicePreview
+        )
+            ? devicePreview
+            : 'auto';
+        const debugLogin = ['auto', 'logged-in', 'logged-out'].includes(
+            previewLogin
+        )
+            ? previewLogin
+            : 'auto';
+        url.searchParams.set('magick_ad_diagnose', '1');
+        url.searchParams.set('magick_ad_diagnose_nonce', diagnoseNonce);
+        url.searchParams.set('magick_ad_debug_device', debugDevice);
+        url.searchParams.set('magick_ad_debug_login', debugLogin);
+        return url.toString();
+    };
+
+    const runtimeContextMeta = useMemo(() => {
+        if (!selectedAd) {
+            return null;
+        }
+        const options = selectedAd.options || {};
+        const runtime = runtimeMeta(selectedAd);
+        const deviceRule = options.device || 'all';
+        const loginRule = options.login || 'all';
+        const effectiveLogin =
+            previewLogin === 'auto' ? 'logged-in' : previewLogin;
+        const currentDeviceLabel = getOptionLabel(
+            deviceOptions,
+            devicePreview,
+            '桌面端'
+        );
+        const currentLoginLabel =
+            previewLogin === 'auto'
+                ? '自动（当前已登录）'
+                : getOptionLabel(loginOptions, effectiveLogin, '已登录');
+        const deviceRuleLabel = getOptionLabel(
+            deviceOptions,
+            deviceRule,
+            '全部设备'
+        );
+        const loginRuleLabel = getOptionLabel(
+            loginOptions,
+            loginRule,
+            '全部用户'
+        );
+        const deviceMismatch =
+            deviceRule !== 'all' && deviceRule !== devicePreview;
+        const loginMismatch =
+            loginRule !== 'all' && loginRule !== effectiveLogin;
+        const targetCount = Array.isArray(options.target_ids)
+            ? options.target_ids.length
+            : Array.isArray(options.target_values)
+              ? options.target_values.length
+              : 0;
+        const pageLabel =
+            options.ad_type === 'targeted' && options.target_type
+                ? `${getOptionLabel(
+                      TARGET_TYPE_OPTIONS,
+                      options.target_type,
+                      '指定类型'
+                  )}（${targetCount} 项）`
+                : getOptionLabel(
+                      DISPLAY_PAGE_OPTIONS,
+                      options.show_page || 'all',
+                      '全站'
+                  );
+        const reasons = [];
+        if (runtime.blocked) {
+            reasons.push(runtime.label);
+        }
+        if (deviceMismatch) {
+            reasons.push('设备不匹配');
+        }
+        if (loginMismatch) {
+            reasons.push('登录状态不匹配');
+        }
+        return {
+            placementLabel: resolvePlacementLabel(options),
+            pageLabel,
+            deviceRuleLabel,
+            loginRuleLabel,
+            currentDeviceLabel,
+            currentLoginLabel,
+            deviceMismatch,
+            loginMismatch,
+            blocked: reasons.length > 0,
+            reasonText:
+                reasons.length > 0
+                    ? `当前模拟环境下预计不展示：${reasons.join(' · ')}`
+                    : '当前模拟环境下预计可展示。',
+            statusClassName:
+                reasons.length > 0 ? 'is-disabled' : 'is-enabled',
+            statusLabel: reasons.length > 0 ? '预计不展示' : '预计展示',
+            previewUrl: buildRuntimePreviewUrl(),
+            diagnoseUrl: buildRuntimeDiagnoseUrl(),
+        };
+    }, [
+        selectedAd?.id,
+        selectedAd?.status,
+        selectedAd?.date,
+        selectedAd?.options?.enabled,
+        selectedAd?.options?.ad_type,
+        selectedAd?.options?.show_page,
+        selectedAd?.options?.target_type,
+        selectedAd?.options?.target_ids,
+        selectedAd?.options?.target_values,
+        selectedAd?.options?.placement_hook,
+        selectedAd?.options?.placement_position,
+        selectedAd?.options?.placement_paragraph,
+        selectedAd?.options?.device,
+        selectedAd?.options?.login,
+        selectedAd?.options?.start_date,
+        selectedAd?.options?.end_date,
+        devicePreview,
+        previewLogin,
+        previewTarget,
+        previewUsePage,
+    ]);
 
     const missingPositionIds = useMemo(() => {
         return new Set(
@@ -4605,6 +4846,73 @@ const AdsConfig = () => {
         </div>
     );
 
+    const openRuntimeUrl = (url, fallbackMessage) => {
+        if (!url) {
+            showNotice('error', fallbackMessage, 2600);
+            return;
+        }
+        window.open(url, '_blank', 'noopener');
+    };
+
+    const renderRuntimeSummaryBar = () => {
+        if (!selectedAd || !runtimeContextMeta) {
+            return null;
+        }
+        return (
+            <div className="magick-ad-runtime-summary">
+                <div className="magick-ad-runtime-summary__body">
+                    <div className="magick-ad-runtime-summary__title">
+                        运行条件速览
+                    </div>
+                    <div className="magick-ad-runtime-summary__line">
+                        规则：位置 {runtimeContextMeta.placementLabel} · 页面{' '}
+                        {runtimeContextMeta.pageLabel} · 设备{' '}
+                        {runtimeContextMeta.deviceRuleLabel} · 登录{' '}
+                        {runtimeContextMeta.loginRuleLabel}
+                    </div>
+                    <div className="magick-ad-runtime-summary__line">
+                        环境：设备 {runtimeContextMeta.currentDeviceLabel} · 登录{' '}
+                        {runtimeContextMeta.currentLoginLabel}
+                    </div>
+                    <div className="magick-ad-runtime-summary__status">
+                        <span
+                            className={`magick-ad-status-pill ${runtimeContextMeta.statusClassName}`}
+                        >
+                            {runtimeContextMeta.statusLabel}
+                        </span>
+                        <span className="magick-ad-runtime-summary__reason">
+                            {runtimeContextMeta.reasonText}
+                        </span>
+                    </div>
+                </div>
+                <div className="magick-ad-runtime-summary__actions">
+                    <Button
+                        variant="secondary"
+                        onClick={() =>
+                            openRuntimeUrl(
+                                runtimeContextMeta.previewUrl,
+                                '预览地址生成失败，请检查预览配置。'
+                            )
+                        }
+                    >
+                        查看预览壳
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() =>
+                            openRuntimeUrl(
+                                runtimeContextMeta.diagnoseUrl,
+                                '诊断地址生成失败，请刷新后台后重试。'
+                            )
+                        }
+                    >
+                        查看真实诊断
+                    </Button>
+                </div>
+            </div>
+        );
+    };
+
     const renderPublishSection = () => (
         <div className="magick-ad-right-section">
             <div className="magick-ad-right-section__header">
@@ -6359,6 +6667,7 @@ const AdsConfig = () => {
                     {error.message || '请求失败'}
                 </Notice>
             )}
+            {renderRuntimeSummaryBar()}
 
             <Layout
                 adData={selectedAd}

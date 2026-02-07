@@ -940,6 +940,68 @@
     font-size: 13px;
 }
 
+.magick-ad-runtime-summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin: 10px 0 14px;
+    padding: 12px 14px;
+    border: 1px solid #dbe4f0;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.magick-ad-runtime-summary__body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.magick-ad-runtime-summary__title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.magick-ad-runtime-summary__line {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.45;
+}
+
+.magick-ad-runtime-summary__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.magick-ad-runtime-summary__reason {
+    font-size: 12px;
+    color: #334155;
+    line-height: 1.45;
+}
+
+.magick-ad-runtime-summary__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 1080px) {
+    .magick-ad-runtime-summary {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .magick-ad-runtime-summary__actions {
+        justify-content: flex-start;
+    }
+}
+
 .magick-ad-right-section__body {
     display: flex;
     flex-direction: column;

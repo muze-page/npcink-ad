@@ -59,6 +59,7 @@ final class Admin {
             'settingsLevel' => $this->get_settings_level(),
             'previewUrl' => $this->get_preview_url(),
             'previewNonce' => wp_create_nonce('magick_ad_preview'),
+            'diagnoseNonce' => wp_create_nonce('magick_ad_diagnose'),
             'pickerNonce' => wp_create_nonce('magick_ad_picker'),
             'siteHealthUrl' => admin_url('site-health.php?tab=direct'),
             'compatibilityUrl' => admin_url('admin.php?page=magick-ad-compat'),
