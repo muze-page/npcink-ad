@@ -117,10 +117,6 @@ const TemplateCard = ({
                 label: getContainerLabel(template),
                 className: 'magick-ad-template-tag magick-ad-template-tag--soft',
             },
-            {
-                label: getSourceLabel(template),
-                className: 'magick-ad-template-tag magick-ad-template-tag--source',
-            },
         ];
         if (template.category) {
             list.push({
@@ -142,6 +138,9 @@ const TemplateCard = ({
         >
             <div className="magick-ad-template-media">
                 <TemplateThumbnail template={template} />
+                <span className="magick-ad-template-source-badge">
+                    {getSourceLabel(template)}
+                </span>
                 {selectionMode && (
                     <div
                         className={`magick-ad-template-select ${
