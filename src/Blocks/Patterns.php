@@ -240,7 +240,7 @@ final class Patterns {
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '通用',
-                    'html' => '<article style="padding:18px;border:1px solid #e2e8f0;border-radius:14px;background:#ffffff;box-shadow:0 8px 20px rgba(15,23,42,.08);"><span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;">推荐</span><h3 style="margin:12px 0 8px;font-size:20px;line-height:1.35;color:#0f172a;">用一张卡片介绍你的重点内容</h3><p style="margin:0 0 14px;font-size:14px;color:#475569;">可用于课程报名、产品更新、下载入口或会员权益说明。</p><a href="#" style="display:inline-block;padding:9px 14px;border-radius:10px;background:#0f172a;color:#ffffff;text-decoration:none;font-size:13px;">立即了解</a></article>',
+                    'html' => '<section style="max-width:760px;margin:0 auto;"><article style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px;border:1px solid #d9e1ea;border-radius:14px;background:#ffffff;box-shadow:0 8px 20px rgba(15,23,42,.06);"><div style="flex:1 1 320px;min-width:220px;"><span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;">推荐</span><h3 style="margin:12px 0 8px;font-size:20px;line-height:1.35;color:#0f172a;">用一张卡片介绍你的重点内容</h3><p style="margin:0;font-size:14px;line-height:1.65;color:#475569;">可用于课程报名、产品更新、下载入口或会员权益说明。</p></div><a href="#" style="display:inline-block;align-self:flex-start;padding:9px 14px;border-radius:10px;background:#0f172a;color:#ffffff;text-decoration:none;font-size:13px;white-space:nowrap;">立即了解</a></article></section>',
                 )),
             ),
             array(

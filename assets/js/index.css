@@ -1225,6 +1225,11 @@
     text-overflow: ellipsis;
 }
 
+.magick-ad-sidebar__runtime {
+    display: inline-flex;
+    align-items: center;
+}
+
 .magick-ad-status-pill {
     display: inline-flex;
     align-items: center;

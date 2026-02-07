@@ -334,6 +334,106 @@ const AdsConfig = () => {
         return { label: '已停用', className: 'is-disabled' };
     };
 
+    const formatDateTimeDisplay = (value) => {
+        const date = parseDateTime(value);
+        if (!date) {
+            return '';
+        }
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+            date.getDate()
+        )} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    const runtimeMeta = (ad) => {
+        if (!ad) {
+            return {
+                code: 'unknown',
+                label: '未知',
+                className: 'is-pending',
+                blocked: true,
+                message: '当前状态未知，请刷新后重试。',
+            };
+        }
+
+        const options = ad.options || {};
+        if (options.enabled === false) {
+            return {
+                code: 'option_disabled',
+                label: '已停用',
+                className: 'is-disabled',
+                blocked: true,
+                message: '当前不会展示：广告已停用。',
+            };
+        }
+
+        const status = ad.status || 'publish';
+        if (status === 'pending') {
+            return {
+                code: 'status_pending',
+                label: '待审核',
+                className: 'is-pending',
+                blocked: true,
+                message: '当前不会展示：发布状态为待审核。',
+            };
+        }
+        if (status === 'future') {
+            const dateText = formatDateTimeDisplay(ad.date);
+            return {
+                code: 'status_future',
+                label: '已排期',
+                className: 'is-scheduled',
+                blocked: true,
+                message: dateText
+                    ? `当前不会展示：发布排期未到（${dateText}）。`
+                    : '当前不会展示：发布状态为已排期。',
+            };
+        }
+        if (status !== 'publish') {
+            return {
+                code: 'status_unpublished',
+                label: '未发布',
+                className: 'is-disabled',
+                blocked: true,
+                message: '当前不会展示：发布状态不是“已发布”。',
+            };
+        }
+
+        const now = Date.now();
+        const startDate = parseDateTime(options.start_date);
+        if (startDate && startDate.getTime() > now) {
+            return {
+                code: 'schedule_not_started',
+                label: '未到开始时间',
+                className: 'is-scheduled',
+                blocked: true,
+                message: `当前不会展示：将于 ${formatDateTimeDisplay(
+                    options.start_date
+                )} 生效。`,
+            };
+        }
+
+        const endDate = parseDateTime(options.end_date);
+        if (endDate && endDate.getTime() < now) {
+            return {
+                code: 'schedule_expired',
+                label: '已过期',
+                className: 'is-disabled',
+                blocked: true,
+                message: `当前不会展示：已于 ${formatDateTimeDisplay(
+                    options.end_date
+                )} 过期。`,
+            };
+        }
+
+        return {
+            code: 'active',
+            label: '生效中',
+            className: 'is-enabled',
+            blocked: false,
+            message: '当前满足发布与排期条件。',
+        };
+    };
+
     const deviceOptions = [
         { label: '全部设备', value: 'all' },
         { label: '仅移动端', value: 'mobile' },
@@ -1752,18 +1852,82 @@ const AdsConfig = () => {
         };
     };
 
+    const getTemplateDefaultDelay = (containerType) =>
+        ['popup', 'banner', 'floating', 'interstitial'].includes(containerType)
+            ? 300
+            : 0;
+
+    const buildTemplateBehaviorDefaults = (containerType = 'inline') => ({
+        animation: 'none',
+        close_button: containerType !== 'inline',
+        close_on_esc: true,
+        close_on_overlay: true,
+        lock_scroll: false,
+        frequency_mode: 'none',
+        frequency_limit: 1,
+        delay: getTemplateDefaultDelay(containerType),
+    });
+
+    const buildTemplateContainerStyleDefaults = (placementHook = '') => ({
+        mode: placementHook === 'head' ? 'raw' : 'boxed',
+        max_width: 100,
+        max_width_unit: '%',
+        reserve_height: 0,
+        padding_top: 0,
+        padding_right: 0,
+        padding_bottom: 0,
+        padding_left: 0,
+        background: 'transparent',
+        radius: 0,
+        shadow: 'none',
+        badge_enabled: false,
+        badge_type: 'text',
+        badge_text: '广告',
+        badge_color: '#1d2327',
+        badge_image: {
+            id: 0,
+            url: '',
+            alt: '',
+        },
+        layout: '',
+    });
+
     const applyTemplate = (template) => {
-        const updates = { creative_type: template.type };
+        if (!selectedAd || !template) {
+            return;
+        }
+
+        const nextOptions = {
+            ...selectedAd.options,
+            creative_type: template.type,
+        };
+
         if (template.containerType) {
-            updates.container_type = template.containerType;
+            nextOptions.container_type = template.containerType;
             if (template.containerType !== 'inline') {
-                updates.placement_hook = 'footer';
-                updates.placement_position = '';
-                updates.placement_paragraph = 0;
+                nextOptions.placement_hook = 'footer';
+                nextOptions.placement_position = '';
+                nextOptions.placement_paragraph = 0;
             }
         }
-        handleUpdateOptions(updates);
-        handleUpdateContent(template.data || {});
+
+        const containerType =
+            nextOptions.container_type || selectedAd.options?.container_type || 'inline';
+        const placementHook = nextOptions.placement_hook || '';
+        const nextContent = {
+            ...selectedAd.content,
+            ...(template.data || {}),
+            variants_enabled: false,
+            variants_strategy: 'request',
+            variants: [],
+            container_style: buildTemplateContainerStyleDefaults(placementHook),
+            behavior: buildTemplateBehaviorDefaults(containerType),
+        };
+
+        updateAdGroup(selectedAd.id, {
+            options: nextOptions,
+            content: nextContent,
+        });
     };
 
     const {
@@ -2149,6 +2313,23 @@ const AdsConfig = () => {
                                                                     ).label
                                                                 }
                                                             </span>
+                                                        </span>
+                                                        <span className="magick-ad-sidebar__runtime">
+                                                            {(() => {
+                                                                const runtime =
+                                                                    runtimeMeta(
+                                                                        ad
+                                                                    );
+                                                                return (
+                                                                    <span
+                                                                        className={`magick-ad-status-pill ${runtime.className}`}
+                                                                    >
+                                                                        {
+                                                                            runtime.label
+                                                                        }
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                         </span>
                                                         {missingPositionIds.has(
                                                             ad.id
@@ -4447,6 +4628,13 @@ const AdsConfig = () => {
                     >
                         {statusMeta(selectedAd).label}
                     </span>
+                    <span
+                        className={`magick-ad-status-pill ${
+                            runtimeMeta(selectedAd).className
+                        }`}
+                    >
+                        {runtimeMeta(selectedAd).label}
+                    </span>
                 </div>
             </div>
             <div className="magick-ad-right-section__body">
@@ -4544,6 +4732,22 @@ const AdsConfig = () => {
                             }
                             help="结束时间为空表示长期有效，支持到分钟。"
                         />
+                        {(() => {
+                            const runtime = runtimeMeta(selectedAd);
+                            if (!runtime.blocked) {
+                                return null;
+                            }
+                            const noticeStatus =
+                                runtime.code === 'schedule_not_started' ||
+                                runtime.code === 'schedule_expired'
+                                    ? 'warning'
+                                    : 'info';
+                            return (
+                                <Notice status={noticeStatus} isDismissible={false}>
+                                    {runtime.message}
+                                </Notice>
+                            );
+                        })()}
                     </div>
                 </div>
             </div>
