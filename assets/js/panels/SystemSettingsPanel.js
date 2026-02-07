@@ -55,6 +55,8 @@ const DEFAULT_SETTINGS = {
 };
 
 const LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
+const normalizeLevel = (value) =>
+    value === 'advanced' || value === 'lab' ? value : 'simple';
 
 const SystemSettingsPanel = ({ onNotice }) => {
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -67,7 +69,13 @@ const SystemSettingsPanel = ({ onNotice }) => {
             return 'simple';
         }
         try {
-            return window.localStorage.getItem(LEVEL_STORAGE_KEY) || 'simple';
+            const fromBoot = window.MagickAD?.settingsLevel;
+            if (fromBoot) {
+                return normalizeLevel(fromBoot);
+            }
+            return normalizeLevel(
+                window.localStorage.getItem(LEVEL_STORAGE_KEY) || 'simple'
+            );
         } catch (err) {
             return 'simple';
         }

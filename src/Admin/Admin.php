@@ -10,6 +10,7 @@ final class Admin {
     private const MENU_SLUG = 'magick-ad';
     private const MENU_ICON = 'dashicons-megaphone';
     private const MENU_POSITION = 60;
+    private const SETTINGS_LEVEL_OPTION = 'magick_ad_settings_level';
     private const DEBUG_DEVICES = array('auto', 'mobile', 'tablet', 'desktop');
     private const DEBUG_LOGIN_STATES = array('auto', 'logged-in', 'logged-out');
 
@@ -55,6 +56,7 @@ final class Admin {
         $data = array(
             'nonce' => wp_create_nonce('wp_rest'),
             'initialTab' => $this->get_initial_tab($hook),
+            'settingsLevel' => $this->get_settings_level(),
             'previewUrl' => $this->get_preview_url(),
             'previewNonce' => wp_create_nonce('magick_ad_preview'),
             'pickerNonce' => wp_create_nonce('magick_ad_picker'),
@@ -110,6 +112,11 @@ final class Admin {
             'name' => $name !== '' ? sanitize_text_field($name) : 'Magick AD',
             'tagline' => $tagline !== '' ? sanitize_text_field($tagline) : '广告配置与投放规则管理',
         );
+    }
+
+    private function get_settings_level(): string {
+        $level = (string) get_option(self::SETTINGS_LEVEL_OPTION, 'simple');
+        return in_array($level, array('simple', 'advanced', 'lab'), true) ? $level : 'simple';
     }
 
     private function is_debug_enabled(): bool {
@@ -200,13 +207,16 @@ final class Admin {
                 'menu_title' => __('广告列表', 'magick-ad'),
                 'menu_slug' => 'edit.php?post_type=magick_ad',
             ),
-            array(
+        );
+
+        if ($this->get_settings_level() !== 'simple') {
+            $pages[] = array(
                 'page_title' => __('统计看板', 'magick-ad'),
                 'menu_title' => __('统计看板', 'magick-ad'),
                 'menu_slug' => 'magick-ad-report',
                 'callback' => array($this, 'render_app'),
-            ),
-        );
+            );
+        }
 
         if ($this->is_debug_enabled()) {
             $pages[] = array(

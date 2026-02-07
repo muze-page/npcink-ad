@@ -64,13 +64,24 @@ import { cleanForSlug } from '@wordpress/url';
 import apiFetch from '@wordpress/api-fetch';
 
 const SETTINGS_LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
+const DISPLAY_LEVEL_LABELS = {
+    simple: '简洁',
+    advanced: '高级',
+    lab: '实验室',
+};
+const normalizeDisplayLevel = (value) =>
+    value === 'advanced' || value === 'lab' ? value : 'simple';
 const readDisplayLevel = () => {
     if (typeof window === 'undefined') {
         return 'simple';
     }
     try {
+        const fromBoot = window.MagickAD?.settingsLevel;
+        if (fromBoot) {
+            return normalizeDisplayLevel(fromBoot);
+        }
         const level = window.localStorage?.getItem(SETTINGS_LEVEL_STORAGE_KEY);
-        return level === 'advanced' || level === 'lab' ? level : 'simple';
+        return normalizeDisplayLevel(level);
     } catch (err) {
         return 'simple';
     }
@@ -216,6 +227,7 @@ const AdsConfig = () => {
     const [pickerLabel, setPickerLabel] = useState('');
     const [debugEnabled, setDebugEnabled] = useState(false);
     const [displayLevel, setDisplayLevel] = useState(() => readDisplayLevel());
+    const [displayLevelSaving, setDisplayLevelSaving] = useState(false);
     const branding =
         (typeof window !== 'undefined' && window.MagickAD?.branding) || {
             name: 'Magick AD',
@@ -5791,6 +5803,61 @@ const AdsConfig = () => {
         fetchSystemSettings();
     };
 
+    const applyDisplayLevel = (nextLevelRaw) => {
+        const nextLevel = normalizeDisplayLevel(nextLevelRaw);
+        setDisplayLevel(nextLevel);
+        if (typeof window === 'undefined') {
+            return nextLevel;
+        }
+        try {
+            window.localStorage?.setItem(SETTINGS_LEVEL_STORAGE_KEY, nextLevel);
+        } catch (err) {
+            // ignore storage errors
+        }
+        if (window.MagickAD) {
+            window.MagickAD.settingsLevel = nextLevel;
+        }
+        window.dispatchEvent(
+            new CustomEvent('magick-ad-display-level-updated', {
+                detail: { level: nextLevel },
+            })
+        );
+        return nextLevel;
+    };
+
+    const handleDisplayLevelQuickChange = (nextLevelRaw) => {
+        const nextLevel = normalizeDisplayLevel(nextLevelRaw);
+        if (nextLevel === displayLevel || displayLevelSaving) {
+            return;
+        }
+        const prevLevel = displayLevel;
+        applyDisplayLevel(nextLevel);
+        setDisplayLevelSaving(true);
+        apiFetch({
+            path: '/magick-ad/v1/system-settings',
+            method: 'POST',
+            data: { settings_level: nextLevel },
+        })
+            .then(() => {
+                showNotice(
+                    'success',
+                    `显示级别已切换为“${DISPLAY_LEVEL_LABELS[nextLevel]}”，刷新后台后左侧菜单会同步更新。`,
+                    2600
+                );
+            })
+            .catch((err) => {
+                applyDisplayLevel(prevLevel);
+                const message =
+                    err?.data?.message ||
+                    err?.message ||
+                    '显示级别更新失败，请重试。';
+                showNotice('error', message, 4000);
+            })
+            .finally(() => {
+                setDisplayLevelSaving(false);
+            });
+    };
+
     const toolbarMiddle = selectedAd ? (
         <TemplateActions
             variant="toolbar"
@@ -5883,6 +5950,45 @@ const AdsConfig = () => {
                     >
                         调试面板
                     </Button>
+                    <DropdownMenu
+                        className="magick-ad-header__level-switch"
+                        icon={null}
+                        text={`级别：${DISPLAY_LEVEL_LABELS[displayLevel] || '简洁'}`}
+                        toggleProps={{
+                            variant: 'secondary',
+                            className: 'magick-ad-header__btn',
+                            disabled: displayLevelSaving,
+                        }}
+                    >
+                        {({ onClose }) => (
+                            <MenuGroup>
+                                <MenuItem
+                                    onClick={() => {
+                                        onClose();
+                                        handleDisplayLevelQuickChange('simple');
+                                    }}
+                                >
+                                    简洁
+                                </MenuItem>
+                                <MenuItem
+                                    onClick={() => {
+                                        onClose();
+                                        handleDisplayLevelQuickChange('advanced');
+                                    }}
+                                >
+                                    高级
+                                </MenuItem>
+                                <MenuItem
+                                    onClick={() => {
+                                        onClose();
+                                        handleDisplayLevelQuickChange('lab');
+                                    }}
+                                >
+                                    实验室
+                                </MenuItem>
+                            </MenuGroup>
+                        )}
+                    </DropdownMenu>
                     <Button
                         className="magick-ad-header__btn"
                         icon={cog}

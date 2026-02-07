@@ -11,6 +11,7 @@ import apiFetch from '@wordpress/api-fetch';
 
 const DEFAULT_SETTINGS = {
     block_editor_enabled: false,
+    settings_level: 'simple',
 };
 
 const LEVEL_STORAGE_KEY = 'magick_ad_settings_level';
@@ -19,6 +20,8 @@ const LEVELS = [
     { value: 'advanced', label: '高级' },
     { value: 'lab', label: '实验室' },
 ];
+const normalizeLevel = (value) =>
+    value === 'advanced' || value === 'lab' ? value : 'simple';
 
 const ExperimentsPanel = ({ onNotice }) => {
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -30,7 +33,13 @@ const ExperimentsPanel = ({ onNotice }) => {
             return 'simple';
         }
         try {
-            return window.localStorage.getItem(LEVEL_STORAGE_KEY) || 'simple';
+            const fromBoot = window.MagickAD?.settingsLevel;
+            if (fromBoot) {
+                return normalizeLevel(fromBoot);
+            }
+            return normalizeLevel(
+                window.localStorage.getItem(LEVEL_STORAGE_KEY) || 'simple'
+            );
         } catch (err) {
             return 'simple';
         }
@@ -45,6 +54,7 @@ const ExperimentsPanel = ({ onNotice }) => {
                     return;
                 }
                 setSettings({ ...DEFAULT_SETTINGS, ...response });
+                setDisplayLevel(normalizeLevel(response?.settings_level));
                 setLoading(false);
             })
             .catch((err) => {
@@ -65,6 +75,9 @@ const ExperimentsPanel = ({ onNotice }) => {
         }
         try {
             window.localStorage.setItem(LEVEL_STORAGE_KEY, displayLevel);
+            if (window.MagickAD) {
+                window.MagickAD.settingsLevel = displayLevel;
+            }
             window.dispatchEvent(
                 new CustomEvent('magick-ad-display-level-updated', {
                     detail: { level: displayLevel },
@@ -74,6 +87,17 @@ const ExperimentsPanel = ({ onNotice }) => {
             // ignore storage errors
         }
     }, [displayLevel]);
+
+    useEffect(() => {
+        if (loading || saving) {
+            return;
+        }
+        const currentLevel = normalizeLevel(settings.settings_level);
+        if (currentLevel === displayLevel) {
+            return;
+        }
+        updateSettings({ settings_level: displayLevel });
+    }, [displayLevel, loading, saving, settings.settings_level]);
 
     const persist = (next) => {
         setSaving(true);

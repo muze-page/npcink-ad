@@ -9,6 +9,13 @@ const readDisplayLevel = () => {
         return 'simple';
     }
     try {
+        const fromBoot = window.MagickAD?.settingsLevel;
+        if (fromBoot === 'advanced' || fromBoot === 'lab') {
+            return fromBoot;
+        }
+        if (fromBoot === 'simple') {
+            return 'simple';
+        }
         const level = window.localStorage?.getItem(SETTINGS_LEVEL_STORAGE_KEY);
         return level === 'advanced' || level === 'lab' ? level : 'simple';
     } catch (err) {

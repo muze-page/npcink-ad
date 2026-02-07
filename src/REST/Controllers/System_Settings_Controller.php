@@ -71,6 +71,11 @@ final class System_Settings_Controller {
         return in_array($value, array('sync', 'async'), true) ? $value : 'async';
     }
 
+    private static function sanitize_settings_level($value): string {
+        $value = is_string($value) ? $value : '';
+        return in_array($value, array('simple', 'advanced', 'lab'), true) ? $value : 'simple';
+    }
+
     private static function sanitize_domain_list($value): array {
         if (is_string($value)) {
             $value = preg_split('/[\\s,;]+/', $value);
@@ -194,6 +199,9 @@ final class System_Settings_Controller {
             'brand_name' => get_option('magick_ad_brand_name', 'Magick AD'),
             'brand_tagline' => get_option('magick_ad_brand_tagline', '广告配置与投放规则管理'),
             'manage_capability' => get_option('magick_ad_manage_capability', 'manage_options'),
+            'settings_level' => self::sanitize_settings_level(
+                get_option('magick_ad_settings_level', 'simple')
+            ),
         );
 
         return rest_ensure_response($settings);
@@ -316,6 +324,9 @@ final class System_Settings_Controller {
         $manage_capability = self::sanitize_manage_capability(
             $params['manage_capability'] ?? get_option('magick_ad_manage_capability', 'manage_options')
         );
+        $settings_level = self::sanitize_settings_level(
+            $params['settings_level'] ?? get_option('magick_ad_settings_level', 'simple')
+        );
 
         update_option('magick_ad_tracking_strategy', $tracking_strategy);
         update_option('magick_ad_tracking_enabled', $tracking_enabled ? '1' : '0');
@@ -342,6 +353,7 @@ final class System_Settings_Controller {
         update_option('magick_ad_brand_name', $brand_name);
         update_option('magick_ad_brand_tagline', $brand_tagline);
         update_option('magick_ad_manage_capability', $manage_capability);
+        update_option('magick_ad_settings_level', $settings_level);
 
         $tracking_secret_rotated_at = (int) get_option('magick_ad_track_secret_rotated_at', 0);
         $tracking_secret_has_prev = (get_option('magick_ad_track_secret_prev', '') !== '');
@@ -385,6 +397,7 @@ final class System_Settings_Controller {
             'brand_name' => $brand_name,
             'brand_tagline' => $brand_tagline,
             'manage_capability' => $manage_capability,
+            'settings_level' => $settings_level,
         ));
     }
 }
