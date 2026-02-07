@@ -180,7 +180,7 @@ final class Patterns {
                     'creativeType' => 'html',
                     'templateCategory' => '品牌',
                     'html' => sprintf(
-                        '<section class="magick-hero-banner" style="%spadding:56px 24px;border-radius:14px;text-align:center;color:#ffffff;"><div style="max-width:920px;margin:0 auto;"><p style="margin:0 0 10px;font-size:13px;letter-spacing:.06em;opacity:.9;">推荐内容</p><h2 style="margin:0 0 12px;font-size:30px;line-height:1.3;">向访客清晰传达你的核心价值</h2><p style="margin:0 0 18px;font-size:16px;opacity:.92;">适用于活动推广、功能介绍、订阅引导等大多数场景。</p><a href="#" style="display:inline-block;padding:10px 18px;border-radius:999px;background:#ffffff;color:#0f172a;text-decoration:none;font-weight:600;">了解详情</a></div></section>',
+                        '<section class="magick-hero-banner" style="%spadding:52px 24px;border-radius:16px;overflow:hidden;color:#ffffff;"><div style="max-width:860px;margin:0 auto;text-align:center;"><p style="margin:0 0 10px;font-size:13px;letter-spacing:.06em;opacity:.88;">推荐内容</p><h2 style="margin:0;font-size:30px;line-height:1.3;">向访客清晰传达你的核心价值</h2><p style="margin:14px auto 0;max-width:680px;font-size:16px;line-height:1.65;opacity:.94;">适用于活动推广、功能介绍、订阅引导等大多数站点场景。</p><div style="margin-top:20px;"><a href="#" style="display:inline-block;padding:10px 18px;border-radius:999px;background:#ffffff;color:#0f172a;text-decoration:none;font-weight:600;">了解详情</a></div></div></section>',
                         $allow_external_assets
                             ? 'background-image:url(https://via.placeholder.com/1600x400?text=Banner);'
                             : 'background:linear-gradient(135deg,#2563eb,#22d3ee);'
@@ -203,8 +203,8 @@ final class Patterns {
                     'creativeType' => 'html',
                     'templateCategory' => '视频',
                     'html' => $allow_external_assets
-                        ? '<div style="position:relative;width:100%;padding-top:56.25%;overflow:hidden;border-radius:10px;background:#000;"><iframe src="https://www.youtube.com/embed/aqz-KE-bpKQ" title="Video" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>'
-                        : $this->media_placeholder_html('视频占位（请替换链接）'),
+                        ? '<section style="max-width:920px;margin:0 auto;"><div style="position:relative;width:100%;padding-top:56.25%;overflow:hidden;border-radius:12px;background:#000;"><iframe src="https://www.youtube.com/embed/aqz-KE-bpKQ" title="Video" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div><p style="margin:10px 4px 0;font-size:13px;color:#64748b;">可替换为课程讲解、产品演示或案例回放视频。</p></section>'
+                        : '<section style="max-width:920px;margin:0 auto;">' . $this->media_placeholder_html('视频占位（请替换链接）') . '</section>',
                 )),
             ),
             array(
@@ -222,7 +222,7 @@ final class Patterns {
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '通用',
-                    'html' => '<div class="magick-ad-banner-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;border:1px solid #d0d7de;border-radius:12px;background:#f8fafc;"><div><strong style="display:block;font-size:16px;color:#0f172a;">这里可以放置一条重点信息</strong><span style="font-size:13px;color:#475569;">适合文章中部、列表顶部或专题页。</span></div><a href="#" style="display:inline-block;padding:8px 14px;border-radius:999px;background:#2563eb;color:#ffffff;text-decoration:none;font-size:13px;">查看详情</a></div>',
+                    'html' => '<section style="max-width:900px;margin:0 auto;"><div class="magick-ad-banner-row" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:15px 16px;border:1px solid #d0d7de;border-radius:12px;background:#f8fafc;"><div style="min-width:220px;flex:1 1 360px;"><strong style="display:block;font-size:16px;line-height:1.45;color:#0f172a;">这里可以放置一条重点信息</strong><span style="display:block;margin-top:6px;font-size:13px;line-height:1.55;color:#475569;">适合文章中部、列表顶部或专题页。</span></div><a href="#" style="display:inline-block;padding:8px 14px;border-radius:999px;background:#2563eb;color:#ffffff;text-decoration:none;font-size:13px;line-height:1.2;">查看详情</a></div></section>',
                 )),
             ),
             array(
@@ -240,7 +240,7 @@ final class Patterns {
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '通用',
-                    'html' => '<section style="max-width:760px;margin:0 auto;"><article style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px;border:1px solid #d9e1ea;border-radius:14px;background:#ffffff;box-shadow:0 8px 20px rgba(15,23,42,.06);"><div style="flex:1 1 320px;min-width:220px;"><span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;">推荐</span><h3 style="margin:12px 0 8px;font-size:20px;line-height:1.35;color:#0f172a;">用一张卡片介绍你的重点内容</h3><p style="margin:0;font-size:14px;line-height:1.65;color:#475569;">可用于课程报名、产品更新、下载入口或会员权益说明。</p></div><a href="#" style="display:inline-block;align-self:flex-start;padding:9px 14px;border-radius:10px;background:#0f172a;color:#ffffff;text-decoration:none;font-size:13px;white-space:nowrap;">立即了解</a></article></section>',
+                    'html' => '<section style="max-width:760px;margin:0 auto;"><article style="padding:22px 24px;border:1px solid #d9e1ea;border-radius:14px;background:#ffffff;box-shadow:0 8px 20px rgba(15,23,42,.06);"><div style="max-width:640px;"><span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;">推荐</span><h3 style="margin:14px 0 10px;font-size:20px;line-height:1.35;color:#0f172a;">用一张卡片介绍你的重点内容</h3><p style="margin:0;font-size:14px;line-height:1.7;color:#475569;">可用于课程报名、产品更新、下载入口或会员权益说明。</p><div style="margin-top:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><a href="#" style="display:inline-block;padding:10px 16px;border-radius:10px;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;line-height:1.2;white-space:nowrap;">立即了解</a></div></div></article></section>',
                 )),
             ),
             array(
@@ -258,7 +258,7 @@ final class Patterns {
                 'content' => $this->build_ad_block(array(
                     'creativeType' => 'html',
                     'templateCategory' => '通用',
-                    'html' => '<div class="magick-ad-custom-slot">在此粘贴你的 HTML / JS 代码</div>',
+                    'html' => '<section style="max-width:860px;margin:0 auto;padding:18px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;color:#475569;font-size:14px;line-height:1.7;"><strong style="display:block;color:#0f172a;font-size:15px;margin-bottom:8px;">原始代码区</strong>在此粘贴你的 HTML / JS 代码，建议先在预览中验证展示与交互效果。</section>',
                 )),
             ),
             array(
@@ -313,11 +313,92 @@ final class Patterns {
                     'risk' => 'low',
                 )
             ),
+            $this->pattern(
+                'magick-ad/image-cover-16-9',
+                array(
+                    'title' => esc_html__('内容封面图（16:9）', 'magick-ad'),
+                    'description' => esc_html__('适用于文章首图、专题封面或视频封面', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'image',
+                        'templateCategory' => '内容',
+                        'imageUrl' => $allow_external_assets
+                            ? 'https://via.placeholder.com/1280x720?text=Cover'
+                            : $placeholders['feature'],
+                        'imageAlt' => '16:9 封面占位图',
+                    )),
+                ),
+                array(
+                    'scenario' => '内容运营',
+                    'device' => 'all',
+                    'risk' => 'low',
+                )
+            ),
+            $this->pattern(
+                'magick-ad/image-poster-3-4',
+                array(
+                    'title' => esc_html__('活动海报（3:4）', 'magick-ad'),
+                    'description' => esc_html__('适用于活动宣传、下载引导和移动端焦点位', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'image',
+                        'templateCategory' => '促销',
+                        'imageUrl' => $allow_external_assets
+                            ? 'https://via.placeholder.com/900x1200?text=Poster'
+                            : $placeholders['square'],
+                        'imageAlt' => '3:4 海报占位图',
+                    )),
+                ),
+                array(
+                    'scenario' => '活动促销',
+                    'device' => 'mobile',
+                    'risk' => 'medium',
+                )
+            ),
+            $this->pattern(
+                'magick-ad/image-brand-strip',
+                array(
+                    'title' => esc_html__('品牌条幅（宽屏）', 'magick-ad'),
+                    'description' => esc_html__('适用于导航下方、列表上方或专题页顶部', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'image',
+                        'templateCategory' => '品牌',
+                        'imageUrl' => $allow_external_assets
+                            ? 'https://via.placeholder.com/1440x220?text=Brand+Strip'
+                            : $placeholders['banner'],
+                        'imageAlt' => '宽屏条幅占位图',
+                    )),
+                ),
+                array(
+                    'scenario' => '品牌曝光',
+                    'device' => 'desktop',
+                    'risk' => 'low',
+                )
+            ),
+            $this->pattern(
+                'magick-ad/image-cta-banner',
+                array(
+                    'title' => esc_html__('转化横幅（图像）', 'magick-ad'),
+                    'description' => esc_html__('适用于促销入口、优惠券领取或课程报名', 'magick-ad'),
+                    'content' => $this->build_ad_block(array(
+                        'creativeType' => 'image',
+                        'templateCategory' => '转化',
+                        'imageUrl' => $allow_external_assets
+                            ? 'https://via.placeholder.com/1200x480?text=CTA+Banner'
+                            : $placeholders['banner'],
+                        'imageAlt' => '转化横幅占位图',
+                    )),
+                ),
+                array(
+                    'scenario' => '转化引导',
+                    'device' => 'all',
+                    'risk' => 'medium',
+                )
+            ),
         );
     }
 
     private function get_video_patterns(bool $allow_external_assets): array {
         $placeholder = $this->media_placeholder_html('视频占位（请替换为你的链接）');
+        $video_url = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
 
         return array(
             $this->pattern(
@@ -331,7 +412,7 @@ final class Patterns {
                         ? array(
                             'creativeType' => 'video',
                             'templateCategory' => '视频',
-                            'videoUrl' => 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+                            'videoUrl' => $video_url,
                         )
                         : array(
                             'creativeType' => 'html',
@@ -356,7 +437,7 @@ final class Patterns {
                         ? array(
                             'creativeType' => 'video',
                             'templateCategory' => '视频',
-                            'videoUrl' => 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+                            'videoUrl' => $video_url,
                         )
                         : array(
                             'creativeType' => 'html',
@@ -368,6 +449,85 @@ final class Patterns {
                     'scenario' => '品牌曝光',
                     'device' => 'desktop',
                     'risk' => 'medium',
+                )
+            ),
+            $this->pattern(
+                'magick-ad/video-short',
+                array(
+                    'title' => esc_html__('短视频导流（通用）', 'magick-ad'),
+                    'description' => $allow_external_assets
+                        ? esc_html__('适合社媒分发、活动引导或短内容承接', 'magick-ad')
+                        : esc_html__('视频占位（请替换为你的链接）', 'magick-ad'),
+                    'content' => $this->build_ad_block($allow_external_assets
+                        ? array(
+                            'creativeType' => 'video',
+                            'templateCategory' => '视频',
+                            'videoUrl' => $video_url,
+                        )
+                        : array(
+                            'creativeType' => 'html',
+                            'templateCategory' => '视频',
+                            'html' => $placeholder,
+                        )),
+                ),
+                array(
+                    'scenario' => '转化引导',
+                    'device' => 'mobile',
+                    'risk' => 'medium',
+                )
+            ),
+            $this->pattern(
+                'magick-ad/video-popup-highlight',
+                array(
+                    'title' => esc_html__('视频弹窗（重点提示）', 'magick-ad'),
+                    'description' => $allow_external_assets
+                        ? esc_html__('适合新品发布、直播预告或限时活动提醒', 'magick-ad')
+                        : esc_html__('视频占位（请替换为你的链接）', 'magick-ad'),
+                    'content' => $this->build_ad_block($allow_external_assets
+                        ? array(
+                            'creativeType' => 'video',
+                            'containerType' => 'popup',
+                            'templateCategory' => '视频',
+                            'videoUrl' => $video_url,
+                        )
+                        : array(
+                            'creativeType' => 'html',
+                            'containerType' => 'popup',
+                            'templateCategory' => '视频',
+                            'html' => '<div style="max-width:420px;margin:0 auto;">' . $placeholder . '<p style="margin:12px 0 0;text-align:center;font-size:13px;color:#64748b;">建议替换为你的发布预告或活动视频。</p></div>',
+                        )),
+                ),
+                array(
+                    'scenario' => '活动促销',
+                    'device' => 'all',
+                    'risk' => 'medium',
+                )
+            ),
+            $this->pattern(
+                'magick-ad/video-interstitial-focus',
+                array(
+                    'title' => esc_html__('全屏视频（活动焦点）', 'magick-ad'),
+                    'description' => $allow_external_assets
+                        ? esc_html__('适合发布会、重大活动或阶段性强提醒', 'magick-ad')
+                        : esc_html__('视频占位（请替换为你的链接）', 'magick-ad'),
+                    'content' => $this->build_ad_block($allow_external_assets
+                        ? array(
+                            'creativeType' => 'video',
+                            'containerType' => 'interstitial',
+                            'templateCategory' => '视频',
+                            'videoUrl' => $video_url,
+                        )
+                        : array(
+                            'creativeType' => 'html',
+                            'containerType' => 'interstitial',
+                            'templateCategory' => '视频',
+                            'html' => '<div style="max-width:560px;margin:0 auto;text-align:center;">' . $placeholder . '<p style="margin:12px 0 0;font-size:13px;color:#64748b;">建议用于活动节点，避免常驻打扰。</p></div>',
+                        )),
+                ),
+                array(
+                    'scenario' => '活动促销',
+                    'device' => 'all',
+                    'risk' => 'high',
                 )
             ),
         );
@@ -389,7 +549,7 @@ final class Patterns {
                     'content' => $this->build_ad_block(array(
                         'creativeType' => 'block',
                         'templateCategory' => '通用',
-                        'blocks' => '<!-- wp:heading {"level":3} --><h3>用简洁文案引导用户下一步操作</h3><!-- /wp:heading --><!-- wp:paragraph --><p>可替换为注册、咨询、下载、加入社群等任意行动目标。</p><!-- /wp:paragraph --><!-- wp:buttons --><div class="wp-block-buttons"><div class="wp-block-button"><a class="wp-block-button__link">立即开始</a></div></div><!-- /wp:buttons -->',
+                        'blocks' => '<!-- wp:group {"style":{"spacing":{"padding":{"top":"20px","right":"20px","bottom":"20px","left":"20px"},"blockGap":"12px"},"border":{"radius":"12px","width":"1px"},"color":{"background":"#f8fafc","border":"#d9e1ea"}},"layout":{"type":"constrained"}} --><div class="wp-block-group has-border-color has-background" style="border-color:#d9e1ea;border-width:1px;border-radius:12px;background-color:#f8fafc;padding-top:20px;padding-right:20px;padding-bottom:20px;padding-left:20px"><!-- wp:heading {"level":3} --><h3>用简洁文案引导用户下一步操作</h3><!-- /wp:heading --><!-- wp:paragraph --><p>可替换为注册、咨询、下载、加入社群等任意行动目标。</p><!-- /wp:paragraph --><!-- wp:buttons --><div class="wp-block-buttons"><!-- wp:button {"style":{"border":{"radius":"999px"}}} --><div class="wp-block-button"><a class="wp-block-button__link wp-element-button" style="border-radius:999px">立即开始</a></div><!-- /wp:button --></div><!-- /wp:buttons --></div><!-- /wp:group -->',
                     )),
                 ),
                 array(
@@ -407,7 +567,7 @@ final class Patterns {
                         'creativeType' => 'block',
                         'templateCategory' => '内容',
                         'blocks' => sprintf(
-                            '<!-- wp:columns --><div class="wp-block-columns"><!-- wp:column --><div class="wp-block-column"><!-- wp:paragraph --><p>用图文组合表达你的核心卖点</p><!-- /wp:paragraph --><!-- wp:list --><ul><li>可替换为任意行业文案</li><li>支持快速替换主图和按钮</li><li>适配桌面与移动端阅读</li></ul><!-- /wp:list --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:image {"sizeSlug":"large"} --><figure class="wp-block-image size-large"><img src="%s" alt=""/></figure><!-- /wp:image --></div><!-- /wp:column --></div><!-- /wp:columns -->',
+                            '<!-- wp:group {"style":{"spacing":{"padding":{"top":"20px","right":"20px","bottom":"20px","left":"20px"}},"border":{"radius":"12px","width":"1px"},"color":{"background":"#ffffff","border":"#d9e1ea"}},"layout":{"type":"constrained"}} --><div class="wp-block-group has-border-color has-background" style="border-color:#d9e1ea;border-width:1px;border-radius:12px;background-color:#ffffff;padding-top:20px;padding-right:20px;padding-bottom:20px;padding-left:20px"><!-- wp:columns {"verticalAlignment":"center"} --><div class="wp-block-columns are-vertically-aligned-center"><!-- wp:column {"verticalAlignment":"center"} --><div class="wp-block-column is-vertically-aligned-center"><!-- wp:paragraph --><p>用图文组合表达你的核心卖点</p><!-- /wp:paragraph --><!-- wp:list --><ul><li>可替换为任意行业文案</li><li>支持快速替换主图和按钮</li><li>适配桌面与移动端阅读</li></ul><!-- /wp:list --></div><!-- /wp:column --><!-- wp:column {"verticalAlignment":"center"} --><div class="wp-block-column is-vertically-aligned-center"><!-- wp:image {"sizeSlug":"large"} --><figure class="wp-block-image size-large"><img src="%s" alt=""/></figure><!-- /wp:image --></div><!-- /wp:column --></div><!-- /wp:columns --></div><!-- /wp:group -->',
                             $image_url
                         ),
                     )),
@@ -431,9 +591,9 @@ final class Patterns {
                     'content' => $this->build_ad_block(array(
                         'creativeType' => 'html',
                         'containerType' => 'popup',
-                    'templateCategory' => '通用',
-                    'html' => '<div style="text-align:center;max-width:420px;margin:0 auto;"><h3 style="margin:0 0 10px;">欢迎查看本周重点内容</h3><p style="margin:0 0 14px;color:#475569;">这段文案可替换为订阅提醒、优惠领取或功能更新通知。</p><a href="#" style="display:inline-block;padding:9px 14px;border-radius:999px;background:#2563eb;color:#fff;text-decoration:none;">继续查看</a></div>',
-                )),
+                        'templateCategory' => '通用',
+                        'html' => '<div style="text-align:center;max-width:440px;margin:0 auto;"><p style="margin:0 0 8px;font-size:13px;color:#64748b;">限时推荐</p><h3 style="margin:0;font-size:24px;line-height:1.35;color:#0f172a;">欢迎查看本周重点内容</h3><p style="margin:12px 0 0;color:#475569;line-height:1.65;">这段文案可替换为订阅提醒、优惠领取或功能更新通知。</p><div style="margin-top:16px;"><a href="#" style="display:inline-block;padding:10px 16px;border-radius:999px;background:#2563eb;color:#fff;text-decoration:none;font-size:14px;line-height:1.2;">继续查看</a></div></div>',
+                    )),
                 ),
                 array(
                     'scenario' => '订阅留资',
@@ -449,9 +609,9 @@ final class Patterns {
                     'content' => $this->build_ad_block(array(
                         'creativeType' => 'html',
                         'containerType' => 'banner',
-                    'templateCategory' => '通用',
-                    'html' => '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;"><span><strong>公告：</strong>这里放置一条不会过时的通用提示文案。</span><a href="#" style="display:inline-block;padding:6px 12px;border-radius:999px;background:#0f172a;color:#fff;text-decoration:none;font-size:12px;">查看</a></div>',
-                )),
+                        'templateCategory' => '通用',
+                        'html' => '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><span style="font-size:14px;line-height:1.6;color:#0f172a;"><strong>公告：</strong>这里放置一条不会过时的通用提示文案。</span><a href="#" style="display:inline-block;padding:7px 13px;border-radius:999px;background:#0f172a;color:#fff;text-decoration:none;font-size:12px;line-height:1.2;">查看</a></div>',
+                    )),
                 ),
                 array(
                     'scenario' => '公告通知',
@@ -488,9 +648,9 @@ final class Patterns {
                     'content' => $this->build_ad_block(array(
                         'creativeType' => 'html',
                         'containerType' => 'interstitial',
-                    'templateCategory' => '通用',
-                    'html' => '<div style="text-align:center;max-width:560px;margin:0 auto;"><p style="margin:0 0 8px;font-size:13px;color:#64748b;">重点提示</p><h2 style="margin:0 0 12px;font-size:28px;line-height:1.3;color:#0f172a;">在全屏中展示你的核心信息</h2><p style="margin:0 0 16px;font-size:15px;color:#475569;">适合用于新功能发布、活动引导或重要公告。</p><a href="#" style="display:inline-block;padding:10px 18px;border-radius:999px;background:#0f172a;color:#ffffff;text-decoration:none;">查看详情</a></div>',
-                )),
+                        'templateCategory' => '通用',
+                        'html' => '<div style="text-align:center;max-width:580px;margin:0 auto;"><p style="margin:0 0 8px;font-size:13px;color:#64748b;">重点提示</p><h2 style="margin:0;font-size:28px;line-height:1.3;color:#0f172a;">在全屏中展示你的核心信息</h2><p style="margin:14px auto 0;max-width:520px;font-size:15px;line-height:1.65;color:#475569;">适合用于新功能发布、活动引导或重要公告。</p><div style="margin-top:18px;"><a href="#" style="display:inline-block;padding:10px 18px;border-radius:999px;background:#0f172a;color:#ffffff;text-decoration:none;font-size:14px;line-height:1.2;">查看详情</a></div></div>',
+                    )),
                 ),
                 array(
                     'scenario' => '活动促销',
