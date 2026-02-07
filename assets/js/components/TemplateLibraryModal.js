@@ -5,6 +5,7 @@ import TemplateLibrary from './TemplateLibrary';
 const TemplateLibraryModal = ({
     isOpen,
     type,
+    showVisualTemplateType = true,
     templates,
     categories,
     selected,
@@ -30,27 +31,47 @@ const TemplateLibraryModal = ({
         return null;
     }
 
+    const creativeOptions = useMemo(
+        () => [
+            { label: '全部', value: 'all' },
+            { label: '代码/HTML', value: 'html' },
+            { label: '图片', value: 'image' },
+            { label: '视频', value: 'video' },
+            ...(showVisualTemplateType
+                ? [{ label: '可视化', value: 'block' }]
+                : []),
+        ],
+        [showVisualTemplateType]
+    );
+    const allowedCreativeValues = useMemo(
+        () => new Set(creativeOptions.map((item) => item.value)),
+        [creativeOptions]
+    );
+    const resolveCreativeFilter = (value) =>
+        allowedCreativeValues.has(value || 'all') ? value || 'all' : 'all';
+    const initialCreativeFilter = resolveCreativeFilter(type || 'all');
+
     const [containerFilter, setContainerFilter] = useState('all');
-    const [creativeFilter, setCreativeFilter] = useState(type || 'all');
+    const [creativeFilter, setCreativeFilter] = useState(initialCreativeFilter);
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [query, setQuery] = useState('');
     const [onlyFavorites, setOnlyFavorites] = useState(false);
     const [selectionMode, setSelectionMode] = useState(false);
-    const initialCreativeFilter = type || 'all';
 
     useEffect(() => {
-        if (type) {
-            setCreativeFilter(type);
-        }
-    }, [type]);
+        setCreativeFilter(resolveCreativeFilter(type || 'all'));
+    }, [type, allowedCreativeValues]);
 
     const safeTemplates = Array.isArray(templates) ? templates : [];
-    const systemTemplates = safeTemplates.filter((item) => item.source === 'core');
-    const userTemplates = safeTemplates.filter((item) => item.source === 'user');
+    const visibleTemplates = showVisualTemplateType
+        ? safeTemplates
+        : safeTemplates.filter((item) => item.type !== 'block');
+    const systemTemplates = visibleTemplates.filter((item) => item.source === 'core');
+    const userTemplates = visibleTemplates.filter((item) => item.source === 'user');
 
     const derivedCategories = Array.from(
         new Set(
-            safeTemplates
+            visibleTemplates
                 .map((item) => item.category)
                 .filter((item) => item && item.trim())
         )
@@ -69,7 +90,7 @@ const TemplateLibraryModal = ({
         }
         return acc;
     }, {});
-    const hasUncategorized = safeTemplates.some(
+    const hasUncategorized = visibleTemplates.some(
         (item) => !item.category || !item.category.trim()
     );
 
@@ -177,13 +198,8 @@ const TemplateLibraryModal = ({
     const activeFilterTags = [];
     if (creativeFilter !== initialCreativeFilter) {
         const creativeLabel =
-            [
-                { label: '全部', value: 'all' },
-                { label: '代码/HTML', value: 'html' },
-                { label: '图片', value: 'image' },
-                { label: '视频', value: 'video' },
-                { label: '可视化', value: 'block' },
-            ].find((item) => item.value === creativeFilter)?.label || creativeFilter;
+            creativeOptions.find((item) => item.value === creativeFilter)?.label ||
+            creativeFilter;
         activeFilterTags.push(`创意：${creativeLabel}`);
     }
     if (containerFilter !== 'all') {
@@ -257,13 +273,7 @@ const TemplateLibraryModal = ({
                 templates={list}
                 query={query}
                 onQueryChange={setQuery}
-                creativeOptions={[
-                    { label: '全部', value: 'all' },
-                    { label: '代码/HTML', value: 'html' },
-                    { label: '图片', value: 'image' },
-                    { label: '视频', value: 'video' },
-                    { label: '可视化', value: 'block' },
-                ]}
+                creativeOptions={creativeOptions}
                 containerOptions={[
                     { label: '全部', value: 'all' },
                     { label: '默认嵌入', value: 'inline' },
@@ -335,7 +345,7 @@ const TemplateLibraryModal = ({
             <div className="magick-ad-template-shell">
                 <div className="magick-ad-template-modal-overview">
                     <div className="magick-ad-template-overview-item">
-                        <strong>{safeTemplates.length}</strong>
+                        <strong>{visibleTemplates.length}</strong>
                         <span>模板总数</span>
                     </div>
                     <div className="magick-ad-template-overview-item">

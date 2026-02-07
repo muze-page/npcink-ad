@@ -93,33 +93,7 @@ const TemplateLibrary = ({
             </div>
 
             <div className="magick-ad-template-toolbar-shell">
-                <div className="magick-ad-template-actions-row">
-                    <div className="magick-ad-template-actions-left">
-                        <Button variant="secondary" onClick={onImport}>
-                            导入模板
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            aria-expanded={drawerOpen}
-                            onClick={() => {
-                                setDrawerOpen(true);
-                                onOpenCategoryDrawer?.();
-                            }}
-                        >
-                            分类设置
-                        </Button>
-                    </div>
-                    <div className="magick-ad-template-actions-right">
-                        <Button
-                            variant={selectionMode ? 'primary' : 'secondary'}
-                            onClick={onToggleSelectionMode}
-                        >
-                            {selectionMode ? '退出选择' : '选择模式'}
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="magick-ad-template-filter-row">
+                <div className="magick-ad-template-toolbar-main">
                     <div className="magick-ad-template-search">
                         <span className="magick-ad-template-search-icon">
                             <Icon icon={search} size={16} />
@@ -133,29 +107,53 @@ const TemplateLibrary = ({
                             placeholder="搜索模板..."
                         />
                     </div>
-
-                    <div className="magick-ad-template-filter-group">
-                        <div className="magick-ad-template-segment">
-                            {creativeOptions.map((option) => (
-                                <button
-                                    key={option.value}
-                                    type="button"
-                                    className={`magick-ad-template-segment-btn ${
-                                        creativeFilter === option.value
-                                            ? 'is-active'
-                                            : ''
-                                    }`}
-                                    onClick={() =>
-                                        onFilterChange?.('creative', option.value)
-                                    }
-                                >
-                                    {option.label}
-                                </button>
-                            ))}
+                    <div className="magick-ad-template-actions-row">
+                        <div className="magick-ad-template-actions-left">
+                            <Button variant="secondary" onClick={onImport}>
+                                导入模板
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                aria-expanded={drawerOpen}
+                                onClick={() => {
+                                    setDrawerOpen(true);
+                                    onOpenCategoryDrawer?.();
+                                }}
+                            >
+                                分类设置
+                            </Button>
+                        </div>
+                        <div className="magick-ad-template-actions-right">
+                            <Button
+                                variant={selectionMode ? 'primary' : 'secondary'}
+                                onClick={onToggleSelectionMode}
+                            >
+                                {selectionMode ? '退出选择' : '选择模式'}
+                            </Button>
                         </div>
                     </div>
+                </div>
 
-                    <div className="magick-ad-template-filter-select">
+                <div className="magick-ad-template-toolbar-filters">
+                    <div className="magick-ad-template-filter-select magick-ad-template-filter-field">
+                        <span className="magick-ad-template-filter-label">
+                            模板类型
+                        </span>
+                        <SelectControl
+                            label="模板类型"
+                            hideLabelFromVision
+                            value={creativeFilter}
+                            options={creativeOptions}
+                            onChange={(value) =>
+                                onFilterChange?.('creative', value)
+                            }
+                        />
+                    </div>
+
+                    <div className="magick-ad-template-filter-select magick-ad-template-filter-field">
+                        <span className="magick-ad-template-filter-label">
+                            容器
+                        </span>
                         <SelectControl
                             label="容器"
                             hideLabelFromVision
@@ -167,7 +165,10 @@ const TemplateLibrary = ({
                         />
                     </div>
 
-                    <div className="magick-ad-template-filter-select">
+                    <div className="magick-ad-template-filter-select magick-ad-template-filter-field">
+                        <span className="magick-ad-template-filter-label">
+                            分类
+                        </span>
                         <SelectControl
                             label="分类"
                             hideLabelFromVision

@@ -6090,6 +6090,9 @@ const AdsConfig = () => {
             <TemplateLibraryModal
                 isOpen={templateModalOpen}
                 type={templateType}
+                showVisualTemplateType={
+                    displayLevel !== 'simple' && isBlockEditorEnabled
+                }
                 templates={templateLibrary}
                 selected={templateSelection}
                 categories={templateCategories}
