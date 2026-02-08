@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MAGICK_AD_E2E_PREVIEW_PATH: ${{ vars.MAGICK_AD_E2E_PREVIEW_PATH }}
+      MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB: 180
+      MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB: 60
+      MAGICK_AD_BUNDLE_BUDGET_STRICT: 1
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -37,7 +37,29 @@ unzip -l dist/magick-ad-*.zip | head
 wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table
 ```
 
-## 4. 灰度建议
+## 4. 前端包体预算门禁
+
+`release-gate.sh` 默认检查：
+
+- `build/index.js <= 180 KiB`
+- `build/index.css <= 60 KiB`
+
+可用环境变量覆盖：
+
+```bash
+MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB=200 \
+MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB=70 \
+MAGICK_AD_BUNDLE_BUDGET_STRICT=1 \
+bash scripts/release-gate.sh
+```
+
+如果只是临时观察不阻断发布：
+
+```bash
+MAGICK_AD_BUNDLE_BUDGET_STRICT=0 bash scripts/release-gate.sh
+```
+
+## 5. 灰度建议
 
 1. 先在预发布站验证：
    - 后台广告配置页可打开
@@ -49,7 +71,7 @@ wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table
    - 队列积压
    - 接口失败原因码
 
-## 5. 回滚流程
+## 6. 回滚流程
 
 ```bash
 bash scripts/rollback.sh <release-zip> <plugin-target-dir>
@@ -67,7 +89,7 @@ bash scripts/rollback.sh dist/magick-ad-0.1.0.zip /var/www/html/wp-content/plugi
 2. 打开一条前台页面确认广告可见
 3. 执行一次核心 E2E（tracking）
 
-## 6. GitHub Actions 对齐
+## 7. GitHub Actions 对齐
 
 - CI：`.github/workflows/ci.yml`
 - 发布门禁：`.github/workflows/release-gate.yml`

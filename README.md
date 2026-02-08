@@ -38,9 +38,16 @@ bash scripts/release-gate.sh
 门禁默认执行：
 
 - 前端构建
+- 前端包体预算检查（`build/index.js`、`build/index.css`）
 - PHP 语法检查（本机有 `php` 时）
 - 可选 E2E（设置 `MAGICK_AD_E2E_PREVIEW_PATH` 时）
 - 生成并校验发布 zip
+
+可用环境变量：
+
+- `MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB`（默认 `180`）
+- `MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB`（默认 `60`）
+- `MAGICK_AD_BUNDLE_BUDGET_STRICT`（默认 `1`，设为 `0` 时仅告警不失败）
 
 ## 回滚脚本
 

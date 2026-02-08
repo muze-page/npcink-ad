@@ -76,7 +76,25 @@ add_filter('magick_ad_has_consent', function ($has_consent) {
   - `report`：统计看板
   - `compatibility`：兼容报告
 
-## 8. 发布体系
+## 8. 前端分包与性能预算
+
+- 入口：`assets/js/index.js`
+- 路由级按需加载：`assets/js/sections/App.js`
+- 面板级按需加载：`assets/js/sections/AdsConfig.js`
+- 模板库重逻辑按需加载：`assets/js/hooks/useTemplateLibrary.js`
+
+当前预算门禁（`scripts/release-gate.sh`）：
+
+- `build/index.js <= 180 KiB`
+- `build/index.css <= 60 KiB`
+
+预算可通过环境变量覆盖：
+
+- `MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB`
+- `MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB`
+- `MAGICK_AD_BUNDLE_BUDGET_STRICT`（`1` 失败门禁，`0` 仅告警）
+
+## 9. 发布体系
 
 - 门禁脚本：`scripts/release-gate.sh`
 - 回滚脚本：`scripts/rollback.sh`

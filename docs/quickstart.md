@@ -54,6 +54,7 @@ bash scripts/release-gate.sh
 
 门禁包含：
 - 前端构建
+- 前端包体预算检查（index.js / index.css）
 - PHP 语法检查（如果本机有 `php`）
 - 可选 E2E（设置 `MAGICK_AD_E2E_PREVIEW_PATH` 时）
 - 发布包生成与校验
