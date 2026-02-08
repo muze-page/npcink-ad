@@ -5116,23 +5116,15 @@ const AdsConfig = () => {
                         </div>
                     )}
                     {compact ? (
-                        <div className="magick-ad-runtime-summary__chips">
-                            <span className="magick-ad-runtime-summary__chip">
-                                规则 · {runtimeContextMeta.placementLabel}
-                            </span>
-                            <span className="magick-ad-runtime-summary__chip">
-                                页面 · {runtimeContextMeta.pageLabel}
-                            </span>
-                            <span className="magick-ad-runtime-summary__chip">
-                                设备 · {runtimeContextMeta.deviceRuleLabel}
-                            </span>
-                            <span className="magick-ad-runtime-summary__chip">
-                                登录 · {runtimeContextMeta.loginRuleLabel}
-                            </span>
-                            <span className="magick-ad-runtime-summary__chip is-env">
-                                环境 · {runtimeContextMeta.currentDeviceLabel} /{' '}
+                        <div className="magick-ad-runtime-summary__compact">
+                            <div className="magick-ad-runtime-summary__line">
+                                规则：{runtimeContextMeta.placementLabel} ·{' '}
+                                {runtimeContextMeta.pageLabel}
+                            </div>
+                            <div className="magick-ad-runtime-summary__line">
+                                环境：{runtimeContextMeta.currentDeviceLabel} /{' '}
                                 {runtimeContextMeta.currentLoginLabel}
-                            </span>
+                            </div>
                         </div>
                     ) : showDetails ? (
                         <>
@@ -5319,10 +5311,7 @@ const AdsConfig = () => {
                 {publishDetailsOpen && (
                     <Panel className="magick-ad-right-inline-panel">
                         <PanelBody
-                            title={renderPanelTitleWithSummary(
-                                '发布详情',
-                                `${publishStatusLabel} · ${publishScheduleSummary}`
-                            )}
+                            title={renderPanelTitleWithSummary('发布详情')}
                             opened
                         >
                             <SelectControl
@@ -5392,10 +5381,7 @@ const AdsConfig = () => {
                 )}
                 <Panel className="magick-ad-right-inline-panel">
                     <PanelBody
-                        title={renderPanelTitleWithSummary(
-                            '精确排期（高级）',
-                            publishScheduleSummary
-                        )}
+                        title={renderPanelTitleWithSummary('精确排期（高级）')}
                         opened={publishAdvancedOpen}
                         onToggle={() =>
                             setPublishAdvancedOpen((prev) => !prev)
@@ -5807,6 +5793,9 @@ const AdsConfig = () => {
         const targetCount = Array.isArray(selectedAd.options?.target_values)
             ? selectedAd.options.target_values.length
             : 0;
+        const placementCompactSummary = isGlobal
+            ? `页面 ${pageLabel} · 位置 ${placementLabel}`
+            : `定向 ${targetTypeLabel} · 目标 ${targetCount} 项`;
         return (
             <>
                 {includeValidation &&
@@ -5818,27 +5807,13 @@ const AdsConfig = () => {
                     )}
                 {canTogglePlacementDetails && (
                     <div className="magick-ad-placement-compact">
-                        <div className="magick-ad-placement-compact__chips">
-                            {isGlobal && (
-                                <>
-                                    <span className="magick-ad-placement-compact__chip">
-                                        页面 {pageLabel}
-                                    </span>
-                                    <span className="magick-ad-placement-compact__chip">
-                                        位置 {placementLabel}
-                                    </span>
-                                </>
-                            )}
-                            {isTargeted && (
-                                <>
-                                    <span className="magick-ad-placement-compact__chip">
-                                        定向 {targetTypeLabel}
-                                    </span>
-                                    <span className="magick-ad-placement-compact__chip">
-                                        目标 {targetCount} 项
-                                    </span>
-                                </>
-                            )}
+                        <div className="magick-ad-placement-compact__main">
+                            <span className="magick-ad-placement-compact__title">
+                                当前投放
+                            </span>
+                            <span className="magick-ad-placement-compact__desc">
+                                {placementCompactSummary}
+                            </span>
                         </div>
                         <Button
                             variant="tertiary"
@@ -5939,36 +5914,37 @@ const AdsConfig = () => {
             normalizeUsageType(selectedAd?.options?.usage_type || 'ad')
         );
         const modeLabel = editorModeLabels[effectiveEditorMode] || '设计';
-        const placement = resolvePlacement(selectedAd?.options || {});
-        const nodeSummary =
-            placement.hook === 'node' ? '节点已启用' : '节点未启用';
+        const pageLabel =
+            selectedAd?.options?.ad_type === 'targeted' &&
+            selectedAd?.options?.target_type
+                ? getOptionLabel(
+                      TARGET_TYPE_OPTIONS,
+                      selectedAd.options.target_type,
+                      '指定页面'
+                  )
+                : getOptionLabel(
+                      DISPLAY_PAGE_OPTIONS,
+                      selectedAd?.options?.show_page || 'all',
+                      '全站'
+                  );
         return (
             <>
                 <div className="magick-ad-right-section">
                     <div className="magick-ad-right-section__body">
                         <div className="magick-ad-right-overview">
                             <span className="magick-ad-right-overview__item">
-                                用途
-                                <strong>{usageLabel}</strong>
-                            </span>
-                            <span className="magick-ad-right-overview__item">
-                                模式
-                                <strong>{modeLabel}</strong>
-                            </span>
-                            <span className="magick-ad-right-overview__item">
-                                容器
+                                编辑
                                 <strong>
-                                    {resolveContainerTypeLabel(
-                                        selectedAd?.options || {}
-                                    )}
+                                    {usageLabel} · {modeLabel}
                                 </strong>
                             </span>
                             <span className="magick-ad-right-overview__item">
-                                位置
+                                投放
                                 <strong>
                                     {resolvePlacementLabel(
                                         selectedAd?.options || {}
-                                    )}
+                                    )}{' '}
+                                    · {pageLabel}
                                 </strong>
                             </span>
                         </div>
@@ -5987,14 +5963,6 @@ const AdsConfig = () => {
                                         setPlacementRulesAdvancedOpen((prev) => !prev)
                                     }
                                 >
-                                    <div className="magick-ad-right-inline-summary">
-                                        <span className="magick-ad-right-inline-summary__chip">
-                                            用途 {usageLabel}
-                                        </span>
-                                        <span className="magick-ad-right-inline-summary__chip">
-                                            模式 {modeLabel}
-                                        </span>
-                                    </div>
                                     <p className="magick-ad-right-inline-note">
                                         调整用途类型、编辑模式和专家能力。日常投放可保持默认。
                                     </p>
@@ -6079,12 +6047,9 @@ const AdsConfig = () => {
                         </Panel>
                     )}
                 {effectiveEditorMode === 'quick' && (
-                    <Panel>
-                        <PanelBody
-                            title={renderPanelTitleWithSummary(
-                                '页面插入',
-                                resolvePlacementLabel(selectedAd?.options || {})
-                            )}
+                        <Panel>
+                            <PanelBody
+                            title={renderPanelTitleWithSummary('页面插入')}
                             opened={quickPanelOpen === 'placement'}
                             onToggle={() =>
                                 setQuickPanelOpen((prev) =>
@@ -6106,10 +6071,7 @@ const AdsConfig = () => {
                             {!isSimpleLevel && (
                                 <Panel className="magick-ad-right-inline-panel">
                                     <PanelBody
-                                        title={renderPanelTitleWithSummary(
-                                            '高级规则（节点）',
-                                            nodeSummary
-                                        )}
+                                        title={renderPanelTitleWithSummary('高级规则（节点）')}
                                         opened={
                                             placementAdvancedOpen === 'quick'
                                         }
@@ -7064,7 +7026,7 @@ const AdsConfig = () => {
                                     {renderRuntimeSummaryBar({
                                         compact: true,
                                         showTitle: false,
-                                        showActions: true,
+                                        showActions: false,
                                         showDetails: runtimeDetailsOpen,
                                         detailsOpen: runtimeDetailsOpen,
                                         onToggleDetails: () =>
