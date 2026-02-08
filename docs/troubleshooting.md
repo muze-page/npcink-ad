@@ -8,6 +8,15 @@
 2. 调试面板中的“未展示原因码”。
 3. 节点插入场景是否存在目标节点，回退策略是否可用。
 
+### 常见 `reason_code`
+
+- `schedule_not_started`：未到开始时间
+- `schedule_expired`：已过期
+- `targeting_mismatch`：页面/分类/标签定向不命中
+- `device_mismatch`：设备不匹配
+- `login_mismatch`：登录状态不匹配
+- `consent_required`：同意门控未通过
+
 ## 2. Track 接口异常
 
 ### 症状：大量 `403`
@@ -64,3 +73,45 @@ bash scripts/rollback.sh dist/magick-ad-0.1.0.zip /var/www/html/wp-content/plugi
 ```
 
 脚本会先备份当前目录，再将目标版本同步回插件目录。
+
+## 7. E2E 常见失败
+
+### 症状：`tracking sends click payload` 超时或点不到元素
+
+- 常见原因：
+  - 广告元素存在但不可见（如 `aria-hidden="true"` / delay 未到）
+  - 当前页面未加载 tracking runtime
+- 处理建议：
+  - 用 `:visible` 目标触发点击或使用合成点击回退
+  - 本地测试临时关闭 `magick_ad_track_defer`
+
+### 症状：`page.goto(..., { waitUntil: 'networkidle' })` 超时
+
+- 常见原因：页面有持续网络请求，`networkidle` 长时间不满足。
+- 处理建议：
+  - 改为 `waitUntil: 'domcontentloaded'` + 关键选择器等待
+  - 对广告单元使用 `state: 'attached'` 或 `state: 'visible'` 的显式等待
+
+### 症状：`Playwright does not support chromium on mac-arm64`
+
+- 常见原因：错误设置了 `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE`。
+- 处理建议：移除 override，直接执行：
+
+```bash
+pnpm exec playwright install chromium chromium-headless-shell
+```
+
+## 8. Shell 与命令环境问题
+
+### 症状：提示符变成 `bash-3.2$`
+
+- 原因：当前会话仍在 bash。
+- 处理：
+
+```bash
+exec zsh
+```
+
+### 症状：`zsh: command not found: rg`
+
+- 处理：使用 `find` 版替代命令（见 `docs/quickstart.md` 的语法检查命令）。

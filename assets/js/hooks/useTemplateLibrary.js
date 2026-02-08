@@ -1,20 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { serialize, createBlock, getBlockVariations } from '@wordpress/blocks';
-import { select } from '@wordpress/data';
-import { store as coreStore } from '@wordpress/core-data';
-import {
-    buildPatternContent,
-    extractTemplateFromContent,
-    extractTemplateFromContentLoose,
-    FAVORITES_KEY,
-    getDefaultMeta,
-    MAGICK_BLOCK,
-    normalizeTemplateMeta,
-    PINNED_KEY,
-    sanitizeUsageType,
-    withTemplateMeta,
-} from './template-library/helpers';
+
+const FAVORITES_KEY = 'magick_ad_template_favorites';
+const PINNED_KEY = 'magick_ad_template_pins';
+const MAGICK_BLOCK = 'magick-ad/ad';
+
+let templateHelpersPromise = null;
+
+const loadTemplateHelpers = async () => {
+    if (!templateHelpersPromise) {
+        templateHelpersPromise = import('./template-library/helpers');
+    }
+    return templateHelpersPromise;
+};
 
 const useTemplateLibrary = ({
     selectedAd,
@@ -77,7 +75,26 @@ const useTemplateLibrary = ({
         pinsRef.current = pinnedIds;
     }, [pinnedIds]);
 
-    const loadTemplates = useCallback(async (type) => {
+    const loadTemplates = useCallback(async () => {
+        const [
+            {
+                extractTemplateFromContent,
+                extractTemplateFromContentLoose,
+                getDefaultMeta,
+                normalizeTemplateMeta,
+                sanitizeUsageType,
+                withTemplateMeta,
+            },
+            { createBlock, getBlockVariations, serialize },
+            { select },
+            { store: coreStore },
+        ] = await Promise.all([
+            loadTemplateHelpers(),
+            import('@wordpress/blocks'),
+            import('@wordpress/data'),
+            import('@wordpress/core-data'),
+        ]);
+
         const fallbackMetaMap = new Map();
         if (
             typeof window !== 'undefined' &&
@@ -296,9 +313,11 @@ const useTemplateLibrary = ({
             setTemplateType(type);
             setTemplateSelection([]);
             setTemplateModalOpen(true);
-            await loadTemplateCategories();
-            await loadTemplatePreferences();
-            await loadTemplates(type);
+            await Promise.all([
+                loadTemplateCategories(),
+                loadTemplatePreferences(),
+                loadTemplates(),
+            ]);
         },
         [loadTemplates, loadTemplateCategories, loadTemplatePreferences]
     );
@@ -454,6 +473,7 @@ const useTemplateLibrary = ({
             }
             const data = getCreativeTemplateData(type, selectedAd);
             try {
+                const { buildPatternContent } = await loadTemplateHelpers();
                 const content = buildPatternContent(
                     type,
                     data,
@@ -467,7 +487,7 @@ const useTemplateLibrary = ({
                     method: 'POST',
                     data: { title: name, status: 'publish', content },
                 });
-                await loadTemplates(type);
+                await loadTemplates();
                 showNotice?.('success', '模板已保存');
             } catch (err) {
                 showNotice?.('error', err?.message || '模板保存失败');
@@ -549,13 +569,13 @@ const useTemplateLibrary = ({
                     });
                 });
                 await Promise.all(createTasks.filter(Boolean));
-                await loadTemplates(templateType);
+                await loadTemplates();
                 showNotice?.('success', '模板导入完成');
             } catch (err) {
                 showNotice?.('error', err?.message || '模板导入失败');
             }
         },
-        [loadTemplates, templateType, showNotice]
+        [loadTemplates, showNotice]
     );
 
     return {

@@ -58,9 +58,35 @@ bash scripts/release-gate.sh
 - 可选 E2E（设置 `MAGICK_AD_E2E_PREVIEW_PATH` 时）
 - 发布包生成与校验
 
-## 6. 关键入口
+## 6. E2E 最短路径
+
+```bash
+MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
+MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
+pnpm exec playwright test tests/e2e/tracking.spec.js tests/e2e/compatibility-matrix.spec.js --project=chromium
+```
+
+如果首次下载浏览器失败，先单独执行：
+
+```bash
+pnpm exec playwright install chromium chromium-headless-shell
+```
+
+## 7. 关键入口
 
 - 广告配置：`wp-admin/admin.php?page=magick-ad`
 - 统计看板：`wp-admin/admin.php?page=magick-ad-report`
 - 兼容报告：`wp-admin/admin.php?page=magick-ad-compat`
 - 站点健康：`wp-admin/site-health.php?tab=direct`
+
+## 8. 常用诊断命令
+
+PHP 全量语法检查（无 `rg` 依赖）：
+
+```bash
+find . -type f -name "*.php" \
+  ! -path "./dist/*" \
+  ! -path "./vendor/*" \
+  ! -path "./node_modules/*" \
+  -print0 | xargs -0 -n1 php -l
+```

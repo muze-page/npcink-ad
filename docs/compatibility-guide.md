@@ -57,7 +57,17 @@ add_filter('magick_ad_has_consent', function ($has_consent) {
 - 老模板会在迁移阶段自动补齐版本和字段映射。
 - 模板导入导出优先使用最新 schema。
 
-## 6. 兼容报告使用方式
+## 6. 投放位置与创意约束（防误配）
+
+- 可视化/卡片类内容不建议投放到 `Head`。
+- `Head` 场景仅建议脚本/像素类（`raw` 模式）。
+- 装饰组件（`decorative`）仅建议：
+  - `顶部（body_top）`
+  - `内容前/内容后（content before/after）`
+  - `底部（footer）`
+- 当规则冲突时，插件会自动收敛并给出提示文案。
+
+## 7. 兼容报告使用方式
 
 1. 打开 `wp-admin/admin.php?page=magick-ad-compat`
 2. 点击 `刷新报告`
@@ -68,3 +78,9 @@ add_filter('magick_ad_has_consent', function ($has_consent) {
 - 运行设置（追踪、签名、同意、写入模式）
 - 体检检查项（节点/Cron/队列/同意）
 - 风险与建议动作
+
+## 8. 预览与真实页一致性建议
+
+- 先在“预览地址”验证，再在真实页面做 `diagnose` 检查。
+- 对照 `reason_code`（如 `schedule_not_started`、`targeting_mismatch`）确认未展示原因。
+- 生产环境建议固定时区与排期格式，避免“后台看起来已发布、前台仍未命中”。

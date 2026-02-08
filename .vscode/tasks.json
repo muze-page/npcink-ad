@@ -15,6 +15,48 @@
       "runOptions": {
         "runOn": "folderOpen"
       }
+    },
+    {
+      "label": "🧪 Magick AD: PHP 语法检查",
+      "type": "shell",
+      "command": "find . -type f -name \"*.php\" ! -path \"./dist/*\" ! -path \"./vendor/*\" ! -path \"./node_modules/*\" -print0 | xargs -0 -n1 php -l",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧪 Magick AD: 核心 E2E (tracking + matrix)",
+      "type": "shell",
+      "command": "MAGICK_AD_E2E_PREVIEW_PATH=\"http://magick-ad.local/\" MAGICK_AD_E2E_REQUIRE_CONSENT=1 pnpm exec playwright test tests/e2e/tracking.spec.js tests/e2e/compatibility-matrix.spec.js --project=chromium",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "📦 Magick AD: Release Gate",
+      "type": "shell",
+      "command": "MAGICK_AD_E2E_PREVIEW_PATH=\"http://magick-ad.local/\" MAGICK_AD_E2E_REQUIRE_CONSENT=1 bash scripts/release-gate.sh",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": true
+      },
+      "problemMatcher": []
     }
   ]
 }
