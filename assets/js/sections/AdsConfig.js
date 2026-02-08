@@ -1,4 +1,11 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from '@wordpress/element';
+import {
+    lazy,
+    Suspense,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from '@wordpress/element';
 import {
     Button,
     ButtonGroup,
@@ -109,6 +116,16 @@ const SIDEBAR_TYPE_VIEWS = [
     { value: 'targeted', label: '指定广告' },
 ];
 
+const buildSaveSignature = (ads, slots) => {
+    try {
+        return JSON.stringify({ ads, slots });
+    } catch (err) {
+        const adCount = Array.isArray(ads) ? ads.length : 0;
+        const slotCount = Array.isArray(slots) ? slots.length : 0;
+        return `${adCount}:${slotCount}`;
+    }
+};
+
 const AdsConfig = () => {
     const headerStorageKey = 'magick_ad_header_collapsed';
     const quickPanelStorageKey = 'magick_ad_panel_quick';
@@ -135,8 +152,18 @@ const AdsConfig = () => {
     const removeSlot = useStore((state) => state.removeSlot);
     const saveToDB = useStore((state) => state.saveToDB);
     const fetchFromDB = useStore((state) => state.fetchFromDB);
+    const [lastSavedSignature, setLastSavedSignature] = useState(null);
+    const prevLoadingRef = useRef(isLoading);
+    const currentSaveSignature = useMemo(
+        () => buildSaveSignature(ads, slots),
+        [ads, slots]
+    );
+    const hasUnsavedChanges =
+        lastSavedSignature !== null &&
+        currentSaveSignature !== lastSavedSignature;
 
     const [selectedId, setSelectedId] = useState(null);
+    const [switchConfirmTargetId, setSwitchConfirmTargetId] = useState(null);
     const [showValidation, setShowValidation] = useState(false);
     const [devicePreview, setDevicePreview] = useState('desktop');
     const { notice, showNotice, clearNotice } = useNotice();
@@ -341,6 +368,14 @@ const AdsConfig = () => {
     }, [fetchFromDB]);
 
     useEffect(() => {
+        const wasLoading = prevLoadingRef.current;
+        if ((wasLoading && !isLoading) || (lastSavedSignature === null && !isLoading)) {
+            setLastSavedSignature(buildSaveSignature(ads, slots));
+        }
+        prevLoadingRef.current = isLoading;
+    }, [isLoading, ads, slots, lastSavedSignature]);
+
+    useEffect(() => {
         fetchSystemSettings();
     }, []);
 
@@ -349,6 +384,12 @@ const AdsConfig = () => {
             setSelectedId(ads[0].id);
         }
     }, [ads, selectedId]);
+
+    useEffect(() => {
+        if (!hasUnsavedChanges && switchConfirmTargetId) {
+            setSwitchConfirmTargetId(null);
+        }
+    }, [hasUnsavedChanges, switchConfirmTargetId]);
 
     useEffect(() => {
         if (displayLevel === 'simple') {
@@ -2500,6 +2541,29 @@ const AdsConfig = () => {
         }
     };
 
+    const handleSelectAd = (nextId) => {
+        if (!nextId || nextId === selectedId) {
+            setSwitchConfirmTargetId(null);
+            return;
+        }
+        if (!hasUnsavedChanges) {
+            setSwitchConfirmTargetId(null);
+            setSelectedId(nextId);
+            return;
+        }
+        if (switchConfirmTargetId !== nextId) {
+            setSwitchConfirmTargetId(nextId);
+            showNotice(
+                'warning',
+                '当前广告有未保存改动，再点一次该广告可切换。',
+                2600
+            );
+            return;
+        }
+        setSwitchConfirmTargetId(null);
+        setSelectedId(nextId);
+    };
+
     const handleSave = async () => {
         clearNotice();
 
@@ -2542,6 +2606,7 @@ const AdsConfig = () => {
 
         try {
             await saveToDB();
+            setLastSavedSignature(buildSaveSignature(ads, slots));
             showNotice('success', '保存成功', 2500);
         } catch (err) {
             const message =
@@ -2561,7 +2626,9 @@ const AdsConfig = () => {
                 2500
             );
         }
-        return saveToDB();
+        const response = await saveToDB();
+        setLastSavedSignature(buildSaveSignature(ads, slots));
+        return response;
     };
 
     const openSaveTemplate = async (type) => {
@@ -2985,13 +3052,18 @@ const AdsConfig = () => {
                                                         false
                                                             ? 'is-disabled'
                                                             : ''
+                                                    } ${
+                                                        switchConfirmTargetId ===
+                                                        ad.id
+                                                            ? 'is-switch-confirm'
+                                                            : ''
                                                     }`}
                                                 >
                                                     <div className="magick-ad-sidebar__body">
                                                         <Button
                                                             variant="tertiary"
                                                             onClick={() =>
-                                                                setSelectedId(
+                                                                handleSelectAd(
                                                                     ad.id
                                                                 )
                                                             }
@@ -5381,7 +5453,7 @@ const AdsConfig = () => {
                 )}
                 <Panel className="magick-ad-right-inline-panel">
                     <PanelBody
-                        title={renderPanelTitleWithSummary('精确排期（高级）')}
+                        title={renderPanelTitleWithSummary('高级排期')}
                         opened={publishAdvancedOpen}
                         onToggle={() =>
                             setPublishAdvancedOpen((prev) => !prev)
@@ -5436,15 +5508,49 @@ const AdsConfig = () => {
                 </div>
             )}
             <div className="magick-ad-right-section__body">
-                {compactHeader
-                    ? renderPublishMeta(
-                          'magick-ad-right-section__meta magick-ad-right-section__meta--inline'
-                      )
-                    : null}
                 {renderPublishBody()}
             </div>
         </div>
     );
+
+    const renderRightSaveBar = () => {
+        if (!selectedAd) {
+            return null;
+        }
+        const publish = statusMeta(selectedAd);
+        const runtime = runtimeMeta(selectedAd);
+        const saveStateLabel = isSaving
+            ? '保存中...'
+            : hasUnsavedChanges
+              ? '未保存更改'
+              : '已保存';
+        return (
+            <div className="magick-ad-right-savebar">
+                <div className="magick-ad-right-savebar__meta">
+                    <span className="magick-ad-right-savebar__label">
+                        {publish.label} · {runtime.label}
+                    </span>
+                    <span
+                        className={`magick-ad-right-savebar__state ${
+                            hasUnsavedChanges ? 'is-dirty' : 'is-clean'
+                        }`}
+                    >
+                        <span className="magick-ad-right-savebar__state-dot" />
+                        {saveStateLabel}
+                    </span>
+                </div>
+                <Button
+                    className="magick-ad-save-button"
+                    variant="primary"
+                    onClick={handleSave}
+                    isBusy={isSaving}
+                    disabled={isSaving || !selectedAd}
+                >
+                    {isSaving ? '保存中...' : '保存'}
+                </Button>
+            </div>
+        );
+    };
 
     const renderRightAccordionSection = ({
         id,
@@ -7013,6 +7119,7 @@ const AdsConfig = () => {
 
     const rightSidebar = selectedAd ? (
         <div className="magick-ad-right-stack">
+            {renderRightSaveBar()}
             {renderRightPrioritySummary()}
             <Card className="magick-ad-right-panel">
                 <CardBody>

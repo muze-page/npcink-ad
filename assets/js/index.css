@@ -1130,6 +1130,71 @@
     gap: 12px;
 }
 
+.magick-ad-right-savebar {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #dbe4f0;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: saturate(180%) blur(2px);
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+.magick-ad-right-savebar__meta {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.magick-ad-right-savebar__label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.35;
+}
+
+.magick-ad-right-savebar__state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: #64748b;
+}
+
+.magick-ad-right-savebar__state-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #94a3b8;
+    display: inline-block;
+    flex: 0 0 auto;
+}
+
+.magick-ad-right-savebar__state.is-clean {
+    color: #166534;
+}
+
+.magick-ad-right-savebar__state.is-clean .magick-ad-right-savebar__state-dot {
+    background: #16a34a;
+}
+
+.magick-ad-right-savebar__state.is-dirty {
+    color: #b45309;
+}
+
+.magick-ad-right-savebar__state.is-dirty .magick-ad-right-savebar__state-dot {
+    background: #f59e0b;
+}
+
 .magick-ad-right-priority {
     display: flex;
     flex-direction: column;
@@ -1655,6 +1720,11 @@
 
     .magick-ad-right-overview {
         grid-template-columns: 1fr;
+    }
+
+    .magick-ad-right-savebar {
+        position: static;
+        backdrop-filter: none;
     }
 }
 
@@ -2692,6 +2762,12 @@
     width: 4px;
     border-radius: 4px;
     background: #3858e9;
+}
+
+.magick-ad-sidebar__item.is-switch-confirm {
+    border-color: #fcd34d;
+    background: #fffbeb;
+    box-shadow: 0 4px 10px rgba(217, 119, 6, 0.12);
 }
 
 .magick-ad-sidebar__item.is-disabled {
