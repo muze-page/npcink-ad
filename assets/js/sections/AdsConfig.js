@@ -128,7 +128,6 @@ const buildSaveSignature = (ads, slots) => {
 
 const AdsConfig = () => {
     const headerStorageKey = 'magick_ad_header_collapsed';
-    const quickPanelStorageKey = 'magick_ad_panel_quick';
     const containerTabStorageKey = 'magick_ad_container_tab';
     const frequencyPanelStorageKey = 'magick_ad_panel_frequency';
     const rightAccordionStorageKey = 'magick_ad_right_panel_open';
@@ -241,15 +240,8 @@ const AdsConfig = () => {
         }
     };
 
-    const [quickPanelOpen, setQuickPanelOpen] = useState(() =>
-        readPanelState(quickPanelStorageKey, 'placement')
-    );
-    const [publishDetailsOpen, setPublishDetailsOpen] = useState(false);
     const [placementDetailsOpen, setPlacementDetailsOpen] = useState(false);
-    const [publishAdvancedOpen, setPublishAdvancedOpen] = useState(false);
     const [placementAdvancedOpen, setPlacementAdvancedOpen] = useState(null);
-    const [placementRulesAdvancedOpen, setPlacementRulesAdvancedOpen] =
-        useState(false);
     const [behaviorAdvancedOpen, setBehaviorAdvancedOpen] = useState(false);
     const [containerAdvancedOpen, setContainerAdvancedOpen] = useState(false);
     const [containerTab, setContainerTab] = useState(() => {
@@ -448,7 +440,6 @@ const AdsConfig = () => {
     );
 
     useEffect(() => {
-        setPublishDetailsOpen(false);
         setPlacementDetailsOpen(false);
         setRuntimeDetailsOpen(false);
     }, [selectedId]);
@@ -564,20 +555,6 @@ const AdsConfig = () => {
             // ignore storage errors
         }
     }, [headerCollapsed]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            return;
-        }
-        try {
-            window.localStorage?.setItem(
-                quickPanelStorageKey,
-                quickPanelOpen || 'none'
-            );
-        } catch (err) {
-            // ignore storage errors
-        }
-    }, [quickPanelOpen]);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -5298,6 +5275,28 @@ const AdsConfig = () => {
                 date.getDate()
             )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
         };
+        const applyQuickSchedule = (preset) => {
+            if (preset === 'immediate') {
+                handleUpdateOptions({
+                    start_date: '',
+                });
+                return;
+            }
+            if (preset === 'week') {
+                const next = new Date();
+                next.setDate(next.getDate() + 7);
+                next.setHours(23, 59, 0, 0);
+                handleUpdateOptions({
+                    end_date: formatDateTimeStorage(toLocalInputValue(next)),
+                });
+                return;
+            }
+            if (preset === 'long') {
+                handleUpdateOptions({
+                    end_date: '',
+                });
+            }
+        };
         const publishStatusValue = resolveStatus(selectedAd);
         const publishStatusOptions = [
             { label: '已发布', value: 'publish' },
@@ -5333,166 +5332,148 @@ const AdsConfig = () => {
                             {publishScheduleSummary}
                         </span>
                     </div>
-                    <Button
-                        variant="tertiary"
-                        className="magick-ad-publish-compact__toggle"
-                        onClick={() =>
-                            setPublishDetailsOpen((prev) => !prev)
-                        }
-                    >
-                        {publishDetailsOpen ? '收起详情' : '查看详情'}
-                    </Button>
                 </div>
                 <div className="magick-ad-publish-quick">
                     <Button
                         variant="secondary"
-                        onClick={() =>
-                            handleUpdateOptions({
-                                start_date: '',
-                            })
-                        }
+                        onClick={() => applyQuickSchedule('immediate')}
                     >
                         立即生效
                     </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() => {
-                            const next = new Date();
-                            next.setDate(next.getDate() + 7);
-                            next.setHours(23, 59, 0, 0);
-                            handleUpdateOptions({
-                                end_date: formatDateTimeStorage(
-                                    toLocalInputValue(next)
-                                ),
-                            });
+                    <DropdownMenu
+                        icon={moreHorizontal}
+                        label="更多快捷排期"
+                        toggleProps={{
+                            variant: 'tertiary',
+                            className: 'magick-ad-publish-quick__more',
                         }}
                     >
-                        一周后结束
-                    </Button>
-                    <Button
-                        variant="tertiary"
-                        onClick={() =>
+                        {({ onClose }) => (
+                            <MenuGroup>
+                                <MenuItem
+                                    onClick={() => {
+                                        onClose();
+                                        applyQuickSchedule('week');
+                                    }}
+                                >
+                                    一周后结束
+                                </MenuItem>
+                                <MenuItem
+                                    onClick={() => {
+                                        onClose();
+                                        applyQuickSchedule('long');
+                                    }}
+                                >
+                                    长期有效
+                                </MenuItem>
+                            </MenuGroup>
+                        )}
+                    </DropdownMenu>
+                </div>
+                <div className="magick-ad-right-inline-panel magick-ad-right-inline-panel--static">
+                    <div className="magick-ad-right-inline-panel__heading">
+                        发布详情
+                    </div>
+                    <SelectControl
+                        label="发布状态"
+                        value={publishStatusValue}
+                        options={publishStatusOptions}
+                        onChange={(value) => {
+                            if (!selectedAd) {
+                                return;
+                            }
+                            if (value === 'draft') {
+                                handleUpdateMeta({
+                                    status: 'draft',
+                                    options: {
+                                        ...selectedAd.options,
+                                        enabled: false,
+                                    },
+                                });
+                                return;
+                            }
+                            if (value === 'pending') {
+                                handleUpdateMeta({
+                                    status: 'pending',
+                                    options: {
+                                        ...selectedAd.options,
+                                        enabled: true,
+                                    },
+                                });
+                                return;
+                            }
+                            const nextDate =
+                                selectedAd.date &&
+                                isFutureDate(selectedAd.date)
+                                    ? formatDateFromDate(new Date())
+                                    : selectedAd.date || '';
+                            handleUpdateMeta({
+                                status: 'publish',
+                                date: nextDate,
+                                options: {
+                                    ...selectedAd.options,
+                                    enabled: true,
+                                },
+                            });
+                        }}
+                    />
+                    {(() => {
+                        const runtime = runtimeMeta(selectedAd);
+                        if (!runtime.blocked) {
+                            return null;
+                        }
+                        const noticeStatus =
+                            runtime.code === 'schedule_not_started' ||
+                            runtime.code === 'schedule_expired'
+                                ? 'warning'
+                                : 'info';
+                        return (
+                            <Notice
+                                status={noticeStatus}
+                                isDismissible={false}
+                            >
+                                {runtime.message}
+                            </Notice>
+                        );
+                    })()}
+                </div>
+                <div className="magick-ad-right-inline-panel magick-ad-right-inline-panel--static">
+                    <div className="magick-ad-right-inline-panel__heading">
+                        高级排期
+                    </div>
+                    <TextControl
+                        label="开始时间"
+                        type="datetime-local"
+                        value={formatDateTimeLocalInput(
+                            selectedAd.options?.start_date
+                        )}
+                        onChange={(value) =>
                             handleUpdateOptions({
-                                end_date: '',
+                                start_date:
+                                    formatDateTimeStorage(
+                                        value
+                                    ),
                             })
                         }
-                    >
-                        长期有效
-                    </Button>
-                </div>
-                {publishDetailsOpen && (
-                    <Panel className="magick-ad-right-inline-panel">
-                        <PanelBody
-                            title={renderPanelTitleWithSummary('发布详情')}
-                            opened
-                        >
-                            <SelectControl
-                                label="发布状态"
-                                value={publishStatusValue}
-                                options={publishStatusOptions}
-                                onChange={(value) => {
-                                    if (!selectedAd) {
-                                        return;
-                                    }
-                                    if (value === 'draft') {
-                                        handleUpdateMeta({
-                                            status: 'draft',
-                                            options: {
-                                                ...selectedAd.options,
-                                                enabled: false,
-                                            },
-                                        });
-                                        return;
-                                    }
-                                    if (value === 'pending') {
-                                        handleUpdateMeta({
-                                            status: 'pending',
-                                            options: {
-                                                ...selectedAd.options,
-                                                enabled: true,
-                                            },
-                                        });
-                                        return;
-                                    }
-                                    const nextDate =
-                                        selectedAd.date &&
-                                        isFutureDate(selectedAd.date)
-                                            ? formatDateFromDate(new Date())
-                                            : selectedAd.date || '';
-                                    handleUpdateMeta({
-                                        status: 'publish',
-                                        date: nextDate,
-                                        options: {
-                                            ...selectedAd.options,
-                                            enabled: true,
-                                        },
-                                    });
-                                }}
-                            />
-                            {(() => {
-                                const runtime = runtimeMeta(selectedAd);
-                                if (!runtime.blocked) {
-                                    return null;
-                                }
-                                const noticeStatus =
-                                    runtime.code === 'schedule_not_started' ||
-                                    runtime.code === 'schedule_expired'
-                                        ? 'warning'
-                                        : 'info';
-                                return (
-                                    <Notice
-                                        status={noticeStatus}
-                                        isDismissible={false}
-                                    >
-                                        {runtime.message}
-                                    </Notice>
-                                );
-                            })()}
-                        </PanelBody>
-                    </Panel>
-                )}
-                <Panel className="magick-ad-right-inline-panel">
-                    <PanelBody
-                        title={renderPanelTitleWithSummary('高级排期')}
-                        opened={publishAdvancedOpen}
-                        onToggle={() =>
-                            setPublishAdvancedOpen((prev) => !prev)
+                        help="开始时间为空表示立即生效。"
+                    />
+                    <TextControl
+                        label="结束时间"
+                        type="datetime-local"
+                        value={formatEndDateTimeLocalInput(
+                            selectedAd.options?.end_date
+                        )}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                end_date:
+                                    formatDateTimeStorage(
+                                        value
+                                    ),
+                            })
                         }
-                    >
-                        <TextControl
-                            label="开始时间"
-                            type="datetime-local"
-                            value={formatDateTimeLocalInput(
-                                selectedAd.options?.start_date
-                            )}
-                            onChange={(value) =>
-                                handleUpdateOptions({
-                                    start_date:
-                                        formatDateTimeStorage(
-                                            value
-                                        ),
-                                })
-                            }
-                            help="开始时间为空表示立即生效。"
-                        />
-                        <TextControl
-                            label="结束时间"
-                            type="datetime-local"
-                            value={formatEndDateTimeLocalInput(
-                                selectedAd.options?.end_date
-                            )}
-                            onChange={(value) =>
-                                handleUpdateOptions({
-                                    end_date:
-                                        formatDateTimeStorage(
-                                            value
-                                        ),
-                                })
-                            }
-                            help="结束时间为空表示长期有效，支持到分钟。"
-                        />
-                    </PanelBody>
-                </Panel>
+                        help="结束时间为空表示长期有效，支持到分钟。"
+                    />
+                </div>
             </>
         );
     };
@@ -5654,45 +5635,12 @@ const AdsConfig = () => {
                     </p>
                     <Button
                         variant="tertiary"
-                        onClick={() => setRightPanelOpen('runtime')}
+                        onClick={() => {
+                            setRightPanelOpen('runtime');
+                            setRuntimeDetailsOpen(true);
+                        }}
                     >
-                        查看条件
-                    </Button>
-                </div>
-                <div className="magick-ad-right-priority__actions">
-                    <Button
-                        variant="tertiary"
-                        onClick={() => setRightPanelOpen('publish')}
-                    >
-                        排期
-                    </Button>
-                    <Button
-                        variant="tertiary"
-                        onClick={() => setRightPanelOpen('placement')}
-                    >
-                        投放
-                    </Button>
-                    <Button
-                        variant="tertiary"
-                        onClick={() =>
-                            openRuntimeUrl(
-                                runtimeContextMeta.previewUrl,
-                                '预览地址生成失败，请检查预览配置。'
-                            )
-                        }
-                    >
-                        预览
-                    </Button>
-                    <Button
-                        variant="tertiary"
-                        onClick={() =>
-                            openRuntimeUrl(
-                                runtimeContextMeta.diagnoseUrl,
-                                '诊断地址生成失败，请刷新后台后重试。'
-                            )
-                        }
-                    >
-                        诊断
+                        查看详情
                     </Button>
                 </div>
             </div>
@@ -6054,24 +6002,18 @@ const AdsConfig = () => {
                                 </strong>
                             </span>
                         </div>
-                    {isSimpleLevel ? (
-                        <Notice status="info" isDismissible={false}>
-                            简洁级别已锁定为“快速模式”，仅保留页面插入与基础投放能力。
-                        </Notice>
-                    ) : (
-                            <Panel className="magick-ad-right-inline-panel">
-                                <PanelBody
-                                    title={renderPanelTitleWithSummary(
-                                        '高级规则（用途与模式）'
-                                    )}
-                                    opened={placementRulesAdvancedOpen}
-                                    onToggle={() =>
-                                        setPlacementRulesAdvancedOpen((prev) => !prev)
-                                    }
-                                >
-                                    <p className="magick-ad-right-inline-note">
-                                        调整用途类型、编辑模式和专家能力。日常投放可保持默认。
-                                    </p>
+                        {isSimpleLevel ? (
+                            <Notice status="info" isDismissible={false}>
+                                简洁级别已锁定为“快速模式”，仅保留页面插入与基础投放能力。
+                            </Notice>
+                        ) : (
+                            <div className="magick-ad-right-inline-panel magick-ad-right-inline-panel--static">
+                                <div className="magick-ad-right-inline-panel__heading">
+                                    高级规则（用途与模式）
+                                </div>
+                                <p className="magick-ad-right-inline-note">
+                                    调整用途类型、编辑模式和专家能力。日常投放可保持默认。
+                                </p>
                                 <SelectControl
                                     label="用途类型"
                                     value={normalizeUsageType(
@@ -6149,58 +6091,37 @@ const AdsConfig = () => {
                                             权限，已回退为设计模式。
                                         </Notice>
                                     )}
-                            </PanelBody>
-                        </Panel>
-                    )}
-                {effectiveEditorMode === 'quick' && (
-                        <Panel>
-                            <PanelBody
-                            title={renderPanelTitleWithSummary('页面插入')}
-                            opened={quickPanelOpen === 'placement'}
-                            onToggle={() =>
-                                setQuickPanelOpen((prev) =>
-                                    prev === 'placement'
-                                        ? null
-                                        : 'placement'
-                                )
-                            }
-                        >
-                            <p className="magick-ad-right-inline-note">
-                                {isSimpleLevel
-                                    ? '简洁级别仅保留页面插入能力。'
-                                    : '快速模式仅保留页面插入能力；样式、频控与高级能力请切换到设计模式/专家模式。'}
-                            </p>
-                            {renderPlacementRulesControls({
-                                includeValidation: true,
-                                includePlacementCompact: true,
-                            })}
-                            {!isSimpleLevel && (
-                                <Panel className="magick-ad-right-inline-panel">
-                                    <PanelBody
-                                        title={renderPanelTitleWithSummary('高级规则（节点）')}
-                                        opened={
-                                            placementAdvancedOpen === 'quick'
-                                        }
-                                        onToggle={() =>
-                                            setPlacementAdvancedOpen((prev) =>
-                                                prev === 'quick'
-                                                    ? null
-                                                    : 'quick'
-                                            )
-                                        }
-                                    >
+                            </div>
+                        )}
+                        {effectiveEditorMode === 'quick' && (
+                            <div className="magick-ad-right-inline-panel magick-ad-right-inline-panel--static">
+                                <div className="magick-ad-right-inline-panel__heading">
+                                    页面插入
+                                </div>
+                                <p className="magick-ad-right-inline-note">
+                                    {isSimpleLevel
+                                        ? '简洁级别仅保留页面插入能力。'
+                                        : '快速模式仅保留页面插入能力；样式、频控与高级能力请切换到设计模式/专家模式。'}
+                                </p>
+                                {renderPlacementRulesControls({
+                                    includeValidation: true,
+                                    includePlacementCompact: true,
+                                })}
+                                {!isSimpleLevel && (
+                                    <div className="magick-ad-right-subsection">
+                                        <div className="magick-ad-right-subsection__title">
+                                            节点规则（按需）
+                                        </div>
                                         <p className="magick-ad-right-inline-note">
                                             仅在“位置=节点”时需要配置，普通投放可忽略。
                                         </p>
                                         {renderPlacementRulesControls({
                                             includeNode: true,
                                         })}
-                                    </PanelBody>
-                                </Panel>
-                            )}
-                        </PanelBody>
-                    </Panel>
-                )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                 {effectiveEditorMode !== 'quick' && (
                     <TabPanel
                         className="magick-ad-right-tabs"
@@ -7133,7 +7054,7 @@ const AdsConfig = () => {
                                     {renderRuntimeSummaryBar({
                                         compact: true,
                                         showTitle: false,
-                                        showActions: false,
+                                        showActions: runtimeDetailsOpen,
                                         showDetails: runtimeDetailsOpen,
                                         detailsOpen: runtimeDetailsOpen,
                                         onToggleDetails: () =>

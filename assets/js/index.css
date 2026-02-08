@@ -207,6 +207,10 @@
 }
 
 .magick-ad-right {
+    --magick-ad-right-space-xs: 8px;
+    --magick-ad-right-space-sm: 10px;
+    --magick-ad-right-space-md: 12px;
+    --magick-ad-right-space-lg: 16px;
     flex: 0 0 320px;
     position: sticky;
     top: 44px;
@@ -1127,7 +1131,7 @@
 .magick-ad-right-stack {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--magick-ad-right-space-md, 12px);
 }
 
 .magick-ad-right-savebar {
@@ -1137,8 +1141,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 10px 12px;
+    gap: var(--magick-ad-right-space-sm, 10px);
+    padding: var(--magick-ad-right-space-sm, 10px) var(--magick-ad-right-space-md, 12px);
     border-radius: 12px;
     border: 1px solid #dbe4f0;
     background: rgba(255, 255, 255, 0.96);
@@ -1198,8 +1202,8 @@
 .magick-ad-right-priority {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: var(--magick-ad-right-space-xs, 8px);
+    padding: var(--magick-ad-right-space-sm, 10px) var(--magick-ad-right-space-md, 12px);
     border-radius: 14px;
     border: 1px solid #dbe4f0;
     background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
@@ -1305,7 +1309,7 @@
     width: 100%;
     border: 0;
     background: transparent;
-    padding: 12px 16px;
+    padding: var(--magick-ad-right-space-md, 12px) var(--magick-ad-right-space-lg, 16px);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1402,7 +1406,7 @@
 }
 
 .magick-ad-right-accordion__panel {
-    padding: 0 16px 16px;
+    padding: 0 var(--magick-ad-right-space-lg, 16px) var(--magick-ad-right-space-lg, 16px);
 }
 
 .magick-ad-right-accordion__panel .magick-ad-right-section {
@@ -1487,30 +1491,15 @@
     line-height: 1.35;
 }
 
-.magick-ad-publish-compact__chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 999px;
-    border: 1px solid #dbe4f0;
-    background: #ffffff;
-    color: #475569;
-    font-size: 11px;
-    line-height: 1.35;
-}
-
-.magick-ad-publish-compact__toggle.components-button {
+.magick-ad-publish-quick .components-button {
     min-height: 28px;
     height: 28px;
     padding: 0 10px;
     border-radius: 8px;
-    border: 1px solid #dbe4f0;
-    background: #ffffff;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 12px;
 }
 
-.magick-ad-publish-quick .components-button {
+.magick-ad-publish-quick__more.components-button {
     min-height: 28px;
     height: 28px;
     padding: 0 10px;
@@ -1560,15 +1549,31 @@
     font-weight: 600;
 }
 
-.magick-ad-right-inline-panel.components-panel {
+.magick-ad-right-inline-panel {
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     background: #f8fafc;
+    padding: var(--magick-ad-right-space-md, 12px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--magick-ad-right-space-sm, 10px);
 }
 
-.magick-ad-right-inline-panel.components-panel .components-panel__body {
+.magick-ad-right-inline-panel .components-panel__body {
     border-top: 0;
-    padding: 10px;
+    padding: 0;
+}
+
+.magick-ad-right-inline-panel__heading {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.35;
+}
+
+.magick-ad-right-inline-panel--static .components-base-control:last-child {
+    margin-bottom: 0;
 }
 
 .magick-ad-runtime-summary {
@@ -1722,23 +1727,39 @@
         grid-template-columns: 1fr;
     }
 
+    .magick-ad-right-overview__item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .magick-ad-right-overview__item strong {
+        margin-left: 0;
+        text-align: left;
+    }
+
     .magick-ad-right-savebar {
         position: static;
         backdrop-filter: none;
+    }
+
+    .magick-ad-right-section .magick-ad-panel-title__summary {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
     }
 }
 
 .magick-ad-right-section__body {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--magick-ad-right-space-md, 12px);
 }
 
 .magick-ad-right-overview {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 6px;
-    padding: 8px;
+    gap: var(--magick-ad-right-space-xs, 8px);
+    padding: var(--magick-ad-right-space-sm, 10px);
     border-radius: 10px;
     border: 1px solid #e2e8f0;
     background: #f8fafc;
@@ -1749,8 +1770,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 5px;
-    padding: 2px 8px;
+    gap: 6px;
+    padding: 4px 8px;
     border-radius: 8px;
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -1973,7 +1994,10 @@
 
 .magick-ad-right-section .components-panel__body {
     border-top: 1px solid #edf2f7;
-    padding: 12px;
+    padding: var(--magick-ad-right-space-md, 12px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--magick-ad-right-space-sm, 10px);
 }
 
 .magick-ad-right-section .components-panel__body:first-child {
@@ -1981,11 +2005,11 @@
 }
 
 .magick-ad-right-section .components-panel__body-title {
-    margin-bottom: 10px;
+    margin-bottom: 0;
 }
 
 .magick-ad-right-section .components-panel__body-title button {
-    min-height: 28px;
+    min-height: 30px;
     font-size: 13px;
     font-weight: 600;
     color: #0f172a;
@@ -1993,15 +2017,11 @@
 }
 
 .magick-ad-right-section .components-base-control {
-    margin-bottom: 10px;
-}
-
-.magick-ad-right-section .components-base-control:last-child {
     margin-bottom: 0;
 }
 
 .magick-ad-right-section .components-base-control__help {
-    margin-top: 4px;
+    margin-top: 6px;
     color: #64748b;
     font-size: 11px;
     line-height: 1.4;
@@ -2015,11 +2035,7 @@
 }
 
 .magick-ad-right-section .components-notice {
-    margin: 0 0 10px;
-}
-
-.magick-ad-right-section .components-notice:last-child {
-    margin-bottom: 0;
+    margin: 0;
 }
 
 .magick-ad-empty {
@@ -2841,10 +2857,6 @@
     .magick-ad-publish-compact {
         grid-template-columns: 1fr;
     }
-
-    .magick-ad-publish-compact__toggle.components-button {
-        width: 100%;
-    }
 }
 
 .magick-ad-delete-btn:hover {
@@ -2967,7 +2979,7 @@
 
 .magick-ad-panel-title {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
     width: 100%;
@@ -2978,7 +2990,7 @@
 }
 
 .magick-ad-panel-title__summary {
-    margin-left: auto;
+    margin-left: 0;
     max-width: 55%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2986,6 +2998,18 @@
     color: #64748b;
     font-size: 11px;
     font-weight: 500;
+}
+
+.magick-ad-right-section .magick-ad-panel-title--compact {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding-right: 20px;
+}
+
+.magick-ad-right-section .magick-ad-panel-title__summary {
+    max-width: 100%;
+    line-height: 1.35;
 }
 
 .magick-ad-panel-note__trigger.components-button {
