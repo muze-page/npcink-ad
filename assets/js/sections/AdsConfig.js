@@ -101,6 +101,7 @@ const AdsConfig = () => {
     const quickPanelStorageKey = 'magick_ad_panel_quick';
     const containerTabStorageKey = 'magick_ad_container_tab';
     const frequencyPanelStorageKey = 'magick_ad_panel_frequency';
+    const rightAccordionStorageKey = 'magick_ad_right_panel_open';
     const editorModeStorageKey = 'magick_ad_editor_mode';
     const allowedEditorModes = new Set(['quick', 'design', 'expert']);
     const ads = useStore((state) => state.ads);
@@ -212,6 +213,11 @@ const AdsConfig = () => {
     const [frequencyPanelOpen, setFrequencyPanelOpen] = useState(() =>
         readPanelState(frequencyPanelStorageKey, 'frequency')
     );
+    const [rightPanelOpen, setRightPanelOpen] = useState(() => {
+        const allowed = new Set(['publish', 'runtime', 'placement']);
+        const stored = readPanelState(rightAccordionStorageKey, 'placement');
+        return allowed.has(stored) ? stored : 'placement';
+    });
     const [previewTarget, setPreviewTarget] = useState('');
     const [previewMode, setPreviewMode] = useState('url');
     const [previewSearch, setPreviewSearch] = useState('');
@@ -512,6 +518,20 @@ const AdsConfig = () => {
             // ignore storage errors
         }
     }, [frequencyPanelOpen]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage?.setItem(
+                rightAccordionStorageKey,
+                rightPanelOpen || 'placement'
+            );
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [rightPanelOpen]);
 
     const { targetItems, targetSuggestions, targetLoading, handleTargetSearch } =
         useTargeting(selectedAd);
@@ -4751,7 +4771,10 @@ const AdsConfig = () => {
         window.open(url, '_blank', 'noopener');
     };
 
-    const renderRuntimeSummaryBar = ({ compact = false } = {}) => {
+    const renderRuntimeSummaryBar = ({
+        compact = false,
+        showTitle = true,
+    } = {}) => {
         if (!selectedAd || !runtimeContextMeta) {
             return null;
         }
@@ -4761,9 +4784,11 @@ const AdsConfig = () => {
         return (
             <div className={summaryClassName}>
                 <div className="magick-ad-runtime-summary__body">
-                    <div className="magick-ad-runtime-summary__title">
-                        运行条件速览
-                    </div>
+                    {showTitle && (
+                        <div className="magick-ad-runtime-summary__title">
+                            运行条件速览
+                        </div>
+                    )}
                     <div className="magick-ad-runtime-summary__line">
                         规则：位置 {runtimeContextMeta.placementLabel} · 页面 {runtimeContextMeta.pageLabel}{' '}
                         {compact ? '' : `· 用途 ${runtimeContextMeta.usageLabel}`} · 设备{' '}
@@ -4812,155 +4837,243 @@ const AdsConfig = () => {
         );
     };
 
-    const renderPublishSection = () => (
-        <div className="magick-ad-right-section">
-            <div className="magick-ad-right-section__header">
-                <div className="magick-ad-right-section__title">
-                    发布与排期
-                </div>
-                <div className="magick-ad-right-section__meta">
-                    <Button
-                        className="magick-ad-save-button"
-                        variant="primary"
-                        onClick={handleSave}
-                        isBusy={isSaving}
-                        disabled={isSaving || !selectedAd}
-                    >
-                        {isSaving ? '保存中...' : '保存'}
-                    </Button>
-                    <span
-                        className={`magick-ad-status-pill ${
-                            statusMeta(selectedAd).className
-                        }`}
-                    >
-                        {statusMeta(selectedAd).label}
-                    </span>
-                    <span
-                        className={`magick-ad-status-pill ${
-                            runtimeMeta(selectedAd).className
-                        }`}
-                    >
-                        {runtimeMeta(selectedAd).label}
-                    </span>
-                </div>
-            </div>
-            <div className="magick-ad-right-section__body">
-                <SelectControl
-                    label="发布状态"
-                    value={resolveStatus(selectedAd)}
-                    options={[
-                        { label: '已发布', value: 'publish' },
-                        { label: '待审核', value: 'pending' },
-                        { label: '草稿/停用', value: 'draft' },
-                        ...(resolveStatus(selectedAd) ===
-                        'future'
-                            ? [
-                                  {
-                                      label: '已排期',
-                                      value: 'future',
-                                      disabled: true,
-                                  },
-                              ]
-                            : []),
-                    ]}
-                    onChange={(value) => {
-                        if (!selectedAd) {
-                            return;
-                        }
-                        if (value === 'draft') {
-                            handleUpdateMeta({
-                                status: 'draft',
-                                options: {
-                                    ...selectedAd.options,
-                                    enabled: false,
-                                },
-                            });
-                            return;
-                        }
-                        if (value === 'pending') {
-                            handleUpdateMeta({
-                                status: 'pending',
-                                options: {
-                                    ...selectedAd.options,
-                                    enabled: true,
-                                },
-                            });
-                            return;
-                        }
-                        const nextDate =
-                            selectedAd.date &&
-                            isFutureDate(selectedAd.date)
-                                ? formatDateFromDate(new Date())
-                                : selectedAd.date || '';
+    const renderPublishMeta = (className = 'magick-ad-right-section__meta') => (
+        <div className={className}>
+            <Button
+                className="magick-ad-save-button"
+                variant="primary"
+                onClick={handleSave}
+                isBusy={isSaving}
+                disabled={isSaving || !selectedAd}
+            >
+                {isSaving ? '保存中...' : '保存'}
+            </Button>
+            <span
+                className={`magick-ad-status-pill ${
+                    statusMeta(selectedAd).className
+                }`}
+            >
+                {statusMeta(selectedAd).label}
+            </span>
+            <span
+                className={`magick-ad-status-pill ${
+                    runtimeMeta(selectedAd).className
+                }`}
+            >
+                {runtimeMeta(selectedAd).label}
+            </span>
+        </div>
+    );
+
+    const renderPublishBody = () => (
+        <>
+            <SelectControl
+                label="发布状态"
+                value={resolveStatus(selectedAd)}
+                options={[
+                    { label: '已发布', value: 'publish' },
+                    { label: '待审核', value: 'pending' },
+                    { label: '草稿/停用', value: 'draft' },
+                    ...(resolveStatus(selectedAd) ===
+                    'future'
+                        ? [
+                              {
+                                  label: '已排期',
+                                  value: 'future',
+                                  disabled: true,
+                              },
+                          ]
+                        : []),
+                ]}
+                onChange={(value) => {
+                    if (!selectedAd) {
+                        return;
+                    }
+                    if (value === 'draft') {
                         handleUpdateMeta({
-                            status: 'publish',
-                            date: nextDate,
+                            status: 'draft',
+                            options: {
+                                ...selectedAd.options,
+                                enabled: false,
+                            },
+                        });
+                        return;
+                    }
+                    if (value === 'pending') {
+                        handleUpdateMeta({
+                            status: 'pending',
                             options: {
                                 ...selectedAd.options,
                                 enabled: true,
                             },
                         });
-                    }}
-                />
-                <div className="magick-ad-right-subsection">
-                    <div className="magick-ad-right-subsection__title">
-                        投放周期
-                    </div>
-                    <div className="magick-ad-right-subsection__body">
-                        <TextControl
-                            label="开始时间"
-                            type="datetime-local"
-                            value={formatDateTimeLocalInput(
-                                selectedAd.options?.start_date
-                            )}
-                            onChange={(value) =>
-                                handleUpdateOptions({
-                                    start_date:
-                                        formatDateTimeStorage(
-                                            value
-                                        ),
-                                })
-                            }
-                            help="开始时间为空表示立即生效。"
-                        />
-                        <TextControl
-                            label="结束时间"
-                            type="datetime-local"
-                            value={formatEndDateTimeLocalInput(
-                                selectedAd.options?.end_date
-                            )}
-                            onChange={(value) =>
-                                handleUpdateOptions({
-                                    end_date:
-                                        formatDateTimeStorage(
-                                            value
-                                        ),
-                                })
-                            }
-                            help="结束时间为空表示长期有效，支持到分钟。"
-                        />
-                        {(() => {
-                            const runtime = runtimeMeta(selectedAd);
-                            if (!runtime.blocked) {
-                                return null;
-                            }
-                            const noticeStatus =
-                                runtime.code === 'schedule_not_started' ||
-                                runtime.code === 'schedule_expired'
-                                    ? 'warning'
-                                    : 'info';
-                            return (
-                                <Notice status={noticeStatus} isDismissible={false}>
-                                    {runtime.message}
-                                </Notice>
-                            );
-                        })()}
-                    </div>
+                        return;
+                    }
+                    const nextDate =
+                        selectedAd.date &&
+                        isFutureDate(selectedAd.date)
+                            ? formatDateFromDate(new Date())
+                            : selectedAd.date || '';
+                    handleUpdateMeta({
+                        status: 'publish',
+                        date: nextDate,
+                        options: {
+                            ...selectedAd.options,
+                            enabled: true,
+                        },
+                    });
+                }}
+            />
+            <div className="magick-ad-right-subsection">
+                <div className="magick-ad-right-subsection__title">
+                    投放周期
+                </div>
+                <div className="magick-ad-right-subsection__body">
+                    <TextControl
+                        label="开始时间"
+                        type="datetime-local"
+                        value={formatDateTimeLocalInput(
+                            selectedAd.options?.start_date
+                        )}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                start_date:
+                                    formatDateTimeStorage(
+                                        value
+                                    ),
+                            })
+                        }
+                        help="开始时间为空表示立即生效。"
+                    />
+                    <TextControl
+                        label="结束时间"
+                        type="datetime-local"
+                        value={formatEndDateTimeLocalInput(
+                            selectedAd.options?.end_date
+                        )}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                end_date:
+                                    formatDateTimeStorage(
+                                        value
+                                    ),
+                            })
+                        }
+                        help="结束时间为空表示长期有效，支持到分钟。"
+                    />
+                    {(() => {
+                        const runtime = runtimeMeta(selectedAd);
+                        if (!runtime.blocked) {
+                            return null;
+                        }
+                        const noticeStatus =
+                            runtime.code === 'schedule_not_started' ||
+                            runtime.code === 'schedule_expired'
+                                ? 'warning'
+                                : 'info';
+                        return (
+                            <Notice status={noticeStatus} isDismissible={false}>
+                                {runtime.message}
+                            </Notice>
+                        );
+                    })()}
                 </div>
             </div>
-        </div>
-
+        </>
     );
+
+    const renderPublishSection = ({ compactHeader = false } = {}) => (
+        <div className="magick-ad-right-section">
+            {!compactHeader && (
+                <div className="magick-ad-right-section__header">
+                    <div className="magick-ad-right-section__title">
+                        发布与排期
+                    </div>
+                    {renderPublishMeta()}
+                </div>
+            )}
+            <div className="magick-ad-right-section__body">
+                {compactHeader
+                    ? renderPublishMeta(
+                          'magick-ad-right-section__meta magick-ad-right-section__meta--inline'
+                      )
+                    : null}
+                {renderPublishBody()}
+            </div>
+        </div>
+    );
+
+    const renderRightAccordionSection = ({
+        id,
+        title,
+        summary,
+        children,
+    }) => {
+        const isOpen = rightPanelOpen === id;
+        const contentId = `magick-ad-right-panel-${id}`;
+        return (
+            <section
+                className={`magick-ad-right-accordion__section ${
+                    isOpen ? 'is-open' : ''
+                }`}
+            >
+                <button
+                    type="button"
+                    className="magick-ad-right-accordion__toggle"
+                    aria-expanded={isOpen}
+                    aria-controls={contentId}
+                    onClick={() => setRightPanelOpen(id)}
+                >
+                    <div className="magick-ad-right-accordion__heading">
+                        <span className="magick-ad-right-accordion__title">
+                            {title}
+                        </span>
+                        {summary ? (
+                            <span className="magick-ad-right-accordion__summary">
+                                {summary}
+                            </span>
+                        ) : null}
+                    </div>
+                    <span
+                        className={`magick-ad-right-accordion__chevron ${
+                            isOpen ? 'is-open' : ''
+                        }`}
+                        aria-hidden="true"
+                    >
+                        ▾
+                    </span>
+                </button>
+                <div
+                    id={contentId}
+                    className="magick-ad-right-accordion__panel"
+                    hidden={!isOpen}
+                >
+                    {children}
+                </div>
+            </section>
+        );
+    };
+
+    const renderPublishStatusSummary = () => (
+        <span className="magick-ad-right-accordion__summary-pills">
+            <span className={`magick-ad-status-pill ${statusMeta(selectedAd).className}`}>
+                {statusMeta(selectedAd).label}
+            </span>
+            <span className={`magick-ad-status-pill ${runtimeMeta(selectedAd).className}`}>
+                {runtimeMeta(selectedAd).label}
+            </span>
+        </span>
+    );
+
+    const renderRuntimeSummaryLabel = runtimeContextMeta
+        ? `位置 ${runtimeContextMeta.placementLabel} · 页面 ${runtimeContextMeta.pageLabel}`
+        : '';
+
+    const renderPlacementSummaryLabel = runtimeContextMeta
+        ? `设备 ${runtimeContextMeta.deviceRuleLabel} · 登录 ${runtimeContextMeta.loginRuleLabel}`
+        : '';
+
+    const renderPublishModalSection = () => renderPublishSection();
 
     const renderPreviewControls = () => (
         <div className="magick-ad-preview-target">
@@ -6497,11 +6610,35 @@ const AdsConfig = () => {
         <div className="magick-ad-right-stack">
             <Card className="magick-ad-right-panel">
                 <CardBody>
-                    {renderPublishSection()}
-                    <div className="magick-ad-right-section magick-ad-right-section--runtime">
-                        {renderRuntimeSummaryBar({ compact: true })}
+                    <div className="magick-ad-right-accordion">
+                        {renderRightAccordionSection({
+                            id: 'publish',
+                            title: '发布与排期',
+                            summary: renderPublishStatusSummary(),
+                            children: renderPublishSection({
+                                compactHeader: true,
+                            }),
+                        })}
+                        {renderRightAccordionSection({
+                            id: 'runtime',
+                            title: '运行条件速览',
+                            summary: renderRuntimeSummaryLabel,
+                            children: (
+                                <div className="magick-ad-right-section magick-ad-right-section--runtime">
+                                    {renderRuntimeSummaryBar({
+                                        compact: true,
+                                        showTitle: false,
+                                    })}
+                                </div>
+                            ),
+                        })}
+                        {renderRightAccordionSection({
+                            id: 'placement',
+                            title: '投放设置',
+                            summary: renderPlacementSummaryLabel,
+                            children: renderPlacementSection(),
+                        })}
                     </div>
-                    {renderPlacementSection()}
                 </CardBody>
             </Card>
         </div>
@@ -6708,7 +6845,7 @@ const AdsConfig = () => {
                     className="magick-ad-modal magick-ad-config-modal"
                     onRequestClose={() => setPublishModalOpen(false)}
                 >
-                    {renderPublishSection()}
+                    {renderPublishModalSection()}
                 </Modal>
             )}
 

@@ -115,7 +115,7 @@
 
 .magick-ad-grid {
     display: grid;
-    grid-template-columns: 260px minmax(0, 1fr) 280px;
+    grid-template-columns: 280px minmax(0, 1fr) 320px;
     gap: 16px;
 }
 
@@ -126,7 +126,7 @@
 }
 
 .magick-ad-left {
-    flex: 0 0 260px;
+    flex: 0 0 280px;
 }
 
 .magick-ad-main {
@@ -135,7 +135,7 @@
 }
 
 .magick-ad-right {
-    flex: 0 0 300px;
+    flex: 0 0 320px;
 }
 
 .magick-ad-layout.is-left-collapsed .magick-ad-left,
@@ -905,6 +905,91 @@
     padding: 0;
 }
 
+.magick-ad-right-accordion {
+    display: flex;
+    flex-direction: column;
+}
+
+.magick-ad-right-accordion__section + .magick-ad-right-accordion__section {
+    border-top: 1px solid #e2e8f0;
+}
+
+.magick-ad-right-accordion__toggle {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.magick-ad-right-accordion__toggle:hover {
+    background: #f8fafc;
+}
+
+.magick-ad-right-accordion__toggle:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px #2271b1;
+}
+
+.magick-ad-right-accordion__section.is-open .magick-ad-right-accordion__toggle {
+    background: #f8fafc;
+}
+
+.magick-ad-right-accordion__heading {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.magick-ad-right-accordion__title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.magick-ad-right-accordion__summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 18px;
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.4;
+    flex-wrap: wrap;
+}
+
+.magick-ad-right-accordion__summary-pills {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.magick-ad-right-accordion__chevron {
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.magick-ad-right-accordion__chevron.is-open {
+    transform: rotate(180deg);
+}
+
+.magick-ad-right-accordion__panel {
+    padding: 0 16px 16px;
+}
+
+.magick-ad-right-accordion__panel .magick-ad-right-section {
+    padding: 0;
+}
+
 .magick-ad-right-section {
     padding: 16px;
 }
@@ -933,6 +1018,11 @@
     gap: 8px;
 }
 
+.magick-ad-right-section__meta--inline {
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+
 .magick-ad-save-button.components-button {
     height: 32px;
     padding: 0 14px;
@@ -953,7 +1043,7 @@
 }
 
 .magick-ad-right-section--runtime {
-    padding-top: 12px;
+    padding-top: 0;
 }
 
 .magick-ad-runtime-summary.is-compact {
@@ -1026,6 +1116,14 @@
 
     .magick-ad-runtime-summary__actions {
         justify-content: flex-start;
+    }
+
+    .magick-ad-right-accordion__toggle {
+        padding: 12px 14px;
+    }
+
+    .magick-ad-right-accordion__panel {
+        padding: 0 14px 14px;
     }
 }
 
