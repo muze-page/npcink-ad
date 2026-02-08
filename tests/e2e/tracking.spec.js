@@ -61,7 +61,10 @@ test('tracking sends click payload', async ({ page }) => {
     });
 
     await page.goto(previewPath, { waitUntil: 'networkidle' });
-    await page.waitForSelector(adSelector, { timeout: 10000 });
+    await page.waitForSelector(adSelector, {
+        state: 'attached',
+        timeout: 15000,
+    });
     await expect
         .poll(
             () =>

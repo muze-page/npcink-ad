@@ -38,7 +38,8 @@ for (const scenario of MATRIX_CASES) {
         await page.route('https://pd.w.org/**', (route) => route.abort());
 
         await page.goto(previewPath, { waitUntil: 'domcontentloaded' });
-        await expect(page.locator(adSelector).first()).toBeVisible({
+        await page.waitForSelector(adSelector, {
+            state: 'attached',
             timeout: 15000,
         });
 

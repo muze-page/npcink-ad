@@ -1,0 +1,20 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 启动 Local 环境 (Site 2 - PHP 8.2)",
+      "type": "shell",
+      "command": "/Users/muze/Library/Application\\ Support/Local/ssh-entry/woSvhUMpg.sh",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": true,
+        "echo": false,
+        "close": true
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    }
+  ]
+}

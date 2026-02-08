@@ -73,6 +73,9 @@ find . -type f -name "*.php" \
 预览地址：http://magick-ad.local/
 
 ```shell
+# 首次运行或浏览器架构变更（arm64/x64）时，先执行
+pnpm exec playwright install --force chromium chromium-headless-shell
+
 MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" pnpm run test:e2e
 
 ```

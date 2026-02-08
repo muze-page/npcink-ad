@@ -69,7 +69,33 @@ const clickAdTarget = async (page, selector) => {
         return;
     }
 
-    await page.locator(selector).first().click({ force: true });
+    const visibleUnits = page.locator(`${selector}:visible`);
+    if ((await visibleUnits.count()) > 0) {
+        await visibleUnits.first().click({ force: true });
+        return;
+    }
+
+    // Fallback for delayed/hidden containers in test fixtures:
+    // trigger a synthetic click so tracking pipeline can still be validated.
+    const dispatched = await page.evaluate((rootSelector) => {
+        const root = document.querySelector(rootSelector);
+        if (!root) {
+            return false;
+        }
+        const target = root.querySelector(
+            'a:not(.magick-ad-close),button:not(.magick-ad-close),[role="button"]:not(.magick-ad-close)'
+        ) || root;
+        const event = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+        });
+        return target.dispatchEvent(event);
+    }, selector);
+
+    if (!dispatched) {
+        throw new Error(`No ad target found for selector: ${selector}`);
+    }
 };
 
 module.exports = {

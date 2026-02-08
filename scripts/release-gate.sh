@@ -40,7 +40,7 @@ if [[ -n "${MAGICK_AD_E2E_PREVIEW_PATH:-}" ]]; then
     echo "[release-gate] Playwright Chromium already installed, skip install"
   else
     echo "[release-gate] Playwright Chromium not found, installing..."
-    pnpm exec playwright install chromium
+    pnpm exec playwright install chromium chromium-headless-shell
   fi
 
   pnpm run test:e2e
