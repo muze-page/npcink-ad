@@ -132,6 +132,9 @@ const AdsConfig = () => {
     const frequencyPanelStorageKey = 'magick_ad_panel_frequency';
     const placementTabStorageKey = 'magick_ad_panel_placement_tab';
     const placementDrawerScrollStorageKey = 'magick_ad_placement_drawer_scroll';
+    const publishDrawerScrollStorageKey = 'magick_ad_publish_drawer_scroll';
+    const quickPlacementPanelStorageKey = 'magick_ad_quick_placement_panel';
+    const placementAdvancedStorageKey = 'magick_ad_panel_placement_advanced';
     const rightSidebarTabStorageKey = 'magick_ad_right_sidebar_tab';
     const editorModeStorageKey = 'magick_ad_editor_mode';
     const allowedEditorModes = new Set(['quick', 'design', 'expert']);
@@ -263,14 +266,23 @@ const AdsConfig = () => {
     };
 
     const [placementDetailsOpen, setPlacementDetailsOpen] = useState(false);
-    const [placementAdvancedOpen, setPlacementAdvancedOpen] = useState(null);
+    const [placementAdvancedOpen, setPlacementAdvancedOpen] = useState(() => {
+        const allowed = new Set(['rules', 'design']);
+        const stored = readPanelState(placementAdvancedStorageKey, null);
+        return stored && allowed.has(stored) ? stored : null;
+    });
     const [quickPlacementTab, setQuickPlacementTab] = useState(() => {
         const allowed = new Set(['insert', 'rules', 'node']);
         const stored = readPanelState(quickPlacementTabStorageKey, 'insert');
         return allowed.has(stored) ? stored : 'insert';
     });
-    const [quickPlacementPanelOpen, setQuickPlacementPanelOpen] =
-        useState('insert');
+    const [quickPlacementPanelOpen, setQuickPlacementPanelOpen] = useState(
+        () => {
+            const allowed = new Set(['insert', 'rules', 'node']);
+            const stored = readPanelState(quickPlacementPanelStorageKey, 'insert');
+            return stored && allowed.has(stored) ? stored : 'insert';
+        }
+    );
     const [behaviorAdvancedOpen, setBehaviorAdvancedOpen] = useState(false);
     const [containerAdvancedOpen, setContainerAdvancedOpen] = useState(false);
     const [containerTab, setContainerTab] = useState(() => {
@@ -302,6 +314,21 @@ const AdsConfig = () => {
     const [previewLoading, setPreviewLoading] = useState(false);
     const [previewLogin, setPreviewLogin] = useState('auto');
     const [previewUsePage, setPreviewUsePage] = useState(false);
+    const publishDrawerBodyRef = useRef(null);
+    const publishDrawerWasOpenRef = useRef(false);
+    const [publishDrawerScrollTop, setPublishDrawerScrollTop] = useState(() => {
+        if (typeof window === 'undefined') {
+            return 0;
+        }
+        try {
+            const stored = Number(
+                window.localStorage?.getItem(publishDrawerScrollStorageKey) || 0
+            );
+            return Number.isFinite(stored) && stored >= 0 ? stored : 0;
+        } catch (err) {
+            return 0;
+        }
+    });
     const placementDrawerBodyRef = useRef(null);
     const placementDrawerWasOpenRef = useRef(false);
     const [placementDrawerScrollTop, setPlacementDrawerScrollTop] = useState(
@@ -659,6 +686,50 @@ const AdsConfig = () => {
         }
         try {
             window.localStorage?.setItem(
+                quickPlacementPanelStorageKey,
+                quickPlacementPanelOpen || 'none'
+            );
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [quickPlacementPanelOpen]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage?.setItem(
+                publishDrawerScrollStorageKey,
+                String(Math.max(0, Math.floor(publishDrawerScrollTop || 0)))
+            );
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [publishDrawerScrollTop]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const wasOpen = publishDrawerWasOpenRef.current;
+        if (publishModalOpen && !wasOpen) {
+            window.requestAnimationFrame(() => {
+                if (publishDrawerBodyRef.current) {
+                    publishDrawerBodyRef.current.scrollTop =
+                        publishDrawerScrollTop;
+                }
+            });
+        }
+        publishDrawerWasOpenRef.current = publishModalOpen;
+    }, [publishModalOpen, publishDrawerScrollTop]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage?.setItem(
                 placementTabStorageKey,
                 placementTab || 'placement'
             );
@@ -680,6 +751,20 @@ const AdsConfig = () => {
             // ignore storage errors
         }
     }, [placementDrawerScrollTop]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage?.setItem(
+                placementAdvancedStorageKey,
+                placementAdvancedOpen || 'none'
+            );
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [placementAdvancedOpen]);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -5374,7 +5459,8 @@ const AdsConfig = () => {
         </div>
     );
 
-    const renderPublishBody = () => {
+    const renderPublishBody = ({ variant = 'full' } = {}) => {
+        const isSidebarPublish = variant === 'sidebar';
         const toLocalInputValue = (date) => {
             const pad = (num) => String(num).padStart(2, '0');
             return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
@@ -5426,6 +5512,12 @@ const AdsConfig = () => {
         const publishScheduleSummary = `${
             selectedAd.options?.start_date ? '已设开始' : '立即生效'
         } · ${selectedAd.options?.end_date ? '已设结束' : '长期有效'}`;
+        const publishAdvancedSummary = [
+            `开始 ${
+                selectedAd.options?.start_date || '立即生效'
+            }`,
+            `结束 ${selectedAd.options?.end_date || '长期有效'}`,
+        ].join(' · ');
 
         return (
             <>
@@ -5543,48 +5635,65 @@ const AdsConfig = () => {
                         );
                     })()}
                 </div>
-                <div className="magick-ad-right-inline-panel magick-ad-right-inline-panel--static">
-                    <div className="magick-ad-right-inline-panel__heading">
-                        高级排期
+                {isSidebarPublish ? (
+                    <div className="magick-ad-right-advanced-entry">
+                        <div className="magick-ad-right-advanced-entry__title">
+                            精确排期已迁移
+                        </div>
+                        <p className="magick-ad-right-advanced-entry__desc">
+                            不影响广告外观预览的排期细项已迁移到抽屉，侧栏仅保留高频发布操作。
+                        </p>
+                        <p className="magick-ad-right-advanced-entry__meta">
+                            {publishAdvancedSummary}
+                        </p>
+                        <Button
+                            variant="secondary"
+                            onClick={() => openPublishDrawer()}
+                        >
+                            打开高级排期
+                        </Button>
                     </div>
-                    <TextControl
-                        label="开始时间"
-                        type="datetime-local"
-                        value={formatDateTimeLocalInput(
-                            selectedAd.options?.start_date
-                        )}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                start_date:
-                                    formatDateTimeStorage(
-                                        value
-                                    ),
-                            })
-                        }
-                        help="开始时间为空表示立即生效。"
-                    />
-                    <TextControl
-                        label="结束时间"
-                        type="datetime-local"
-                        value={formatEndDateTimeLocalInput(
-                            selectedAd.options?.end_date
-                        )}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                end_date:
-                                    formatDateTimeStorage(
-                                        value
-                                    ),
-                            })
-                        }
-                        help="结束时间为空表示长期有效，支持到分钟。"
-                    />
-                </div>
+                ) : (
+                    <div className="magick-ad-right-inline-panel magick-ad-right-inline-panel--static">
+                        <div className="magick-ad-right-inline-panel__heading">
+                            高级排期
+                        </div>
+                        <TextControl
+                            label="开始时间"
+                            type="datetime-local"
+                            value={formatDateTimeLocalInput(
+                                selectedAd.options?.start_date
+                            )}
+                            onChange={(value) =>
+                                handleUpdateOptions({
+                                    start_date: formatDateTimeStorage(value),
+                                })
+                            }
+                            help="开始时间为空表示立即生效。"
+                        />
+                        <TextControl
+                            label="结束时间"
+                            type="datetime-local"
+                            value={formatEndDateTimeLocalInput(
+                                selectedAd.options?.end_date
+                            )}
+                            onChange={(value) =>
+                                handleUpdateOptions({
+                                    end_date: formatDateTimeStorage(value),
+                                })
+                            }
+                            help="结束时间为空表示长期有效，支持到分钟。"
+                        />
+                    </div>
+                )}
             </>
         );
     };
 
-    const renderPublishSection = ({ compactHeader = false } = {}) => (
+    const renderPublishSection = ({
+        compactHeader = false,
+        variant = 'full',
+    } = {}) => (
         <div className="magick-ad-right-section">
             {!compactHeader && (
                 <div className="magick-ad-right-section__header">
@@ -5595,7 +5704,7 @@ const AdsConfig = () => {
                 </div>
             )}
             <div className="magick-ad-right-section__body">
-                {renderPublishBody()}
+                {renderPublishBody({ variant })}
             </div>
         </div>
     );
@@ -5686,7 +5795,8 @@ const AdsConfig = () => {
         );
     };
 
-    const renderPublishModalSection = () => renderPublishSection();
+    const renderPublishModalSection = () =>
+        renderPublishSection({ variant: 'full' });
 
     const renderPreviewControls = () => (
         <div className="magick-ad-preview-target">
@@ -6099,6 +6209,30 @@ const AdsConfig = () => {
             `优先级 ${selectedAd?.options?.priority ?? 10}`,
             `权重 ${selectedAd?.options?.weight ?? 1}`,
         ].join(' · ');
+        const renderPlacementAdvancedEntry = () => {
+            if (!isSidebarPlacement || isSimpleLevel) {
+                return null;
+            }
+            return (
+                <div className="magick-ad-right-advanced-entry">
+                    <div className="magick-ad-right-advanced-entry__title">
+                        高级规则已迁移
+                    </div>
+                    <p className="magick-ad-right-advanced-entry__desc">
+                        不影响广告外观预览的设置项（如频控、优先级/权重、设备登录与节点规则）已迁移到抽屉。
+                    </p>
+                    <p className="magick-ad-right-advanced-entry__meta">
+                        {advancedPlacementSummary}
+                    </p>
+                    <Button
+                        variant="secondary"
+                        onClick={() => openPlacementDrawer({ tab: 'rules' })}
+                    >
+                        打开高级投放设置
+                    </Button>
+                </div>
+            );
+        };
         const quickPlacementTabs = [
             { name: 'insert', title: '页面插入' },
             ...(!isSimpleLevel && !isSidebarPlacement
@@ -6155,6 +6289,7 @@ const AdsConfig = () => {
                                 </strong>
                             </span>
                         </div>
+                        {renderPlacementAdvancedEntry()}
                         {effectiveEditorMode === 'quick' && (
                             <TabPanel
                                 className="magick-ad-right-tabs"
@@ -6254,30 +6389,6 @@ const AdsConfig = () => {
                                                     includeValidation: true,
                                                     includePlacementCompact: true,
                                                 })}
-                                                {isSidebarPlacement &&
-                                                    !isSimpleLevel && (
-                                                        <div className="magick-ad-right-advanced-entry">
-                                                            <div className="magick-ad-right-advanced-entry__title">
-                                                                高级规则已迁移
-                                                            </div>
-                                                            <p className="magick-ad-right-advanced-entry__desc">
-                                                                不影响广告外观预览的设置项（如频控、优先级/权重、设备登录与节点规则）已迁移到弹窗。
-                                                            </p>
-                                                            <p className="magick-ad-right-advanced-entry__meta">
-                                                                {advancedPlacementSummary}
-                                                            </p>
-                                                            <Button
-                                                                variant="secondary"
-                                                                onClick={() =>
-                                                                    setPlacementModalOpen(
-                                                                        true
-                                                                    )
-                                                                }
-                                                            >
-                                                                打开高级投放设置
-                                                            </Button>
-                                                        </div>
-                                                    )}
                                             </PanelBody>
                                         </Panel>
                                     );
@@ -7086,27 +7197,6 @@ const AdsConfig = () => {
                                             })}
                                         </PanelBody>
                                     )}
-                                    {isSidebarPlacement && (
-                                        <div className="magick-ad-right-advanced-entry">
-                                            <div className="magick-ad-right-advanced-entry__title">
-                                                高级规则已迁移
-                                            </div>
-                                            <p className="magick-ad-right-advanced-entry__desc">
-                                                不影响广告外观预览的设置项（如频控、优先级/权重、设备登录与节点规则）已迁移到弹窗。
-                                            </p>
-                                            <p className="magick-ad-right-advanced-entry__meta">
-                                                {advancedPlacementSummary}
-                                            </p>
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() =>
-                                                    setPlacementModalOpen(true)
-                                                }
-                                            >
-                                                打开高级投放设置
-                                            </Button>
-                                        </div>
-                                    )}
                                 </Panel>
                             );
                         }}
@@ -7118,6 +7208,37 @@ const AdsConfig = () => {
         );
     };
 
+    function openPublishDrawer({ resetScroll = false } = {}) {
+        if (resetScroll) {
+            setPublishDrawerScrollTop(0);
+            if (publishDrawerBodyRef.current) {
+                publishDrawerBodyRef.current.scrollTop = 0;
+            }
+        }
+        setPublishModalOpen(true);
+    }
+
+    function closePublishDrawer() {
+        setPublishModalOpen(false);
+    }
+
+    function openPlacementDrawer({ tab = null, resetScroll = false } = {}) {
+        if (tab) {
+            setPlacementTab(tab);
+        }
+        if (resetScroll) {
+            setPlacementDrawerScrollTop(0);
+            if (placementDrawerBodyRef.current) {
+                placementDrawerBodyRef.current.scrollTop = 0;
+            }
+        }
+        setPlacementModalOpen(true);
+    }
+
+    function closePlacementDrawer() {
+        setPlacementModalOpen(false);
+    }
+
     const toolbarActions = selectedAd ? (
         <div className="magick-ad-toolbar-actions">
             <div className="magick-ad-toolbar-actions__primary">
@@ -7126,7 +7247,7 @@ const AdsConfig = () => {
                     icon={megaphone}
                     label="投放设置"
                     variant="tertiary"
-                    onClick={() => setPlacementModalOpen(true)}
+                    onClick={() => openPlacementDrawer()}
                 >
                     投放
                 </Button>
@@ -7135,9 +7256,7 @@ const AdsConfig = () => {
                     icon={calendar}
                     label="发布与排期"
                     variant="tertiary"
-                    onClick={() => {
-                        setPublishModalOpen(true);
-                    }}
+                    onClick={() => openPublishDrawer()}
                 >
                     排期
                 </Button>
@@ -7166,7 +7285,7 @@ const AdsConfig = () => {
                             icon={megaphone}
                             onClick={() => {
                                 onClose();
-                                setPlacementModalOpen(true);
+                                openPlacementDrawer();
                             }}
                         >
                             投放设置
@@ -7175,7 +7294,7 @@ const AdsConfig = () => {
                             icon={calendar}
                             onClick={() => {
                                 onClose();
-                                setPublishModalOpen(true);
+                                openPublishDrawer();
                             }}
                         >
                             发布与排期
@@ -7297,6 +7416,7 @@ const AdsConfig = () => {
                             if (tab.name === 'publish') {
                                 return renderPublishSection({
                                     compactHeader: true,
+                                    variant: 'sidebar',
                                 });
                             }
                             return renderPlacementSection({
@@ -7528,10 +7648,20 @@ const AdsConfig = () => {
             {publishModalOpen && selectedAd && (
                 <Modal
                     title="发布与排期"
-                    className="magick-ad-modal magick-ad-config-modal"
-                    onRequestClose={() => setPublishModalOpen(false)}
+                    className="magick-ad-modal magick-ad-config-modal magick-ad-drawer-modal"
+                    onRequestClose={closePublishDrawer}
                 >
-                    {renderPublishModalSection()}
+                    <div
+                        className="magick-ad-drawer-modal__content"
+                        ref={publishDrawerBodyRef}
+                        onScroll={(event) =>
+                            setPublishDrawerScrollTop(
+                                event.currentTarget.scrollTop
+                            )
+                        }
+                    >
+                        {renderPublishModalSection()}
+                    </div>
                 </Modal>
             )}
 
@@ -7539,7 +7669,7 @@ const AdsConfig = () => {
                 <Modal
                     title="高级投放设置"
                     className="magick-ad-modal magick-ad-config-modal magick-ad-drawer-modal"
-                    onRequestClose={() => setPlacementModalOpen(false)}
+                    onRequestClose={closePlacementDrawer}
                 >
                     <div
                         className="magick-ad-drawer-modal__content"
