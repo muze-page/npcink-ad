@@ -217,6 +217,8 @@ const AdsConfig = () => {
     const [quickPanelOpen, setQuickPanelOpen] = useState(() =>
         readPanelState(quickPanelStorageKey, 'placement')
     );
+    const [publishDetailsOpen, setPublishDetailsOpen] = useState(false);
+    const [placementDetailsOpen, setPlacementDetailsOpen] = useState(false);
     const [publishAdvancedOpen, setPublishAdvancedOpen] = useState(false);
     const [placementAdvancedOpen, setPlacementAdvancedOpen] = useState(null);
     const [placementRulesAdvancedOpen, setPlacementRulesAdvancedOpen] =
@@ -242,6 +244,7 @@ const AdsConfig = () => {
         const stored = readPanelState(rightAccordionStorageKey, 'publish');
         return allowed.has(stored) ? stored : 'publish';
     });
+    const [runtimeDetailsOpen, setRuntimeDetailsOpen] = useState(false);
     const [previewTarget, setPreviewTarget] = useState('');
     const [previewMode, setPreviewMode] = useState('url');
     const [previewSearch, setPreviewSearch] = useState('');
@@ -402,6 +405,12 @@ const AdsConfig = () => {
         () => ads.find((ad) => ad.id === selectedId),
         [ads, selectedId]
     );
+
+    useEffect(() => {
+        setPublishDetailsOpen(false);
+        setPlacementDetailsOpen(false);
+        setRuntimeDetailsOpen(false);
+    }, [selectedId]);
 
     useEffect(() => {
         if (!selectedAd) {
@@ -2741,6 +2750,18 @@ const AdsConfig = () => {
         return stats;
     }, [ads]);
 
+    const activeFilterCount = Number(adFilter !== 'all') + Number(adTypeView !== 'all');
+    const activeFilterLabel = getOptionLabel(
+        SIDEBAR_FILTERS,
+        adFilter,
+        '全部'
+    );
+    const activeTypeLabel = getOptionLabel(
+        SIDEBAR_TYPE_VIEWS,
+        adTypeView,
+        '全部类型'
+    );
+
     const sidebarSections = useMemo(() => {
         const sections = [
             {
@@ -2818,49 +2839,58 @@ const AdsConfig = () => {
                             value={adSearch}
                             onChange={(value) => setAdSearch(value)}
                         />
-                        <div className="magick-ad-sidebar__filters">
-                            {SIDEBAR_FILTERS.map((item) => (
-                                <Button
-                                    key={item.value}
-                                    variant="secondary"
-                                    isPressed={adFilter === item.value}
-                                    className="magick-ad-sidebar__filter-btn"
-                                    onClick={() => setAdFilter(item.value)}
-                                >
-                                    {item.label}
-                                    <span className="magick-ad-sidebar__filter-count">
-                                        {filterStats[item.value] || 0}
-                                    </span>
-                                </Button>
-                            ))}
-                        </div>
-                        <div className="magick-ad-sidebar__types">
-                            {SIDEBAR_TYPE_VIEWS.map((item) => (
-                                <Button
-                                    key={item.value}
-                                    variant="secondary"
-                                    isPressed={adTypeView === item.value}
-                                    className="magick-ad-sidebar__type-btn"
-                                    onClick={() => setAdTypeView(item.value)}
-                                >
-                                    {item.label}
-                                    <span className="magick-ad-sidebar__type-count">
-                                        {typeStats[item.value] || 0}
-                                    </span>
-                                </Button>
-                            ))}
-                        </div>
-                        {(hasSidebarFilter || selectedHiddenByFilter) && (
-                            <div className="magick-ad-sidebar__tool-row">
-                                {selectedHiddenByFilter ? (
-                                    <span className="magick-ad-sidebar__tool-tip">
-                                        当前编辑项已被筛选隐藏。
-                                    </span>
-                                ) : (
-                                    <span className="magick-ad-sidebar__tool-tip">
-                                        已应用筛选条件。
-                                    </span>
+                        <div className="magick-ad-sidebar__tool-row">
+                            <DropdownMenu
+                                className="magick-ad-sidebar__filter-menu"
+                                icon={null}
+                                text={`筛选：${activeFilterLabel} · ${activeTypeLabel}`}
+                                toggleProps={{
+                                    variant: 'secondary',
+                                    className: 'magick-ad-sidebar__filter-trigger',
+                                }}
+                            >
+                                {({ onClose }) => (
+                                    <>
+                                        <MenuGroup label="状态">
+                                            {SIDEBAR_FILTERS.map((item) => (
+                                                <MenuItem
+                                                    key={`filter-${item.value}`}
+                                                    onClick={() => {
+                                                        setAdFilter(item.value);
+                                                        onClose();
+                                                    }}
+                                                >
+                                                    {item.label}（
+                                                    {filterStats[item.value] || 0}
+                                                    ）
+                                                    {adFilter === item.value
+                                                        ? ' 当前'
+                                                        : ''}
+                                                </MenuItem>
+                                            ))}
+                                        </MenuGroup>
+                                        <MenuGroup label="类型">
+                                            {SIDEBAR_TYPE_VIEWS.map((item) => (
+                                                <MenuItem
+                                                    key={`type-${item.value}`}
+                                                    onClick={() => {
+                                                        setAdTypeView(item.value);
+                                                        onClose();
+                                                    }}
+                                                >
+                                                    {item.label}（
+                                                    {typeStats[item.value] || 0}
+                                                    ）
+                                                    {adTypeView === item.value
+                                                        ? ' 当前'
+                                                        : ''}
+                                                </MenuItem>
+                                            ))}
+                                        </MenuGroup>
+                                    </>
                                 )}
+                            </DropdownMenu>
+                            {(hasSidebarFilter || selectedHiddenByFilter) && (
                                 <Button
                                     variant="tertiary"
                                     className="magick-ad-sidebar__clear-btn"
@@ -2872,6 +2902,20 @@ const AdsConfig = () => {
                                 >
                                     清空
                                 </Button>
+                            )}
+                        </div>
+                        {(hasSidebarFilter || selectedHiddenByFilter) && (
+                            <div className="magick-ad-sidebar__tool-meta">
+                                <span className="magick-ad-sidebar__tool-tip">
+                                    {selectedHiddenByFilter
+                                        ? '当前编辑项已被筛选隐藏。'
+                                        : '已应用筛选条件。'}
+                                </span>
+                                {hasSidebarFilter && (
+                                    <span className="magick-ad-sidebar__tool-chip">
+                                        已筛选 {activeFilterCount} 项
+                                    </span>
+                                )}
                             </div>
                         )}
                     </div>
@@ -2909,11 +2953,8 @@ const AdsConfig = () => {
                                             const status = statusMeta(ad);
                                             const runtime = runtimeMeta(ad);
                                             const options = ad.options || {};
-                                            const usageLabel = getUsageLabel(
-                                                normalizeUsageType(
-                                                    options.usage_type || 'ad'
-                                                )
-                                            );
+                                            const hasMissingPosition =
+                                                missingPositionIds.has(ad.id);
                                             const pageLabel =
                                                 options.ad_type === 'targeted' &&
                                                 options.target_type
@@ -2936,9 +2977,7 @@ const AdsConfig = () => {
                                                             ? 'is-active'
                                                             : ''
                                                     } ${
-                                                        missingPositionIds.has(
-                                                            ad.id
-                                                        )
+                                                        hasMissingPosition
                                                             ? 'has-error'
                                                             : ''
                                                     } ${
@@ -2972,43 +3011,31 @@ const AdsConfig = () => {
                                                             </span>
                                                             <span className="magick-ad-sidebar__badges">
                                                                 <span
-                                                                    className={`magick-ad-status-pill ${status.className}`}
+                                                                    className={`magick-ad-sidebar__state ${status.className}`}
                                                                 >
-                                                                    {status.label}
+                                                                    <span className="magick-ad-sidebar__state-dot" />
+                                                                    <span className="magick-ad-sidebar__state-label">
+                                                                        {status.label}
+                                                                    </span>
                                                                 </span>
-                                                                <span
-                                                                    className={`magick-ad-status-pill ${runtime.className}`}
-                                                                >
-                                                                    {runtime.label}
-                                                                </span>
+                                                                {hasMissingPosition && (
+                                                                    <span className="magick-ad-sidebar__alert">
+                                                                        <span className="magick-ad-sidebar__dot" />
+                                                                        需配置位置
+                                                                    </span>
+                                                                )}
                                                             </span>
                                                             <span className="magick-ad-sidebar__meta-row">
-                                                                <span className="magick-ad-sidebar__meta">
-                                                                    {usageLabel}
-                                                                </span>
-                                                                <span className="magick-ad-sidebar__meta-sep">
-                                                                    ·
-                                                                </span>
-                                                                <span className="magick-ad-sidebar__meta">
+                                                                <span className="magick-ad-sidebar__meta-summary">
+                                                                    {runtime.label}{' '}
+                                                                    ·{' '}
                                                                     {resolvePlacementLabel(
                                                                         options
-                                                                    )}
-                                                                </span>
-                                                                <span className="magick-ad-sidebar__meta-sep">
-                                                                    ·
-                                                                </span>
-                                                                <span className="magick-ad-sidebar__meta">
+                                                                    )}{' '}
+                                                                    ·{' '}
                                                                     {pageLabel}
                                                                 </span>
                                                             </span>
-                                                            {missingPositionIds.has(
-                                                                ad.id
-                                                            ) && (
-                                                                <span className="magick-ad-sidebar__alert">
-                                                                    <span className="magick-ad-sidebar__dot" />
-                                                                    需配置位置
-                                                                </span>
-                                                            )}
                                                         </Button>
                                                     </div>
                                                     <div className="magick-ad-sidebar__actions">
@@ -5068,10 +5095,15 @@ const AdsConfig = () => {
     const renderRuntimeSummaryBar = ({
         compact = false,
         showTitle = true,
+        showActions = !compact,
+        showDetails = !compact,
+        detailsOpen = false,
+        onToggleDetails = null,
     } = {}) => {
         if (!selectedAd || !runtimeContextMeta) {
             return null;
         }
+        const canToggleDetails = compact && typeof onToggleDetails === 'function';
         const summaryClassName = compact
             ? 'magick-ad-runtime-summary is-compact'
             : 'magick-ad-runtime-summary';
@@ -5102,7 +5134,7 @@ const AdsConfig = () => {
                                 {runtimeContextMeta.currentLoginLabel}
                             </span>
                         </div>
-                    ) : (
+                    ) : showDetails ? (
                         <>
                             <div className="magick-ad-runtime-summary__line">
                                 规则：位置 {runtimeContextMeta.placementLabel} · 页面 {runtimeContextMeta.pageLabel} · 用途{' '}
@@ -5114,6 +5146,19 @@ const AdsConfig = () => {
                                 {runtimeContextMeta.currentLoginLabel}
                             </div>
                         </>
+                    ) : null}
+                    {compact && showDetails && (
+                        <div className="magick-ad-runtime-summary__details">
+                            <div className="magick-ad-runtime-summary__line">
+                                规则：位置 {runtimeContextMeta.placementLabel} · 页面 {runtimeContextMeta.pageLabel} · 用途{' '}
+                                {runtimeContextMeta.usageLabel} · 设备{' '}
+                                {runtimeContextMeta.deviceRuleLabel} · 登录 {runtimeContextMeta.loginRuleLabel}
+                            </div>
+                            <div className="magick-ad-runtime-summary__line">
+                                环境：设备 {runtimeContextMeta.currentDeviceLabel} · 登录{' '}
+                                {runtimeContextMeta.currentLoginLabel}
+                            </div>
+                        </div>
                     )}
                     <div className="magick-ad-runtime-summary__status">
                         <span
@@ -5126,30 +5171,42 @@ const AdsConfig = () => {
                         </span>
                     </div>
                 </div>
-                {!compact && (
+                {(showActions || canToggleDetails) && (
                     <div className="magick-ad-runtime-summary__actions">
-                        <Button
-                            variant="secondary"
-                            onClick={() =>
-                                openRuntimeUrl(
-                                    runtimeContextMeta.previewUrl,
-                                    '预览地址生成失败，请检查预览配置。'
-                                )
-                            }
-                        >
-                            查看预览壳
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            onClick={() =>
-                                openRuntimeUrl(
-                                    runtimeContextMeta.diagnoseUrl,
-                                    '诊断地址生成失败，请刷新后台后重试。'
-                                )
-                            }
-                        >
-                            查看真实诊断
-                        </Button>
+                        {canToggleDetails && (
+                            <Button
+                                variant="tertiary"
+                                onClick={onToggleDetails}
+                            >
+                                {detailsOpen ? '收起详情' : '查看详情'}
+                            </Button>
+                        )}
+                        {showActions && (
+                            <>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() =>
+                                        openRuntimeUrl(
+                                            runtimeContextMeta.previewUrl,
+                                            '预览地址生成失败，请检查预览配置。'
+                                        )
+                                    }
+                                >
+                                    查看预览壳
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() =>
+                                        openRuntimeUrl(
+                                            runtimeContextMeta.diagnoseUrl,
+                                            '诊断地址生成失败，请刷新后台后重试。'
+                                        )
+                                    }
+                                >
+                                    查看真实诊断
+                                </Button>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
@@ -5167,20 +5224,6 @@ const AdsConfig = () => {
             >
                 {isSaving ? '保存中...' : '保存'}
             </Button>
-            <span
-                className={`magick-ad-status-pill ${
-                    statusMeta(selectedAd).className
-                }`}
-            >
-                {statusMeta(selectedAd).label}
-            </span>
-            <span
-                className={`magick-ad-status-pill ${
-                    runtimeMeta(selectedAd).className
-                }`}
-            >
-                {runtimeMeta(selectedAd).label}
-            </span>
         </div>
     );
 
@@ -5191,66 +5234,51 @@ const AdsConfig = () => {
                 date.getDate()
             )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
         };
+        const publishStatusValue = resolveStatus(selectedAd);
+        const publishStatusOptions = [
+            { label: '已发布', value: 'publish' },
+            { label: '待审核', value: 'pending' },
+            { label: '草稿/停用', value: 'draft' },
+            ...(publishStatusValue === 'future'
+                ? [
+                      {
+                          label: '已排期',
+                          value: 'future',
+                          disabled: true,
+                      },
+                  ]
+                : []),
+        ];
+        const publishStatusLabel = getOptionLabel(
+            publishStatusOptions,
+            publishStatusValue,
+            '已发布'
+        );
+        const publishScheduleSummary = `${
+            selectedAd.options?.start_date ? '已设开始' : '立即生效'
+        } · ${selectedAd.options?.end_date ? '已设结束' : '长期有效'}`;
 
         return (
             <>
-                <SelectControl
-                    label="发布状态"
-                    value={resolveStatus(selectedAd)}
-                    options={[
-                        { label: '已发布', value: 'publish' },
-                        { label: '待审核', value: 'pending' },
-                        { label: '草稿/停用', value: 'draft' },
-                        ...(resolveStatus(selectedAd) ===
-                        'future'
-                            ? [
-                                  {
-                                      label: '已排期',
-                                      value: 'future',
-                                      disabled: true,
-                                  },
-                              ]
-                            : []),
-                    ]}
-                    onChange={(value) => {
-                        if (!selectedAd) {
-                            return;
+                <div className="magick-ad-publish-compact">
+                    <div className="magick-ad-publish-compact__main">
+                        <span className="magick-ad-publish-compact__title">
+                            {publishStatusLabel}
+                        </span>
+                        <span className="magick-ad-publish-compact__desc">
+                            {publishScheduleSummary}
+                        </span>
+                    </div>
+                    <Button
+                        variant="tertiary"
+                        className="magick-ad-publish-compact__toggle"
+                        onClick={() =>
+                            setPublishDetailsOpen((prev) => !prev)
                         }
-                        if (value === 'draft') {
-                            handleUpdateMeta({
-                                status: 'draft',
-                                options: {
-                                    ...selectedAd.options,
-                                    enabled: false,
-                                },
-                            });
-                            return;
-                        }
-                        if (value === 'pending') {
-                            handleUpdateMeta({
-                                status: 'pending',
-                                options: {
-                                    ...selectedAd.options,
-                                    enabled: true,
-                                },
-                            });
-                            return;
-                        }
-                        const nextDate =
-                            selectedAd.date &&
-                            isFutureDate(selectedAd.date)
-                                ? formatDateFromDate(new Date())
-                                : selectedAd.date || '';
-                        handleUpdateMeta({
-                            status: 'publish',
-                            date: nextDate,
-                            options: {
-                                ...selectedAd.options,
-                                enabled: true,
-                            },
-                        });
-                    }}
-                />
+                    >
+                        {publishDetailsOpen ? '收起详情' : '查看详情'}
+                    </Button>
+                </div>
                 <div className="magick-ad-publish-quick">
                     <Button
                         variant="secondary"
@@ -5288,25 +5316,86 @@ const AdsConfig = () => {
                         长期有效
                     </Button>
                 </div>
-                {(() => {
-                    const runtime = runtimeMeta(selectedAd);
-                    if (!runtime.blocked) {
-                        return null;
-                    }
-                    const noticeStatus =
-                        runtime.code === 'schedule_not_started' ||
-                        runtime.code === 'schedule_expired'
-                            ? 'warning'
-                            : 'info';
-                    return (
-                        <Notice status={noticeStatus} isDismissible={false}>
-                            {runtime.message}
-                        </Notice>
-                    );
-                })()}
+                {publishDetailsOpen && (
+                    <Panel className="magick-ad-right-inline-panel">
+                        <PanelBody
+                            title={renderPanelTitleWithSummary(
+                                '发布详情',
+                                `${publishStatusLabel} · ${publishScheduleSummary}`
+                            )}
+                            opened
+                        >
+                            <SelectControl
+                                label="发布状态"
+                                value={publishStatusValue}
+                                options={publishStatusOptions}
+                                onChange={(value) => {
+                                    if (!selectedAd) {
+                                        return;
+                                    }
+                                    if (value === 'draft') {
+                                        handleUpdateMeta({
+                                            status: 'draft',
+                                            options: {
+                                                ...selectedAd.options,
+                                                enabled: false,
+                                            },
+                                        });
+                                        return;
+                                    }
+                                    if (value === 'pending') {
+                                        handleUpdateMeta({
+                                            status: 'pending',
+                                            options: {
+                                                ...selectedAd.options,
+                                                enabled: true,
+                                            },
+                                        });
+                                        return;
+                                    }
+                                    const nextDate =
+                                        selectedAd.date &&
+                                        isFutureDate(selectedAd.date)
+                                            ? formatDateFromDate(new Date())
+                                            : selectedAd.date || '';
+                                    handleUpdateMeta({
+                                        status: 'publish',
+                                        date: nextDate,
+                                        options: {
+                                            ...selectedAd.options,
+                                            enabled: true,
+                                        },
+                                    });
+                                }}
+                            />
+                            {(() => {
+                                const runtime = runtimeMeta(selectedAd);
+                                if (!runtime.blocked) {
+                                    return null;
+                                }
+                                const noticeStatus =
+                                    runtime.code === 'schedule_not_started' ||
+                                    runtime.code === 'schedule_expired'
+                                        ? 'warning'
+                                        : 'info';
+                                return (
+                                    <Notice
+                                        status={noticeStatus}
+                                        isDismissible={false}
+                                    >
+                                        {runtime.message}
+                                    </Notice>
+                                );
+                            })()}
+                        </PanelBody>
+                    </Panel>
+                )}
                 <Panel className="magick-ad-right-inline-panel">
                     <PanelBody
-                        title="精确排期（高级）"
+                        title={renderPanelTitleWithSummary(
+                            '精确排期（高级）',
+                            publishScheduleSummary
+                        )}
                         opened={publishAdvancedOpen}
                         onToggle={() =>
                             setPublishAdvancedOpen((prev) => !prev)
@@ -5427,41 +5516,15 @@ const AdsConfig = () => {
         );
     };
 
-    const renderPublishStatusSummary = () => (
-        <span className="magick-ad-right-accordion__summary-pills">
-            <span className={`magick-ad-status-pill ${statusMeta(selectedAd).className}`}>
-                {statusMeta(selectedAd).label}
-            </span>
-            <span className={`magick-ad-status-pill ${runtimeMeta(selectedAd).className}`}>
-                {runtimeMeta(selectedAd).label}
-            </span>
-        </span>
-    );
+    const renderPublishStatusSummary = () =>
+        `${statusMeta(selectedAd).label} · ${runtimeMeta(selectedAd).label}`;
 
     const renderRuntimeSummaryLabel = runtimeContextMeta
-        ? (
-              <span className="magick-ad-right-accordion__summary-pills">
-                  <span className="magick-ad-right-accordion__summary-chip">
-                      设备 {runtimeContextMeta.currentDeviceLabel}
-                  </span>
-                  <span className="magick-ad-right-accordion__summary-chip">
-                      登录 {runtimeContextMeta.currentLoginLabel}
-                  </span>
-              </span>
-          )
+        ? `设备 ${runtimeContextMeta.currentDeviceLabel} · 登录 ${runtimeContextMeta.currentLoginLabel}`
         : '';
 
     const renderPlacementSummaryLabel = runtimeContextMeta
-        ? (
-              <span className="magick-ad-right-accordion__summary-pills">
-                  <span className="magick-ad-right-accordion__summary-chip">
-                      位置 {runtimeContextMeta.placementLabel}
-                  </span>
-                  <span className="magick-ad-right-accordion__summary-chip">
-                      页面 {runtimeContextMeta.pageLabel}
-                  </span>
-              </span>
-          )
+        ? `位置 ${runtimeContextMeta.placementLabel} · 页面 ${runtimeContextMeta.pageLabel}`
         : '';
 
     const renderRightPrioritySummary = () => {
@@ -5661,135 +5724,6 @@ const AdsConfig = () => {
         </>
     );
 
-    const renderFrequencyAdvancedTab = (
-        behavior = {},
-        { showAdvanced = true } = {}
-    ) => (
-        <Panel>
-            <PanelBody
-                title="频控"
-                opened={frequencyPanelOpen === 'frequency'}
-                onToggle={() =>
-                    setFrequencyPanelOpen((prev) =>
-                        prev === 'frequency' ? null : 'frequency'
-                    )
-                }
-            >
-                {renderFrequencyControls(behavior)}
-            </PanelBody>
-            {showAdvanced && (
-                <PanelBody
-                    title="高级设置"
-                    opened={frequencyPanelOpen === 'advanced'}
-                    onToggle={() =>
-                        setFrequencyPanelOpen((prev) =>
-                            prev === 'advanced' ? null : 'advanced'
-                        )
-                    }
-                >
-                    {renderAdvancedControls({ includePreview: false })}
-                </PanelBody>
-            )}
-        </Panel>
-    );
-
-    const renderPlacementRulesControls = ({
-        includeValidation = false,
-        includeAudience = false,
-        includeNode = false,
-        includeFrequency = false,
-        behavior = {},
-    } = {}) => (
-        <>
-            {includeValidation &&
-                showValidation &&
-                !resolvePlacement(selectedAd.options || {}).hook && (
-                    <Notice status="error" isDismissible={false}>
-                        请先选择展示位置
-                    </Notice>
-                )}
-            {selectedAd.options?.ad_type === 'global' && (
-                <>
-                    <SelectControl
-                        label="展示页面"
-                        value={selectedAd.options?.show_page || 'all'}
-                        options={DISPLAY_PAGE_OPTIONS}
-                        onChange={(value) => {
-                            const usageType = normalizeUsageType(
-                                selectedAd.options?.usage_type || 'ad'
-                            );
-                            const allowedPositions = getPositionOptions(value)
-                                .filter((option) =>
-                                    usageType === 'decorative'
-                                        ? !['head', 'node'].includes(
-                                              option.value
-                                          )
-                                        : true
-                                )
-                                .map((option) => option.value);
-                            const currentPlacement = resolvePlacement(
-                                selectedAd.options || {}
-                            );
-                            const currentValue =
-                                placementToSlotValue(currentPlacement);
-                            const nextPosition =
-                                allowedPositions.includes(currentValue)
-                                    ? currentValue
-                                    : '';
-                            applyPlacementSelection(nextPosition, {
-                                show_page: value,
-                            });
-                        }}
-                    />
-                    <SelectControl
-                        label="展示位置"
-                        value={placementToSlotValue(
-                            resolvePlacement(selectedAd.options || {})
-                        )}
-                        options={positionOptions}
-                        onChange={(value) => applyPlacementSelection(value)}
-                    />
-                </>
-            )}
-            {selectedAd.options?.ad_type === 'targeted' && (
-                <>
-                    <SelectControl
-                        label="展示类型"
-                        value={selectedAd.options?.target_type || ''}
-                        options={TARGET_TYPE_OPTIONS}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                target_type: value,
-                                target_values: [],
-                            })
-                        }
-                    />
-                    <FormTokenField
-                        label="展示页面"
-                        value={selectedAd.options?.target_values || []}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                target_values: value,
-                            })
-                        }
-                        suggestions={
-                            selectedAd.options?.target_suggestions || []
-                        }
-                        help={
-                            selectedAd.options?.target_type
-                                ? '支持输入并搜索添加多个目标'
-                                : '请先选择展示类型'
-                        }
-                        disabled={!selectedAd.options?.target_type}
-                    />
-                </>
-            )}
-            {includeAudience && renderDeviceLoginControls()}
-            {includeNode && renderNodePlacement()}
-            {includeFrequency && renderFrequencySummary(behavior)}
-        </>
-    );
-
     const renderPanelTitleWithSummary = (title, summary = '') => (
         <div className="magick-ad-panel-title magick-ad-panel-title--compact">
             <span>{title}</span>
@@ -5800,6 +5734,205 @@ const AdsConfig = () => {
             ) : null}
         </div>
     );
+
+    const renderFrequencyAdvancedTab = (
+        behavior = {},
+        { showAdvanced = true } = {}
+    ) => {
+        const frequencySummary = isDecorativeUsage(selectedAd?.options || {})
+            ? '装饰组件不参与频控'
+            : getFrequencySummary(behavior);
+        const advancedSummary = `优先级 ${selectedAd.options?.priority ?? 10} · 权重 ${selectedAd.options?.weight ?? 1}`;
+        return (
+            <Panel>
+                <PanelBody
+                    title={renderPanelTitleWithSummary(
+                        '核心频控',
+                        frequencySummary
+                    )}
+                    opened={frequencyPanelOpen === 'frequency'}
+                    onToggle={() =>
+                        setFrequencyPanelOpen((prev) =>
+                            prev === 'frequency' ? null : 'frequency'
+                        )
+                    }
+                >
+                    {renderFrequencyControls(behavior)}
+                </PanelBody>
+                {showAdvanced && (
+                    <PanelBody
+                        title={renderPanelTitleWithSummary(
+                            '高级规则（优先级/权重）',
+                            advancedSummary
+                        )}
+                        opened={frequencyPanelOpen === 'advanced'}
+                        onToggle={() =>
+                            setFrequencyPanelOpen((prev) =>
+                                prev === 'advanced' ? null : 'advanced'
+                            )
+                        }
+                    >
+                        {renderAdvancedControls({ includePreview: false })}
+                    </PanelBody>
+                )}
+            </Panel>
+        );
+    };
+
+    const renderPlacementRulesControls = ({
+        includeValidation = false,
+        includePlacementCompact = false,
+        includeAudience = false,
+        includeNode = false,
+        includeFrequency = false,
+        behavior = {},
+    } = {}) => {
+        const isGlobal = selectedAd.options?.ad_type === 'global';
+        const isTargeted = selectedAd.options?.ad_type === 'targeted';
+        const canTogglePlacementDetails =
+            includePlacementCompact && (isGlobal || isTargeted);
+        const showPlacementDetails =
+            !canTogglePlacementDetails || placementDetailsOpen;
+        const pageLabel = getOptionLabel(
+            DISPLAY_PAGE_OPTIONS,
+            selectedAd.options?.show_page || 'all',
+            '全站'
+        );
+        const placementLabel = resolvePlacementLabel(selectedAd.options || {});
+        const targetTypeLabel = getOptionLabel(
+            TARGET_TYPE_OPTIONS,
+            selectedAd.options?.target_type || '',
+            '未设置'
+        );
+        const targetCount = Array.isArray(selectedAd.options?.target_values)
+            ? selectedAd.options.target_values.length
+            : 0;
+        return (
+            <>
+                {includeValidation &&
+                    showValidation &&
+                    !resolvePlacement(selectedAd.options || {}).hook && (
+                        <Notice status="error" isDismissible={false}>
+                            请先选择展示位置
+                        </Notice>
+                    )}
+                {canTogglePlacementDetails && (
+                    <div className="magick-ad-placement-compact">
+                        <div className="magick-ad-placement-compact__chips">
+                            {isGlobal && (
+                                <>
+                                    <span className="magick-ad-placement-compact__chip">
+                                        页面 {pageLabel}
+                                    </span>
+                                    <span className="magick-ad-placement-compact__chip">
+                                        位置 {placementLabel}
+                                    </span>
+                                </>
+                            )}
+                            {isTargeted && (
+                                <>
+                                    <span className="magick-ad-placement-compact__chip">
+                                        定向 {targetTypeLabel}
+                                    </span>
+                                    <span className="magick-ad-placement-compact__chip">
+                                        目标 {targetCount} 项
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                        <Button
+                            variant="tertiary"
+                            className="magick-ad-placement-compact__toggle"
+                            onClick={() =>
+                                setPlacementDetailsOpen((prev) => !prev)
+                            }
+                        >
+                            {placementDetailsOpen ? '收起详情' : '查看详情'}
+                        </Button>
+                    </div>
+                )}
+                {showPlacementDetails && isGlobal && (
+                    <>
+                        <SelectControl
+                            label="展示页面"
+                            value={selectedAd.options?.show_page || 'all'}
+                            options={DISPLAY_PAGE_OPTIONS}
+                            onChange={(value) => {
+                                const usageType = normalizeUsageType(
+                                    selectedAd.options?.usage_type || 'ad'
+                                );
+                                const allowedPositions = getPositionOptions(value)
+                                    .filter((option) =>
+                                        usageType === 'decorative'
+                                            ? !['head', 'node'].includes(
+                                                  option.value
+                                              )
+                                            : true
+                                    )
+                                    .map((option) => option.value);
+                                const currentPlacement = resolvePlacement(
+                                    selectedAd.options || {}
+                                );
+                                const currentValue =
+                                    placementToSlotValue(currentPlacement);
+                                const nextPosition =
+                                    allowedPositions.includes(currentValue)
+                                        ? currentValue
+                                        : '';
+                                applyPlacementSelection(nextPosition, {
+                                    show_page: value,
+                                });
+                            }}
+                        />
+                        <SelectControl
+                            label="展示位置"
+                            value={placementToSlotValue(
+                                resolvePlacement(selectedAd.options || {})
+                            )}
+                            options={positionOptions}
+                            onChange={(value) => applyPlacementSelection(value)}
+                        />
+                    </>
+                )}
+                {showPlacementDetails && isTargeted && (
+                    <>
+                        <SelectControl
+                            label="展示类型"
+                            value={selectedAd.options?.target_type || ''}
+                            options={TARGET_TYPE_OPTIONS}
+                            onChange={(value) =>
+                                handleUpdateOptions({
+                                    target_type: value,
+                                    target_values: [],
+                                })
+                            }
+                        />
+                        <FormTokenField
+                            label="展示页面"
+                            value={selectedAd.options?.target_values || []}
+                            onChange={(value) =>
+                                handleUpdateOptions({
+                                    target_values: value,
+                                })
+                            }
+                            suggestions={
+                                selectedAd.options?.target_suggestions || []
+                            }
+                            help={
+                                selectedAd.options?.target_type
+                                    ? '支持输入并搜索添加多个目标'
+                                    : '请先选择展示类型'
+                            }
+                            disabled={!selectedAd.options?.target_type}
+                        />
+                    </>
+                )}
+                {includeAudience && renderDeviceLoginControls()}
+                {includeNode && renderNodePlacement()}
+                {includeFrequency && renderFrequencySummary(behavior)}
+            </>
+        );
+    };
 
     const renderPlacementSection = () => {
         const usageLabel = getUsageLabel(
@@ -5844,20 +5977,27 @@ const AdsConfig = () => {
                             简洁级别已锁定为“快速模式”，仅保留页面插入与基础投放能力。
                         </Notice>
                     ) : (
-                        <Panel className="magick-ad-right-inline-panel">
-                            <PanelBody
-                                title={renderPanelTitleWithSummary(
-                                    '高级规则（用途与模式）',
-                                    `${usageLabel} · ${modeLabel}`
-                                )}
-                                opened={placementRulesAdvancedOpen}
-                                onToggle={() =>
-                                    setPlacementRulesAdvancedOpen((prev) => !prev)
-                                }
-                            >
-                                <p className="magick-ad-right-inline-note">
-                                    调整用途类型、编辑模式和专家能力。日常投放可保持默认。
-                                </p>
+                            <Panel className="magick-ad-right-inline-panel">
+                                <PanelBody
+                                    title={renderPanelTitleWithSummary(
+                                        '高级规则（用途与模式）'
+                                    )}
+                                    opened={placementRulesAdvancedOpen}
+                                    onToggle={() =>
+                                        setPlacementRulesAdvancedOpen((prev) => !prev)
+                                    }
+                                >
+                                    <div className="magick-ad-right-inline-summary">
+                                        <span className="magick-ad-right-inline-summary__chip">
+                                            用途 {usageLabel}
+                                        </span>
+                                        <span className="magick-ad-right-inline-summary__chip">
+                                            模式 {modeLabel}
+                                        </span>
+                                    </div>
+                                    <p className="magick-ad-right-inline-note">
+                                        调整用途类型、编辑模式和专家能力。日常投放可保持默认。
+                                    </p>
                                 <SelectControl
                                     label="用途类型"
                                     value={normalizeUsageType(
@@ -5941,7 +6081,10 @@ const AdsConfig = () => {
                 {effectiveEditorMode === 'quick' && (
                     <Panel>
                         <PanelBody
-                            title="页面插入"
+                            title={renderPanelTitleWithSummary(
+                                '页面插入',
+                                resolvePlacementLabel(selectedAd?.options || {})
+                            )}
                             opened={quickPanelOpen === 'placement'}
                             onToggle={() =>
                                 setQuickPanelOpen((prev) =>
@@ -5958,6 +6101,7 @@ const AdsConfig = () => {
                             </p>
                             {renderPlacementRulesControls({
                                 includeValidation: true,
+                                includePlacementCompact: true,
                             })}
                             {!isSimpleLevel && (
                                 <Panel className="magick-ad-right-inline-panel">
@@ -6722,11 +6866,17 @@ const AdsConfig = () => {
                                         </Notice>
                                     )}
                                     <PanelBody
-                                        title="核心投放"
+                                        title={renderPanelTitleWithSummary(
+                                            '核心投放',
+                                            resolvePlacementLabel(
+                                                selectedAd?.options || {}
+                                            )
+                                        )}
                                         initialOpen
                                     >
                                         {renderPlacementRulesControls({
                                             includeValidation: true,
+                                            includePlacementCompact: true,
                                         })}
                                     </PanelBody>
                                     <PanelBody
@@ -6909,12 +7059,16 @@ const AdsConfig = () => {
                             id: 'runtime',
                             title: '运行条件速览',
                             summary: renderRuntimeSummaryLabel,
-                            summaryMode: 'chips',
                             children: (
                                 <div className="magick-ad-right-section magick-ad-right-section--runtime">
                                     {renderRuntimeSummaryBar({
                                         compact: true,
                                         showTitle: false,
+                                        showActions: true,
+                                        showDetails: runtimeDetailsOpen,
+                                        detailsOpen: runtimeDetailsOpen,
+                                        onToggleDetails: () =>
+                                            setRuntimeDetailsOpen((prev) => !prev),
                                     })}
                                 </div>
                             ),
@@ -6923,7 +7077,6 @@ const AdsConfig = () => {
                             id: 'publish',
                             title: '发布与排期',
                             summary: renderPublishStatusSummary(),
-                            summaryMode: 'chips',
                             children: renderPublishSection({
                                 compactHeader: true,
                             }),
@@ -6932,7 +7085,6 @@ const AdsConfig = () => {
                             id: 'placement',
                             title: '投放设置',
                             summary: renderPlacementSummaryLabel,
-                            summaryMode: 'chips',
                             children: renderPlacementSection(),
                         })}
                     </div>
@@ -7010,73 +7162,80 @@ const AdsConfig = () => {
                         label={headerCollapsed ? '展开头部' : '收起头部'}
                         showTooltip
                     />
-                    {!isSimpleLevel && (
-                        <Button
-                            className="magick-ad-header__btn"
-                            icon={external}
-                            variant="secondary"
-                            onClick={() => {
-                                const url = window?.MagickAD?.diagnoseUrl || '';
-                                if (url) {
-                                    window.open(url, '_blank', 'noopener');
-                                }
-                            }}
-                        >
-                            诊断
-                        </Button>
-                    )}
                     <div className="magick-ad-header__level">
                         <span className="magick-ad-header__level-badge">
                             {DISPLAY_LEVEL_LABELS[displayLevel] || '简洁'}
                         </span>
                         <DropdownMenu
-                            className="magick-ad-header__level-switch"
-                            icon={null}
-                            text="级别"
+                            className="magick-ad-header__more"
+                            icon={moreHorizontal}
+                            label="更多操作"
                             toggleProps={{
                                 variant: 'secondary',
-                                className: 'magick-ad-header__btn',
-                                disabled: displayLevelSaving,
+                                className:
+                                    'magick-ad-header__btn magick-ad-header__btn--icon',
                             }}
                         >
                             {({ onClose }) => (
+                                <>
                                 <MenuGroup>
                                     <MenuItem
+                                        disabled={displayLevelSaving}
                                         onClick={() => {
                                             onClose();
                                             handleDisplayLevelQuickChange('simple');
                                         }}
                                     >
-                                        简洁
+                                        切换到简洁
                                     </MenuItem>
                                     <MenuItem
+                                        disabled={displayLevelSaving}
                                         onClick={() => {
                                             onClose();
                                             handleDisplayLevelQuickChange('advanced');
                                         }}
                                     >
-                                        高级
+                                        切换到高级
                                     </MenuItem>
                                     <MenuItem
+                                        disabled={displayLevelSaving}
                                         onClick={() => {
                                             onClose();
                                             handleDisplayLevelQuickChange('lab');
                                         }}
                                     >
-                                        实验室
+                                        切换到实验室
                                     </MenuItem>
                                 </MenuGroup>
+                                <MenuGroup>
+                                    {!isSimpleLevel && (
+                                        <MenuItem
+                                            icon={external}
+                                            onClick={() => {
+                                                onClose();
+                                                const url = window?.MagickAD?.diagnoseUrl || '';
+                                                if (url) {
+                                                    window.open(url, '_blank', 'noopener');
+                                                }
+                                            }}
+                                        >
+                                            诊断
+                                        </MenuItem>
+                                    )}
+                                    <MenuItem
+                                        icon={cog}
+                                        onClick={() => {
+                                            onClose();
+                                            setSettingsOpen(true);
+                                        }}
+                                    >
+                                        系统设置
+                                    </MenuItem>
+                                </MenuGroup>
+                                </>
                             )}
                         </DropdownMenu>
                     </div>
-                    <Button
-                        className="magick-ad-header__btn"
-                        icon={cog}
-                        variant="secondary"
-                        onClick={() => setSettingsOpen(true)}
-                    >
-                        设置
-                    </Button>
                 </div>
             </div>
 
