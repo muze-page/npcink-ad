@@ -5,10 +5,13 @@
 /node_modules
 /tests
 /docs
+/assets/js
 /scripts
 /.gitignore
 /.distignore
 /.DS_Store
+/.vscode
+/.idea
 /README.md
 /README.en.md
 /phpcs.xml
@@ -21,4 +24,6 @@
 /package.json
 /composer.json
 /build/*.map
+/playwright-report
+/test-results
 /dist

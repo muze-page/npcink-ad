@@ -28,18 +28,10 @@ if command -v wp >/dev/null 2>&1; then
 fi
 
 rsync -a \
-  --exclude ".git" \
-  --exclude ".github" \
-  --exclude "node_modules" \
-  --exclude "vendor" \
-  --exclude "assets/js" \
-  --exclude "docs" \
-  --exclude "tests" \
-  --exclude "dist" \
-  --exclude "*.map" \
-  --exclude ".DS_Store" \
+  --exclude-from="$ROOT_DIR/.distignore" \
   "$ROOT_DIR/" "$STAGING_DIR/"
 
 cd "$DIST_DIR"
+rm -f "${PLUGIN_DIR_NAME}-${VERSION}.zip"
 zip -r "${PLUGIN_DIR_NAME}-${VERSION}.zip" "$PLUGIN_DIR_NAME" >/dev/null
 echo "Release package created: ${DIST_DIR}/${PLUGIN_DIR_NAME}-${VERSION}.zip"
