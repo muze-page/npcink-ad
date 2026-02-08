@@ -1801,6 +1801,43 @@
     line-height: 1.45;
 }
 
+.magick-ad-right-advanced-entry {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px dashed #cbd5e1;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.magick-ad-right-advanced-entry__title {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.35;
+}
+
+.magick-ad-right-advanced-entry__desc {
+    margin: 0;
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.45;
+}
+
+.magick-ad-right-advanced-entry__meta {
+    margin: 0;
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+.magick-ad-right-advanced-entry .components-button {
+    align-self: flex-start;
+}
+
 .magick-ad-config-modal {
     width: min(960px, 92vw);
 }
@@ -1815,6 +1852,33 @@
 
 .magick-ad-config-modal .components-modal__header-heading-container {
     padding: 0;
+}
+
+.magick-ad-drawer-modal.components-modal__frame,
+.magick-ad-drawer-modal .components-modal__frame {
+    top: 0;
+    right: 0;
+    left: auto;
+    transform: none;
+    margin: 0 0 0 auto;
+    width: min(640px, calc(100vw - 24px));
+    max-width: min(640px, calc(100vw - 24px));
+    height: 100vh;
+    max-height: 100vh;
+    min-height: 100vh;
+    border-radius: 16px 0 0 16px;
+}
+
+.magick-ad-drawer-modal .components-modal__content {
+    overflow: hidden;
+    padding: 0;
+}
+
+.magick-ad-drawer-modal__content {
+    height: 100%;
+    overflow: auto;
+    padding: 0 16px 16px;
+    box-sizing: border-box;
 }
 
 .magick-ad-right-subsection {
@@ -1958,31 +2022,53 @@
     padding-bottom: 8px;
     border-bottom: 1px solid #e2e8f0;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
 }
 
 .magick-ad-right-tabs .components-tab-panel__tabs-item {
     margin: 0;
     border-bottom: 0;
+    flex: 0 0 auto;
 }
 
 .magick-ad-right-tabs .components-tab-panel__tabs-item .components-button {
     min-height: 30px;
     height: 30px;
-    padding: 0 10px;
+    padding: 0 9px;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
     background: #ffffff;
     color: #475569;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .magick-ad-right-tabs .components-tab-panel__tabs-item.is-active .components-button {
     border-color: #bfd3f4;
     background: #eef4ff;
     color: #0f172a;
+}
+
+.magick-ad-right-tabs--primary .components-tab-panel__tabs {
+    margin: 0;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 16px 16px 0 0;
+}
+
+.magick-ad-right-tabs--primary .components-tab-panel__tabs-item .components-button {
+    min-height: 32px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .magick-ad-right-section .components-panel {
@@ -2009,11 +2095,12 @@
 }
 
 .magick-ad-right-section .components-panel__body-title button {
-    min-height: 30px;
-    font-size: 13px;
-    font-weight: 600;
+    min-height: 40px;
+    font-size: 14px;
+    font-weight: 700;
     color: #0f172a;
-    padding: 0;
+    padding: 6px 0;
+    line-height: 1.35;
 }
 
 .magick-ad-right-section .components-base-control {
@@ -3003,12 +3090,15 @@
 .magick-ad-right-section .magick-ad-panel-title--compact {
     flex-direction: column;
     align-items: flex-start;
-    gap: 2px;
+    gap: 4px;
     padding-right: 20px;
 }
 
 .magick-ad-right-section .magick-ad-panel-title__summary {
     max-width: 100%;
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
     line-height: 1.35;
 }
 

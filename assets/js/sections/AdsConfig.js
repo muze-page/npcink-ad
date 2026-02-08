@@ -130,7 +130,9 @@ const AdsConfig = () => {
     const headerStorageKey = 'magick_ad_header_collapsed';
     const containerTabStorageKey = 'magick_ad_container_tab';
     const frequencyPanelStorageKey = 'magick_ad_panel_frequency';
-    const rightAccordionStorageKey = 'magick_ad_right_panel_open';
+    const placementTabStorageKey = 'magick_ad_panel_placement_tab';
+    const placementDrawerScrollStorageKey = 'magick_ad_placement_drawer_scroll';
+    const rightSidebarTabStorageKey = 'magick_ad_right_sidebar_tab';
     const editorModeStorageKey = 'magick_ad_editor_mode';
     const allowedEditorModes = new Set(['quick', 'design', 'expert']);
     const editorModeLabels = {
@@ -224,7 +226,27 @@ const AdsConfig = () => {
     const [publishModalOpen, setPublishModalOpen] = useState(false);
     const [placementModalOpen, setPlacementModalOpen] = useState(false);
     const [previewModalOpen, setPreviewModalOpen] = useState(false);
-    const [placementTab, setPlacementTab] = useState('placement');
+    const [placementTab, setPlacementTab] = useState(() => {
+        if (typeof window === 'undefined') {
+            return 'placement';
+        }
+        try {
+            const stored =
+                window.localStorage?.getItem(placementTabStorageKey) ||
+                'placement';
+            const allowed = new Set([
+                'rules',
+                'container',
+                'behavior',
+                'placement',
+                'frequency',
+            ]);
+            return allowed.has(stored) ? stored : 'placement';
+        } catch (err) {
+            return 'placement';
+        }
+    });
+    const quickPlacementTabStorageKey = 'magick_ad_quick_placement_tab';
     const readPanelState = (key, fallback) => {
         if (typeof window === 'undefined') {
             return fallback;
@@ -242,6 +264,13 @@ const AdsConfig = () => {
 
     const [placementDetailsOpen, setPlacementDetailsOpen] = useState(false);
     const [placementAdvancedOpen, setPlacementAdvancedOpen] = useState(null);
+    const [quickPlacementTab, setQuickPlacementTab] = useState(() => {
+        const allowed = new Set(['insert', 'rules', 'node']);
+        const stored = readPanelState(quickPlacementTabStorageKey, 'insert');
+        return allowed.has(stored) ? stored : 'insert';
+    });
+    const [quickPlacementPanelOpen, setQuickPlacementPanelOpen] =
+        useState('insert');
     const [behaviorAdvancedOpen, setBehaviorAdvancedOpen] = useState(false);
     const [containerAdvancedOpen, setContainerAdvancedOpen] = useState(false);
     const [containerTab, setContainerTab] = useState(() => {
@@ -258,10 +287,10 @@ const AdsConfig = () => {
     const [frequencyPanelOpen, setFrequencyPanelOpen] = useState(() =>
         readPanelState(frequencyPanelStorageKey, 'frequency')
     );
-    const [rightPanelOpen, setRightPanelOpen] = useState(() => {
+    const [rightSidebarTab, setRightSidebarTab] = useState(() => {
         const allowed = new Set(['publish', 'runtime', 'placement']);
-        const stored = readPanelState(rightAccordionStorageKey, 'publish');
-        return allowed.has(stored) ? stored : 'publish';
+        const stored = readPanelState(rightSidebarTabStorageKey, 'placement');
+        return allowed.has(stored) ? stored : 'placement';
     });
     const [runtimeDetailsOpen, setRuntimeDetailsOpen] = useState(false);
     const [previewTarget, setPreviewTarget] = useState('');
@@ -273,6 +302,25 @@ const AdsConfig = () => {
     const [previewLoading, setPreviewLoading] = useState(false);
     const [previewLogin, setPreviewLogin] = useState('auto');
     const [previewUsePage, setPreviewUsePage] = useState(false);
+    const placementDrawerBodyRef = useRef(null);
+    const placementDrawerWasOpenRef = useRef(false);
+    const [placementDrawerScrollTop, setPlacementDrawerScrollTop] = useState(
+        () => {
+            if (typeof window === 'undefined') {
+                return 0;
+            }
+            try {
+                const stored = Number(
+                    window.localStorage?.getItem(
+                        placementDrawerScrollStorageKey
+                    ) || 0
+                );
+                return Number.isFinite(stored) && stored >= 0 ? stored : 0;
+            } catch (err) {
+                return 0;
+            }
+        }
+    );
     const [htmlTab, setHtmlTab] = useState('content');
     const [htmlSettingsTab, setHtmlSettingsTab] = useState('mode');
     const [imageTab, setImageTab] = useState('content');
@@ -597,6 +645,64 @@ const AdsConfig = () => {
         }
         try {
             window.localStorage?.setItem(
+                quickPlacementTabStorageKey,
+                quickPlacementTab || 'insert'
+            );
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [quickPlacementTab]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage?.setItem(
+                placementTabStorageKey,
+                placementTab || 'placement'
+            );
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [placementTab]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage?.setItem(
+                placementDrawerScrollStorageKey,
+                String(Math.max(0, Math.floor(placementDrawerScrollTop || 0)))
+            );
+        } catch (err) {
+            // ignore storage errors
+        }
+    }, [placementDrawerScrollTop]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const wasOpen = placementDrawerWasOpenRef.current;
+        if (placementModalOpen && !wasOpen) {
+            window.requestAnimationFrame(() => {
+                if (placementDrawerBodyRef.current) {
+                    placementDrawerBodyRef.current.scrollTop =
+                        placementDrawerScrollTop;
+                }
+            });
+        }
+        placementDrawerWasOpenRef.current = placementModalOpen;
+    }, [placementModalOpen, placementDrawerScrollTop]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        try {
+            window.localStorage?.setItem(
                 frequencyPanelStorageKey,
                 frequencyPanelOpen || 'none'
             );
@@ -611,13 +717,13 @@ const AdsConfig = () => {
         }
         try {
             window.localStorage?.setItem(
-                rightAccordionStorageKey,
-                rightPanelOpen || 'placement'
+                rightSidebarTabStorageKey,
+                rightSidebarTab || 'placement'
             );
         } catch (err) {
             // ignore storage errors
         }
-    }, [rightPanelOpen]);
+    }, [rightSidebarTab]);
 
     const { targetItems, targetSuggestions, targetLoading, handleTargetSearch } =
         useTargeting(selectedAd);
@@ -5533,73 +5639,6 @@ const AdsConfig = () => {
         );
     };
 
-    const renderRightAccordionSection = ({
-        id,
-        title,
-        summary,
-        summaryMode = 'text',
-        children,
-    }) => {
-        const isOpen = rightPanelOpen === id;
-        const contentId = `magick-ad-right-panel-${id}`;
-        return (
-            <section
-                className={`magick-ad-right-accordion__section ${
-                    isOpen ? 'is-open' : ''
-                }`}
-            >
-                <button
-                    type="button"
-                    className="magick-ad-right-accordion__toggle"
-                    aria-expanded={isOpen}
-                    aria-controls={contentId}
-                    onClick={() => setRightPanelOpen(id)}
-                >
-                    <div className="magick-ad-right-accordion__heading">
-                        <span className="magick-ad-right-accordion__title">
-                            {title}
-                        </span>
-                        {summary ? (
-                            <span
-                                className={`magick-ad-right-accordion__summary ${
-                                    summaryMode === 'chips' ? 'is-chips' : ''
-                                }`}
-                            >
-                                {summary}
-                            </span>
-                        ) : null}
-                    </div>
-                    <span
-                        className={`magick-ad-right-accordion__chevron ${
-                            isOpen ? 'is-open' : ''
-                        }`}
-                        aria-hidden="true"
-                    >
-                        ▾
-                    </span>
-                </button>
-                <div
-                    id={contentId}
-                    className="magick-ad-right-accordion__panel"
-                    hidden={!isOpen}
-                >
-                    {children}
-                </div>
-            </section>
-        );
-    };
-
-    const renderPublishStatusSummary = () =>
-        `${statusMeta(selectedAd).label} · ${runtimeMeta(selectedAd).label}`;
-
-    const renderRuntimeSummaryLabel = runtimeContextMeta
-        ? `设备 ${runtimeContextMeta.currentDeviceLabel} · 登录 ${runtimeContextMeta.currentLoginLabel}`
-        : '';
-
-    const renderPlacementSummaryLabel = runtimeContextMeta
-        ? `位置 ${runtimeContextMeta.placementLabel} · 页面 ${runtimeContextMeta.pageLabel}`
-        : '';
-
     const renderRightPrioritySummary = () => {
         if (!selectedAd || !runtimeContextMeta) {
             return null;
@@ -5636,7 +5675,7 @@ const AdsConfig = () => {
                     <Button
                         variant="tertiary"
                         onClick={() => {
-                            setRightPanelOpen('runtime');
+                            setRightSidebarTab('runtime');
                             setRuntimeDetailsOpen(true);
                         }}
                     >
@@ -5773,6 +5812,72 @@ const AdsConfig = () => {
                 </span>
             ) : null}
         </div>
+    );
+
+    const renderUsageModeControls = () => (
+        <>
+            <p className="magick-ad-right-inline-note">
+                调整用途类型、编辑模式和专家能力。日常投放可保持默认。
+            </p>
+            <SelectControl
+                label="用途类型"
+                value={normalizeUsageType(selectedAd?.options?.usage_type || 'ad')}
+                options={usageOptions}
+                onChange={(value) =>
+                    handleUpdateOptions({
+                        usage_type: normalizeUsageType(value),
+                    })
+                }
+                help="“装饰组件”会自动禁用统计、频控和 A/B，并限制到非侵入位置。"
+            />
+            {isDecorativeUsage(selectedAd?.options || {}) && (
+                <Notice status="info" isDismissible={false}>
+                    当前为“装饰组件”：仅支持顶部/内容区/底部位置，且不参与统计与频控。
+                </Notice>
+            )}
+            <div className="magick-ad-mode-switch">
+                <div className="magick-ad-mode-switch__label">编辑模式</div>
+                <ButtonGroup className="magick-ad-mode-switch__group">
+                    <Button
+                        variant="secondary"
+                        isPressed={effectiveEditorMode === 'quick'}
+                        onClick={() => updateEditorMode('quick')}
+                    >
+                        快速模式
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        isPressed={effectiveEditorMode === 'design'}
+                        onClick={() => updateEditorMode('design')}
+                    >
+                        设计模式
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        isPressed={effectiveEditorMode === 'expert'}
+                        onClick={() => {
+                            if (!canUnfilteredHtml) {
+                                showNotice(
+                                    'error',
+                                    '当前账号无 unfiltered_html 权限，无法启用专家模式。',
+                                    3500
+                                );
+                                return;
+                            }
+                            updateEditorMode('expert');
+                        }}
+                        disabled={!canUnfilteredHtml}
+                    >
+                        专家模式
+                    </Button>
+                </ButtonGroup>
+            </div>
+            {editorModeRaw === 'expert' && !canUnfilteredHtml && (
+                <Notice status="warning" isDismissible={false}>
+                    专家模式需要 unfiltered_html 权限，已回退为设计模式。
+                </Notice>
+            )}
+        </>
     );
 
     const renderFrequencyAdvancedTab = (
@@ -5963,7 +6068,8 @@ const AdsConfig = () => {
         );
     };
 
-    const renderPlacementSection = () => {
+    const renderPlacementSection = ({ variant = 'full' } = {}) => {
+        const isSidebarPlacement = variant === 'sidebar';
         const usageLabel = getUsageLabel(
             normalizeUsageType(selectedAd?.options?.usage_type || 'ad')
         );
@@ -5977,10 +6083,57 @@ const AdsConfig = () => {
                       '指定页面'
                   )
                 : getOptionLabel(
-                      DISPLAY_PAGE_OPTIONS,
-                      selectedAd?.options?.show_page || 'all',
-                      '全站'
-                  );
+                  DISPLAY_PAGE_OPTIONS,
+                  selectedAd?.options?.show_page || 'all',
+                  '全站'
+              );
+        const behaviorSummary = selectedAd?.content?.behavior || {};
+        const advancedPlacementSummary = [
+            `设备 ${runtimeContextMeta?.deviceRuleLabel || '全部设备'}`,
+            `登录 ${runtimeContextMeta?.loginRuleLabel || '全部用户'}`,
+            `频控 ${
+                isDecorativeUsage(selectedAd?.options || {})
+                    ? '装饰组件不参与'
+                    : getFrequencySummary(behaviorSummary)
+            }`,
+            `优先级 ${selectedAd?.options?.priority ?? 10}`,
+            `权重 ${selectedAd?.options?.weight ?? 1}`,
+        ].join(' · ');
+        const quickPlacementTabs = [
+            { name: 'insert', title: '页面插入' },
+            ...(!isSimpleLevel && !isSidebarPlacement
+                ? [
+                      { name: 'rules', title: '用途与模式' },
+                      { name: 'node', title: '节点规则' },
+                  ]
+                : []),
+        ];
+        const placementTabs =
+            effectiveEditorMode !== 'quick'
+                ? isSidebarPlacement
+                    ? [
+                          { name: 'placement', title: '投放' },
+                          { name: 'container', title: '容器' },
+                          { name: 'behavior', title: '交互' },
+                      ]
+                    : [
+                          { name: 'rules', title: '规则' },
+                          { name: 'container', title: '容器' },
+                          { name: 'behavior', title: '交互' },
+                          { name: 'placement', title: '投放' },
+                          { name: 'frequency', title: '频控' },
+                      ]
+                : [];
+        const resolvedPlacementTab = placementTabs.some(
+            (tab) => tab.name === placementTab
+        )
+            ? placementTab
+            : 'placement';
+        const resolvedQuickPlacementTab = quickPlacementTabs.some(
+            (tab) => tab.name === quickPlacementTab
+        )
+            ? quickPlacementTab
+            : 'insert';
         return (
             <>
                 <div className="magick-ad-right-section">
@@ -6002,211 +6155,256 @@ const AdsConfig = () => {
                                 </strong>
                             </span>
                         </div>
-                        {isSimpleLevel ? (
-                            <Notice status="info" isDismissible={false}>
-                                简洁级别已锁定为“快速模式”，仅保留页面插入与基础投放能力。
-                            </Notice>
-                        ) : (
-                            <div className="magick-ad-right-inline-panel magick-ad-right-inline-panel--static">
-                                <div className="magick-ad-right-inline-panel__heading">
-                                    高级规则（用途与模式）
-                                </div>
-                                <p className="magick-ad-right-inline-note">
-                                    调整用途类型、编辑模式和专家能力。日常投放可保持默认。
-                                </p>
-                                <SelectControl
-                                    label="用途类型"
-                                    value={normalizeUsageType(
-                                        selectedAd?.options?.usage_type || 'ad'
-                                    )}
-                                    options={usageOptions}
-                                    onChange={(value) =>
-                                        handleUpdateOptions({
-                                            usage_type: normalizeUsageType(value),
-                                        })
-                                    }
-                                    help="“装饰组件”会自动禁用统计、频控和 A/B，并限制到非侵入位置。"
-                                />
-                                {isDecorativeUsage(selectedAd?.options || {}) && (
-                                    <Notice status="info" isDismissible={false}>
-                                        当前为“装饰组件”：仅支持顶部/内容区/底部位置，且不参与统计与频控。
-                                    </Notice>
-                                )}
-                                <div className="magick-ad-mode-switch">
-                                    <div className="magick-ad-mode-switch__label">
-                                        编辑模式
-                                    </div>
-                                    <ButtonGroup className="magick-ad-mode-switch__group">
-                                        <Button
-                                            variant="secondary"
-                                            isPressed={
-                                                effectiveEditorMode === 'quick'
-                                            }
-                                            onClick={() =>
-                                                updateEditorMode('quick')
-                                            }
-                                        >
-                                            快速模式
-                                        </Button>
-                                        <Button
-                                            variant="secondary"
-                                            isPressed={
-                                                effectiveEditorMode === 'design'
-                                            }
-                                            onClick={() =>
-                                                updateEditorMode('design')
-                                            }
-                                        >
-                                            设计模式
-                                        </Button>
-                                        <Button
-                                            variant="secondary"
-                                            isPressed={
-                                                effectiveEditorMode === 'expert'
-                                            }
-                                            onClick={() => {
-                                                if (!canUnfilteredHtml) {
-                                                    showNotice(
-                                                        'error',
-                                                        '当前账号无 unfiltered_html 权限，无法启用专家模式。',
-                                                        3500
-                                                    );
-                                                    return;
-                                                }
-                                                updateEditorMode('expert');
-                                            }}
-                                            disabled={!canUnfilteredHtml}
-                                        >
-                                            专家模式
-                                        </Button>
-                                    </ButtonGroup>
-                                </div>
-                                {editorModeRaw === 'expert' &&
-                                    !canUnfilteredHtml && (
-                                        <Notice
-                                            status="warning"
-                                            isDismissible={false}
-                                        >
-                                            专家模式需要 unfiltered_html
-                                            权限，已回退为设计模式。
-                                        </Notice>
-                                    )}
-                            </div>
-                        )}
                         {effectiveEditorMode === 'quick' && (
-                            <div className="magick-ad-right-inline-panel magick-ad-right-inline-panel--static">
-                                <div className="magick-ad-right-inline-panel__heading">
-                                    页面插入
-                                </div>
-                                <p className="magick-ad-right-inline-note">
-                                    {isSimpleLevel
-                                        ? '简洁级别仅保留页面插入能力。'
-                                        : '快速模式仅保留页面插入能力；样式、频控与高级能力请切换到设计模式/专家模式。'}
-                                </p>
-                                {renderPlacementRulesControls({
-                                    includeValidation: true,
-                                    includePlacementCompact: true,
-                                })}
-                                {!isSimpleLevel && (
-                                    <div className="magick-ad-right-subsection">
-                                        <div className="magick-ad-right-subsection__title">
-                                            节点规则（按需）
-                                        </div>
-                                        <p className="magick-ad-right-inline-note">
-                                            仅在“位置=节点”时需要配置，普通投放可忽略。
-                                        </p>
-                                        {renderPlacementRulesControls({
-                                            includeNode: true,
-                                        })}
-                                    </div>
-                                )}
-                            </div>
+                            <TabPanel
+                                className="magick-ad-right-tabs"
+                                tabs={quickPlacementTabs}
+                                initialTabName={resolvedQuickPlacementTab}
+                                onSelect={(name) => {
+                                    setQuickPlacementTab(name);
+                                    setQuickPlacementPanelOpen(name);
+                                }}
+                                key={`quick-${resolvedQuickPlacementTab}`}
+                            >
+                                {(tab) => {
+                                    if (tab.name === 'rules') {
+                                        return (
+                                            <Panel className="magick-ad-right-inline-panel">
+                                                <PanelBody
+                                                    title="高级规则（用途与模式）"
+                                                    opened={
+                                                        quickPlacementPanelOpen ===
+                                                        'rules'
+                                                    }
+                                                    onToggle={() =>
+                                                        setQuickPlacementPanelOpen(
+                                                            (prev) =>
+                                                                prev === 'rules'
+                                                                    ? null
+                                                                    : 'rules'
+                                                        )
+                                                    }
+                                                >
+                                                    {renderUsageModeControls()}
+                                                </PanelBody>
+                                            </Panel>
+                                        );
+                                    }
+
+                                    if (tab.name === 'node') {
+                                        return (
+                                            <Panel className="magick-ad-right-inline-panel">
+                                                <PanelBody
+                                                    title="高级规则（节点）"
+                                                    opened={
+                                                        quickPlacementPanelOpen ===
+                                                        'node'
+                                                    }
+                                                    onToggle={() =>
+                                                        setQuickPlacementPanelOpen(
+                                                            (prev) =>
+                                                                prev === 'node'
+                                                                    ? null
+                                                                    : 'node'
+                                                        )
+                                                    }
+                                                >
+                                                    <p className="magick-ad-right-inline-note">
+                                                        仅在“位置=节点”时需要配置，普通投放可忽略。
+                                                    </p>
+                                                    {renderPlacementRulesControls({
+                                                        includeNode: true,
+                                                    })}
+                                                </PanelBody>
+                                            </Panel>
+                                        );
+                                    }
+
+                                    return (
+                                        <Panel className="magick-ad-right-inline-panel">
+                                            <PanelBody
+                                                title="页面插入"
+                                                opened={
+                                                    quickPlacementPanelOpen ===
+                                                    'insert'
+                                                }
+                                                onToggle={() =>
+                                                    setQuickPlacementPanelOpen(
+                                                        (prev) =>
+                                                            prev === 'insert'
+                                                                ? null
+                                                                : 'insert'
+                                                    )
+                                                }
+                                            >
+                                                <p className="magick-ad-right-inline-note">
+                                                    {isSimpleLevel
+                                                        ? '简洁级别仅保留页面插入能力。'
+                                                        : '快速模式仅保留页面插入能力；样式、频控与高级能力请切换到设计模式/专家模式。'}
+                                                </p>
+                                                {isSimpleLevel && (
+                                                    <Notice
+                                                        status="info"
+                                                        isDismissible={false}
+                                                    >
+                                                        简洁级别已锁定为“快速模式”，仅保留页面插入与基础投放能力。
+                                                    </Notice>
+                                                )}
+                                                {renderPlacementRulesControls({
+                                                    includeValidation: true,
+                                                    includePlacementCompact: true,
+                                                })}
+                                                {isSidebarPlacement &&
+                                                    !isSimpleLevel && (
+                                                        <div className="magick-ad-right-advanced-entry">
+                                                            <div className="magick-ad-right-advanced-entry__title">
+                                                                高级规则已迁移
+                                                            </div>
+                                                            <p className="magick-ad-right-advanced-entry__desc">
+                                                                不影响广告外观预览的设置项（如频控、优先级/权重、设备登录与节点规则）已迁移到弹窗。
+                                                            </p>
+                                                            <p className="magick-ad-right-advanced-entry__meta">
+                                                                {advancedPlacementSummary}
+                                                            </p>
+                                                            <Button
+                                                                variant="secondary"
+                                                                onClick={() =>
+                                                                    setPlacementModalOpen(
+                                                                        true
+                                                                    )
+                                                                }
+                                                            >
+                                                                打开高级投放设置
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                            </PanelBody>
+                                        </Panel>
+                                    );
+                                }}
+                            </TabPanel>
                         )}
-                {effectiveEditorMode !== 'quick' && (
-                    <TabPanel
-                        className="magick-ad-right-tabs"
-                        tabs={[
-                            { name: 'container', title: '容器' },
-                            { name: 'behavior', title: '交互' },
-                            { name: 'placement', title: '投放' },
-                            { name: 'frequency', title: '频控与高级' },
-                        ]}
-                        initialTabName={placementTab}
-                        onSelect={(name) => setPlacementTab(name)}
-                        key={placementTab}
-                    >
-                        {(tab) => {
-                            const containerStyle =
-                                selectedAd.content?.container_style ||
-                                {};
-                            const behavior =
-                                selectedAd.content?.behavior || {};
+                        {effectiveEditorMode !== 'quick' && (
+                            <TabPanel
+                                className="magick-ad-right-tabs"
+                                tabs={placementTabs}
+                                initialTabName={resolvedPlacementTab}
+                                onSelect={(name) => setPlacementTab(name)}
+                                key={resolvedPlacementTab}
+                            >
+                                {(tab) => {
+                                    const containerStyle =
+                                        selectedAd.content?.container_style ||
+                                        {};
+                                    const behavior =
+                                        selectedAd.content?.behavior || {};
 
-                            const isInlineContainer =
-                                (selectedAd.options?.container_type ||
-                                    'inline') === 'inline';
+                                    const isInlineContainer =
+                                        (selectedAd.options?.container_type ||
+                                            'inline') === 'inline';
+                                    const advancedRulesSummary = [
+                                        `设备 ${
+                                            runtimeContextMeta?.deviceRuleLabel ||
+                                            '全部设备'
+                                        }`,
+                                        `登录 ${
+                                            runtimeContextMeta?.loginRuleLabel ||
+                                            '全部用户'
+                                        }`,
+                                        `频控 ${getFrequencySummary(behavior)}`,
+                                        isExpertMode ? '含节点规则' : null,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' · ');
 
-                            if (tab.name === 'frequency') {
-                                return renderFrequencyAdvancedTab(behavior, {
-                                    showAdvanced: isExpertMode,
-                                });
-                            }
+                                    if (tab.name === 'rules') {
+                                        return (
+                                            <Panel className="magick-ad-right-inline-panel">
+                                                <PanelBody
+                                                    title="高级规则（用途与模式）"
+                                                    opened={
+                                                        placementAdvancedOpen ===
+                                                        'rules'
+                                                    }
+                                                    onToggle={() =>
+                                                        setPlacementAdvancedOpen(
+                                                            (prev) =>
+                                                                prev === 'rules'
+                                                                    ? null
+                                                                    : 'rules'
+                                                        )
+                                                    }
+                                                >
+                                                    {renderUsageModeControls()}
+                                                </PanelBody>
+                                            </Panel>
+                                        );
+                                    }
 
-                            if (tab.name === 'container') {
-                                return (
-                                    <Panel>
-                                        <PanelBody
-                                            title={
-                                                <div className="magick-ad-panel-title">
-                                                    <span>容器外观</span>
-                                                    {!isHeadPlacement && (
-                                                        <Dropdown
-                                                            className="magick-ad-panel-note"
-                                                            position="bottom right"
-                                                            renderToggle={({
-                                                                isOpen,
-                                                                onToggle,
-                                                            }) => (
-                                                                <Button
-                                                                    className="magick-ad-panel-note__trigger"
-                                                                    icon={info}
-                                                                    label="说明"
-                                                                    variant="tertiary"
-                                                                    size="small"
-                                                                    aria-expanded={isOpen}
-                                                                    onClick={(event) => {
-                                                                        event.stopPropagation();
-                                                                        onToggle();
-                                                                    }}
+                                    if (tab.name === 'frequency') {
+                                        return renderFrequencyAdvancedTab(
+                                            behavior,
+                                            {
+                                                showAdvanced: isExpertMode,
+                                            }
+                                        );
+                                    }
+
+                                    if (tab.name === 'container') {
+                                        return (
+                                            <Panel>
+                                                <PanelBody
+                                                    title={
+                                                        <div className="magick-ad-panel-title">
+                                                            <span>容器外观</span>
+                                                            {!isHeadPlacement && (
+                                                                <Dropdown
+                                                                    className="magick-ad-panel-note"
+                                                                    position="bottom right"
+                                                                    renderToggle={({
+                                                                        isOpen,
+                                                                        onToggle,
+                                                                    }) => (
+                                                                        <Button
+                                                                            className="magick-ad-panel-note__trigger"
+                                                                            icon={info}
+                                                                            label="说明"
+                                                                            variant="tertiary"
+                                                                            size="small"
+                                                                            aria-expanded={isOpen}
+                                                                            onClick={(event) => {
+                                                                                event.stopPropagation();
+                                                                                onToggle();
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                    renderContent={({
+                                                                        onClose,
+                                                                    }) => (
+                                                                        <div className="magick-ad-panel-note__content">
+                                                                            <p>
+                                                                                容器外观仅作用于包裹层（div），不会影响图片本体。
+                                                                                图片尺寸、圆角与外边距请在“图片配置”里调整。
+                                                                            </p>
+                                                                            <Button
+                                                                                variant="secondary"
+                                                                                size="small"
+                                                                                onClick={(event) => {
+                                                                                    event.stopPropagation();
+                                                                                    jumpToImageSettings();
+                                                                                    onClose();
+                                                                                }}
+                                                                            >
+                                                                                去图片配置
+                                                                            </Button>
+                                                                        </div>
+                                                                    )}
                                                                 />
                                                             )}
-                                                            renderContent={({
-                                                                onClose,
-                                                            }) => (
-                                                                <div className="magick-ad-panel-note__content">
-                                                                    <p>
-                                                                        容器外观仅作用于包裹层（div），不会影响图片本体。
-                                                                        图片尺寸、圆角与外边距请在“图片配置”里调整。
-                                                                    </p>
-                                                                    <Button
-                                                                        variant="secondary"
-                                                                        size="small"
-                                                                        onClick={(event) => {
-                                                                            event.stopPropagation();
-                                                                            jumpToImageSettings();
-                                                                            onClose();
-                                                                        }}
-                                                                    >
-                                                                        去图片配置
-                                                                    </Button>
-                                                                </div>
-                                                            )}
-                                                        />
-                                                    )}
-                                                </div>
-                                            }
-                                            initialOpen
-                                        >
+                                                        </div>
+                                                    }
+                                                    initialOpen
+                                                >
                                             {isHeadPlacement && (
                                                 <>
                                                     <Notice
@@ -6846,51 +7044,69 @@ const AdsConfig = () => {
 
                             return (
                                 <Panel>
-                                    {!isInlineContainer && (
-                                        <Notice
-                                            status="info"
-                                            isDismissible={false}
-                                        >
-                                            当前容器为“非嵌入”模式，展示位置将固定在页脚输出。
-                                        </Notice>
-                                    )}
                                     <PanelBody
-                                        title={renderPanelTitleWithSummary(
-                                            '核心投放',
-                                            resolvePlacementLabel(
-                                                selectedAd?.options || {}
-                                            )
-                                        )}
+                                        title="核心投放"
                                         initialOpen
                                     >
+                                        {!isInlineContainer && (
+                                            <Notice
+                                                status="info"
+                                                isDismissible={false}
+                                            >
+                                                当前容器为“非嵌入”模式，展示位置将固定在页脚输出。
+                                            </Notice>
+                                        )}
                                         {renderPlacementRulesControls({
                                             includeValidation: true,
                                             includePlacementCompact: true,
                                         })}
                                     </PanelBody>
-                                    <PanelBody
-                                        title={renderPanelTitleWithSummary(
-                                            '高级规则（设备/登录/节点/频控）',
-                                            `设备 ${runtimeContextMeta?.deviceRuleLabel || '全部'} · 登录 ${runtimeContextMeta?.loginRuleLabel || '全部'} · 频控 ${getFrequencySummary(behavior)}`
-                                        )}
-                                        opened={
-                                            placementAdvancedOpen === 'design'
-                                        }
-                                        onToggle={() =>
-                                            setPlacementAdvancedOpen((prev) =>
-                                                prev === 'design'
-                                                    ? null
-                                                    : 'design'
-                                            )
-                                        }
-                                    >
-                                        {renderPlacementRulesControls({
-                                            includeAudience: true,
-                                            includeNode: isExpertMode,
-                                            includeFrequency: true,
-                                            behavior,
-                                        })}
-                                    </PanelBody>
+                                    {!isSidebarPlacement && (
+                                        <PanelBody
+                                            title={renderPanelTitleWithSummary(
+                                                '高级规则',
+                                                advancedRulesSummary
+                                            )}
+                                            opened={
+                                                placementAdvancedOpen === 'design'
+                                            }
+                                            onToggle={() =>
+                                                setPlacementAdvancedOpen((prev) =>
+                                                    prev === 'design'
+                                                        ? null
+                                                        : 'design'
+                                                )
+                                            }
+                                        >
+                                            {renderPlacementRulesControls({
+                                                includeAudience: true,
+                                                includeNode: isExpertMode,
+                                                includeFrequency: true,
+                                                behavior,
+                                            })}
+                                        </PanelBody>
+                                    )}
+                                    {isSidebarPlacement && (
+                                        <div className="magick-ad-right-advanced-entry">
+                                            <div className="magick-ad-right-advanced-entry__title">
+                                                高级规则已迁移
+                                            </div>
+                                            <p className="magick-ad-right-advanced-entry__desc">
+                                                不影响广告外观预览的设置项（如频控、优先级/权重、设备登录与节点规则）已迁移到弹窗。
+                                            </p>
+                                            <p className="magick-ad-right-advanced-entry__meta">
+                                                {advancedPlacementSummary}
+                                            </p>
+                                            <Button
+                                                variant="secondary"
+                                                onClick={() =>
+                                                    setPlacementModalOpen(true)
+                                                }
+                                            >
+                                                打开高级投放设置
+                                            </Button>
+                                        </div>
+                                    )}
                                 </Panel>
                             );
                         }}
@@ -7038,46 +7254,56 @@ const AdsConfig = () => {
         />
     ) : null;
 
+    const rightSidebarTabs = [
+        { name: 'runtime', title: '运行条件' },
+        { name: 'publish', title: '发布排期' },
+        { name: 'placement', title: '投放设置' },
+    ];
+    const resolvedRightSidebarTab = rightSidebarTabs.some(
+        (tab) => tab.name === rightSidebarTab
+    )
+        ? rightSidebarTab
+        : 'placement';
+
     const rightSidebar = selectedAd ? (
         <div className="magick-ad-right-stack">
             {renderRightSaveBar()}
             {renderRightPrioritySummary()}
             <Card className="magick-ad-right-panel">
                 <CardBody>
-                    <div className="magick-ad-right-accordion">
-                        {renderRightAccordionSection({
-                            id: 'runtime',
-                            title: '运行条件速览',
-                            summary: renderRuntimeSummaryLabel,
-                            children: (
-                                <div className="magick-ad-right-section magick-ad-right-section--runtime">
-                                    {renderRuntimeSummaryBar({
-                                        compact: true,
-                                        showTitle: false,
-                                        showActions: runtimeDetailsOpen,
-                                        showDetails: runtimeDetailsOpen,
-                                        detailsOpen: runtimeDetailsOpen,
-                                        onToggleDetails: () =>
-                                            setRuntimeDetailsOpen((prev) => !prev),
-                                    })}
-                                </div>
-                            ),
-                        })}
-                        {renderRightAccordionSection({
-                            id: 'publish',
-                            title: '发布与排期',
-                            summary: renderPublishStatusSummary(),
-                            children: renderPublishSection({
-                                compactHeader: true,
-                            }),
-                        })}
-                        {renderRightAccordionSection({
-                            id: 'placement',
-                            title: '投放设置',
-                            summary: renderPlacementSummaryLabel,
-                            children: renderPlacementSection(),
-                        })}
-                    </div>
+                    <TabPanel
+                        className="magick-ad-right-tabs magick-ad-right-tabs--primary"
+                        tabs={rightSidebarTabs}
+                        initialTabName={resolvedRightSidebarTab}
+                        onSelect={(name) => setRightSidebarTab(name)}
+                        key={`right-${resolvedRightSidebarTab}`}
+                    >
+                        {(tab) => {
+                            if (tab.name === 'runtime') {
+                                return (
+                                    <div className="magick-ad-right-section magick-ad-right-section--runtime">
+                                        {renderRuntimeSummaryBar({
+                                            compact: true,
+                                            showTitle: false,
+                                            showActions: runtimeDetailsOpen,
+                                            showDetails: runtimeDetailsOpen,
+                                            detailsOpen: runtimeDetailsOpen,
+                                            onToggleDetails: () =>
+                                                setRuntimeDetailsOpen((prev) => !prev),
+                                        })}
+                                    </div>
+                                );
+                            }
+                            if (tab.name === 'publish') {
+                                return renderPublishSection({
+                                    compactHeader: true,
+                                });
+                            }
+                            return renderPlacementSection({
+                                variant: 'sidebar',
+                            });
+                        }}
+                    </TabPanel>
                 </CardBody>
             </Card>
         </div>
@@ -7311,11 +7537,21 @@ const AdsConfig = () => {
 
             {placementModalOpen && selectedAd && (
                 <Modal
-                    title="投放设置"
-                    className="magick-ad-modal magick-ad-config-modal"
+                    title="高级投放设置"
+                    className="magick-ad-modal magick-ad-config-modal magick-ad-drawer-modal"
                     onRequestClose={() => setPlacementModalOpen(false)}
                 >
-                    {renderPlacementSection()}
+                    <div
+                        className="magick-ad-drawer-modal__content"
+                        ref={placementDrawerBodyRef}
+                        onScroll={(event) =>
+                            setPlacementDrawerScrollTop(
+                                event.currentTarget.scrollTop
+                            )
+                        }
+                    >
+                        {renderPlacementSection({ variant: 'full' })}
+                    </div>
                 </Modal>
             )}
 
