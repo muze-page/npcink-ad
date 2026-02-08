@@ -770,8 +770,8 @@ const Layout = ({
             )}
 
             <main className="magick-ad-main">
-                <Card>
-                    <CardBody>
+                <Card className="magick-ad-main-shell">
+                    <CardBody className="magick-ad-main-shell__body">
                         <Toolbar
                             className="magick-ad-toolbar"
                             label="编辑工具"

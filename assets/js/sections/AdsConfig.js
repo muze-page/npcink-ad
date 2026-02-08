@@ -2334,13 +2334,23 @@ const AdsConfig = () => {
             <Card>
                 <CardBody>
                     <div className="magick-ad-sidebar__header">
-                        <h2>广告组</h2>
+                        <div className="magick-ad-sidebar__title-wrap">
+                            <h2 className="magick-ad-sidebar__heading">
+                                广告组
+                            </h2>
+                            <span className="magick-ad-sidebar__total">
+                                {ads.length}
+                            </span>
+                        </div>
                         <div className="magick-ad-sidebar__header-actions">
                             <DropdownMenu
                                 className="magick-ad-add-menu"
                                 icon={null}
                                 text="新增"
-                                toggleProps={{ variant: 'secondary' }}
+                                toggleProps={{
+                                    variant: 'secondary',
+                                    className: 'magick-ad-sidebar__add-btn',
+                                }}
                             >
                                 {({ onClose }) => (
                                     <MenuGroup>
@@ -2398,152 +2408,178 @@ const AdsConfig = () => {
                                         </span>
                                     </div>
                                     {section.items.length === 0 ? (
-                                        <p className="description">
+                                        <p className="description magick-ad-sidebar__empty">
                                             暂无{section.title}
                                         </p>
                                     ) : (
-                                        section.items.map((ad, index) => (
-                                            <div
-                                                key={ad.id}
-                                                className={`magick-ad-sidebar__item ${
-                                                    selectedId === ad.id
-                                                        ? 'is-active'
-                                                        : ''
-                                                } ${
-                                                    missingPositionIds.has(
-                                                        ad.id
-                                                    )
-                                                        ? 'has-error'
-                                                        : ''
-                                                } ${
-                                                    ad?.options?.enabled ===
-                                                    false
-                                                        ? 'is-disabled'
-                                                        : ''
-                                                }`}
-                                            >
-                                                <div className="magick-ad-sidebar__body">
-                                                    <Button
-                                                        variant="tertiary"
-                                                        onClick={() =>
-                                                            setSelectedId(
+                                        section.items.map((ad, index) => {
+                                            const status = statusMeta(ad);
+                                            const runtime = runtimeMeta(ad);
+                                            const options = ad.options || {};
+                                            const usageLabel = getUsageLabel(
+                                                normalizeUsageType(
+                                                    options.usage_type || 'ad'
+                                                )
+                                            );
+                                            const pageLabel =
+                                                options.ad_type === 'targeted' &&
+                                                options.target_type
+                                                    ? getOptionLabel(
+                                                          TARGET_TYPE_OPTIONS,
+                                                          options.target_type,
+                                                          '指定页面'
+                                                      )
+                                                    : getOptionLabel(
+                                                          DISPLAY_PAGE_OPTIONS,
+                                                          options.show_page || 'all',
+                                                          '全站'
+                                                      );
+
+                                            return (
+                                                <div
+                                                    key={ad.id}
+                                                    className={`magick-ad-sidebar__item ${
+                                                        selectedId === ad.id
+                                                            ? 'is-active'
+                                                            : ''
+                                                    } ${
+                                                        missingPositionIds.has(
+                                                            ad.id
+                                                        )
+                                                            ? 'has-error'
+                                                            : ''
+                                                    } ${
+                                                        ad?.options?.enabled ===
+                                                        false
+                                                            ? 'is-disabled'
+                                                            : ''
+                                                    }`}
+                                                >
+                                                    <div className="magick-ad-sidebar__body">
+                                                        <Button
+                                                            variant="tertiary"
+                                                            onClick={() =>
+                                                                setSelectedId(
+                                                                    ad.id
+                                                                )
+                                                            }
+                                                            aria-current={
+                                                                selectedId ===
                                                                 ad.id
-                                                            )
-                                                        }
-                                                        aria-current={
-                                                            selectedId ===
-                                                            ad.id
-                                                                ? 'true'
-                                                                : undefined
-                                                        }
-                                                        className="magick-ad-sidebar__main"
-                                                    >
-                                                        <span className="magick-ad-sidebar__title-row">
-                                                            <span className="magick-ad-sidebar__title">
-                                                                {ad.name ||
-                                                                    `广告组 ${index + 1}`}
+                                                                    ? 'true'
+                                                                    : undefined
+                                                            }
+                                                            className="magick-ad-sidebar__main"
+                                                        >
+                                                            <span className="magick-ad-sidebar__title-row">
+                                                                <span className="magick-ad-sidebar__title">
+                                                                    {ad.name ||
+                                                                        `广告组 ${index + 1}`}
+                                                                </span>
                                                             </span>
-                                                            <span
-                                                                className={`magick-ad-status-pill ${
-                                                                    statusMeta(ad)
-                                                                        .className
-                                                                }`}
-                                                            >
-                                                                {
-                                                                    statusMeta(
-                                                                        ad
-                                                                    ).label
-                                                                }
+                                                            <span className="magick-ad-sidebar__badges">
+                                                                <span
+                                                                    className={`magick-ad-status-pill ${status.className}`}
+                                                                >
+                                                                    {status.label}
+                                                                </span>
+                                                                <span
+                                                                    className={`magick-ad-status-pill ${runtime.className}`}
+                                                                >
+                                                                    {runtime.label}
+                                                                </span>
                                                             </span>
-                                                        </span>
-                                                        <span className="magick-ad-sidebar__runtime">
-                                                            {(() => {
-                                                                const runtime =
-                                                                    runtimeMeta(
-                                                                        ad
-                                                                    );
-                                                                return (
-                                                                    <span
-                                                                        className={`magick-ad-status-pill ${runtime.className}`}
+                                                            <span className="magick-ad-sidebar__meta-row">
+                                                                <span className="magick-ad-sidebar__meta">
+                                                                    {usageLabel}
+                                                                </span>
+                                                                <span className="magick-ad-sidebar__meta-sep">
+                                                                    ·
+                                                                </span>
+                                                                <span className="magick-ad-sidebar__meta">
+                                                                    {resolvePlacementLabel(
+                                                                        options
+                                                                    )}
+                                                                </span>
+                                                                <span className="magick-ad-sidebar__meta-sep">
+                                                                    ·
+                                                                </span>
+                                                                <span className="magick-ad-sidebar__meta">
+                                                                    {pageLabel}
+                                                                </span>
+                                                            </span>
+                                                            {missingPositionIds.has(
+                                                                ad.id
+                                                            ) && (
+                                                                <span className="magick-ad-sidebar__alert">
+                                                                    <span className="magick-ad-sidebar__dot" />
+                                                                    需配置位置
+                                                                </span>
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                    <div className="magick-ad-sidebar__actions">
+                                                        <DropdownMenu
+                                                            icon={moreHorizontal}
+                                                            label="更多操作"
+                                                            className="magick-ad-item-menu"
+                                                            toggleProps={{
+                                                                variant:
+                                                                    'tertiary',
+                                                                size: 'small',
+                                                                className:
+                                                                    'magick-ad-item-menu__toggle',
+                                                            }}
+                                                        >
+                                                            {({ onClose }) => (
+                                                                <MenuGroup>
+                                                                    <MenuItem
+                                                                        onClick={() => {
+                                                                            setRenameTarget(
+                                                                                ad
+                                                                            );
+                                                                            setRenameValue(
+                                                                                ad.name ||
+                                                                                    ''
+                                                                            );
+                                                                            onClose();
+                                                                        }}
                                                                     >
-                                                                        {
-                                                                            runtime.label
-                                                                        }
-                                                                    </span>
-                                                                );
-                                                            })()}
-                                                        </span>
-                                                        {missingPositionIds.has(
-                                                            ad.id
-                                                        ) && (
-                                                            <span className="magick-ad-sidebar__alert">
-                                                                <span className="magick-ad-sidebar__dot" />
-                                                                需配置位置
-                                                            </span>
-                                                        )}
-                                                    </Button>
+                                                                        修改名称
+                                                                    </MenuItem>
+                                                                    <MenuItem
+                                                                        onClick={() => {
+                                                                            handleToggleEnabled(
+                                                                                ad
+                                                                            );
+                                                                            onClose();
+                                                                        }}
+                                                                    >
+                                                                        {ad
+                                                                            ?.options
+                                                                            ?.enabled ===
+                                                                        false
+                                                                            ? '设为启用'
+                                                                            : '设为停用'}
+                                                                    </MenuItem>
+                                                                    <MenuItem
+                                                                        isDestructive
+                                                                        onClick={() => {
+                                                                            setDeleteTarget(
+                                                                                ad
+                                                                            );
+                                                                            onClose();
+                                                                        }}
+                                                                    >
+                                                                        删除
+                                                                    </MenuItem>
+                                                                </MenuGroup>
+                                                            )}
+                                                        </DropdownMenu>
+                                                    </div>
                                                 </div>
-                                                <div className="magick-ad-sidebar__actions">
-                                                    <DropdownMenu
-                                                        icon={moreHorizontal}
-                                                        label="更多操作"
-                                                        className="magick-ad-item-menu"
-                                                        toggleProps={{
-                                                            variant:
-                                                                'tertiary',
-                                                            size: 'small',
-                                                            className:
-                                                                'magick-ad-item-menu__toggle',
-                                                        }}
-                                                    >
-                                                        {({ onClose }) => (
-                                                            <MenuGroup>
-                                                                <MenuItem
-                                                                    onClick={() => {
-                                                                        setRenameTarget(
-                                                                            ad
-                                                                        );
-                                                                        setRenameValue(
-                                                                            ad.name ||
-                                                                                ''
-                                                                        );
-                                                                        onClose();
-                                                                    }}
-                                                                >
-                                                                    修改名称
-                                                                </MenuItem>
-                                                                <MenuItem
-                                                                    onClick={() => {
-                                                                        handleToggleEnabled(
-                                                                            ad
-                                                                        );
-                                                                        onClose();
-                                                                    }}
-                                                                >
-                                                                    {ad
-                                                                        ?.options
-                                                                        ?.enabled ===
-                                                                    false
-                                                                        ? '设为启用'
-                                                                        : '设为停用'}
-                                                                </MenuItem>
-                                                                <MenuItem
-                                                                    isDestructive
-                                                                    onClick={() => {
-                                                                        setDeleteTarget(
-                                                                            ad
-                                                                        );
-                                                                        onClose();
-                                                                    }}
-                                                                >
-                                                                    删除
-                                                                </MenuItem>
-                                                            </MenuGroup>
-                                                        )}
-                                                    </DropdownMenu>
-                                                </div>
-                                            </div>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </div>
                             ))}
@@ -6513,28 +6549,34 @@ const AdsConfig = () => {
     const toolbarActions = selectedAd ? (
         <>
             <Button
-                className="magick-ad-toolbar-toggle"
+                className="magick-ad-toolbar-toggle magick-ad-toolbar-toggle--text"
                 icon={megaphone}
                 label="投放设置"
                 variant="tertiary"
                 onClick={() => setPlacementModalOpen(true)}
-            />
+            >
+                投放
+            </Button>
             <Button
-                className="magick-ad-toolbar-toggle"
+                className="magick-ad-toolbar-toggle magick-ad-toolbar-toggle--text"
                 icon={calendar}
                 label="发布与排期"
                 variant="tertiary"
                 onClick={() => {
                     setPublishModalOpen(true);
                 }}
-            />
+            >
+                排期
+            </Button>
             <Button
-                className="magick-ad-toolbar-toggle"
+                className="magick-ad-toolbar-toggle magick-ad-toolbar-toggle--text"
                 icon={globe}
                 label="预览设置"
                 variant="tertiary"
                 onClick={() => setPreviewModalOpen(true)}
-            />
+            >
+                预览
+            </Button>
         </>
     ) : null;
 
@@ -6695,15 +6737,15 @@ const AdsConfig = () => {
                 </div>
                 <div className="magick-ad-header__actions">
                     <Button
-                        className="magick-ad-header__btn"
+                        className="magick-ad-header__btn magick-ad-header__btn--icon"
                         icon={headerCollapsed ? chevronDown : chevronUp}
                         variant="tertiary"
                         onClick={() =>
                             setHeaderCollapsed((prev) => !prev)
                         }
-                    >
-                        {headerCollapsed ? '展开' : '收起'}
-                    </Button>
+                        label={headerCollapsed ? '展开头部' : '收起头部'}
+                        showTooltip
+                    />
                     {!isSimpleLevel && (
                         <Button
                             className="magick-ad-header__btn"
@@ -6716,55 +6758,60 @@ const AdsConfig = () => {
                                 }
                             }}
                         >
-                            调试面板
+                            诊断
                         </Button>
                     )}
-                    <DropdownMenu
-                        className="magick-ad-header__level-switch"
-                        icon={null}
-                        text={`级别：${DISPLAY_LEVEL_LABELS[displayLevel] || '简洁'}`}
-                        toggleProps={{
-                            variant: 'secondary',
-                            className: 'magick-ad-header__btn',
-                            disabled: displayLevelSaving,
-                        }}
-                    >
-                        {({ onClose }) => (
-                            <MenuGroup>
-                                <MenuItem
-                                    onClick={() => {
-                                        onClose();
-                                        handleDisplayLevelQuickChange('simple');
-                                    }}
-                                >
-                                    简洁
-                                </MenuItem>
-                                <MenuItem
-                                    onClick={() => {
-                                        onClose();
-                                        handleDisplayLevelQuickChange('advanced');
-                                    }}
-                                >
-                                    高级
-                                </MenuItem>
-                                <MenuItem
-                                    onClick={() => {
-                                        onClose();
-                                        handleDisplayLevelQuickChange('lab');
-                                    }}
-                                >
-                                    实验室
-                                </MenuItem>
-                            </MenuGroup>
-                        )}
-                    </DropdownMenu>
+                    <div className="magick-ad-header__level">
+                        <span className="magick-ad-header__level-badge">
+                            {DISPLAY_LEVEL_LABELS[displayLevel] || '简洁'}
+                        </span>
+                        <DropdownMenu
+                            className="magick-ad-header__level-switch"
+                            icon={null}
+                            text="级别"
+                            toggleProps={{
+                                variant: 'secondary',
+                                className: 'magick-ad-header__btn',
+                                disabled: displayLevelSaving,
+                            }}
+                        >
+                            {({ onClose }) => (
+                                <MenuGroup>
+                                    <MenuItem
+                                        onClick={() => {
+                                            onClose();
+                                            handleDisplayLevelQuickChange('simple');
+                                        }}
+                                    >
+                                        简洁
+                                    </MenuItem>
+                                    <MenuItem
+                                        onClick={() => {
+                                            onClose();
+                                            handleDisplayLevelQuickChange('advanced');
+                                        }}
+                                    >
+                                        高级
+                                    </MenuItem>
+                                    <MenuItem
+                                        onClick={() => {
+                                            onClose();
+                                            handleDisplayLevelQuickChange('lab');
+                                        }}
+                                    >
+                                        实验室
+                                    </MenuItem>
+                                </MenuGroup>
+                            )}
+                        </DropdownMenu>
+                    </div>
                     <Button
                         className="magick-ad-header__btn"
                         icon={cog}
                         variant="secondary"
                         onClick={() => setSettingsOpen(true)}
                     >
-                        系统设置
+                        设置
                     </Button>
                 </div>
             </div>
