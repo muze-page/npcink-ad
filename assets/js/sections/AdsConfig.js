@@ -96,6 +96,19 @@ const InsertHelpPanel = lazy(() => import('../panels/InsertHelpPanel'));
 const ExperimentsPanel = lazy(() => import('../panels/ExperimentsPanel'));
 const DebugPanel = lazy(() => import('../panels/DebugPanel'));
 
+const SIDEBAR_FILTERS = [
+    { value: 'all', label: '全部' },
+    { value: 'active', label: '生效' },
+    { value: 'risk', label: '待处理' },
+    { value: 'paused', label: '停用' },
+];
+
+const SIDEBAR_TYPE_VIEWS = [
+    { value: 'all', label: '全部类型' },
+    { value: 'global', label: '全局广告' },
+    { value: 'targeted', label: '指定广告' },
+];
+
 const AdsConfig = () => {
     const headerStorageKey = 'magick_ad_header_collapsed';
     const quickPanelStorageKey = 'magick_ad_panel_quick';
@@ -104,6 +117,11 @@ const AdsConfig = () => {
     const rightAccordionStorageKey = 'magick_ad_right_panel_open';
     const editorModeStorageKey = 'magick_ad_editor_mode';
     const allowedEditorModes = new Set(['quick', 'design', 'expert']);
+    const editorModeLabels = {
+        quick: '快速',
+        design: '设计',
+        expert: '专家',
+    };
     const ads = useStore((state) => state.ads);
     const isLoading = useStore((state) => state.isLoading);
     const isSaving = useStore((state) => state.isSaving);
@@ -199,6 +217,12 @@ const AdsConfig = () => {
     const [quickPanelOpen, setQuickPanelOpen] = useState(() =>
         readPanelState(quickPanelStorageKey, 'placement')
     );
+    const [publishAdvancedOpen, setPublishAdvancedOpen] = useState(false);
+    const [placementAdvancedOpen, setPlacementAdvancedOpen] = useState(null);
+    const [placementRulesAdvancedOpen, setPlacementRulesAdvancedOpen] =
+        useState(false);
+    const [behaviorAdvancedOpen, setBehaviorAdvancedOpen] = useState(false);
+    const [containerAdvancedOpen, setContainerAdvancedOpen] = useState(false);
     const [containerTab, setContainerTab] = useState(() => {
         const allowed = new Set([
             'base',
@@ -215,8 +239,8 @@ const AdsConfig = () => {
     );
     const [rightPanelOpen, setRightPanelOpen] = useState(() => {
         const allowed = new Set(['publish', 'runtime', 'placement']);
-        const stored = readPanelState(rightAccordionStorageKey, 'placement');
-        return allowed.has(stored) ? stored : 'placement';
+        const stored = readPanelState(rightAccordionStorageKey, 'publish');
+        return allowed.has(stored) ? stored : 'publish';
     });
     const [previewTarget, setPreviewTarget] = useState('');
     const [previewMode, setPreviewMode] = useState('url');
@@ -231,7 +255,8 @@ const AdsConfig = () => {
     const [htmlSettingsTab, setHtmlSettingsTab] = useState('mode');
     const [imageTab, setImageTab] = useState('content');
     const [videoTab, setVideoTab] = useState('content');
-    const [videoSettingsTab, setVideoSettingsTab] = useState('basic');
+    const [videoSettingsAdvancedOpen, setVideoSettingsAdvancedOpen] = useState(false);
+    const [htmlScriptsAdvancedOpen, setHtmlScriptsAdvancedOpen] = useState(false);
     const [blockTab, setBlockTab] = useState('content');
     const [blockSettingsTab, setBlockSettingsTab] = useState('style');
     const [pickerConfirmOpen, setPickerConfirmOpen] = useState(false);
@@ -243,6 +268,15 @@ const AdsConfig = () => {
     const [debugEnabled, setDebugEnabled] = useState(false);
     const [displayLevel, setDisplayLevel] = useState(() => readDisplayLevel());
     const [displayLevelSaving, setDisplayLevelSaving] = useState(false);
+    const [adSearch, setAdSearch] = useState('');
+    const [adFilter, setAdFilter] = useState('all');
+    const [adTypeView, setAdTypeView] = useState('all');
+    const [contentPanelOpenState, setContentPanelOpenState] = useState(() => ({
+        image: true,
+        html: true,
+        video: false,
+        block: false,
+    }));
     const isSimpleLevel = displayLevel === 'simple';
     const branding =
         (typeof window !== 'undefined' && window.MagickAD?.branding) || {
@@ -312,6 +346,31 @@ const AdsConfig = () => {
             setSelectedId(ads[0].id);
         }
     }, [ads, selectedId]);
+
+    useEffect(() => {
+        if (displayLevel === 'simple') {
+            setContentPanelOpenState({
+                image: true,
+                html: true,
+                video: true,
+                block: true,
+            });
+            return;
+        }
+        setContentPanelOpenState((prev) => ({
+            image: prev.image ?? true,
+            html: prev.html ?? true,
+            video: prev.video ?? false,
+            block: prev.block ?? false,
+        }));
+    }, [displayLevel]);
+
+    const toggleContentPanelOpen = (key) => {
+        setContentPanelOpenState((prev) => ({
+            ...prev,
+            [key]: !prev[key],
+        }));
+    };
 
     useEffect(() => {
         if (!showValidation) {
@@ -801,6 +860,23 @@ const AdsConfig = () => {
             }
         }
         return '未设置';
+    };
+
+    const resolveContainerTypeLabel = (options = {}) => {
+        const containerType = options.container_type || 'inline';
+        if (containerType === 'popup') {
+            return '弹窗';
+        }
+        if (containerType === 'banner') {
+            return '横栏';
+        }
+        if (containerType === 'floating') {
+            return '悬浮';
+        }
+        if (containerType === 'interstitial') {
+            return '插屏';
+        }
+        return '默认嵌入';
     };
 
     const getEffectBaseUrl = () => {
@@ -2023,6 +2099,226 @@ const AdsConfig = () => {
         );
     };
 
+    const renderContainerBadgeControls = (containerStyle = {}) => (
+        <>
+            <ToggleControl
+                label="显示角标"
+                checked={Boolean(containerStyle.badge_enabled)}
+                onChange={(value) =>
+                    handleUpdateContainerStyle({
+                        badge_enabled: value,
+                    })
+                }
+            />
+            {containerStyle.badge_enabled && (
+                <>
+                    <div className="magick-ad-field">
+                        <p className="magick-ad-field__label">角标类型</p>
+                        <ButtonGroup>
+                            <Button
+                                variant="secondary"
+                                isPressed={
+                                    (containerStyle.badge_type || 'text') ===
+                                    'text'
+                                }
+                                onClick={() =>
+                                    handleUpdateContainerStyle({
+                                        badge_type: 'text',
+                                    })
+                                }
+                            >
+                                文本
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                isPressed={
+                                    containerStyle.badge_type === 'image'
+                                }
+                                onClick={() =>
+                                    handleUpdateContainerStyle({
+                                        badge_type: 'image',
+                                    })
+                                }
+                            >
+                                图片
+                            </Button>
+                        </ButtonGroup>
+                    </div>
+                    {(containerStyle.badge_type || 'text') === 'text' ? (
+                        <>
+                            <TextControl
+                                label="角标文本"
+                                value={containerStyle.badge_text || '广告'}
+                                onChange={(value) =>
+                                    handleUpdateContainerStyle({
+                                        badge_text: value,
+                                    })
+                                }
+                            />
+                            <div className="magick-ad-field">
+                                <p className="magick-ad-field__label">
+                                    角标颜色
+                                </p>
+                                <ColorPicker
+                                    color={
+                                        containerStyle.badge_color ||
+                                        '#1d2327'
+                                    }
+                                    onChangeComplete={(value) =>
+                                        handleUpdateContainerStyle({
+                                            badge_color:
+                                                formatColorValue(value),
+                                        })
+                                    }
+                                />
+                            </div>
+                        </>
+                    ) : (
+                        <div className="magick-ad-field">
+                            <p className="magick-ad-field__label">
+                                角标图片
+                            </p>
+                            <ImagePicker
+                                value={containerStyle.badge_image || {}}
+                                onChange={(value) =>
+                                    handleUpdateContainerStyle({
+                                        badge_image: value,
+                                        badge_type: 'image',
+                                    })
+                                }
+                            />
+                            <p className="magick-ad-field__help">
+                                推荐尺寸：56×28 或 64×32（2x）；格式：PNG/SVG（透明背景），建议 ≤ 100KB。
+                            </p>
+                        </div>
+                    )}
+                </>
+            )}
+        </>
+    );
+
+    const renderHtmlScriptsAdvanced = () => {
+        if (isQuickMode) {
+            return (
+                <Notice status="info" isDismissible={false}>
+                    快速模式已隐藏脚本域名配置，请切换到“设计模式/专家模式”查看。
+                </Notice>
+            );
+        }
+        const allowlist = Array.isArray(
+            selectedAd?.content?.html_script_allowlist
+        )
+            ? selectedAd.content?.html_script_allowlist
+            : [];
+        const blocklist = Array.isArray(
+            selectedAd?.content?.html_script_blocklist
+        )
+            ? selectedAd.content?.html_script_blocklist
+            : [];
+        const addDomain = (domain, listKey) => {
+            const nextAllow =
+                listKey === 'allow'
+                    ? Array.from(new Set([...allowlist, domain]))
+                    : allowlist.filter((item) => item !== domain);
+            const nextBlock =
+                listKey === 'block'
+                    ? Array.from(new Set([...blocklist, domain]))
+                    : blocklist.filter((item) => item !== domain);
+            handleUpdateContent({
+                html_script_allowlist: nextAllow,
+                html_script_blocklist: nextBlock,
+            });
+        };
+        return (
+            <>
+                {detectedScriptDomains?.length > 0 && (
+                    <div className="magick-ad-script-domains">
+                        <div className="magick-ad-script-domains__title">
+                            检测到脚本域名
+                        </div>
+                        <div className="magick-ad-script-domains__list">
+                            {detectedScriptDomains.map((domain) => {
+                                const isAllowed = allowlist.includes(domain);
+                                const isBlocked = blocklist.includes(domain);
+                                return (
+                                    <div
+                                        key={domain}
+                                        className="magick-ad-script-domains__item"
+                                    >
+                                        <span className="magick-ad-script-domains__domain">
+                                            {domain}
+                                        </span>
+                                        <div className="magick-ad-script-domains__actions">
+                                            <Button
+                                                variant={
+                                                    isAllowed
+                                                        ? 'secondary'
+                                                        : 'primary'
+                                                }
+                                                size="small"
+                                                disabled={isAllowed}
+                                                onClick={() =>
+                                                    addDomain(domain, 'allow')
+                                                }
+                                            >
+                                                {isAllowed
+                                                    ? '已在白名单'
+                                                    : '加入白名单'}
+                                            </Button>
+                                            <Button
+                                                variant={
+                                                    isBlocked
+                                                        ? 'secondary'
+                                                        : 'tertiary'
+                                                }
+                                                size="small"
+                                                disabled={isBlocked}
+                                                onClick={() =>
+                                                    addDomain(domain, 'block')
+                                                }
+                                            >
+                                                {isBlocked
+                                                    ? '已在黑名单'
+                                                    : '加入黑名单'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="magick-ad-script-domains__help">
+                            系统默认仅允许本站域名。将外部域名加入白名单后，脚本才会保留。
+                        </div>
+                    </div>
+                )}
+                <TextareaControl
+                    label="脚本白名单（追加域名）"
+                    value={formatDomainList(
+                        selectedAd?.content?.html_script_allowlist
+                    )}
+                    onChange={(value) =>
+                        handleUpdateContent({
+                            html_script_allowlist: parseDomainList(value),
+                        })
+                    }
+                    help="系统默认仅允许当前站点域名，此处为追加白名单。每行一个域名或用逗号分隔。"
+                />
+                <TextareaControl
+                    label="脚本黑名单（追加域名）"
+                    value={formatDomainList(
+                        selectedAd?.content?.html_script_blocklist
+                    )}
+                    onChange={(value) =>
+                        handleUpdateContent({
+                            html_script_blocklist: parseDomainList(value),
+                        })
+                    }
+                    help="系统级黑名单优先生效，此处为追加黑名单。命中即移除。"
+                />
+            </>
+        );
+    };
+
     const applyTemplate = (template) => {
         if (!selectedAd || !template) {
             return;
@@ -2329,6 +2625,144 @@ const AdsConfig = () => {
         }
     };
 
+    const normalizedAdSearch = adSearch.trim().toLowerCase();
+
+    const matchesSidebarFilter = (ad) => {
+        const runtime = runtimeMeta(ad);
+        if (adFilter === 'active') {
+            return runtime.code === 'active';
+        }
+        if (adFilter === 'risk') {
+            return runtime.code !== 'active' || missingPositionIds.has(ad.id);
+        }
+        if (adFilter === 'paused') {
+            return ad?.options?.enabled === false;
+        }
+        return true;
+    };
+
+    const matchesSidebarSearch = (ad) => {
+        if (!normalizedAdSearch) {
+            return true;
+        }
+        const options = ad?.options || {};
+        const usageLabel = getUsageLabel(
+            normalizeUsageType(options.usage_type || 'ad')
+        );
+        const pageLabel =
+            options.ad_type === 'targeted'
+                ? getOptionLabel(
+                      TARGET_TYPE_OPTIONS,
+                      options.target_type || '',
+                      '指定页面'
+                  )
+                : getOptionLabel(
+                      DISPLAY_PAGE_OPTIONS,
+                      options.show_page || 'all',
+                      '全站'
+                  );
+        const haystack = [
+            ad?.name || '',
+            ad?.id || '',
+            usageLabel,
+            pageLabel,
+            resolvePlacementLabel(options),
+        ]
+            .join(' ')
+            .toLowerCase();
+        return haystack.includes(normalizedAdSearch);
+    };
+
+    const matchesSidebarTypeView = (ad) => {
+        if (adTypeView === 'global') {
+            return ad?.options?.ad_type !== 'targeted';
+        }
+        if (adTypeView === 'targeted') {
+            return ad?.options?.ad_type === 'targeted';
+        }
+        return true;
+    };
+
+    const visibleAdIds = useMemo(() => {
+        return new Set(
+            ads.filter(
+                (ad) =>
+                    matchesSidebarTypeView(ad) &&
+                    matchesSidebarFilter(ad) &&
+                    matchesSidebarSearch(ad)
+            ).map((ad) => ad.id)
+        );
+    }, [ads, adFilter, adTypeView, normalizedAdSearch, missingPositionIds]);
+
+    const filteredAdCount = visibleAdIds.size;
+    const hasSidebarFilter =
+        adFilter !== 'all' ||
+        adTypeView !== 'all' ||
+        Boolean(normalizedAdSearch);
+    const selectedHiddenByFilter = Boolean(
+        selectedAd?.id && !visibleAdIds.has(selectedAd.id)
+    );
+
+    const filterStats = useMemo(() => {
+        const stats = {
+            all: ads.length,
+            active: 0,
+            risk: 0,
+            paused: 0,
+        };
+        ads.forEach((ad) => {
+            const runtime = runtimeMeta(ad);
+            if (runtime.code === 'active') {
+                stats.active += 1;
+            }
+            if (runtime.code !== 'active' || missingPositionIds.has(ad.id)) {
+                stats.risk += 1;
+            }
+            if (ad?.options?.enabled === false) {
+                stats.paused += 1;
+            }
+        });
+        return stats;
+    }, [ads, missingPositionIds]);
+
+    const typeStats = useMemo(() => {
+        const stats = {
+            all: ads.length,
+            global: 0,
+            targeted: 0,
+        };
+        ads.forEach((ad) => {
+            if (ad?.options?.ad_type === 'targeted') {
+                stats.targeted += 1;
+                return;
+            }
+            stats.global += 1;
+        });
+        return stats;
+    }, [ads]);
+
+    const sidebarSections = useMemo(() => {
+        const sections = [
+            {
+                key: 'global',
+                title: '全局广告',
+                items: ads.filter((ad) => ad.options?.ad_type !== 'targeted'),
+            },
+            {
+                key: 'targeted',
+                title: '指定广告',
+                items: ads.filter((ad) => ad.options?.ad_type === 'targeted'),
+            },
+        ];
+        if (adTypeView === 'global') {
+            return sections.filter((section) => section.key === 'global');
+        }
+        if (adTypeView === 'targeted') {
+            return sections.filter((section) => section.key === 'targeted');
+        }
+        return sections;
+    }, [ads, adTypeView]);
+
     const leftSidebar = (
         <div className="magick-ad-left-stack">
             <Card>
@@ -2339,7 +2773,9 @@ const AdsConfig = () => {
                                 广告组
                             </h2>
                             <span className="magick-ad-sidebar__total">
-                                {ads.length}
+                                {hasSidebarFilter
+                                    ? `${filteredAdCount}/${ads.length}`
+                                    : ads.length}
                             </span>
                         </div>
                         <div className="magick-ad-sidebar__header-actions">
@@ -2375,44 +2811,101 @@ const AdsConfig = () => {
                             </DropdownMenu>
                         </div>
                     </div>
+                    <div className="magick-ad-sidebar__tools">
+                        <TextControl
+                            className="magick-ad-sidebar__search"
+                            placeholder="搜索名称 / ID / 位置 / 页面规则"
+                            value={adSearch}
+                            onChange={(value) => setAdSearch(value)}
+                        />
+                        <div className="magick-ad-sidebar__filters">
+                            {SIDEBAR_FILTERS.map((item) => (
+                                <Button
+                                    key={item.value}
+                                    variant="secondary"
+                                    isPressed={adFilter === item.value}
+                                    className="magick-ad-sidebar__filter-btn"
+                                    onClick={() => setAdFilter(item.value)}
+                                >
+                                    {item.label}
+                                    <span className="magick-ad-sidebar__filter-count">
+                                        {filterStats[item.value] || 0}
+                                    </span>
+                                </Button>
+                            ))}
+                        </div>
+                        <div className="magick-ad-sidebar__types">
+                            {SIDEBAR_TYPE_VIEWS.map((item) => (
+                                <Button
+                                    key={item.value}
+                                    variant="secondary"
+                                    isPressed={adTypeView === item.value}
+                                    className="magick-ad-sidebar__type-btn"
+                                    onClick={() => setAdTypeView(item.value)}
+                                >
+                                    {item.label}
+                                    <span className="magick-ad-sidebar__type-count">
+                                        {typeStats[item.value] || 0}
+                                    </span>
+                                </Button>
+                            ))}
+                        </div>
+                        {(hasSidebarFilter || selectedHiddenByFilter) && (
+                            <div className="magick-ad-sidebar__tool-row">
+                                {selectedHiddenByFilter ? (
+                                    <span className="magick-ad-sidebar__tool-tip">
+                                        当前编辑项已被筛选隐藏。
+                                    </span>
+                                ) : (
+                                    <span className="magick-ad-sidebar__tool-tip">
+                                        已应用筛选条件。
+                                    </span>
+                                )}
+                                <Button
+                                    variant="tertiary"
+                                    className="magick-ad-sidebar__clear-btn"
+                                    onClick={() => {
+                                        setAdFilter('all');
+                                        setAdSearch('');
+                                        setAdTypeView('all');
+                                    }}
+                                >
+                                    清空
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                     {ads.length === 0 ? (
                         <p className="description">暂无广告组。</p>
                     ) : (
                         <nav className="magick-ad-sidebar__list">
-                            {[
-                                {
-                                    key: 'global',
-                                    title: '全局广告',
-                                    items: ads.filter(
-                                        (ad) =>
-                                            ad.options?.ad_type !== 'targeted'
-                                    ),
-                                },
-                                {
-                                    key: 'targeted',
-                                    title: '指定广告',
-                                    items: ads.filter(
-                                        (ad) =>
-                                            ad.options?.ad_type === 'targeted'
-                                    ),
-                                },
-                            ].map((section) => (
+                            {sidebarSections.map((section) => (
                                 <div
                                     key={section.key}
                                     className="magick-ad-sidebar__section"
                                 >
+                                    {(() => {
+                                        const visibleItems = section.items.filter(
+                                            (item) => visibleAdIds.has(item.id)
+                                        );
+                                        return (
+                                            <>
                                     <div className="magick-ad-sidebar__section-title">
                                         {section.title}
                                         <span className="magick-ad-sidebar__section-count">
-                                            {section.items.length}
+                                            {hasSidebarFilter
+                                                ? `${visibleItems.length}/${section.items.length}`
+                                                : section.items.length}
                                         </span>
                                     </div>
-                                    {section.items.length === 0 ? (
+                                    {visibleItems.length === 0 ? (
                                         <p className="description magick-ad-sidebar__empty">
-                                            暂无{section.title}
+                                            {hasSidebarFilter
+                                                ? `筛选条件下暂无${section.title}`
+                                                : `暂无${section.title}`}
                                         </p>
                                     ) : (
-                                        section.items.map((ad, index) => {
+                                        visibleItems.map((ad, index) => {
                                             const status = statusMeta(ad);
                                             const runtime = runtimeMeta(ad);
                                             const options = ad.options || {};
@@ -2433,7 +2926,7 @@ const AdsConfig = () => {
                                                           DISPLAY_PAGE_OPTIONS,
                                                           options.show_page || 'all',
                                                           '全站'
-                                                      );
+                                                );
 
                                             return (
                                                 <div
@@ -2581,20 +3074,26 @@ const AdsConfig = () => {
                                             );
                                         })
                                     )}
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             ))}
                         </nav>
                     )}
+                    <div className="magick-ad-sidebar__slots">
+                        <SlotsPanel
+                            embedded
+                            slots={slots}
+                            ads={ads}
+                            onAddSlot={addSlot}
+                            onUpdateSlot={updateSlot}
+                            onRemoveSlot={removeSlot}
+                            onNotice={showNotice}
+                        />
+                    </div>
                 </CardBody>
             </Card>
-            <SlotsPanel
-                slots={slots}
-                ads={ads}
-                onAddSlot={addSlot}
-                onUpdateSlot={updateSlot}
-                onRemoveSlot={removeSlot}
-                onNotice={showNotice}
-            />
         </div>
     );
 
@@ -2628,6 +3127,11 @@ const AdsConfig = () => {
     )
         ? activeCreativeType
         : creativeTabs[0]?.name || 'image';
+    const htmlSettingsTabResolved = ['mode', 'custom', 'runtime'].includes(
+        htmlSettingsTab
+    )
+        ? htmlSettingsTab
+        : 'mode';
 
     const contentPanels = selectedAd ? (
         <TabPanel
@@ -2663,7 +3167,13 @@ const AdsConfig = () => {
                             }`}
                         >
                             <Panel>
-                                <PanelBody initialOpen>
+                                <PanelBody
+                                    title="图片编辑"
+                                    opened={contentPanelOpenState.image}
+                                    onToggle={() =>
+                                        toggleContentPanelOpen('image')
+                                    }
+                                >
                                     <TabPanel
                                         className="magick-ad-image-tabs"
                                         tabs={[
@@ -2910,7 +3420,13 @@ const AdsConfig = () => {
                             }`}
                         >
                             <Panel>
-                                <PanelBody initialOpen>
+                                <PanelBody
+                                    title="HTML 编辑"
+                                    opened={contentPanelOpenState.html}
+                                    onToggle={() =>
+                                        toggleContentPanelOpen('html')
+                                    }
+                                >
                                     <TabPanel
                                         className="magick-ad-html-tabs"
                                         tabs={[
@@ -2972,20 +3488,16 @@ const AdsConfig = () => {
                                                                 title:
                                                                     '加载/变量',
                                                             },
-                                                            {
-                                                                name: 'scripts',
-                                                                title: '脚本域名',
-                                                            },
                                                         ]}
                                                         initialTabName={
-                                                            htmlSettingsTab
+                                                            htmlSettingsTabResolved
                                                         }
                                                         onSelect={(name) =>
                                                             setHtmlSettingsTab(
                                                                 name
                                                             )
                                                         }
-                                                        key={htmlSettingsTab}
+                                                        key={htmlSettingsTabResolved}
                                                     >
                                                         {(settingsTabView) => {
                                                         if (
@@ -3305,228 +3817,23 @@ const AdsConfig = () => {
                                                                 </>
                                                             );
                                                         }
-                                                        if (
-                                                            settingsTabView.name ===
-                                                            'scripts'
-                                                        ) {
-                                                            if (isQuickMode) {
-                                                                return (
-                                                                    <Notice
-                                                                        status="info"
-                                                                        isDismissible={
-                                                                            false
-                                                                        }
-                                                                    >
-                                                                        快速模式已隐藏脚本域名配置，请切换到“设计模式/专家模式”查看。
-                                                                    </Notice>
-                                                                );
-                                                            }
-                                                            const allowlist =
-                                                                Array.isArray(
-                                                                    selectedAd
-                                                                        .content
-                                                                        ?.html_script_allowlist
-                                                                )
-                                                                    ? selectedAd
-                                                                          .content
-                                                                          ?.html_script_allowlist
-                                                                    : [];
-                                                            const blocklist =
-                                                                Array.isArray(
-                                                                    selectedAd
-                                                                        .content
-                                                                        ?.html_script_blocklist
-                                                                )
-                                                                    ? selectedAd
-                                                                          .content
-                                                                          ?.html_script_blocklist
-                                                                    : [];
-                                                            const addDomain =
-                                                                (
-                                                                    domain,
-                                                                    listKey
-                                                                ) => {
-                                                                    const nextAllow =
-                                                                        listKey ===
-                                                                        'allow'
-                                                                            ? Array.from(
-                                                                                  new Set(
-                                                                                      [
-                                                                                          ...allowlist,
-                                                                                          domain,
-                                                                                      ]
-                                                                                  )
-                                                                              )
-                                                                            : allowlist.filter(
-                                                                                  (
-                                                                                      item
-                                                                                  ) =>
-                                                                                      item !==
-                                                                                      domain
-                                                                              );
-                                                                    const nextBlock =
-                                                                        listKey ===
-                                                                        'block'
-                                                                            ? Array.from(
-                                                                                  new Set(
-                                                                                      [
-                                                                                          ...blocklist,
-                                                                                          domain,
-                                                                                      ]
-                                                                                  )
-                                                                              )
-                                                                            : blocklist.filter(
-                                                                                  (
-                                                                                      item
-                                                                                  ) =>
-                                                                                      item !==
-                                                                                      domain
-                                                                              );
-                                                                    handleUpdateContent(
-                                                                        {
-                                                                            html_script_allowlist:
-                                                                                nextAllow,
-                                                                            html_script_blocklist:
-                                                                                nextBlock,
-                                                                        }
-                                                                    );
-                                                                };
-                                                            return (
-                                                                <>
-                                                                    {detectedScriptDomains
-                                                                        ?.length >
-                                                                        0 && (
-                                                                        <div className="magick-ad-script-domains">
-                                                                            <div className="magick-ad-script-domains__title">
-                                                                                检测到脚本域名
-                                                                            </div>
-                                                                            <div className="magick-ad-script-domains__list">
-                                                                                {detectedScriptDomains.map(
-                                                                                    (
-                                                                                        domain
-                                                                                    ) => {
-                                                                                        const isAllowed =
-                                                                                            allowlist.includes(
-                                                                                                domain
-                                                                                            );
-                                                                                        const isBlocked =
-                                                                                            blocklist.includes(
-                                                                                                domain
-                                                                                            );
-                                                                                        return (
-                                                                                            <div
-                                                                                                key={
-                                                                                                    domain
-                                                                                                }
-                                                                                                className="magick-ad-script-domains__item"
-                                                                                            >
-                                                                                                <span className="magick-ad-script-domains__domain">
-                                                                                                    {
-                                                                                                        domain
-                                                                                                    }
-                                                                                                </span>
-                                                                                                <div className="magick-ad-script-domains__actions">
-                                                                                                    <Button
-                                                                                                        variant={
-                                                                                                            isAllowed
-                                                                                                                ? 'secondary'
-                                                                                                                : 'primary'
-                                                                                                        }
-                                                                                                        size="small"
-                                                                                                        disabled={
-                                                                                                            isAllowed
-                                                                                                        }
-                                                                                                        onClick={() =>
-                                                                                                            addDomain(
-                                                                                                                domain,
-                                                                                                                'allow'
-                                                                                                            )
-                                                                                                        }
-                                                                                                    >
-                                                                                                        {isAllowed
-                                                                                                            ? '已在白名单'
-                                                                                                            : '加入白名单'}
-                                                                                                    </Button>
-                                                                                                    <Button
-                                                                                                        variant={
-                                                                                                            isBlocked
-                                                                                                                ? 'secondary'
-                                                                                                                : 'tertiary'
-                                                                                                        }
-                                                                                                        size="small"
-                                                                                                        disabled={
-                                                                                                            isBlocked
-                                                                                                        }
-                                                                                                        onClick={() =>
-                                                                                                            addDomain(
-                                                                                                                domain,
-                                                                                                                'block'
-                                                                                                            )
-                                                                                                        }
-                                                                                                    >
-                                                                                                        {isBlocked
-                                                                                                            ? '已在黑名单'
-                                                                                                            : '加入黑名单'}
-                                                                                                    </Button>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        );
-                                                                                    }
-                                                                                )}
-                                                                            </div>
-                                                                            <div className="magick-ad-script-domains__help">
-                                                                                系统默认仅允许本站域名。将外部域名加入白名单后，脚本才会保留。
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                    <TextareaControl
-                                                                        label="脚本白名单（追加域名）"
-                                                                        value={formatDomainList(
-                                                                            selectedAd
-                                                                                .content
-                                                                                ?.html_script_allowlist
-                                                                        )}
-                                                                        onChange={(
-                                                                            value
-                                                                        ) =>
-                                                                            handleUpdateContent(
-                                                                                {
-                                                                                    html_script_allowlist:
-                                                                                        parseDomainList(
-                                                                                            value
-                                                                                        ),
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                        help="系统默认仅允许当前站点域名，此处为追加白名单。每行一个域名或用逗号分隔。"
-                                                                    />
-                                                                    <TextareaControl
-                                                                        label="脚本黑名单（追加域名）"
-                                                                        value={formatDomainList(
-                                                                            selectedAd
-                                                                                .content
-                                                                                ?.html_script_blocklist
-                                                                        )}
-                                                                        onChange={(
-                                                                            value
-                                                                        ) =>
-                                                                            handleUpdateContent(
-                                                                                {
-                                                                                    html_script_blocklist:
-                                                                                        parseDomainList(
-                                                                                            value
-                                                                                        ),
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                        help="系统级黑名单优先生效，此处为追加黑名单。命中即移除。"
-                                                                    />
-                                                                </>
-                                                            );
-                                                        }
                                                         return null;
                                                     }}
                                                     </TabPanel>
+                                                    <Panel className="magick-ad-right-inline-panel">
+                                                        <PanelBody
+                                                            title="脚本域名（高级）"
+                                                            opened={htmlScriptsAdvancedOpen}
+                                                            onToggle={() =>
+                                                                setHtmlScriptsAdvancedOpen((prev) => !prev)
+                                                            }
+                                                        >
+                                                            <p className="magick-ad-right-inline-note">
+                                                                脚本域名白名单/黑名单属于低频项，仅在接入第三方脚本时需要调整。
+                                                            </p>
+                                                            {renderHtmlScriptsAdvanced()}
+                                                        </PanelBody>
+                                                    </Panel>
                                                 </div>
                                             </>
                                         )}
@@ -3537,7 +3844,13 @@ const AdsConfig = () => {
 
                         {activeContentType === 'video' && (
                             <Panel>
-                                <PanelBody initialOpen>
+                                <PanelBody
+                                    title="视频编辑"
+                                    opened={contentPanelOpenState.video}
+                                    onToggle={() =>
+                                        toggleContentPanelOpen('video')
+                                    }
+                                >
                                     <TabPanel
                                         className="magick-ad-video-tabs"
                                         tabs={[
@@ -3632,402 +3945,341 @@ const AdsConfig = () => {
                                                     )}
                                                 </>
                                             ) : (
-                                                <TabPanel
-                                                    className="magick-ad-video-settings-tabs"
-                                                    tabs={[
-                                                        {
-                                                            name: 'basic',
-                                                            title: '基础',
-                                                        },
-                                                        {
-                                                            name: 'cover',
-                                                            title: '封面',
-                                                        },
-                                                        {
-                                                            name: 'playback',
-                                                            title: '播放',
-                                                        },
-                                                        {
-                                                            name: 'track',
-                                                            title: '追踪',
-                                                        },
-                                                    ]}
-                                                    initialTabName={
-                                                        videoSettingsTab
-                                                    }
-                                                    onSelect={(name) =>
-                                                        setVideoSettingsTab(
-                                                            name
-                                                        )
-                                                    }
-                                                    key={videoSettingsTab}
-                                                >
-                                                    {(settingsTabView) => {
-                                                        if (
-                                                            settingsTabView.name ===
-                                                            'basic'
-                                                        ) {
-                                                            return (
-                                                                <>
-                                                                    <SelectControl
-                                                                        label="视频类型"
-                                                                        value={
-                                                                            videoSettings.type ||
-                                                                            'mp4'
-                                                                        }
-                                                                        options={[
-                                                                            {
-                                                                                label: 'MP4',
-                                                                                value: 'mp4',
-                                                                            },
-                                                                            {
-                                                                                label: '嵌入（iframe）',
-                                                                                value: 'embed',
-                                                                            },
-                                                                        ]}
-                                                                        onChange={(value) =>
-                                                                            handleUpdateVideoSettings(
-                                                                                {
-                                                                                    type: value,
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                    <SelectControl
-                                                                        label="比例"
-                                                                        value={
-                                                                            videoSettings.aspect_ratio ||
-                                                                            '16:9'
-                                                                        }
-                                                                        options={[
-                                                                            {
-                                                                                label: '自适应',
-                                                                                value: 'auto',
-                                                                            },
-                                                                            {
-                                                                                label: '16:9',
-                                                                                value: '16:9',
-                                                                            },
-                                                                            {
-                                                                                label: '4:3',
-                                                                                value: '4:3',
-                                                                            },
-                                                                            {
-                                                                                label: '1:1',
-                                                                                value: '1:1',
-                                                                            },
-                                                                            {
-                                                                                label: '9:16',
-                                                                                value: '9:16',
-                                                                            },
-                                                                            {
-                                                                                label: '自定义',
-                                                                                value: 'custom',
-                                                                            },
-                                                                        ]}
-                                                                        onChange={(value) =>
-                                                                            handleUpdateVideoSettings(
-                                                                                {
-                                                                                    aspect_ratio:
-                                                                                        value,
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                    {videoSettings.aspect_ratio ===
-                                                                        'custom' && (
-                                                                        <TextControl
-                                                                            label="自定义比例（如 3:2）"
-                                                                            value={
-                                                                                videoSettings.aspect_ratio_custom ||
-                                                                                ''
-                                                                            }
-                                                                            onChange={(value) =>
-                                                                                handleUpdateVideoSettings(
-                                                                                    {
-                                                                                        aspect_ratio_custom:
-                                                                                            value,
-                                                                                    }
-                                                                                )
-                                                                            }
-                                                                            help="格式如 3:2、21:9。"
-                                                                        />
-                                                                    )}
-                                                                    <SelectControl
-                                                                        label="预加载"
-                                                                        value={
-                                                                            videoSettings.preload ||
-                                                                            'metadata'
-                                                                        }
-                                                                        options={[
-                                                                            {
-                                                                                label: 'metadata',
-                                                                                value: 'metadata',
-                                                                            },
-                                                                            {
-                                                                                label: 'auto',
-                                                                                value: 'auto',
-                                                                            },
-                                                                            {
-                                                                                label: 'none',
-                                                                                value: 'none',
-                                                                            },
-                                                                        ]}
-                                                                        onChange={(value) =>
-                                                                            handleUpdateVideoSettings(
-                                                                                {
-                                                                                    preload:
-                                                                                        value,
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </>
-                                                            );
-                                                        }
-                                                        if (
-                                                            settingsTabView.name ===
-                                                            'cover'
-                                                        ) {
-                                                            if (isEmbed) {
-                                                                return (
-                                                                    <Notice
-                                                                        status="info"
-                                                                        isDismissible={
-                                                                            false
-                                                                        }
-                                                                    >
-                                                                        嵌入视频由第三方播放器控制，封面设置不可用。
-                                                                    </Notice>
-                                                                );
+                                                <Panel className="magick-ad-video-settings-panel">
+                                                    <PanelBody title="核心视频设置" initialOpen>
+                                                        <SelectControl
+                                                            label="视频类型"
+                                                            value={
+                                                                videoSettings.type ||
+                                                                'mp4'
                                                             }
-                                                            return (
-                                                                <>
-                                                                    <SelectControl
-                                                                        label="封面策略"
-                                                                        value={
-                                                                            videoSettings.poster_mode ||
-                                                                            'manual'
+                                                            options={[
+                                                                {
+                                                                    label: 'MP4',
+                                                                    value: 'mp4',
+                                                                },
+                                                                {
+                                                                    label: '嵌入（iframe）',
+                                                                    value: 'embed',
+                                                                },
+                                                            ]}
+                                                            onChange={(value) =>
+                                                                handleUpdateVideoSettings(
+                                                                    {
+                                                                        type: value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                        <SelectControl
+                                                            label="比例"
+                                                            value={
+                                                                videoSettings.aspect_ratio ||
+                                                                '16:9'
+                                                            }
+                                                            options={[
+                                                                {
+                                                                    label: '自适应',
+                                                                    value: 'auto',
+                                                                },
+                                                                {
+                                                                    label: '16:9',
+                                                                    value: '16:9',
+                                                                },
+                                                                {
+                                                                    label: '4:3',
+                                                                    value: '4:3',
+                                                                },
+                                                                {
+                                                                    label: '1:1',
+                                                                    value: '1:1',
+                                                                },
+                                                                {
+                                                                    label: '9:16',
+                                                                    value: '9:16',
+                                                                },
+                                                                {
+                                                                    label: '自定义',
+                                                                    value: 'custom',
+                                                                },
+                                                            ]}
+                                                            onChange={(value) =>
+                                                                handleUpdateVideoSettings(
+                                                                    {
+                                                                        aspect_ratio:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                        {videoSettings.aspect_ratio ===
+                                                            'custom' && (
+                                                            <TextControl
+                                                                label="自定义比例（如 3:2）"
+                                                                value={
+                                                                    videoSettings.aspect_ratio_custom ||
+                                                                    ''
+                                                                }
+                                                                onChange={(value) =>
+                                                                    handleUpdateVideoSettings(
+                                                                        {
+                                                                            aspect_ratio_custom:
+                                                                                value,
                                                                         }
-                                                                        options={[
+                                                                    )
+                                                                }
+                                                                help="格式如 3:2、21:9。"
+                                                            />
+                                                        )}
+                                                        {isEmbed ? (
+                                                            <Notice
+                                                                status="info"
+                                                                isDismissible={
+                                                                    false
+                                                                }
+                                                            >
+                                                                嵌入视频由第三方播放器控制，封面设置不可用。
+                                                            </Notice>
+                                                        ) : (
+                                                            <>
+                                                                <SelectControl
+                                                                    label="封面策略"
+                                                                    value={
+                                                                        videoSettings.poster_mode ||
+                                                                        'manual'
+                                                                    }
+                                                                    options={[
+                                                                        {
+                                                                            label: '使用封面图',
+                                                                            value: 'manual',
+                                                                        },
+                                                                        {
+                                                                            label: '无封面时取首帧',
+                                                                            value: 'auto',
+                                                                        },
+                                                                    ]}
+                                                                    onChange={(value) =>
+                                                                        handleUpdateVideoSettings(
                                                                             {
-                                                                                label:
-                                                                                    '使用封面图',
-                                                                                value: 'manual',
-                                                                            },
-                                                                            {
-                                                                                label:
-                                                                                    '无封面时取首帧',
-                                                                                value: 'auto',
-                                                                            },
-                                                                        ]}
-                                                                        onChange={(
-                                                                            value
-                                                                        ) =>
-                                                                            handleUpdateVideoSettings(
-                                                                                {
-                                                                                    poster_mode:
-                                                                                        value,
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                    {videoSettings.poster_mode !==
-                                                                        'auto' && (
-                                                                        <div className="magick-ad-field">
-                                                                            <p className="magick-ad-field__label">
-                                                                                封面图
-                                                                            </p>
-                                                                            <ImagePicker
-                                                                                value={
-                                                                                    videoSettings.poster ||
-                                                                                    {}
-                                                                                }
-                                                                                onChange={(
-                                                                                    value
-                                                                                ) =>
-                                                                                    handleUpdateVideoSettings(
-                                                                                        {
-                                                                                            poster:
-                                                                                                value,
-                                                                                        }
-                                                                                    )
-                                                                                }
-                                                                            />
-                                                                        </div>
-                                                                    )}
-                                                                </>
-                                                            );
-                                                        }
-                                                        if (
-                                                            settingsTabView.name ===
-                                                            'playback'
-                                                        ) {
-                                                            return (
-                                                                <>
-                                                                    <div className="magick-ad-image-grid">
-                                                                        <ToggleControl
-                                                                            label="自动播放"
-                                                                            checked={Boolean(
-                                                                                videoSettings.autoplay
-                                                                            )}
-                                                                            onChange={(value) =>
-                                                                                handleUpdateVideoSettings(
-                                                                                    {
-                                                                                        autoplay:
-                                                                                            value,
-                                                                                        muted:
-                                                                                            value
-                                                                                                ? true
-                                                                                                : Boolean(
-                                                                                                      videoSettings.muted
-                                                                                                  ),
-                                                                                    }
-                                                                                )
+                                                                                poster_mode:
+                                                                                    value,
                                                                             }
-                                                                            help="自动播放通常需要静音。"
-                                                                        />
-                                                                        <ToggleControl
-                                                                            label="首次展示自动播放"
-                                                                            checked={Boolean(
-                                                                                videoSettings.autoplay_first
-                                                                            )}
-                                                                            onChange={(value) =>
-                                                                                handleUpdateVideoSettings(
-                                                                                    {
-                                                                                        autoplay_first:
-                                                                                            value,
-                                                                                    }
-                                                                                )
-                                                                            }
-                                                                            help="仅首次展示时尝试自动播放（会强制静音）。"
-                                                                        />
-                                                                        <ToggleControl
-                                                                            label="静音"
-                                                                            checked={Boolean(
-                                                                                videoSettings.muted
-                                                                            )}
-                                                                            onChange={(value) =>
-                                                                                handleUpdateVideoSettings(
-                                                                                    {
-                                                                                        muted: value,
-                                                                                    }
-                                                                                )
-                                                                            }
-                                                                        />
-                                                                        <ToggleControl
-                                                                            label="二次展示强制静音"
-                                                                            checked={Boolean(
-                                                                                videoSettings.repeat_muted
-                                                                            )}
-                                                                            onChange={(value) =>
-                                                                                handleUpdateVideoSettings(
-                                                                                    {
-                                                                                        repeat_muted:
-                                                                                            value,
-                                                                                    }
-                                                                                )
-                                                                            }
-                                                                        />
-                                                                        <ToggleControl
-                                                                            label="循环"
-                                                                            checked={Boolean(
-                                                                                videoSettings.loop
-                                                                            )}
-                                                                            onChange={(value) =>
-                                                                                handleUpdateVideoSettings(
-                                                                                    {
-                                                                                        loop: value,
-                                                                                    }
-                                                                                )
-                                                                            }
-                                                                        />
-                                                                        <ToggleControl
-                                                                            label="显示控制条"
-                                                                            checked={
-                                                                                videoSettings.controls !==
-                                                                                false
+                                                                        )
+                                                                    }
+                                                                />
+                                                                {videoSettings.poster_mode !==
+                                                                    'auto' && (
+                                                                    <div className="magick-ad-field">
+                                                                        <p className="magick-ad-field__label">
+                                                                            封面图
+                                                                        </p>
+                                                                        <ImagePicker
+                                                                            value={
+                                                                                videoSettings.poster ||
+                                                                                {}
                                                                             }
                                                                             onChange={(value) =>
                                                                                 handleUpdateVideoSettings(
                                                                                     {
-                                                                                        controls:
-                                                                                            value,
-                                                                                    }
-                                                                                )
-                                                                            }
-                                                                        />
-                                                                        <ToggleControl
-                                                                            label="移动端内嵌播放"
-                                                                            checked={
-                                                                                videoSettings.playsinline !==
-                                                                                false
-                                                                            }
-                                                                            onChange={(value) =>
-                                                                                handleUpdateVideoSettings(
-                                                                                    {
-                                                                                        playsinline:
+                                                                                        poster:
                                                                                             value,
                                                                                     }
                                                                                 )
                                                                             }
                                                                         />
                                                                     </div>
-                                                                </>
-                                                            );
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </PanelBody>
+                                                    <PanelBody
+                                                        title="高级视频设置"
+                                                        opened={videoSettingsAdvancedOpen}
+                                                        onToggle={() =>
+                                                            setVideoSettingsAdvancedOpen((prev) => !prev)
                                                         }
-                                                        if (
-                                                            settingsTabView.name ===
-                                                            'track'
-                                                        ) {
-                                                            return (
-                                                                <>
-                                                                    <ToggleControl
-                                                                        label="追踪播放/暂停/完成"
-                                                                        checked={Boolean(
-                                                                            videoSettings.track_events
-                                                                        )}
-                                                                        onChange={(value) =>
-                                                                            handleUpdateVideoSettings(
-                                                                                {
-                                                                                    track_events:
-                                                                                        value,
-                                                                                }
-                                                                            )
+                                                    >
+                                                        <SelectControl
+                                                            label="预加载"
+                                                            value={
+                                                                videoSettings.preload ||
+                                                                'metadata'
+                                                            }
+                                                            options={[
+                                                                {
+                                                                    label: 'metadata',
+                                                                    value: 'metadata',
+                                                                },
+                                                                {
+                                                                    label: 'auto',
+                                                                    value: 'auto',
+                                                                },
+                                                                {
+                                                                    label: 'none',
+                                                                    value: 'none',
+                                                                },
+                                                            ]}
+                                                            onChange={(value) =>
+                                                                handleUpdateVideoSettings(
+                                                                    {
+                                                                        preload:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                        <div className="magick-ad-image-grid">
+                                                            <ToggleControl
+                                                                label="自动播放"
+                                                                checked={Boolean(
+                                                                    videoSettings.autoplay
+                                                                )}
+                                                                onChange={(value) =>
+                                                                    handleUpdateVideoSettings(
+                                                                        {
+                                                                            autoplay:
+                                                                                value,
+                                                                            muted:
+                                                                                value
+                                                                                    ? true
+                                                                                    : Boolean(
+                                                                                          videoSettings.muted
+                                                                                      ),
                                                                         }
-                                                                        disabled={isDecorativeUsage(
-                                                                            selectedAd?.options || {}
-                                                                        )}
-                                                                        help={
-                                                                            isDecorativeUsage(
-                                                                                selectedAd?.options || {}
-                                                                            )
-                                                                                ? '装饰组件不参与统计，已禁用。'
-                                                                                : '会向统计接口上报播放事件。'
+                                                                    )
+                                                                }
+                                                                help="自动播放通常需要静音。"
+                                                            />
+                                                            <ToggleControl
+                                                                label="首次展示自动播放"
+                                                                checked={Boolean(
+                                                                    videoSettings.autoplay_first
+                                                                )}
+                                                                onChange={(value) =>
+                                                                    handleUpdateVideoSettings(
+                                                                        {
+                                                                            autoplay_first:
+                                                                                value,
                                                                         }
-                                                                    />
-                                                                    <TextControl
-                                                                        label="备用提示文案"
-                                                                        value={
-                                                                            videoSettings.fallback_text ||
-                                                                            ''
+                                                                    )
+                                                                }
+                                                                help="仅首次展示时尝试自动播放（会强制静音）。"
+                                                            />
+                                                            <ToggleControl
+                                                                label="静音"
+                                                                checked={Boolean(
+                                                                    videoSettings.muted
+                                                                )}
+                                                                onChange={(value) =>
+                                                                    handleUpdateVideoSettings(
+                                                                        {
+                                                                            muted:
+                                                                                value,
                                                                         }
-                                                                        onChange={(value) =>
-                                                                            handleUpdateVideoSettings(
-                                                                                {
-                                                                                    fallback_text:
-                                                                                        value,
-                                                                                }
-                                                                            )
+                                                                    )
+                                                                }
+                                                            />
+                                                            <ToggleControl
+                                                                label="二次展示强制静音"
+                                                                checked={Boolean(
+                                                                    videoSettings.repeat_muted
+                                                                )}
+                                                                onChange={(value) =>
+                                                                    handleUpdateVideoSettings(
+                                                                        {
+                                                                            repeat_muted:
+                                                                                value,
                                                                         }
-                                                                        help="浏览器不支持视频时显示。"
-                                                                    />
-                                                                </>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    }}
-                                                </TabPanel>
+                                                                    )
+                                                                }
+                                                            />
+                                                            <ToggleControl
+                                                                label="循环"
+                                                                checked={Boolean(
+                                                                    videoSettings.loop
+                                                                )}
+                                                                onChange={(value) =>
+                                                                    handleUpdateVideoSettings(
+                                                                        {
+                                                                            loop:
+                                                                                value,
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                            <ToggleControl
+                                                                label="显示控制条"
+                                                                checked={
+                                                                    videoSettings.controls !==
+                                                                    false
+                                                                }
+                                                                onChange={(value) =>
+                                                                    handleUpdateVideoSettings(
+                                                                        {
+                                                                            controls:
+                                                                                value,
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                            <ToggleControl
+                                                                label="移动端内嵌播放"
+                                                                checked={
+                                                                    videoSettings.playsinline !==
+                                                                    false
+                                                                }
+                                                                onChange={(value) =>
+                                                                    handleUpdateVideoSettings(
+                                                                        {
+                                                                            playsinline:
+                                                                                value,
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                        </div>
+                                                        <ToggleControl
+                                                            label="追踪播放/暂停/完成"
+                                                            checked={Boolean(
+                                                                videoSettings.track_events
+                                                            )}
+                                                            onChange={(value) =>
+                                                                handleUpdateVideoSettings(
+                                                                    {
+                                                                        track_events:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                            disabled={isDecorativeUsage(
+                                                                selectedAd?.options || {}
+                                                            )}
+                                                            help={
+                                                                isDecorativeUsage(
+                                                                    selectedAd?.options || {}
+                                                                )
+                                                                    ? '装饰组件不参与统计，已禁用。'
+                                                                    : '会向统计接口上报播放事件。'
+                                                            }
+                                                        />
+                                                        <TextControl
+                                                            label="备用提示文案"
+                                                            value={
+                                                                videoSettings.fallback_text ||
+                                                                ''
+                                                            }
+                                                            onChange={(value) =>
+                                                                handleUpdateVideoSettings(
+                                                                    {
+                                                                        fallback_text:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                            help="浏览器不支持视频时显示。"
+                                                        />
+                                                    </PanelBody>
+                                                </Panel>
                                             );
                                         }}
                                     </TabPanel>
@@ -4037,7 +4289,13 @@ const AdsConfig = () => {
 
                         {activeContentType === 'block' && (
                             <Panel>
-                                <PanelBody initialOpen>
+                                <PanelBody
+                                    title="可视化编辑"
+                                    opened={contentPanelOpenState.block}
+                                    onToggle={() =>
+                                        toggleContentPanelOpen('block')
+                                    }
+                                >
                                     <TabPanel
                                         className="magick-ad-block-tabs"
                                         tabs={[
@@ -4825,15 +5083,38 @@ const AdsConfig = () => {
                             运行条件速览
                         </div>
                     )}
-                    <div className="magick-ad-runtime-summary__line">
-                        规则：位置 {runtimeContextMeta.placementLabel} · 页面 {runtimeContextMeta.pageLabel}{' '}
-                        {compact ? '' : `· 用途 ${runtimeContextMeta.usageLabel}`} · 设备{' '}
-                        {runtimeContextMeta.deviceRuleLabel} · 登录 {runtimeContextMeta.loginRuleLabel}
-                    </div>
-                    <div className="magick-ad-runtime-summary__line">
-                        环境：设备 {runtimeContextMeta.currentDeviceLabel} · 登录{' '}
-                        {runtimeContextMeta.currentLoginLabel}
-                    </div>
+                    {compact ? (
+                        <div className="magick-ad-runtime-summary__chips">
+                            <span className="magick-ad-runtime-summary__chip">
+                                规则 · {runtimeContextMeta.placementLabel}
+                            </span>
+                            <span className="magick-ad-runtime-summary__chip">
+                                页面 · {runtimeContextMeta.pageLabel}
+                            </span>
+                            <span className="magick-ad-runtime-summary__chip">
+                                设备 · {runtimeContextMeta.deviceRuleLabel}
+                            </span>
+                            <span className="magick-ad-runtime-summary__chip">
+                                登录 · {runtimeContextMeta.loginRuleLabel}
+                            </span>
+                            <span className="magick-ad-runtime-summary__chip is-env">
+                                环境 · {runtimeContextMeta.currentDeviceLabel} /{' '}
+                                {runtimeContextMeta.currentLoginLabel}
+                            </span>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="magick-ad-runtime-summary__line">
+                                规则：位置 {runtimeContextMeta.placementLabel} · 页面 {runtimeContextMeta.pageLabel} · 用途{' '}
+                                {runtimeContextMeta.usageLabel} · 设备{' '}
+                                {runtimeContextMeta.deviceRuleLabel} · 登录 {runtimeContextMeta.loginRuleLabel}
+                            </div>
+                            <div className="magick-ad-runtime-summary__line">
+                                环境：设备 {runtimeContextMeta.currentDeviceLabel} · 登录{' '}
+                                {runtimeContextMeta.currentLoginLabel}
+                            </div>
+                        </>
+                    )}
                     <div className="magick-ad-runtime-summary__status">
                         <span
                             className={`magick-ad-status-pill ${runtimeContextMeta.statusClassName}`}
@@ -4845,30 +5126,32 @@ const AdsConfig = () => {
                         </span>
                     </div>
                 </div>
-                <div className="magick-ad-runtime-summary__actions">
-                    <Button
-                        variant="secondary"
-                        onClick={() =>
-                            openRuntimeUrl(
-                                runtimeContextMeta.previewUrl,
-                                '预览地址生成失败，请检查预览配置。'
-                            )
-                        }
-                    >
-                        查看预览壳
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() =>
-                            openRuntimeUrl(
-                                runtimeContextMeta.diagnoseUrl,
-                                '诊断地址生成失败，请刷新后台后重试。'
-                            )
-                        }
-                    >
-                        查看真实诊断
-                    </Button>
-                </div>
+                {!compact && (
+                    <div className="magick-ad-runtime-summary__actions">
+                        <Button
+                            variant="secondary"
+                            onClick={() =>
+                                openRuntimeUrl(
+                                    runtimeContextMeta.previewUrl,
+                                    '预览地址生成失败，请检查预览配置。'
+                                )
+                            }
+                        >
+                            查看预览壳
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() =>
+                                openRuntimeUrl(
+                                    runtimeContextMeta.diagnoseUrl,
+                                    '诊断地址生成失败，请刷新后台后重试。'
+                                )
+                            }
+                        >
+                            查看真实诊断
+                        </Button>
+                    </div>
+                )}
             </div>
         );
     };
@@ -4901,122 +5184,171 @@ const AdsConfig = () => {
         </div>
     );
 
-    const renderPublishBody = () => (
-        <>
-            <SelectControl
-                label="发布状态"
-                value={resolveStatus(selectedAd)}
-                options={[
-                    { label: '已发布', value: 'publish' },
-                    { label: '待审核', value: 'pending' },
-                    { label: '草稿/停用', value: 'draft' },
-                    ...(resolveStatus(selectedAd) ===
-                    'future'
-                        ? [
-                              {
-                                  label: '已排期',
-                                  value: 'future',
-                                  disabled: true,
-                              },
-                          ]
-                        : []),
-                ]}
-                onChange={(value) => {
-                    if (!selectedAd) {
-                        return;
-                    }
-                    if (value === 'draft') {
+    const renderPublishBody = () => {
+        const toLocalInputValue = (date) => {
+            const pad = (num) => String(num).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+                date.getDate()
+            )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        };
+
+        return (
+            <>
+                <SelectControl
+                    label="发布状态"
+                    value={resolveStatus(selectedAd)}
+                    options={[
+                        { label: '已发布', value: 'publish' },
+                        { label: '待审核', value: 'pending' },
+                        { label: '草稿/停用', value: 'draft' },
+                        ...(resolveStatus(selectedAd) ===
+                        'future'
+                            ? [
+                                  {
+                                      label: '已排期',
+                                      value: 'future',
+                                      disabled: true,
+                                  },
+                              ]
+                            : []),
+                    ]}
+                    onChange={(value) => {
+                        if (!selectedAd) {
+                            return;
+                        }
+                        if (value === 'draft') {
+                            handleUpdateMeta({
+                                status: 'draft',
+                                options: {
+                                    ...selectedAd.options,
+                                    enabled: false,
+                                },
+                            });
+                            return;
+                        }
+                        if (value === 'pending') {
+                            handleUpdateMeta({
+                                status: 'pending',
+                                options: {
+                                    ...selectedAd.options,
+                                    enabled: true,
+                                },
+                            });
+                            return;
+                        }
+                        const nextDate =
+                            selectedAd.date &&
+                            isFutureDate(selectedAd.date)
+                                ? formatDateFromDate(new Date())
+                                : selectedAd.date || '';
                         handleUpdateMeta({
-                            status: 'draft',
-                            options: {
-                                ...selectedAd.options,
-                                enabled: false,
-                            },
-                        });
-                        return;
-                    }
-                    if (value === 'pending') {
-                        handleUpdateMeta({
-                            status: 'pending',
+                            status: 'publish',
+                            date: nextDate,
                             options: {
                                 ...selectedAd.options,
                                 enabled: true,
                             },
                         });
-                        return;
+                    }}
+                />
+                <div className="magick-ad-publish-quick">
+                    <Button
+                        variant="secondary"
+                        onClick={() =>
+                            handleUpdateOptions({
+                                start_date: '',
+                            })
+                        }
+                    >
+                        立即生效
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            const next = new Date();
+                            next.setDate(next.getDate() + 7);
+                            next.setHours(23, 59, 0, 0);
+                            handleUpdateOptions({
+                                end_date: formatDateTimeStorage(
+                                    toLocalInputValue(next)
+                                ),
+                            });
+                        }}
+                    >
+                        一周后结束
+                    </Button>
+                    <Button
+                        variant="tertiary"
+                        onClick={() =>
+                            handleUpdateOptions({
+                                end_date: '',
+                            })
+                        }
+                    >
+                        长期有效
+                    </Button>
+                </div>
+                {(() => {
+                    const runtime = runtimeMeta(selectedAd);
+                    if (!runtime.blocked) {
+                        return null;
                     }
-                    const nextDate =
-                        selectedAd.date &&
-                        isFutureDate(selectedAd.date)
-                            ? formatDateFromDate(new Date())
-                            : selectedAd.date || '';
-                    handleUpdateMeta({
-                        status: 'publish',
-                        date: nextDate,
-                        options: {
-                            ...selectedAd.options,
-                            enabled: true,
-                        },
-                    });
-                }}
-            />
-            <div className="magick-ad-right-subsection">
-                <div className="magick-ad-right-subsection__title">
-                    投放周期
-                </div>
-                <div className="magick-ad-right-subsection__body">
-                    <TextControl
-                        label="开始时间"
-                        type="datetime-local"
-                        value={formatDateTimeLocalInput(
-                            selectedAd.options?.start_date
-                        )}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                start_date:
-                                    formatDateTimeStorage(
-                                        value
-                                    ),
-                            })
+                    const noticeStatus =
+                        runtime.code === 'schedule_not_started' ||
+                        runtime.code === 'schedule_expired'
+                            ? 'warning'
+                            : 'info';
+                    return (
+                        <Notice status={noticeStatus} isDismissible={false}>
+                            {runtime.message}
+                        </Notice>
+                    );
+                })()}
+                <Panel className="magick-ad-right-inline-panel">
+                    <PanelBody
+                        title="精确排期（高级）"
+                        opened={publishAdvancedOpen}
+                        onToggle={() =>
+                            setPublishAdvancedOpen((prev) => !prev)
                         }
-                        help="开始时间为空表示立即生效。"
-                    />
-                    <TextControl
-                        label="结束时间"
-                        type="datetime-local"
-                        value={formatEndDateTimeLocalInput(
-                            selectedAd.options?.end_date
-                        )}
-                        onChange={(value) =>
-                            handleUpdateOptions({
-                                end_date:
-                                    formatDateTimeStorage(
-                                        value
-                                    ),
-                            })
-                        }
-                        help="结束时间为空表示长期有效，支持到分钟。"
-                    />
-                    {(() => {
-                        const runtime = runtimeMeta(selectedAd);
-                        if (!runtime.blocked) {
-                            return null;
-                        }
-                        const noticeStatus =
-                            runtime.code === 'schedule_not_started' ||
-                            runtime.code === 'schedule_expired'
-                                ? 'warning'
-                                : 'info';
-                        return (
-                            <Notice status={noticeStatus} isDismissible={false}>
-                                {runtime.message}
-                            </Notice>
-                        );
-                    })()}
-                </div>
-            </div>
-        </>
-    );
+                    >
+                        <TextControl
+                            label="开始时间"
+                            type="datetime-local"
+                            value={formatDateTimeLocalInput(
+                                selectedAd.options?.start_date
+                            )}
+                            onChange={(value) =>
+                                handleUpdateOptions({
+                                    start_date:
+                                        formatDateTimeStorage(
+                                            value
+                                        ),
+                                })
+                            }
+                            help="开始时间为空表示立即生效。"
+                        />
+                        <TextControl
+                            label="结束时间"
+                            type="datetime-local"
+                            value={formatEndDateTimeLocalInput(
+                                selectedAd.options?.end_date
+                            )}
+                            onChange={(value) =>
+                                handleUpdateOptions({
+                                    end_date:
+                                        formatDateTimeStorage(
+                                            value
+                                        ),
+                                })
+                            }
+                            help="结束时间为空表示长期有效，支持到分钟。"
+                        />
+                    </PanelBody>
+                </Panel>
+            </>
+        );
+    };
 
     const renderPublishSection = ({ compactHeader = false } = {}) => (
         <div className="magick-ad-right-section">
@@ -5043,6 +5375,7 @@ const AdsConfig = () => {
         id,
         title,
         summary,
+        summaryMode = 'text',
         children,
     }) => {
         const isOpen = rightPanelOpen === id;
@@ -5065,7 +5398,11 @@ const AdsConfig = () => {
                             {title}
                         </span>
                         {summary ? (
-                            <span className="magick-ad-right-accordion__summary">
+                            <span
+                                className={`magick-ad-right-accordion__summary ${
+                                    summaryMode === 'chips' ? 'is-chips' : ''
+                                }`}
+                            >
                                 {summary}
                             </span>
                         ) : null}
@@ -5102,12 +5439,110 @@ const AdsConfig = () => {
     );
 
     const renderRuntimeSummaryLabel = runtimeContextMeta
-        ? `位置 ${runtimeContextMeta.placementLabel} · 页面 ${runtimeContextMeta.pageLabel}`
+        ? (
+              <span className="magick-ad-right-accordion__summary-pills">
+                  <span className="magick-ad-right-accordion__summary-chip">
+                      设备 {runtimeContextMeta.currentDeviceLabel}
+                  </span>
+                  <span className="magick-ad-right-accordion__summary-chip">
+                      登录 {runtimeContextMeta.currentLoginLabel}
+                  </span>
+              </span>
+          )
         : '';
 
     const renderPlacementSummaryLabel = runtimeContextMeta
-        ? `设备 ${runtimeContextMeta.deviceRuleLabel} · 登录 ${runtimeContextMeta.loginRuleLabel}`
+        ? (
+              <span className="magick-ad-right-accordion__summary-pills">
+                  <span className="magick-ad-right-accordion__summary-chip">
+                      位置 {runtimeContextMeta.placementLabel}
+                  </span>
+                  <span className="magick-ad-right-accordion__summary-chip">
+                      页面 {runtimeContextMeta.pageLabel}
+                  </span>
+              </span>
+          )
         : '';
+
+    const renderRightPrioritySummary = () => {
+        if (!selectedAd || !runtimeContextMeta) {
+            return null;
+        }
+        const publish = statusMeta(selectedAd);
+        const reasonText = runtimeContextMeta.reasonText || '可按当前规则展示。';
+        const compactReasonText =
+            reasonText.length > 32
+                ? `${reasonText.slice(0, 32)}...`
+                : reasonText;
+        return (
+            <div className="magick-ad-right-priority">
+                <div className="magick-ad-right-priority__head">
+                    <div className="magick-ad-right-priority__title">
+                        运行结论
+                    </div>
+                    <div className="magick-ad-right-priority__status">
+                        <span
+                            className={`magick-ad-status-pill ${publish.className}`}
+                        >
+                            {publish.label}
+                        </span>
+                        <span
+                            className={`magick-ad-status-pill ${runtimeContextMeta.statusClassName}`}
+                        >
+                            {runtimeContextMeta.statusLabel}
+                        </span>
+                    </div>
+                </div>
+                <div className="magick-ad-right-priority__line">
+                    <p className="magick-ad-right-priority__reason">
+                        {compactReasonText}
+                    </p>
+                    <Button
+                        variant="tertiary"
+                        onClick={() => setRightPanelOpen('runtime')}
+                    >
+                        查看条件
+                    </Button>
+                </div>
+                <div className="magick-ad-right-priority__actions">
+                    <Button
+                        variant="tertiary"
+                        onClick={() => setRightPanelOpen('publish')}
+                    >
+                        排期
+                    </Button>
+                    <Button
+                        variant="tertiary"
+                        onClick={() => setRightPanelOpen('placement')}
+                    >
+                        投放
+                    </Button>
+                    <Button
+                        variant="tertiary"
+                        onClick={() =>
+                            openRuntimeUrl(
+                                runtimeContextMeta.previewUrl,
+                                '预览地址生成失败，请检查预览配置。'
+                            )
+                        }
+                    >
+                        预览
+                    </Button>
+                    <Button
+                        variant="tertiary"
+                        onClick={() =>
+                            openRuntimeUrl(
+                                runtimeContextMeta.diagnoseUrl,
+                                '诊断地址生成失败，请刷新后台后重试。'
+                            )
+                        }
+                    >
+                        诊断
+                    </Button>
+                </div>
+            </div>
+        );
+    };
 
     const renderPublishModalSection = () => renderPublishSection();
 
@@ -5258,90 +5693,250 @@ const AdsConfig = () => {
         </Panel>
     );
 
-    const renderPlacementSection = () => (
+    const renderPlacementRulesControls = ({
+        includeValidation = false,
+        includeAudience = false,
+        includeNode = false,
+        includeFrequency = false,
+        behavior = {},
+    } = {}) => (
         <>
-            <div className="magick-ad-right-section">
-                <div className="magick-ad-right-section__body">
-                <SelectControl
-                    label="用途类型"
-                    value={normalizeUsageType(selectedAd?.options?.usage_type || 'ad')}
-                    options={usageOptions}
-                    onChange={(value) =>
-                        handleUpdateOptions({
-                            usage_type: normalizeUsageType(value),
-                        })
-                    }
-                    help="“装饰组件”会自动禁用统计、频控和 A/B，并限制到非侵入位置。"
-                />
-                {isDecorativeUsage(selectedAd?.options || {}) && (
-                    <Notice status="info" isDismissible={false}>
-                        当前为“装饰组件”：仅支持顶部/内容区/底部位置，且不参与统计与频控。
+            {includeValidation &&
+                showValidation &&
+                !resolvePlacement(selectedAd.options || {}).hook && (
+                    <Notice status="error" isDismissible={false}>
+                        请先选择展示位置
                     </Notice>
                 )}
-                {isSimpleLevel ? (
-                    <Notice status="info" isDismissible={false}>
-                        简洁级别已锁定为“快速模式”，仅保留页面插入与基础投放能力。
-                    </Notice>
-                ) : (
-                    <div className="magick-ad-mode-switch">
-                        <div className="magick-ad-mode-switch__label">
-                            编辑模式
+            {selectedAd.options?.ad_type === 'global' && (
+                <>
+                    <SelectControl
+                        label="展示页面"
+                        value={selectedAd.options?.show_page || 'all'}
+                        options={DISPLAY_PAGE_OPTIONS}
+                        onChange={(value) => {
+                            const usageType = normalizeUsageType(
+                                selectedAd.options?.usage_type || 'ad'
+                            );
+                            const allowedPositions = getPositionOptions(value)
+                                .filter((option) =>
+                                    usageType === 'decorative'
+                                        ? !['head', 'node'].includes(
+                                              option.value
+                                          )
+                                        : true
+                                )
+                                .map((option) => option.value);
+                            const currentPlacement = resolvePlacement(
+                                selectedAd.options || {}
+                            );
+                            const currentValue =
+                                placementToSlotValue(currentPlacement);
+                            const nextPosition =
+                                allowedPositions.includes(currentValue)
+                                    ? currentValue
+                                    : '';
+                            applyPlacementSelection(nextPosition, {
+                                show_page: value,
+                            });
+                        }}
+                    />
+                    <SelectControl
+                        label="展示位置"
+                        value={placementToSlotValue(
+                            resolvePlacement(selectedAd.options || {})
+                        )}
+                        options={positionOptions}
+                        onChange={(value) => applyPlacementSelection(value)}
+                    />
+                </>
+            )}
+            {selectedAd.options?.ad_type === 'targeted' && (
+                <>
+                    <SelectControl
+                        label="展示类型"
+                        value={selectedAd.options?.target_type || ''}
+                        options={TARGET_TYPE_OPTIONS}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                target_type: value,
+                                target_values: [],
+                            })
+                        }
+                    />
+                    <FormTokenField
+                        label="展示页面"
+                        value={selectedAd.options?.target_values || []}
+                        onChange={(value) =>
+                            handleUpdateOptions({
+                                target_values: value,
+                            })
+                        }
+                        suggestions={
+                            selectedAd.options?.target_suggestions || []
+                        }
+                        help={
+                            selectedAd.options?.target_type
+                                ? '支持输入并搜索添加多个目标'
+                                : '请先选择展示类型'
+                        }
+                        disabled={!selectedAd.options?.target_type}
+                    />
+                </>
+            )}
+            {includeAudience && renderDeviceLoginControls()}
+            {includeNode && renderNodePlacement()}
+            {includeFrequency && renderFrequencySummary(behavior)}
+        </>
+    );
+
+    const renderPanelTitleWithSummary = (title, summary = '') => (
+        <div className="magick-ad-panel-title magick-ad-panel-title--compact">
+            <span>{title}</span>
+            {summary ? (
+                <span className="magick-ad-panel-title__summary">
+                    {summary}
+                </span>
+            ) : null}
+        </div>
+    );
+
+    const renderPlacementSection = () => {
+        const usageLabel = getUsageLabel(
+            normalizeUsageType(selectedAd?.options?.usage_type || 'ad')
+        );
+        const modeLabel = editorModeLabels[effectiveEditorMode] || '设计';
+        const placement = resolvePlacement(selectedAd?.options || {});
+        const nodeSummary =
+            placement.hook === 'node' ? '节点已启用' : '节点未启用';
+        return (
+            <>
+                <div className="magick-ad-right-section">
+                    <div className="magick-ad-right-section__body">
+                        <div className="magick-ad-right-overview">
+                            <span className="magick-ad-right-overview__item">
+                                用途
+                                <strong>{usageLabel}</strong>
+                            </span>
+                            <span className="magick-ad-right-overview__item">
+                                模式
+                                <strong>{modeLabel}</strong>
+                            </span>
+                            <span className="magick-ad-right-overview__item">
+                                容器
+                                <strong>
+                                    {resolveContainerTypeLabel(
+                                        selectedAd?.options || {}
+                                    )}
+                                </strong>
+                            </span>
+                            <span className="magick-ad-right-overview__item">
+                                位置
+                                <strong>
+                                    {resolvePlacementLabel(
+                                        selectedAd?.options || {}
+                                    )}
+                                </strong>
+                            </span>
                         </div>
-                        <ButtonGroup>
-                            <Button
-                                variant="secondary"
-                                isPressed={
-                                    effectiveEditorMode === 'quick'
-                                }
-                                onClick={() =>
-                                    updateEditorMode('quick')
-                                }
-                            >
-                                快速模式
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                isPressed={
-                                    effectiveEditorMode === 'design'
-                                }
-                                onClick={() =>
-                                    updateEditorMode('design')
-                                }
-                            >
-                                设计模式
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                isPressed={
-                                    effectiveEditorMode === 'expert'
-                                }
-                                onClick={() => {
-                                    if (!canUnfilteredHtml) {
-                                        showNotice(
-                                            'error',
-                                            '当前账号无 unfiltered_html 权限，无法启用专家模式。',
-                                            3500
-                                        );
-                                        return;
-                                    }
-                                    updateEditorMode('expert');
-                                }}
-                                disabled={!canUnfilteredHtml}
-                            >
-                                专家模式
-                            </Button>
-                        </ButtonGroup>
-                    </div>
-                )}
-                {editorModeRaw === 'expert' &&
-                    !canUnfilteredHtml && (
-                        <Notice
-                            status="warning"
-                            isDismissible={false}
-                        >
-                            专家模式需要 unfiltered_html
-                            权限，已回退为设计模式。
+                    {isSimpleLevel ? (
+                        <Notice status="info" isDismissible={false}>
+                            简洁级别已锁定为“快速模式”，仅保留页面插入与基础投放能力。
                         </Notice>
+                    ) : (
+                        <Panel className="magick-ad-right-inline-panel">
+                            <PanelBody
+                                title={renderPanelTitleWithSummary(
+                                    '高级规则（用途与模式）',
+                                    `${usageLabel} · ${modeLabel}`
+                                )}
+                                opened={placementRulesAdvancedOpen}
+                                onToggle={() =>
+                                    setPlacementRulesAdvancedOpen((prev) => !prev)
+                                }
+                            >
+                                <p className="magick-ad-right-inline-note">
+                                    调整用途类型、编辑模式和专家能力。日常投放可保持默认。
+                                </p>
+                                <SelectControl
+                                    label="用途类型"
+                                    value={normalizeUsageType(
+                                        selectedAd?.options?.usage_type || 'ad'
+                                    )}
+                                    options={usageOptions}
+                                    onChange={(value) =>
+                                        handleUpdateOptions({
+                                            usage_type: normalizeUsageType(value),
+                                        })
+                                    }
+                                    help="“装饰组件”会自动禁用统计、频控和 A/B，并限制到非侵入位置。"
+                                />
+                                {isDecorativeUsage(selectedAd?.options || {}) && (
+                                    <Notice status="info" isDismissible={false}>
+                                        当前为“装饰组件”：仅支持顶部/内容区/底部位置，且不参与统计与频控。
+                                    </Notice>
+                                )}
+                                <div className="magick-ad-mode-switch">
+                                    <div className="magick-ad-mode-switch__label">
+                                        编辑模式
+                                    </div>
+                                    <ButtonGroup className="magick-ad-mode-switch__group">
+                                        <Button
+                                            variant="secondary"
+                                            isPressed={
+                                                effectiveEditorMode === 'quick'
+                                            }
+                                            onClick={() =>
+                                                updateEditorMode('quick')
+                                            }
+                                        >
+                                            快速模式
+                                        </Button>
+                                        <Button
+                                            variant="secondary"
+                                            isPressed={
+                                                effectiveEditorMode === 'design'
+                                            }
+                                            onClick={() =>
+                                                updateEditorMode('design')
+                                            }
+                                        >
+                                            设计模式
+                                        </Button>
+                                        <Button
+                                            variant="secondary"
+                                            isPressed={
+                                                effectiveEditorMode === 'expert'
+                                            }
+                                            onClick={() => {
+                                                if (!canUnfilteredHtml) {
+                                                    showNotice(
+                                                        'error',
+                                                        '当前账号无 unfiltered_html 权限，无法启用专家模式。',
+                                                        3500
+                                                    );
+                                                    return;
+                                                }
+                                                updateEditorMode('expert');
+                                            }}
+                                            disabled={!canUnfilteredHtml}
+                                        >
+                                            专家模式
+                                        </Button>
+                                    </ButtonGroup>
+                                </div>
+                                {editorModeRaw === 'expert' &&
+                                    !canUnfilteredHtml && (
+                                        <Notice
+                                            status="warning"
+                                            isDismissible={false}
+                                        >
+                                            专家模式需要 unfiltered_html
+                                            权限，已回退为设计模式。
+                                        </Notice>
+                                    )}
+                            </PanelBody>
+                        </Panel>
                     )}
                 {effectiveEditorMode === 'quick' && (
                     <Panel>
@@ -5356,147 +5951,41 @@ const AdsConfig = () => {
                                 )
                             }
                         >
-                            <Notice status="info" isDismissible={false}>
+                            <p className="magick-ad-right-inline-note">
                                 {isSimpleLevel
                                     ? '简洁级别仅保留页面插入能力。'
                                     : '快速模式仅保留页面插入能力；样式、频控与高级能力请切换到设计模式/专家模式。'}
-                            </Notice>
-                            {showValidation &&
-                                !resolvePlacement(
-                                    selectedAd.options || {}
-                                ).hook && (
-                                    <Notice
-                                        status="error"
-                                        isDismissible={false}
-                                    >
-                                        请先选择展示位置
-                                    </Notice>
-                                )}
-                            {selectedAd.options?.ad_type ===
-                                'global' && (
-                                <>
-                                    <SelectControl
-                                        label="展示页面"
-                                        value={
-                                            selectedAd.options
-                                                ?.show_page ||
-                                            'all'
-                                        }
-                                        options={DISPLAY_PAGE_OPTIONS}
-                                        onChange={(value) => {
-                                            const usageType =
-                                                normalizeUsageType(
-                                                    selectedAd.options
-                                                        ?.usage_type || 'ad'
-                                                );
-                                            const allowedPositions =
-                                                getPositionOptions(value)
-                                                    .filter((option) =>
-                                                        usageType ===
-                                                        'decorative'
-                                                            ? ![
-                                                                  'head',
-                                                                  'node',
-                                                              ].includes(
-                                                                  option.value
-                                                              )
-                                                            : true
-                                                    )
-                                                    .map(
-                                                        (option) =>
-                                                            option.value
-                                                    );
-                                            const currentPlacement =
-                                                resolvePlacement(
-                                                    selectedAd.options ||
-                                                        {}
-                                                );
-                                            const currentValue =
-                                                placementToSlotValue(
-                                                    currentPlacement
-                                                );
-                                            const nextPosition =
-                                                allowedPositions.includes(
-                                                    currentValue
-                                                )
-                                                    ? currentValue
-                                                    : '';
-                                            applyPlacementSelection(
-                                                nextPosition,
-                                                {
-                                                    show_page:
-                                                        value,
-                                                }
-                                            );
-                                        }}
-                                    />
-                                    <SelectControl
-                                        label="展示位置"
-                                        value={placementToSlotValue(
-                                            resolvePlacement(
-                                                selectedAd.options ||
-                                                    {}
-                                            )
+                            </p>
+                            {renderPlacementRulesControls({
+                                includeValidation: true,
+                            })}
+                            {!isSimpleLevel && (
+                                <Panel className="magick-ad-right-inline-panel">
+                                    <PanelBody
+                                        title={renderPanelTitleWithSummary(
+                                            '高级规则（节点）',
+                                            nodeSummary
                                         )}
-                                        options={positionOptions}
-                                        onChange={(value) =>
-                                            applyPlacementSelection(
-                                                value
+                                        opened={
+                                            placementAdvancedOpen === 'quick'
+                                        }
+                                        onToggle={() =>
+                                            setPlacementAdvancedOpen((prev) =>
+                                                prev === 'quick'
+                                                    ? null
+                                                    : 'quick'
                                             )
                                         }
-                                    />
-                                </>
+                                    >
+                                        <p className="magick-ad-right-inline-note">
+                                            仅在“位置=节点”时需要配置，普通投放可忽略。
+                                        </p>
+                                        {renderPlacementRulesControls({
+                                            includeNode: true,
+                                        })}
+                                    </PanelBody>
+                                </Panel>
                             )}
-                            {selectedAd.options?.ad_type ===
-                                'targeted' && (
-                                <>
-                                    <SelectControl
-                                        label="展示类型"
-                                        value={
-                                            selectedAd.options
-                                                ?.target_type ||
-                                            ''
-                                        }
-                                        options={TARGET_TYPE_OPTIONS}
-                                        onChange={(value) =>
-                                            handleUpdateOptions({
-                                                target_type: value,
-                                                target_values: [],
-                                            })
-                                        }
-                                    />
-                                    <FormTokenField
-                                        label="展示页面"
-                                        value={
-                                            selectedAd.options
-                                                ?.target_values ||
-                                            []
-                                        }
-                                        onChange={(value) =>
-                                            handleUpdateOptions({
-                                                target_values:
-                                                    value,
-                                            })
-                                        }
-                                        suggestions={
-                                            selectedAd.options
-                                                ?.target_suggestions ||
-                                            []
-                                        }
-                                        help={
-                                            selectedAd.options
-                                                ?.target_type
-                                                ? '支持输入并搜索添加多个目标'
-                                                : '请先选择展示类型'
-                                        }
-                                        disabled={
-                                            !selectedAd.options
-                                                ?.target_type
-                                        }
-                                    />
-                                </>
-                            )}
-                            {!isSimpleLevel && renderNodePlacement()}
                         </PanelBody>
                     </Panel>
                 )}
@@ -5632,10 +6121,6 @@ const AdsConfig = () => {
                                                             {
                                                                 name: 'appearance',
                                                                 title: '外观',
-                                                            },
-                                                            {
-                                                                name: 'badge',
-                                                                title: '角标',
                                                             },
                                                         ]}
                                                         initialTabName={
@@ -6072,155 +6557,25 @@ const AdsConfig = () => {
                                                                 );
                                                             }
 
-                                                            if (
-                                                                subTab.name ===
-                                                                'badge'
-                                                            ) {
-                                                                return (
-                                                                    <>
-                                                                        <ToggleControl
-                                                                            label="显示角标"
-                                                                            checked={Boolean(
-                                                                                containerStyle.badge_enabled
-                                                                            )}
-                                                                            onChange={(
-                                                                                value
-                                                                            ) =>
-                                                                                handleUpdateContainerStyle(
-                                                                                    {
-                                                                                        badge_enabled:
-                                                                                            value,
-                                                                                    }
-                                                                                )
-                                                                            }
-                                                                        />
-                                                                        {containerStyle.badge_enabled && (
-                                                                            <>
-                                                                                <div className="magick-ad-field">
-                                                                                    <p className="magick-ad-field__label">
-                                                                                        角标类型
-                                                                                    </p>
-                                                                                    <ButtonGroup>
-                                                                                        <Button
-                                                                                            variant="secondary"
-                                                                                            isPressed={
-                                                                                                (containerStyle.badge_type ||
-                                                                                                    'text') ===
-                                                                                                'text'
-                                                                                            }
-                                                                                            onClick={() =>
-                                                                                                handleUpdateContainerStyle(
-                                                                                                    {
-                                                                                                        badge_type:
-                                                                                                            'text',
-                                                                                                    }
-                                                                                                )
-                                                                                            }
-                                                                                        >
-                                                                                            文本
-                                                                                        </Button>
-                                                                                        <Button
-                                                                                            variant="secondary"
-                                                                                            isPressed={
-                                                                                                containerStyle.badge_type ===
-                                                                                                'image'
-                                                                                            }
-                                                                                            onClick={() =>
-                                                                                                handleUpdateContainerStyle(
-                                                                                                    {
-                                                                                                        badge_type:
-                                                                                                            'image',
-                                                                                                    }
-                                                                                                )
-                                                                                            }
-                                                                                        >
-                                                                                            图片
-                                                                                        </Button>
-                                                                                    </ButtonGroup>
-                                                                                </div>
-                                                                                {(containerStyle.badge_type ||
-                                                                                    'text') ===
-                                                                                'text' ? (
-                                                                                    <>
-                                                                                        <TextControl
-                                                                                            label="角标文本"
-                                                                                            value={
-                                                                                                containerStyle.badge_text ||
-                                                                                                '广告'
-                                                                                            }
-                                                                                            onChange={(
-                                                                                                value
-                                                                                            ) =>
-                                                                                                handleUpdateContainerStyle(
-                                                                                                    {
-                                                                                                        badge_text:
-                                                                                                            value,
-                                                                                                    }
-                                                                                                )
-                                                                                            }
-                                                                                        />
-                                                                                        <div className="magick-ad-field">
-                                                                                            <p className="magick-ad-field__label">
-                                                                                                角标颜色
-                                                                                            </p>
-                                                                                            <ColorPicker
-                                                                                                color={
-                                                                                                    containerStyle.badge_color ||
-                                                                                                    '#1d2327'
-                                                                                                }
-                                                                                                onChangeComplete={(
-                                                                                                    value
-                                                                                                ) =>
-                                                                                                    handleUpdateContainerStyle(
-                                                                                                        {
-                                                                                                            badge_color:
-                                                                                                                formatColorValue(
-                                                                                                                    value
-                                                                                                                ),
-                                                                                                        }
-                                                                                                    )
-                                                                                                }
-                                                                                            />
-                                                                                        </div>
-                                                                                    </>
-                                                                                ) : (
-                                                                                    <div className="magick-ad-field">
-                                                                                        <p className="magick-ad-field__label">
-                                                                                            角标图片
-                                                                                        </p>
-                                                                                        <ImagePicker
-                                                                                            value={
-                                                                                                containerStyle.badge_image ||
-                                                                                                {}
-                                                                                            }
-                                                                                            onChange={(
-                                                                                                value
-                                                                                            ) =>
-                                                                                                handleUpdateContainerStyle(
-                                                                                                    {
-                                                                                                        badge_image:
-                                                                                                            value,
-                                                                                                        badge_type:
-                                                                                                            'image',
-                                                                                                    }
-                                                                                                )
-                                                                                            }
-                                                                                        />
-                                                                                        <p className="magick-ad-field__help">
-                                                                                            推荐尺寸：56×28 或 64×32（2x）；
-                                                                                            格式：PNG/SVG（透明背景），建议 ≤ 100KB。
-                                                                                        </p>
-                                                                                    </div>
-                                                                                )}
-                                                                            </>
-                                                                        )}
-                                                                    </>
-                                                                );
-                                                            }
-
                                                             return null;
                                                         }}
                                                     </TabPanel>
+                                                    <Panel className="magick-ad-right-inline-panel">
+                                                        <PanelBody
+                                                            title="高级外观（角标）"
+                                                            opened={containerAdvancedOpen}
+                                                            onToggle={() =>
+                                                                setContainerAdvancedOpen((prev) => !prev)
+                                                            }
+                                                        >
+                                                            <p className="magick-ad-right-inline-note">
+                                                                角标属于低频项，建议完成基础外观后再配置。
+                                                            </p>
+                                                            {renderContainerBadgeControls(
+                                                                containerStyle
+                                                            )}
+                                                        </PanelBody>
+                                                    </Panel>
                                                 </>
                                             )}
                                         </PanelBody>
@@ -6232,7 +6587,7 @@ const AdsConfig = () => {
                                 return (
                                     <Panel>
                                         <PanelBody
-                                            title="交互行为"
+                                            title="核心交互"
                                             initialOpen
                                         >
                                             <SelectControl
@@ -6268,6 +6623,38 @@ const AdsConfig = () => {
                                                 }
                                                 help="默认关闭。开启后在广告右上角显示关闭按钮。"
                                             />
+                                            <RangeControl
+                                                label="延迟显示（秒）"
+                                                min={0}
+                                                max={30}
+                                                value={
+                                                    behavior.delay ??
+                                                    0
+                                                }
+                                                onChange={(value) =>
+                                                    handleUpdateBehavior(
+                                                        {
+                                                            delay: Number(
+                                                                value
+                                                            ),
+                                                        }
+                                                    )
+                                                }
+                                                help="默认 0 秒。仅对弹窗/横栏/插屏生效。"
+                                            />
+                                        </PanelBody>
+                                        <PanelBody
+                                            title="高级交互"
+                                            opened={behaviorAdvancedOpen}
+                                            onToggle={() =>
+                                                setBehaviorAdvancedOpen((prev) => !prev)
+                                            }
+                                        >
+                                            {!isExpertMode && (
+                                                <Notice status="info" isDismissible={false}>
+                                                    切换到专家模式可配置 ESC 关闭、遮罩关闭与锁滚动。
+                                                </Notice>
+                                            )}
                                             {isExpertMode && (
                                                 <>
                                                     <ToggleControl
@@ -6319,25 +6706,6 @@ const AdsConfig = () => {
                                                     />
                                                 </>
                                             )}
-                                            <RangeControl
-                                                label="延迟显示（秒）"
-                                                min={0}
-                                                max={30}
-                                                value={
-                                                    behavior.delay ??
-                                                    0
-                                                }
-                                                onChange={(value) =>
-                                                    handleUpdateBehavior(
-                                                        {
-                                                            delay: Number(
-                                                                value
-                                                            ),
-                                                        }
-                                                    )
-                                                }
-                                                help="默认 0 秒。仅对弹窗/横栏/插屏生效。"
-                                            />
                                         </PanelBody>
                                     </Panel>
                                 );
@@ -6354,187 +6722,35 @@ const AdsConfig = () => {
                                         </Notice>
                                     )}
                                     <PanelBody
-                                        title="展示位置"
+                                        title="核心投放"
                                         initialOpen
                                     >
-                                        {showValidation &&
-                                            !resolvePlacement(
-                                                selectedAd.options ||
-                                                    {}
-                                            ).hook && (
-                                                <Notice
-                                                    status="error"
-                                                    isDismissible={
-                                                        false
-                                                    }
-                                                >
-                                                    请先选择展示位置
-                                                </Notice>
-                                            )}
-                                        {selectedAd.options
-                                            ?.ad_type ===
-                                            'global' && (
-                                            <>
-                                                <SelectControl
-                                                    label="展示页面"
-                                                    value={
-                                                        selectedAd
-                                                            .options
-                                                            ?.show_page ||
-                                                        'all'
-                                                    }
-                                                    options={
-                                                        DISPLAY_PAGE_OPTIONS
-                                                    }
-                                                    onChange={(
-                                                        value
-                                                    ) => {
-                                                        const usageType =
-                                                            normalizeUsageType(
-                                                                selectedAd
-                                                                    .options
-                                                                    ?.usage_type ||
-                                                                    'ad'
-                                                            );
-                                                        const allowedPositions =
-                                                            getPositionOptions(
-                                                                value
-                                                            )
-                                                                .filter(
-                                                                    (
-                                                                        option
-                                                                    ) =>
-                                                                        usageType ===
-                                                                        'decorative'
-                                                                            ? ![
-                                                                                  'head',
-                                                                                  'node',
-                                                                              ].includes(
-                                                                                  option.value
-                                                                              )
-                                                                            : true
-                                                                )
-                                                                .map(
-                                                                    (
-                                                                        option
-                                                                    ) =>
-                                                                        option.value
-                                                                );
-                                                        const currentPlacement =
-                                                            resolvePlacement(
-                                                                selectedAd.options ||
-                                                                    {}
-                                                            );
-                                                        const currentValue =
-                                                            placementToSlotValue(
-                                                                currentPlacement
-                                                            );
-                                                        const nextPosition =
-                                                            allowedPositions.includes(
-                                                                currentValue
-                                                            )
-                                                                ? currentValue
-                                                                : '';
-                                                        applyPlacementSelection(
-                                                            nextPosition,
-                                                            {
-                                                                show_page:
-                                                                    value,
-                                                            }
-                                                        );
-                                                    }}
-                                                />
-                                                <SelectControl
-                                                    label="展示位置"
-                                                    value={placementToSlotValue(
-                                                        resolvePlacement(
-                                                            selectedAd.options ||
-                                                                {}
-                                                        )
-                                                    )}
-                                                    options={
-                                                        positionOptions
-                                                    }
-                                                    onChange={(
-                                                        value
-                                                    ) =>
-                                                        applyPlacementSelection(
-                                                            value
-                                                        )
-                                                    }
-                                                />
-                                            </>
+                                        {renderPlacementRulesControls({
+                                            includeValidation: true,
+                                        })}
+                                    </PanelBody>
+                                    <PanelBody
+                                        title={renderPanelTitleWithSummary(
+                                            '高级规则（设备/登录/节点/频控）',
+                                            `设备 ${runtimeContextMeta?.deviceRuleLabel || '全部'} · 登录 ${runtimeContextMeta?.loginRuleLabel || '全部'} · 频控 ${getFrequencySummary(behavior)}`
                                         )}
-                                        {selectedAd.options
-                                            ?.ad_type ===
-                                            'targeted' && (
-                                            <>
-                                                <SelectControl
-                                                    label="展示类型"
-                                                    value={
-                                                        selectedAd
-                                                            .options
-                                                            ?.target_type ||
-                                                        ''
-                                                    }
-                                                    options={
-                                                        TARGET_TYPE_OPTIONS
-                                                    }
-                                                    onChange={(
-                                                        value
-                                                    ) =>
-                                                        handleUpdateOptions(
-                                                            {
-                                                                target_type:
-                                                                    value,
-                                                                target_values:
-                                                                    [],
-                                                            }
-                                                        )
-                                                    }
-                                                />
-                                                <FormTokenField
-                                                    label="展示页面"
-                                                    value={
-                                                        selectedAd
-                                                            .options
-                                                            ?.target_values ||
-                                                        []
-                                                    }
-                                                    onChange={(
-                                                        value
-                                                    ) =>
-                                                        handleUpdateOptions(
-                                                            {
-                                                                target_values:
-                                                                    value,
-                                                            }
-                                                        )
-                                                    }
-                                                    suggestions={
-                                                        selectedAd
-                                                            .options
-                                                            ?.target_suggestions ||
-                                                        []
-                                                    }
-                                                    help={
-                                                        selectedAd
-                                                            .options
-                                                            ?.target_type
-                                                            ? '支持输入并搜索添加多个目标'
-                                                            : '请先选择展示类型'
-                                                    }
-                                                    disabled={
-                                                        !selectedAd
-                                                            .options
-                                                            ?.target_type
-                                                    }
-                                                />
-                                            </>
-                                        )}
-                                        {renderDeviceLoginControls()}
-                                        {isExpertMode && renderNodePlacement()}
-                                        {renderFrequencySummary(behavior)}
+                                        opened={
+                                            placementAdvancedOpen === 'design'
+                                        }
+                                        onToggle={() =>
+                                            setPlacementAdvancedOpen((prev) =>
+                                                prev === 'design'
+                                                    ? null
+                                                    : 'design'
+                                            )
+                                        }
+                                    >
+                                        {renderPlacementRulesControls({
+                                            includeAudience: true,
+                                            includeNode: isExpertMode,
+                                            includeFrequency: true,
+                                            behavior,
+                                        })}
                                     </PanelBody>
                                 </Panel>
                             );
@@ -6543,41 +6759,76 @@ const AdsConfig = () => {
                 )}
             </div>
         </div>
-        </>
-    );
+            </>
+        );
+    };
 
     const toolbarActions = selectedAd ? (
-        <>
-            <Button
-                className="magick-ad-toolbar-toggle magick-ad-toolbar-toggle--text"
-                icon={megaphone}
-                label="投放设置"
-                variant="tertiary"
-                onClick={() => setPlacementModalOpen(true)}
-            >
-                投放
-            </Button>
-            <Button
-                className="magick-ad-toolbar-toggle magick-ad-toolbar-toggle--text"
-                icon={calendar}
-                label="发布与排期"
-                variant="tertiary"
-                onClick={() => {
-                    setPublishModalOpen(true);
+        <div className="magick-ad-toolbar-actions">
+            <div className="magick-ad-toolbar-actions__primary">
+                <Button
+                    className="magick-ad-toolbar-toggle magick-ad-toolbar-toggle--text"
+                    icon={megaphone}
+                    label="投放设置"
+                    variant="tertiary"
+                    onClick={() => setPlacementModalOpen(true)}
+                >
+                    投放
+                </Button>
+                <Button
+                    className="magick-ad-toolbar-toggle magick-ad-toolbar-toggle--text"
+                    icon={calendar}
+                    label="发布与排期"
+                    variant="tertiary"
+                    onClick={() => {
+                        setPublishModalOpen(true);
+                    }}
+                >
+                    排期
+                </Button>
+            </div>
+            <DropdownMenu
+                className="magick-ad-toolbar-actions__more"
+                icon={moreHorizontal}
+                label="高级工具"
+                toggleProps={{
+                    variant: 'tertiary',
+                    className: 'magick-ad-toolbar-toggle',
                 }}
             >
-                排期
-            </Button>
-            <Button
-                className="magick-ad-toolbar-toggle magick-ad-toolbar-toggle--text"
-                icon={globe}
-                label="预览设置"
-                variant="tertiary"
-                onClick={() => setPreviewModalOpen(true)}
-            >
-                预览
-            </Button>
-        </>
+                {({ onClose }) => (
+                    <MenuGroup>
+                        <MenuItem
+                            icon={globe}
+                            onClick={() => {
+                                onClose();
+                                setPreviewModalOpen(true);
+                            }}
+                        >
+                            预览设置
+                        </MenuItem>
+                        <MenuItem
+                            icon={megaphone}
+                            onClick={() => {
+                                onClose();
+                                setPlacementModalOpen(true);
+                            }}
+                        >
+                            投放设置
+                        </MenuItem>
+                        <MenuItem
+                            icon={calendar}
+                            onClick={() => {
+                                onClose();
+                                setPublishModalOpen(true);
+                            }}
+                        >
+                            发布与排期
+                        </MenuItem>
+                    </MenuGroup>
+                )}
+            </DropdownMenu>
+        </div>
     ) : null;
 
     const handleCloseSettings = () => {
@@ -6650,21 +6901,15 @@ const AdsConfig = () => {
 
     const rightSidebar = selectedAd ? (
         <div className="magick-ad-right-stack">
+            {renderRightPrioritySummary()}
             <Card className="magick-ad-right-panel">
                 <CardBody>
                     <div className="magick-ad-right-accordion">
                         {renderRightAccordionSection({
-                            id: 'publish',
-                            title: '发布与排期',
-                            summary: renderPublishStatusSummary(),
-                            children: renderPublishSection({
-                                compactHeader: true,
-                            }),
-                        })}
-                        {renderRightAccordionSection({
                             id: 'runtime',
                             title: '运行条件速览',
                             summary: renderRuntimeSummaryLabel,
+                            summaryMode: 'chips',
                             children: (
                                 <div className="magick-ad-right-section magick-ad-right-section--runtime">
                                     {renderRuntimeSummaryBar({
@@ -6675,9 +6920,19 @@ const AdsConfig = () => {
                             ),
                         })}
                         {renderRightAccordionSection({
+                            id: 'publish',
+                            title: '发布与排期',
+                            summary: renderPublishStatusSummary(),
+                            summaryMode: 'chips',
+                            children: renderPublishSection({
+                                compactHeader: true,
+                            }),
+                        })}
+                        {renderRightAccordionSection({
                             id: 'placement',
                             title: '投放设置',
                             summary: renderPlacementSummaryLabel,
+                            summaryMode: 'chips',
                             children: renderPlacementSection(),
                         })}
                     </div>
@@ -6693,6 +6948,12 @@ const AdsConfig = () => {
             </CardBody>
         </Card>
     );
+
+    const headerContextText = selectedAd
+        ? `当前广告：${selectedAd.name || '未命名广告组'} · 位置 ${resolvePlacementLabel(
+              selectedAd.options || {}
+          )}`
+        : '请选择一个广告组开始配置。';
 
     return (
         <div className="magick-ad-config">
@@ -6731,6 +6992,9 @@ const AdsConfig = () => {
                             </div>
                             <p className="description">
                                 {branding.tagline}
+                            </p>
+                            <p className="magick-ad-header__context">
+                                {headerContextText}
                             </p>
                         </>
                     )}

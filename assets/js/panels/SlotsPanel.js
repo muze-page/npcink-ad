@@ -28,6 +28,7 @@ const SlotsPanel = ({
     onUpdateSlot,
     onRemoveSlot,
     onNotice,
+    embedded = false,
 }) => {
     const [open, setOpen] = useState(false);
 
@@ -82,29 +83,32 @@ const SlotsPanel = ({
         onUpdateSlot?.(index, { ad_ids: ids });
     };
 
+    const slotsPanel = (
+        <Panel className={`magick-ad-slots-panel ${embedded ? 'is-embedded' : ''}`}>
+            <PanelBody title="广告位 Slots" initialOpen={false}>
+                <div className="magick-ad-slots-summary">
+                    <span>已创建 {slots.length} 个广告位。</span>
+                    <Button variant="secondary" onClick={() => setOpen(true)}>
+                        管理 Slots
+                    </Button>
+                </div>
+                <p className="description">
+                    Slot 用于区块/短代码/模板函数调用，广告内容由 Slot
+                    绑定决定。
+                </p>
+            </PanelBody>
+        </Panel>
+    );
+
     return (
         <>
-            <Card>
-                <CardBody>
-                    <Panel>
-                        <PanelBody title="广告位 Slots" initialOpen={false}>
-                            <div className="magick-ad-slots-summary">
-                                <span>已创建 {slots.length} 个广告位。</span>
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => setOpen(true)}
-                                >
-                                    管理 Slots
-                                </Button>
-                            </div>
-                            <p className="description">
-                                Slot 用于区块/短代码/模板函数调用，广告内容由 Slot
-                                绑定决定。
-                            </p>
-                        </PanelBody>
-                    </Panel>
-                </CardBody>
-            </Card>
+            {embedded ? (
+                slotsPanel
+            ) : (
+                <Card>
+                    <CardBody>{slotsPanel}</CardBody>
+                </Card>
+            )}
             {open && (
                 <Modal
                     className="magick-ad-modal magick-ad-slots-modal"

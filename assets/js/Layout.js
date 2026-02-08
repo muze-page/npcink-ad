@@ -26,6 +26,77 @@ const previewIcons = {
     mobile,
 };
 
+const creativeTypeLabels = {
+    html: '代码/HTML',
+    image: '图片',
+    video: '视频',
+    block: '可视化',
+};
+
+const containerTypeLabels = {
+    inline: '默认嵌入',
+    popup: '弹窗',
+    banner: '横栏',
+    floating: '悬浮',
+    interstitial: '插屏',
+};
+
+const pageRuleLabels = {
+    all: '全站',
+    home: '首页',
+    posts: '文章页',
+    pages: '单页',
+    singular: '文章/页面',
+    archive: '归档页',
+    search: '搜索页',
+    category: '分类页',
+    tag: '标签页',
+    author: '作者页',
+    '404': '404 页',
+};
+
+const deviceRuleLabels = {
+    all: '全部设备',
+    mobile: '仅移动端',
+    desktop: '仅桌面端',
+};
+
+const loginRuleLabels = {
+    all: '全部用户',
+    in: '仅登录用户',
+    out: '仅游客',
+};
+
+const resolvePlacementSummary = (options = {}) => {
+    const hook = options.placement_hook || '';
+    const position = options.placement_position || '';
+    const paragraph = Number(options.placement_paragraph || 0);
+    if (hook === 'body_top') {
+        return '顶部';
+    }
+    if (hook === 'footer') {
+        return '底部';
+    }
+    if (hook === 'head') {
+        return 'Head';
+    }
+    if (hook === 'node') {
+        return '指定节点';
+    }
+    if (hook === 'content') {
+        if (position === 'before') {
+            return '内容前';
+        }
+        if (position === 'after') {
+            return '内容后';
+        }
+        if (position === 'paragraph') {
+            return `第 ${paragraph > 0 ? paragraph : 2} 段后`;
+        }
+    }
+    return '未设置位置';
+};
+
 const Layout = ({
     adData = {},
     creativeType = 'image',
@@ -53,6 +124,37 @@ const Layout = ({
     const [previewCollapsed] = useState(false);
     const [leftCollapsed, setLeftCollapsed] = useState(false);
     const [rightCollapsed, setRightCollapsed] = useState(false);
+    const workspaceMeta = useMemo(() => {
+        const options = adData?.options || {};
+        const showPage = options.show_page || 'all';
+        const device = options.device || 'all';
+        const login = options.login || 'all';
+        const targetType = options.target_type || '';
+        const isTargeted = options.ad_type === 'targeted';
+
+        return {
+            name: adData?.name || '未命名广告组',
+            creative:
+                creativeTypeLabels[creativeType] || creativeTypeLabels.image,
+            container:
+                containerTypeLabels[containerType] ||
+                containerTypeLabels.inline,
+            page: isTargeted
+                ? targetType
+                    ? `定向 ${targetType}`
+                    : '指定广告'
+                : pageRuleLabels[showPage] || pageRuleLabels.all,
+            placement: resolvePlacementSummary(options),
+            device: deviceRuleLabels[device] || deviceRuleLabels.all,
+            login: loginRuleLabels[login] || loginRuleLabels.all,
+            previewDevice:
+                devicePreview === 'mobile'
+                    ? '手机预览'
+                    : devicePreview === 'tablet'
+                      ? '平板预览'
+                      : '桌面预览',
+        };
+    }, [adData, creativeType, containerType, devicePreview]);
     const previewBody = useMemo(() => {
         const content = adData?.content || {};
         const options = adData?.options || {};
@@ -805,6 +907,39 @@ const Layout = ({
                                 />
                             </ToolbarGroup>
                         </Toolbar>
+                        <div className="magick-ad-workspace-meta">
+                            <div className="magick-ad-workspace-meta__headline">
+                                <strong>{workspaceMeta.name}</strong>
+                                <span>
+                                    {previewUsePage
+                                        ? '真实页面预览'
+                                        : '组件预览'}
+                                </span>
+                            </div>
+                            <div className="magick-ad-workspace-meta__chips">
+                                <span className="magick-ad-workspace-meta__chip">
+                                    {workspaceMeta.creative}
+                                </span>
+                                <span className="magick-ad-workspace-meta__chip">
+                                    {workspaceMeta.container}
+                                </span>
+                                <span className="magick-ad-workspace-meta__chip">
+                                    {workspaceMeta.page}
+                                </span>
+                                <span className="magick-ad-workspace-meta__chip">
+                                    {workspaceMeta.placement}
+                                </span>
+                                <span className="magick-ad-workspace-meta__chip">
+                                    {workspaceMeta.device}
+                                </span>
+                                <span className="magick-ad-workspace-meta__chip">
+                                    {workspaceMeta.login}
+                                </span>
+                                <span className="magick-ad-workspace-meta__chip is-accent">
+                                    {workspaceMeta.previewDevice}
+                                </span>
+                            </div>
+                        </div>
 
                         <div
                             className={`magick-ad-editor ${
