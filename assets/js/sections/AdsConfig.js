@@ -4751,22 +4751,23 @@ const AdsConfig = () => {
         window.open(url, '_blank', 'noopener');
     };
 
-    const renderRuntimeSummaryBar = () => {
+    const renderRuntimeSummaryBar = ({ compact = false } = {}) => {
         if (!selectedAd || !runtimeContextMeta) {
             return null;
         }
+        const summaryClassName = compact
+            ? 'magick-ad-runtime-summary is-compact'
+            : 'magick-ad-runtime-summary';
         return (
-            <div className="magick-ad-runtime-summary">
+            <div className={summaryClassName}>
                 <div className="magick-ad-runtime-summary__body">
                     <div className="magick-ad-runtime-summary__title">
                         运行条件速览
                     </div>
                     <div className="magick-ad-runtime-summary__line">
-                        规则：位置 {runtimeContextMeta.placementLabel} · 页面{' '}
-                        {runtimeContextMeta.pageLabel} · 用途{' '}
-                        {runtimeContextMeta.usageLabel} · 设备{' '}
-                        {runtimeContextMeta.deviceRuleLabel} · 登录{' '}
-                        {runtimeContextMeta.loginRuleLabel}
+                        规则：位置 {runtimeContextMeta.placementLabel} · 页面 {runtimeContextMeta.pageLabel}{' '}
+                        {compact ? '' : `· 用途 ${runtimeContextMeta.usageLabel}`} · 设备{' '}
+                        {runtimeContextMeta.deviceRuleLabel} · 登录 {runtimeContextMeta.loginRuleLabel}
                     </div>
                     <div className="magick-ad-runtime-summary__line">
                         环境：设备 {runtimeContextMeta.currentDeviceLabel} · 登录{' '}
@@ -6497,6 +6498,9 @@ const AdsConfig = () => {
             <Card className="magick-ad-right-panel">
                 <CardBody>
                     {renderPublishSection()}
+                    <div className="magick-ad-right-section magick-ad-right-section--runtime">
+                        {renderRuntimeSummaryBar({ compact: true })}
+                    </div>
                     {renderPlacementSection()}
                 </CardBody>
             </Card>
@@ -6644,8 +6648,6 @@ const AdsConfig = () => {
                     {error.message || '请求失败'}
                 </Notice>
             )}
-            {renderRuntimeSummaryBar()}
-
             <Layout
                 adData={selectedAd}
                 creativeType={selectedAd?.options?.creative_type || 'image'}

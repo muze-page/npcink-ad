@@ -952,6 +952,33 @@
     background: #f8fafc;
 }
 
+.magick-ad-right-section--runtime {
+    padding-top: 12px;
+}
+
+.magick-ad-runtime-summary.is-compact {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    gap: 10px;
+}
+
+.magick-ad-runtime-summary.is-compact .magick-ad-runtime-summary__body {
+    gap: 4px;
+}
+
+.magick-ad-runtime-summary.is-compact .magick-ad-runtime-summary__line,
+.magick-ad-runtime-summary.is-compact .magick-ad-runtime-summary__reason {
+    font-size: 11px;
+}
+
+.magick-ad-runtime-summary.is-compact .magick-ad-runtime-summary__actions .components-button {
+    min-height: 28px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+}
+
 .magick-ad-runtime-summary__body {
     display: flex;
     flex-direction: column;
