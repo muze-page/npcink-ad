@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import { lazy, Suspense, useEffect, useMemo, useState } from '@wordpress/element';
 import {
     Button,
     ButtonGroup,
@@ -40,16 +40,8 @@ import ImagePicker from '../components/ImagePicker';
 import VideoPicker from '../components/VideoPicker';
 import LinkPicker from '../components/LinkPicker';
 import ClassicEditor from '../components/ClassicEditor';
-import BlockEditor from '../components/BlockEditor';
-import TemplateLibraryModal from '../components/TemplateLibraryModal';
 import TemplateActions from '../components/TemplateActions';
-import BuildProbe from '../components/BuildProbe';
-import DebugPanel from '../panels/DebugPanel';
-import SystemSettingsPanel from '../panels/SystemSettingsPanel';
-import ConsentPanel from '../panels/ConsentPanel';
-import InsertHelpPanel from '../panels/InsertHelpPanel';
 import SlotsPanel from '../panels/SlotsPanel';
-import ExperimentsPanel from '../panels/ExperimentsPanel';
 import useNotice from '../hooks/useNotice';
 import useTemplateLibrary from '../hooks/useTemplateLibrary';
 import useTargeting from '../hooks/useTargeting';
@@ -92,6 +84,17 @@ import {
     buildTemplateContainerStyleDefaults,
     getCreativeTemplateData,
 } from './ads-config/template-defaults';
+
+const BlockEditor = lazy(() => import('../components/BlockEditor'));
+const TemplateLibraryModal = lazy(
+    () => import('../components/TemplateLibraryModal')
+);
+const BuildProbe = lazy(() => import('../components/BuildProbe'));
+const SystemSettingsPanel = lazy(() => import('../panels/SystemSettingsPanel'));
+const ConsentPanel = lazy(() => import('../panels/ConsentPanel'));
+const InsertHelpPanel = lazy(() => import('../panels/InsertHelpPanel'));
+const ExperimentsPanel = lazy(() => import('../panels/ExperimentsPanel'));
+const DebugPanel = lazy(() => import('../panels/DebugPanel'));
 
 const AdsConfig = () => {
     const headerStorageKey = 'magick_ad_header_collapsed';
@@ -3998,21 +4001,28 @@ const AdsConfig = () => {
                                             return blockTabView.name ===
                                                 'content' ? (
                                                 <>
-                                                    <BlockEditor
-                                                        value={
-                                                            selectedAd.content
-                                                                ?.blocks ||
-                                                            ''
-                                                        }
-                                                        onChange={(value) =>
-                                                            handleUpdateContent(
-                                                                {
-                                                                    blocks:
-                                                                        value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
+                                                    <Suspense
+                                                        fallback={<Spinner />}
+                                                    >
+                                                        <BlockEditor
+                                                            value={
+                                                                selectedAd
+                                                                    .content
+                                                                    ?.blocks ||
+                                                                ''
+                                                            }
+                                                            onChange={(
+                                                                value
+                                                            ) =>
+                                                                handleUpdateContent(
+                                                                    {
+                                                                        blocks:
+                                                                            value,
+                                                                    }
+                                                                )
+                                                            }
+                                                        />
+                                                    </Suspense>
                                                     {renderVariantSection(
                                                         'block'
                                                     )}
@@ -6720,35 +6730,41 @@ const AdsConfig = () => {
                 </Modal>
             )}
 
-            <TemplateLibraryModal
-                isOpen={templateModalOpen}
-                type={templateType}
-                showVisualTemplateType={
-                    displayLevel !== 'simple' && isBlockEditorEnabled
-                }
-                templates={templateLibrary}
-                selected={templateSelection}
-                categories={templateCategories}
-                onUpdateCategories={updateTemplateCategories}
-                favoriteIds={favoriteIds}
-                pinnedIds={pinnedIds}
-                onAddCategory={addTemplateCategory}
-                onRemoveCategory={removeTemplateCategory}
-                onToggleSelect={handleToggleTemplateSelect}
-                onToggleFavorite={toggleFavorite}
-                onTogglePinned={togglePinned}
-                onBulkFavorite={bulkFavorite}
-                onBulkPinned={bulkPinned}
-                onClearFavorites={clearFavorites}
-                onClearPins={clearPins}
-                onRestorePreferences={restorePreferences}
-                onApply={handleApplyTemplate}
-                onImport={handleImportTemplates}
-                onExport={handleExportTemplates}
-                onClose={() => setTemplateModalOpen(false)}
-            />
+            {templateModalOpen && (
+                <Suspense fallback={<Spinner />}>
+                    <TemplateLibraryModal
+                        isOpen={templateModalOpen}
+                        type={templateType}
+                        showVisualTemplateType={
+                            displayLevel !== 'simple' && isBlockEditorEnabled
+                        }
+                        templates={templateLibrary}
+                        selected={templateSelection}
+                        categories={templateCategories}
+                        onUpdateCategories={updateTemplateCategories}
+                        favoriteIds={favoriteIds}
+                        pinnedIds={pinnedIds}
+                        onAddCategory={addTemplateCategory}
+                        onRemoveCategory={removeTemplateCategory}
+                        onToggleSelect={handleToggleTemplateSelect}
+                        onToggleFavorite={toggleFavorite}
+                        onTogglePinned={togglePinned}
+                        onBulkFavorite={bulkFavorite}
+                        onBulkPinned={bulkPinned}
+                        onClearFavorites={clearFavorites}
+                        onClearPins={clearPins}
+                        onRestorePreferences={restorePreferences}
+                        onApply={handleApplyTemplate}
+                        onImport={handleImportTemplates}
+                        onExport={handleExportTemplates}
+                        onClose={() => setTemplateModalOpen(false)}
+                    />
+                </Suspense>
+            )}
 
-            <BuildProbe />
+            <Suspense fallback={null}>
+                <BuildProbe />
+            </Suspense>
 
             {saveTemplateOpen && (
                 <Modal
@@ -6992,21 +7008,23 @@ const AdsConfig = () => {
                     >
                         {(tab) => (
                             <div className="magick-ad-settings-body">
-                                {tab.name === 'system' ? (
-                                    <SystemSettingsPanel
-                                        onNotice={showNotice}
-                                    />
-                                ) : tab.name === 'consent' ? (
-                                    <ConsentPanel onNotice={showNotice} />
-                                ) : tab.name === 'insert' ? (
-                                    <InsertHelpPanel />
-                                ) : tab.name === 'experiments' ? (
-                                    <ExperimentsPanel
-                                        onNotice={showNotice}
-                                    />
-                                ) : tab.name === 'debug' ? (
-                                    <DebugPanel onNotice={showNotice} />
-                                ) : null}
+                                <Suspense fallback={<Spinner />}>
+                                    {tab.name === 'system' ? (
+                                        <SystemSettingsPanel
+                                            onNotice={showNotice}
+                                        />
+                                    ) : tab.name === 'consent' ? (
+                                        <ConsentPanel onNotice={showNotice} />
+                                    ) : tab.name === 'insert' ? (
+                                        <InsertHelpPanel />
+                                    ) : tab.name === 'experiments' ? (
+                                        <ExperimentsPanel
+                                            onNotice={showNotice}
+                                        />
+                                    ) : tab.name === 'debug' ? (
+                                        <DebugPanel onNotice={showNotice} />
+                                    ) : null}
+                                </Suspense>
                             </div>
                         )}
                     </TabPanel>
