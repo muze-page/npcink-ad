@@ -70,7 +70,7 @@ final class Editor {
 	 * @param array<string, mixed>|null        $current         Stored current Promotion.
 	 * @param int                              $current_id      Current Promotion ID.
 	 * @param Repository                       $repository      Public-content query service.
-	 * @return array{publicContentIds: list<int>, publishedAutomaticPromotions: list<array{id: int, location: string, pageScope: string, includeIds: list<int>, excludeIds: list<int>, device: string, startAt: string, endAt: string, scheduleValid: bool}>}
+	 * @return array{publicContentIds: list<int>, publishedAutomaticPromotions: list<array{id: int, location: string, pageScope: string, includeIds: list<int>, excludeIds: list<int>, device: string, paragraphNumber: int, startAt: string, endAt: string, scheduleValid: bool}>}
 	 */
 	private static function editor_overlap_settings( array $promotions, ?array $current, int $current_id, Repository $repository ): array {
 		$normalized  = array();
@@ -107,11 +107,14 @@ final class Editor {
 		$public_content_ids = array_values( array_filter( $current_ids, static fn ( int $id ): bool => isset( $public_lookup[ $id ] ) ) );
 		$rules = array();
 		foreach ( $normalized as $item ) {
-			$promotion   = $item['promotion'];
-			$start_at    = isset( $promotion['start_at'] ) ? (int) $promotion['start_at'] : 0;
-			$end_at      = isset( $promotion['end_at'] ) ? (int) $promotion['end_at'] : 0;
-			$include_ids = array_values( array_filter( $item['includeIds'], static fn ( int $id ): bool => isset( $public_lookup[ $id ] ) ) );
-			$exclude_ids = array_values( array_filter( $item['excludeIds'], static fn ( int $id ): bool => isset( $public_lookup[ $id ] ) ) );
+			$promotion        = $item['promotion'];
+			$start_at         = isset( $promotion['start_at'] ) ? (int) $promotion['start_at'] : 0;
+			$end_at           = isset( $promotion['end_at'] ) ? (int) $promotion['end_at'] : 0;
+			$paragraph_number = array_key_exists( 'paragraph_number', $promotion )
+				? (int) $promotion['paragraph_number']
+				: Post_Types::DEFAULT_PARAGRAPH_NUMBER;
+			$include_ids      = array_values( array_filter( $item['includeIds'], static fn ( int $id ): bool => isset( $public_lookup[ $id ] ) ) );
+			$exclude_ids      = array_values( array_filter( $item['excludeIds'], static fn ( int $id ): bool => isset( $public_lookup[ $id ] ) ) );
 			if ( 'selected' === $item['pageScope'] ) {
 				$include_lookup = array_fill_keys( $include_ids, true );
 				$exclude_ids    = array_values( array_filter( $exclude_ids, static fn ( int $id ): bool => isset( $include_lookup[ $id ] ) ) );
@@ -120,15 +123,16 @@ final class Editor {
 			}
 
 			$rules[] = array(
-				'id'            => $item['id'],
-				'location'      => Post_Types::sanitize_location( $promotion['location'] ?? '' ),
-				'pageScope'     => $item['pageScope'],
-				'includeIds'    => $include_ids,
-				'excludeIds'    => $exclude_ids,
-				'device'        => Post_Types::sanitize_device( $promotion['device'] ?? '' ),
-				'startAt'       => self::local_datetime( $start_at ),
-				'endAt'         => self::local_datetime( $end_at ),
-				'scheduleValid' => (bool) ( $promotion['start_at_valid'] ?? true )
+				'id'              => $item['id'],
+				'location'        => Post_Types::sanitize_location( $promotion['location'] ?? '' ),
+				'pageScope'       => $item['pageScope'],
+				'includeIds'      => $include_ids,
+				'excludeIds'      => $exclude_ids,
+				'device'          => Post_Types::sanitize_device( $promotion['device'] ?? '' ),
+				'paragraphNumber' => $paragraph_number,
+				'startAt'         => self::local_datetime( $start_at ),
+				'endAt'           => self::local_datetime( $end_at ),
+				'scheduleValid'   => (bool) ( $promotion['start_at_valid'] ?? true )
 					&& (bool) ( $promotion['end_at_valid'] ?? true ),
 			);
 		}

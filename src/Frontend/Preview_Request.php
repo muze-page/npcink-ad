@@ -88,10 +88,18 @@ final class Preview_Request {
 
 		$this->promotion_id = $promotion_id;
 		$this->device       = in_array( $device, array( 'desktop', 'mobile' ), true ) ? $device : 'desktop';
-		if ( 'block' === ( $promotion['location'] ?? 'content_after' ) ) {
+		$location = isset( $promotion['location'] ) ? (string) $promotion['location'] : 'content_after';
+		$this->delivery->enable_preview_request();
+		if ( 'block' === $location ) {
 			$this->delivery->enable_block_preview(
 				$promotion_id,
 				$this->device,
+				$target_id
+			);
+		} elseif ( 'content_after_paragraph' === $location ) {
+			$this->delivery->enable_paragraph_preview(
+				isset( $promotion['paragraph_number'] ) ? (int) $promotion['paragraph_number'] : 3,
+				! array_key_exists( 'paragraph_number_valid', $promotion ) || (bool) $promotion['paragraph_number_valid'],
 				$target_id
 			);
 		}
@@ -102,7 +110,12 @@ final class Preview_Request {
 		nocache_headers();
 		header( 'X-Robots-Tag: noindex, nofollow, noarchive', true );
 
-		remove_filter( 'the_content', array( $this->delivery, 'filter_content' ) );
+		/*
+		 * Keep Delivery::prepare_content() at priority 8. Paragraph previews
+		 * consume its top-level block marker later in this request; only normal
+		 * automatic rendering at priority 10 must be replaced.
+		 */
+		remove_filter( 'the_content', array( $this->delivery, 'filter_content' ), 10 );
 		add_filter( 'the_content', array( $this, 'filter_content' ), 999 );
 	}
 
@@ -120,7 +133,7 @@ final class Preview_Request {
 		}
 
 		$location = isset( $promotion['location'] ) ? (string) $promotion['location'] : 'content_after';
-		if ( ! in_array( $location, array( 'content_before', 'content_after' ), true ) ) {
+		if ( ! in_array( $location, array( 'content_before', 'content_after', 'content_after_paragraph' ), true ) ) {
 			return true;
 		}
 
@@ -147,6 +160,16 @@ final class Preview_Request {
 		$location = isset( $promotion['location'] ) ? (string) $promotion['location'] : 'content_after';
 		if ( 'block' === $location && $this->delivery->has_rendered_block_preview() ) {
 			return $content;
+		}
+		if ( 'content_after_paragraph' === $location ) {
+			return $this->delivery->insert_paragraph_preview(
+				$content,
+				$this->promotion_id,
+				isset( $promotion['paragraph_number'] ) ? (int) $promotion['paragraph_number'] : 3,
+				! array_key_exists( 'paragraph_number_valid', $promotion ) || (bool) $promotion['paragraph_number_valid'],
+				$this->device,
+				get_the_ID()
+			);
 		}
 
 		$preview  = $this->delivery->render_preview(
