@@ -125,6 +125,7 @@ function Edit( {
 						<Spinner />
 					) : (
 						<SelectControl
+							__next40pxDefaultSize
 							label={ __( 'Placement', 'magick-ad' ) }
 							value={ String( attributes.placementId ) }
 							options={ placementOptions }
@@ -141,6 +142,7 @@ function Edit( {
 						/>
 					) }
 					<RangeControl
+						__next40pxDefaultSize
 						label={ __( 'Reserved height', 'magick-ad' ) }
 						help={ __(
 							'Reserve vertical space to reduce layout shift.',
