@@ -42,6 +42,8 @@ final class Blocks {
 		register_block_type(
 			$block_dir,
 			array(
+				'title'           => _x( 'Npcink Ad Promotion', 'block title', 'npcink-ad' ),
+				'description'     => _x( 'Insert a server-rendered Npcink Ad promotion.', 'block description', 'npcink-ad' ),
 				'editor_script'   => self::EDITOR_SCRIPT,
 				'editor_style'    => self::EDITOR_STYLE,
 				'render_callback' => array( $this, 'render' ),
@@ -97,6 +99,11 @@ final class Blocks {
 			$depends,
 			$version,
 			true
+		);
+		wp_set_script_translations(
+			self::EDITOR_SCRIPT,
+			'npcink-ad',
+			NPCINK_AD_PATH . 'languages'
 		);
 
 		wp_register_style(

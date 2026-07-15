@@ -1,0 +1,445 @@
+# Copyright (C) 2026 Npcink
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Npcink Ad 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/muze-page/npcink-ad/issues\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: npcink-ad\n"
+
+#. Plugin Name of the plugin
+#: npcink-ad.php
+#: src/Admin/Menu.php:27
+#: src/Admin/Menu.php:28
+#: src/Blocks/Patterns.php:25
+msgid "Npcink Ad"
+msgstr ""
+
+#. Description of the plugin
+#: npcink-ad.php
+msgid "Create, preview, and publish site-owned WordPress promotions."
+msgstr ""
+
+#. Author of the plugin
+#: npcink-ad.php
+msgid "Npcink"
+msgstr ""
+
+#: src/Admin/Menu.php:38
+#: src/Admin/Menu.php:39
+#: src/Data/Post_Types.php:73
+#: src/Data/Post_Types.php:82
+msgid "Promotions"
+msgstr ""
+
+#: src/Admin/Preview_Page.php:43
+msgid "Npcink Ad Preview"
+msgstr ""
+
+#: src/Admin/Preview_Page.php:44
+msgid "Preview"
+msgstr ""
+
+#: src/Admin/Preview_Page.php:72
+msgid "You are not allowed to preview promotions."
+msgstr ""
+
+#: src/Admin/Preview_Page.php:88
+msgid "The promotion preview link is invalid or has expired."
+msgstr ""
+
+#: src/Admin/Preview_Page.php:93
+msgid "Choose a published post or page for the preview."
+msgstr ""
+
+#: src/Admin/Preview_Page.php:98
+msgid "The preview page does not have a public URL."
+msgstr ""
+
+#: src/Admin/Preview_Page.php:123
+#: build/index.js:3
+msgid "Real-page preview"
+msgstr ""
+
+#: src/Admin/Preview_Page.php:124
+msgid "The promotion is rendered by the same server policy used on the live site. Preview mode may show blocked creative, but its verdict remains truthful."
+msgstr ""
+
+#: src/Admin/Preview_Page.php:127
+#: build/index.js:3
+msgid "Desktop"
+msgstr ""
+
+#: src/Admin/Preview_Page.php:128
+#: build/index.js:3
+msgid "Mobile"
+msgstr ""
+
+#: src/Admin/Preview_Page.php:130
+msgid "Back to promotion"
+msgstr ""
+
+#: src/Admin/Preview_Page.php:135
+msgid "Npcink Ad real-page preview"
+msgstr ""
+
+#: src/Blocks/Blocks.php:45
+msgctxt "block title"
+msgid "Npcink Ad Promotion"
+msgstr ""
+
+#: src/Blocks/Blocks.php:46
+msgctxt "block description"
+msgid "Insert a server-rendered Npcink Ad promotion."
+msgstr ""
+
+#: src/Blocks/Patterns.php:31
+msgid "Promotion CTA banner"
+msgstr ""
+
+#: src/Blocks/Patterns.php:32
+msgid "A clear headline, supporting copy, and call-to-action button."
+msgstr ""
+
+#: src/Blocks/Patterns.php:37
+msgid "A useful offer for your readers"
+msgstr ""
+
+#: src/Blocks/Patterns.php:41
+msgid "Explain the benefit in one short sentence."
+msgstr ""
+
+#: src/Blocks/Patterns.php:46
+msgid "Learn more"
+msgstr ""
+
+#: src/Blocks/Patterns.php:56
+msgid "Promotion card"
+msgstr ""
+
+#: src/Blocks/Patterns.php:57
+msgid "A compact bordered card for an offer, product, or affiliate link."
+msgstr ""
+
+#: src/Blocks/Patterns.php:62
+msgid "Featured recommendation"
+msgstr ""
+
+#: src/Blocks/Patterns.php:66
+msgid "Describe why this recommendation is relevant to the current page."
+msgstr ""
+
+#: src/Blocks/Patterns.php:71
+msgid "View offer"
+msgstr ""
+
+#: src/Blocks/Patterns.php:81
+msgid "Compact announcement"
+msgstr ""
+
+#: src/Blocks/Patterns.php:82
+msgid "A small site-owned announcement with an inline link."
+msgstr ""
+
+#: src/Blocks/Patterns.php:87
+msgid "New:"
+msgstr ""
+
+#: src/Blocks/Patterns.php:87
+msgid "Share a concise update and add a link to the next step."
+msgstr ""
+
+#: src/Data/Post_Types.php:74
+#: src/Frontend/Renderer.php:50
+#: build/index.js:1
+msgid "Promotion"
+msgstr ""
+
+#: src/Data/Post_Types.php:75
+msgid "Add New Promotion"
+msgstr ""
+
+#: src/Data/Post_Types.php:76
+msgid "Edit Promotion"
+msgstr ""
+
+#: src/Data/Post_Types.php:77
+msgid "New Promotion"
+msgstr ""
+
+#: src/Data/Post_Types.php:78
+msgid "View Promotion"
+msgstr ""
+
+#: src/Data/Post_Types.php:79
+msgid "Search Promotions"
+msgstr ""
+
+#: src/Data/Post_Types.php:80
+msgid "No promotions found."
+msgstr ""
+
+#: src/Data/Post_Types.php:81
+msgid "No promotions found in Trash."
+msgstr ""
+
+#: src/Frontend/Preview_Request.php:81
+msgid "This promotion preview is not available."
+msgstr ""
+
+#: src/Frontend/Preview_Request.php:85
+msgid "Promotion previews require a public post or page."
+msgstr ""
+
+#: src/Frontend/Preview_Request.php:139
+msgid "Manual block preview is shown after the page content. The live position is controlled by where the block is inserted."
+msgstr ""
+
+#: src/Frontend/Renderer.php:66
+msgid "Eligible: this promotion will display in the selected page and device context."
+msgstr ""
+
+#. translators: %s: one or more promotion eligibility explanations.
+#: src/Frontend/Renderer.php:70
+#, php-format
+msgid "Not currently eligible: %s"
+msgstr ""
+
+#: src/Frontend/Renderer.php:96
+msgid "Npcink Ad:"
+msgstr ""
+
+#: src/Frontend/Renderer.php:110
+msgid "Select a promotion."
+msgstr ""
+
+#: src/Frontend/Renderer.php:111
+msgid "The promotion is not published."
+msgstr ""
+
+#: src/Frontend/Renderer.php:112
+msgid "The promotion has not started."
+msgstr ""
+
+#: src/Frontend/Renderer.php:113
+msgid "The promotion has expired."
+msgstr ""
+
+#: src/Frontend/Renderer.php:114
+msgid "The promotion has no content."
+msgstr ""
+
+#: src/Frontend/Renderer.php:115
+msgid "This page is not included."
+msgstr ""
+
+#: src/Frontend/Renderer.php:116
+msgid "This page is excluded."
+msgstr ""
+
+#: src/Frontend/Renderer.php:117
+msgid "The promotion location does not match this delivery method."
+msgstr ""
+
+#: src/Frontend/Renderer.php:118
+msgid "The promotion does not target the simulated device."
+msgstr ""
+
+#: src/Frontend/Renderer.php:119
+msgid "The promotion recursively includes itself."
+msgstr ""
+
+#: src/Frontend/Renderer.php:129
+msgid "This promotion is not eligible to render."
+msgstr ""
+
+#: src/REST/Core_Rest_Guard.php:46
+msgid "You are not allowed to access Npcink Ad resources."
+msgstr ""
+
+#: build/index.js:1
+msgid "Select a promotion"
+msgstr ""
+
+#: build/index.js:1
+msgid "(Not published)"
+msgstr ""
+
+#: build/index.js:1
+msgid "Npcink Ad promotion"
+msgstr ""
+
+#: build/index.js:1
+msgid "Preview is disabled. The selected promotion will render here when eligible."
+msgstr ""
+
+#: build/index.js:1
+msgid "Select a promotion in the block settings."
+msgstr ""
+
+#: build/index.js:1
+msgid "Promotion settings"
+msgstr ""
+
+#: build/index.js:1
+msgid "Published and draft promotions are available to editors."
+msgstr ""
+
+#: build/index.js:1
+msgid "Reserved height"
+msgstr ""
+
+#: build/index.js:1
+msgid "Reserve vertical space to reduce layout shift."
+msgstr ""
+
+#: build/index.js:1
+msgid "Show live preview"
+msgstr ""
+
+#: build/index.js:1
+msgid "Loading preview…"
+msgstr ""
+
+#: build/index.js:1
+msgid "Preview unavailable"
+msgstr ""
+
+#: build/index.js:1
+msgid "Check that the selected promotion is configured for block placement."
+msgstr ""
+
+#. translators: 1: content title, 2: content type.
+#: build/index.js:2
+#, js-format
+msgid "%1$s — %2$s"
+msgstr ""
+
+#: build/index.js:2
+msgid "Page"
+msgstr ""
+
+#: build/index.js:2
+msgid "Post"
+msgstr ""
+
+#. translators: %s: content title.
+#: build/index.js:3
+#, js-format
+msgid "Remove %s"
+msgstr ""
+
+#: build/index.js:3
+msgid "Remove"
+msgstr ""
+
+#: build/index.js:3
+msgid "Npcink Ad delivery"
+msgstr ""
+
+#: build/index.js:3
+msgid "Placement"
+msgstr ""
+
+#: build/index.js:3
+msgid "After post content"
+msgstr ""
+
+#: build/index.js:3
+msgid "Before post content"
+msgstr ""
+
+#: build/index.js:3
+msgid "Manual block"
+msgstr ""
+
+#: build/index.js:3
+msgid "Pages"
+msgstr ""
+
+#: build/index.js:3
+msgid "All posts and pages"
+msgstr ""
+
+#: build/index.js:3
+msgid "Only selected content"
+msgstr ""
+
+#: build/index.js:3
+msgid "Included content"
+msgstr ""
+
+#: build/index.js:3
+msgid "The promotion can appear only on these published posts and pages."
+msgstr ""
+
+#: build/index.js:3
+msgid "Device"
+msgstr ""
+
+#: build/index.js:3
+msgid "All devices"
+msgstr ""
+
+#: build/index.js:3
+msgid "Start showing"
+msgstr ""
+
+#: build/index.js:3
+msgid "Optional. Uses the site timezone."
+msgstr ""
+
+#: build/index.js:3
+msgid "Stop showing"
+msgstr ""
+
+#: build/index.js:3
+msgid "Advanced page exclusions"
+msgstr ""
+
+#: build/index.js:3
+msgid "Excluded content"
+msgstr ""
+
+#: build/index.js:3
+msgid "The promotion never appears on these posts and pages."
+msgstr ""
+
+#: build/index.js:3
+msgid "Preview page"
+msgstr ""
+
+#: build/index.js:3
+msgid "Choose the real post or page whose theme and layout should be used."
+msgstr ""
+
+#: build/index.js:3
+msgid "Save the promotion before opening a preview."
+msgstr ""
+
+#: build/index.js:3
+msgid "Choose a published page or post to use as the preview context."
+msgstr ""
+
+#: build/index.js:3
+msgid "Allow pop-ups for this site, then try preview again."
+msgstr ""
+
+#: build/index.js:3
+msgid "Preparing preview…"
+msgstr ""
+
+#: build/index.js:3
+msgid "The promotion could not be saved. Resolve the editor error, then try again."
+msgstr ""
+
+#: build/index.js:3
+msgid "Save and open preview"
+msgstr ""

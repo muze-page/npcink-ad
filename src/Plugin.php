@@ -41,6 +41,7 @@ final class Plugin {
 		$blocks  = new Blocks( $delivery );
 		$preview = new Preview_Request( $delivery, $repository );
 
+		add_action( 'init', array( $this, 'load_textdomain' ), 1 );
 		add_action( 'init', array( Post_Types::class, 'register' ), 5 );
 		add_action( 'init', array( $delivery, 'register' ), 10 );
 		add_action( 'init', array( Patterns::class, 'register' ), 15 );
@@ -54,5 +55,16 @@ final class Plugin {
 			add_action( 'admin_menu', array( Preview_Page::class, 'register' ), 20 );
 			add_action( 'enqueue_block_editor_assets', array( Editor::class, 'enqueue' ) );
 		}
+	}
+
+	/**
+	 * Load bundled translations after WordPress has established the locale.
+	 */
+	public function load_textdomain(): void {
+		load_plugin_textdomain(
+			'npcink-ad',
+			false,
+			dirname( plugin_basename( NPCINK_AD_FILE ) ) . '/languages'
+		);
 	}
 }

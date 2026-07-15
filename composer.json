@@ -26,6 +26,8 @@
         "test": "phpunit -c phpunit.xml.dist",
         "lint:phpcs": "phpcs -p",
         "lint:phpstan": "phpstan analyse -c phpstan.neon --no-progress --memory-limit=1G",
+        "i18n:refresh": "bash scripts/i18n.sh refresh",
+        "i18n:check": "bash scripts/i18n.sh check",
         "check": [
             "@test",
             "@lint:phpcs",

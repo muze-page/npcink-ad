@@ -20,6 +20,7 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 * Read a truthful verdict explaining why the promotion will or will not display.
 * Publish, pause, or expire one Promotion record without a separate placement object.
 * Deliver from the server without visitor tracking, custom tables, or required frontend JavaScript.
+* Use the bundled Simplified Chinese translation in both PHP screens and the block editor.
 
 Version 0.1 intentionally has no analytics, tracking cookies, external requests, A/B testing, ad-network integration, popup builder, arbitrary code execution, or custom database tables.
 
@@ -57,3 +58,4 @@ No. Version 0.1 defines a new pre-GA contract and has no compatibility adapters 
 * Add same-editor location, page, schedule, and device rules.
 * Add truthful real-page desktop/mobile preview and server-rendered delivery.
 * Keep the default runtime free of visitor tracking, custom tables, and external requests.
+* Add complete bundled Simplified Chinese PHP and JavaScript translations.

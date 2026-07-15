@@ -6,14 +6,14 @@ PLUGIN_DIR_NAME="npcink-ad"
 
 cd "$ROOT_DIR"
 
-for required_command in php composer pnpm rsync zip unzip; do
+for required_command in php composer pnpm rsync zip unzip wp msgcmp msgfmt; do
   if ! command -v "$required_command" >/dev/null 2>&1; then
     echo "[release-gate] Required command not found: ${required_command}" >&2
     exit 1
   fi
 done
 
-echo "[release-gate] 1/7 PHP syntax check"
+echo "[release-gate] 1/8 PHP syntax check"
 while IFS= read -r -d '' php_file; do
   php -l "$php_file" >/dev/null
 done < <(
@@ -24,18 +24,21 @@ done < <(
     -print0
 )
 
-echo "[release-gate] 2/7 Composer checks"
+echo "[release-gate] 2/8 Composer checks"
 composer check
 
-echo "[release-gate] 3/7 Frontend type and lint checks"
+echo "[release-gate] 3/8 Frontend type and lint checks"
 pnpm run typecheck
 pnpm run lint:js
 pnpm run lint:style
 
-echo "[release-gate] 4/7 Build production assets once"
+echo "[release-gate] 4/8 Build production assets once"
 pnpm run build
 
-echo "[release-gate] 5/7 Build contract and strict bundle budget checks"
+echo "[release-gate] 5/8 Translation catalog checks"
+composer run i18n:check
+
+echo "[release-gate] 6/8 Build contract and strict bundle budget checks"
 REQUIRES_WORDPRESS="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Requires at least:[[:space:]]*([^[:space:]]+).*/\1/p' npcink-ad.php | head -n 1)"
 if [[ -z "$REQUIRES_WORDPRESS" ]]; then
   echo "[release-gate] Requires at least is missing from npcink-ad.php" >&2
@@ -83,10 +86,10 @@ if [[ "$BUDGET_FAILED" -eq 1 ]]; then
   exit 1
 fi
 
-echo "[release-gate] 6/7 Build release zip"
+echo "[release-gate] 7/8 Build release zip"
 bash scripts/release.sh
 
-echo "[release-gate] 7/7 Verify artifact"
+echo "[release-gate] 8/8 Verify artifact"
 PLUGIN_VERSION="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p' npcink-ad.php | head -n 1)"
 if [[ -z "$PLUGIN_VERSION" ]]; then
   echo "[release-gate] Version is missing from npcink-ad.php" >&2
@@ -132,6 +135,10 @@ REQUIRED_ZIP_ENTRIES=(
   "${PLUGIN_DIR_NAME}/build/index.asset.php"
   "${PLUGIN_DIR_NAME}/build/index.css"
   "${PLUGIN_DIR_NAME}/build/index.js"
+  "${PLUGIN_DIR_NAME}/languages/npcink-ad.pot"
+  "${PLUGIN_DIR_NAME}/languages/npcink-ad-zh_CN.po"
+  "${PLUGIN_DIR_NAME}/languages/npcink-ad-zh_CN.mo"
+  "${PLUGIN_DIR_NAME}/languages/npcink-ad-zh_CN-npcink-ad-block-editor.json"
   "${PLUGIN_DIR_NAME}/src/Admin/Menu.php"
   "${PLUGIN_DIR_NAME}/src/Admin/Editor.php"
   "${PLUGIN_DIR_NAME}/src/Admin/Preview_Page.php"

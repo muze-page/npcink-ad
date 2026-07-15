@@ -22,7 +22,7 @@ Version 0.1 has no AdSense management, analytics, tracking, reports, A/B tests, 
 
 ## Development and verification
 
-Use PHP 8.1+, Node.js 20+, pnpm 10, and Composer 2.
+Use PHP 8.1+, Node.js 20+, pnpm 10, Composer 2, WP-CLI, and GNU gettext.
 
 ```bash
 composer install
@@ -32,6 +32,15 @@ composer check
 pnpm check
 bash scripts/release-gate.sh
 ```
+
+The plugin bundles complete Simplified Chinese (`zh_CN`) catalogs for PHP and the block editor. After adding or changing interface copy, run:
+
+```bash
+composer i18n:refresh
+composer i18n:check
+```
+
+The refresh command extracts the current PHP, block metadata, and production JavaScript strings while preserving existing translations. The completeness check fails until every new string has a Simplified Chinese translation.
 
 Run the minimum and current WordPress Playground matrices:
 

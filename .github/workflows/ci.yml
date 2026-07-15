@@ -27,7 +27,10 @@ jobs:
         with:
           php-version: ${{ matrix.php-version }}
           coverage: none
-          tools: composer:v2
+          tools: composer:v2, wp-cli
+
+      - name: Install gettext
+        run: sudo apt-get update && sudo apt-get install --yes gettext
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6

@@ -25,6 +25,8 @@ $check = static function ( bool $condition, string $message ): void {
 };
 
 $check( is_plugin_active( 'npcink-ad/npcink-ad.php' ), 'Packaged plugin was not activated.' );
+$plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/npcink-ad/npcink-ad.php', false, false );
+$check( '/languages' === $plugin_data['DomainPath'], 'The packaged plugin does not declare its languages directory.' );
 $check( post_type_exists( 'npcink_promotion' ), 'The npcink_promotion post type was not registered.' );
 $check( ! post_type_exists( 'npcink_ad_placement' ), 'The removed npcink_ad_placement post type is still registered.' );
 $check( get_role( 'administrator' )->has_cap( 'manage_npcink_ads' ), 'Administrators did not receive the management capability.' );
@@ -50,6 +52,43 @@ $check(
 	WP_Block_Type_Registry::get_instance()->is_registered( 'npcink-ad/promotion' ),
 	'The npcink-ad/promotion block was not registered.'
 );
+$editor_script = wp_scripts()->registered['npcink-ad-block-editor'] ?? null;
+$check( $editor_script instanceof _WP_Dependency, 'The block editor script was not registered.' );
+$check( 'npcink-ad' === $editor_script->textdomain, 'The block editor script does not use the npcink-ad text domain.' );
+$check(
+	WP_PLUGIN_DIR . '/npcink-ad/languages' === $editor_script->translations_path,
+	'The block editor script does not use the bundled languages directory.'
+);
+
+$force_simplified_chinese = static fn ( mixed $locale ): string => 'zh_CN';
+add_filter( 'pre_determine_locale', $force_simplified_chinese, PHP_INT_MAX );
+unload_textdomain( 'npcink-ad', true );
+$check(
+	load_plugin_textdomain( 'npcink-ad', false, 'npcink-ad/languages' ),
+	'The bundled Simplified Chinese MO catalog did not load.'
+);
+$check( '推广' === __( 'Promotions', 'npcink-ad' ), 'The PHP Simplified Chinese translation did not resolve.' );
+$check(
+	'Npcink Ad 推广' === _x( 'Npcink Ad Promotion', 'block title', 'npcink-ad' ),
+	'The translated block metadata title did not resolve.'
+);
+$script_catalog_path = WP_PLUGIN_DIR . '/npcink-ad/languages/npcink-ad-zh_CN-npcink-ad-block-editor.json';
+$script_catalog      = json_decode( (string) file_get_contents( $script_catalog_path ), true );
+$check(
+	is_array( $script_catalog ) &&
+	isset( $script_catalog['locale_data']['messages']['Npcink Ad delivery'][0] ) &&
+	'Npcink Ad 投放' === $script_catalog['locale_data']['messages']['Npcink Ad delivery'][0],
+	'The block editor Simplified Chinese JSON catalog has an invalid translation.'
+);
+$script_translations = wp_scripts()->print_translations( 'npcink-ad-block-editor', false );
+$check(
+	is_string( $script_translations ) && str_contains( $script_translations, 'Npcink Ad delivery' ),
+	'The block editor Simplified Chinese JSON catalog did not resolve.'
+);
+remove_filter( 'pre_determine_locale', $force_simplified_chinese, PHP_INT_MAX );
+unload_textdomain( 'npcink-ad', true );
+load_plugin_textdomain( 'npcink-ad', false, 'npcink-ad/languages' );
+
 do_action( 'wp_enqueue_scripts' );
 $check(
 	wp_style_is( 'npcink-ad-frontend', 'enqueued' ),
