@@ -289,6 +289,7 @@ final class Promotion_Status_Action {
 			'promotion_content_empty',
 			'promotion_targets_empty',
 			'promotion_schedule_invalid',
+			'promotion_paragraph_invalid',
 		);
 		foreach ( $validation['reasons'] as $reason ) {
 			if ( in_array( $reason, $allowed_reasons, true ) ) {
@@ -351,6 +352,7 @@ final class Promotion_Status_Action {
 			'promotion_content_empty',
 			'promotion_targets_empty',
 			'promotion_schedule_invalid',
+			'promotion_paragraph_invalid',
 		);
 		if ( ! in_array( $notice, $configuration_reasons, true ) ) {
 			return null;

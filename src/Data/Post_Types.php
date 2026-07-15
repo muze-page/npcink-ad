@@ -17,18 +17,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Post_Types {
 	public const PROMOTION_POST_TYPE = 'npcink_promotion';
 
-	public const LOCATION_META    = '_npcink_ad_location';
-	public const PAGE_SCOPE_META  = '_npcink_ad_page_scope';
-	public const INCLUDE_IDS_META = '_npcink_ad_include_ids';
-	public const EXCLUDE_IDS_META = '_npcink_ad_exclude_ids';
-	public const DEVICE_META      = '_npcink_ad_device';
-	public const START_AT_META    = '_npcink_ad_start_at';
-	public const END_AT_META      = '_npcink_ad_end_at';
+	public const LOCATION_META         = '_npcink_ad_location';
+	public const PAGE_SCOPE_META       = '_npcink_ad_page_scope';
+	public const INCLUDE_IDS_META      = '_npcink_ad_include_ids';
+	public const EXCLUDE_IDS_META      = '_npcink_ad_exclude_ids';
+	public const DEVICE_META           = '_npcink_ad_device';
+	public const START_AT_META         = '_npcink_ad_start_at';
+	public const END_AT_META           = '_npcink_ad_end_at';
+	public const PARAGRAPH_NUMBER_META = '_npcink_ad_paragraph_number';
 
-	public const LOCATIONS   = array( 'block', 'content_before', 'content_after' );
-	public const PAGE_SCOPES = array( 'all', 'selected' );
-	public const DEVICES     = array( 'all', 'desktop', 'mobile' );
-	public const MAX_POST_IDS = 50;
+	public const LOCATIONS                = array( 'block', 'content_before', 'content_after', 'content_after_paragraph' );
+	public const PAGE_SCOPES              = array( 'all', 'selected' );
+	public const DEVICES                  = array( 'all', 'desktop', 'mobile' );
+	public const MAX_POST_IDS             = 50;
+	public const DEFAULT_PARAGRAPH_NUMBER = 3;
+	public const MIN_PARAGRAPH_NUMBER     = 1;
+	public const MAX_PARAGRAPH_NUMBER     = 20;
 
 	/**
 	 * Register the native post type and its metadata.
@@ -108,6 +112,7 @@ final class Post_Types {
 		self::register_enum_meta( self::DEVICE_META, 'all', self::DEVICES, array( self::class, 'sanitize_device' ) );
 		self::register_datetime_meta( self::START_AT_META );
 		self::register_datetime_meta( self::END_AT_META );
+		self::register_paragraph_number_meta();
 	}
 
 	/**
@@ -197,6 +202,33 @@ final class Post_Types {
 	}
 
 	/**
+	 * Register the paragraph anchor used by paragraph placement.
+	 *
+	 * The Core REST schema intentionally enforces only the integer type. Range
+	 * validation belongs to publish preflight so drafts can retain incomplete
+	 * values for correction instead of losing the original evidence.
+	 */
+	private static function register_paragraph_number_meta(): void {
+		register_post_meta(
+			self::PROMOTION_POST_TYPE,
+			self::PARAGRAPH_NUMBER_META,
+			array(
+				'type'              => 'integer',
+				'single'            => true,
+				'default'           => self::DEFAULT_PARAGRAPH_NUMBER,
+				'revisions_enabled' => true,
+				'show_in_rest'      => array(
+					'schema' => array(
+						'type' => 'integer',
+					),
+				),
+				'sanitize_callback' => array( self::class, 'sanitize_paragraph_number' ),
+				'auth_callback'     => array( self::class, 'can_manage_meta' ),
+			)
+		);
+	}
+
+	/**
 	 * Validate a WordPress-local datetime.
 	 *
 	 * @param mixed $value Raw metadata value.
@@ -226,6 +258,45 @@ final class Post_Types {
 		$value = sanitize_key( (string) $value );
 
 		return in_array( $value, self::LOCATIONS, true ) ? $value : 'content_after';
+	}
+
+	/**
+	 * Parse a raw paragraph number without discarding validity evidence.
+	 *
+	 * @param mixed $value Raw paragraph number.
+	 * @return array{number: int, valid: bool}
+	 */
+	public static function parse_paragraph_number( mixed $value ): array {
+		$integer_input = is_int( $value )
+			|| ( is_string( $value ) && 1 === preg_match( '/^-?[0-9]+$/', $value ) );
+		$number        = self::sanitize_paragraph_number( $value );
+
+		return array(
+			'number' => $number,
+			'valid'  => $integer_input
+				&& self::MIN_PARAGRAPH_NUMBER <= $number
+				&& self::MAX_PARAGRAPH_NUMBER >= $number,
+		);
+	}
+
+	/**
+	 * Normalize an integer representation without enforcing publish policy.
+	 *
+	 * Out-of-range integers are deliberately preserved. Non-integer values use
+	 * zero as an invalid sentinel; the REST type schema rejects them before this
+	 * callback during supported writes.
+	 *
+	 * @param mixed $value Raw paragraph number.
+	 */
+	public static function sanitize_paragraph_number( mixed $value ): int {
+		if ( is_int( $value ) ) {
+			return $value;
+		}
+		if ( is_string( $value ) && 1 === preg_match( '/^-?[0-9]+$/', $value ) ) {
+			return (int) $value;
+		}
+
+		return 0;
 	}
 
 	/**

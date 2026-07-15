@@ -10,7 +10,9 @@ use Npcink\Ad\Blocks\Blocks;
 use Npcink\Ad\Data\Post_Types;
 use Npcink\Ad\Data\Repository;
 use Npcink\Ad\Domain\Eligibility_Evaluator;
+use Npcink\Ad\Frontend\Classic_Paragraph_Tag_Processor;
 use Npcink\Ad\Frontend\Delivery;
+use Npcink\Ad\Frontend\Paragraph_Inserter;
 use Npcink\Ad\Frontend\Preview_Request;
 use Npcink\Ad\Frontend\Renderer;
 
@@ -52,6 +54,11 @@ $expect_wp_die = static function ( callable $callback ): int {
 };
 
 $check( is_plugin_active( 'npcink-ad/npcink-ad.php' ), 'Packaged plugin was not activated.' );
+$check( class_exists( WP_HTML_Tag_Processor::class ), 'WordPress did not load the Core HTML Tag Processor before plugins.' );
+$check(
+	is_subclass_of( Classic_Paragraph_Tag_Processor::class, WP_HTML_Tag_Processor::class ),
+	'The packaged Classic paragraph processor did not load against the Core HTML API.'
+);
 $plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/npcink-ad/npcink-ad.php', false, false );
 $check( '/languages' === $plugin_data['DomainPath'], 'The packaged plugin does not declare its languages directory.' );
 $check( post_type_exists( 'npcink_promotion' ), 'The npcink_promotion post type was not registered.' );
@@ -68,12 +75,15 @@ $required_meta  = array(
 	'_npcink_ad_device',
 	'_npcink_ad_start_at',
 	'_npcink_ad_end_at',
+	'_npcink_ad_paragraph_number',
 );
 foreach ( $required_meta as $meta_key ) {
 	$check( isset( $promotion_meta[ $meta_key ] ), 'Missing registered promotion meta: ' . $meta_key );
 }
 $check( 'array' === $promotion_meta['_npcink_ad_include_ids']['type'], 'Include IDs meta is not typed as an array.' );
 $check( 'array' === $promotion_meta['_npcink_ad_exclude_ids']['type'], 'Exclude IDs meta is not typed as an array.' );
+$check( 'integer' === $promotion_meta['_npcink_ad_paragraph_number']['type'], 'Paragraph number meta is not typed as an integer.' );
+$check( 3 === $promotion_meta['_npcink_ad_paragraph_number']['default'], 'Paragraph number meta does not default to 3.' );
 $check( shortcode_exists( 'npcink_ad' ), 'The npcink_ad shortcode was not registered.' );
 $check(
 	WP_Block_Type_Registry::get_instance()->is_registered( 'npcink-ad/promotion' ),
@@ -330,6 +340,152 @@ $check(
 );
 $set_main_singular( $page_b_id );
 $check( ! str_contains( $after_delivery->filter_content( '<p>Page body</p>' ), 'Playground smoke creative' ), 'Automatic delivery ignored page exclusion.' );
+
+wp_set_current_user( 1 );
+update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'content_after_paragraph' );
+update_post_meta( $promotion_id, Post_Types::PARAGRAPH_NUMBER_META, 2 );
+update_post_meta( $promotion_id, Post_Types::PAGE_SCOPE_META, 'all' );
+update_post_meta( $promotion_id, Post_Types::EXCLUDE_IDS_META, array() );
+$second_paragraph_promotion_id = wp_insert_post(
+	array(
+		'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+		'post_status'  => 'publish',
+		'post_title'   => 'Second paragraph smoke promotion',
+		'post_content' => '<!-- wp:paragraph --><p>Second paragraph smoke creative</p><!-- /wp:paragraph -->',
+	),
+	true
+);
+$check( ! is_wp_error( $second_paragraph_promotion_id ), 'Could not create the second paragraph Promotion.' );
+$second_paragraph_promotion_id = absint( $second_paragraph_promotion_id );
+update_post_meta( $second_paragraph_promotion_id, Post_Types::LOCATION_META, 'content_after_paragraph' );
+update_post_meta( $second_paragraph_promotion_id, Post_Types::PARAGRAPH_NUMBER_META, 2 );
+wp_set_current_user( 0 );
+$set_main_singular( $page_a_id );
+
+$block_paragraph_source = implode(
+	'',
+	array(
+		'<!-- wp:paragraph --><p>Top paragraph one</p><!-- /wp:paragraph -->',
+		'<!-- wp:group --><div class="wp-block-group"><!-- wp:paragraph --><p>Nested paragraph</p><!-- /wp:paragraph --></div><!-- /wp:group -->',
+		'<!-- wp:paragraph --><p>Top paragraph two</p><!-- /wp:paragraph -->',
+		'<!-- wp:paragraph --><p>Top paragraph three</p><!-- /wp:paragraph -->',
+	)
+);
+$paragraph_delivery     = new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() );
+$prepared_blocks        = $paragraph_delivery->prepare_content( $block_paragraph_source );
+$paragraph_output       = $paragraph_delivery->filter_content( do_blocks( $prepared_blocks ) );
+$first_paragraph_ad     = strpos( $paragraph_output, 'data-npcink-ad-promotion="' . $promotion_id . '"' );
+$second_paragraph_ad    = strpos( $paragraph_output, 'data-npcink-ad-promotion="' . $second_paragraph_promotion_id . '"' );
+$top_paragraph_two      = strpos( $paragraph_output, 'Top paragraph two' );
+$top_paragraph_three    = strpos( $paragraph_output, 'Top paragraph three' );
+$check(
+	is_int( $top_paragraph_two ) && is_int( $first_paragraph_ad ) && $top_paragraph_two < $first_paragraph_ad,
+	'Gutenberg paragraph delivery counted a nested paragraph or rendered before the requested top-level anchor.'
+);
+$check(
+	is_int( $top_paragraph_three ) && is_int( $second_paragraph_ad ) && $second_paragraph_ad < $top_paragraph_three,
+	'Gutenberg paragraph delivery rendered after the wrong top-level paragraph.'
+);
+$check( $first_paragraph_ad < $second_paragraph_ad, 'Promotions sharing one paragraph anchor did not preserve repository order.' );
+$check( ! str_contains( $paragraph_output, 'npcink-ad-paragraph-anchor-' ), 'An internal paragraph marker leaked into Gutenberg output.' );
+$check( ! str_contains( $paragraph_output, 'npcink-ad-block-content-' ), 'The internal block-content sentinel leaked into Gutenberg output.' );
+
+$duplicated_paragraph_marker = false;
+$duplicate_marker_filter     = static function ( string $content ) use ( &$duplicated_paragraph_marker ): string {
+	$marker_start = strpos( $content, '<!-- npcink-ad-paragraph-anchor-' );
+	if ( false === $marker_start ) {
+		return $content;
+	}
+
+	$marker_end = strpos( $content, ' -->', $marker_start );
+	if ( false === $marker_end ) {
+		return $content;
+	}
+
+	$marker                      = substr( $content, $marker_start, $marker_end + 4 - $marker_start );
+	$duplicated_paragraph_marker = true;
+
+	return substr_replace( $content, $marker . $marker, $marker_start, strlen( $marker ) );
+};
+add_filter( 'the_content', $duplicate_marker_filter, 9 );
+try {
+	$filtered_block_paragraph_output = apply_filters( 'the_content', $block_paragraph_source );
+} finally {
+	remove_filter( 'the_content', $duplicate_marker_filter, 9 );
+}
+$check( $duplicated_paragraph_marker, 'The priority 9 smoke filter did not observe a prepared paragraph marker.' );
+$check(
+	1 === substr_count( $filtered_block_paragraph_output, 'data-npcink-ad-promotion="' . $promotion_id . '"' ),
+	'The real the_content filter chain rendered the first Promotion more than once after a marker was copied.'
+);
+$check(
+	1 === substr_count( $filtered_block_paragraph_output, 'data-npcink-ad-promotion="' . $second_paragraph_promotion_id . '"' ),
+	'The real the_content filter chain rendered the second Promotion more than once after a marker was copied.'
+);
+$check(
+	! str_contains( $filtered_block_paragraph_output, 'npcink-ad-paragraph-anchor-' ),
+	'A copied internal paragraph marker leaked from the real the_content filter chain.'
+);
+$check(
+	! str_contains( $filtered_block_paragraph_output, 'npcink-ad-block-content-' ),
+	'The internal block-content sentinel leaked from the real the_content filter chain.'
+);
+
+wp_set_current_user( 1 );
+update_post_meta( $promotion_id, Post_Types::PARAGRAPH_NUMBER_META, 4 );
+update_post_meta( $second_paragraph_promotion_id, Post_Types::PARAGRAPH_NUMBER_META, 4 );
+wp_set_current_user( 0 );
+$missing_paragraph_delivery = new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() );
+$missing_prepared_blocks    = $missing_paragraph_delivery->prepare_content( $block_paragraph_source );
+$missing_paragraph_output   = $missing_paragraph_delivery->filter_content( do_blocks( $missing_prepared_blocks ) );
+$check(
+	! str_contains( $missing_paragraph_output, 'data-npcink-ad-promotion=' ),
+	'A missing Gutenberg paragraph anchor silently fell back to another content position.'
+);
+
+$classic_token_source = '<!-- comment </p> -->'
+	. '<script>window.fake = "</p>";</script>'
+	. '<style>.fake::after{content:"</p>"}</style>'
+	. '<template><p>Template paragraph</p></template>'
+	. '<div data-fake="</p>">Attribute value</div>'
+	. '<p data-order="kept">Real one</P >'
+	. '<p>Real two</p >';
+$classic_token_ad       = '<aside data-token-aware-insertion="true">Inserted</aside>';
+$classic_token_expected = str_replace( '</p >', '</p >' . $classic_token_ad, $classic_token_source );
+$classic_token_inserter = new Paragraph_Inserter();
+$classic_token_output   = $classic_token_inserter->insert_after_classic_paragraphs(
+	$classic_token_source,
+	array( 2 => $classic_token_ad )
+);
+$check(
+	array( 1, 2 ) === $classic_token_inserter->available_classic_anchors( $classic_token_source, array( 1, 2, 3 ) ),
+	'Classic paragraph discovery counted a comment, raw-text, template, or attribute lookalike.'
+);
+$check(
+	$classic_token_expected === $classic_token_output,
+	'Classic paragraph insertion did not preserve source HTML bytes around the real closing token.'
+);
+
+wp_set_current_user( 1 );
+update_post_meta( $promotion_id, Post_Types::PARAGRAPH_NUMBER_META, 2 );
+update_post_meta( $second_paragraph_promotion_id, Post_Types::PARAGRAPH_NUMBER_META, 2 );
+wp_set_current_user( 0 );
+$classic_paragraph_delivery = new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() );
+$classic_source             = wpautop( "Classic paragraph one\n\nClassic paragraph two\n\nClassic paragraph three" );
+$classic_paragraph_output   = $classic_paragraph_delivery->filter_content( $classic_source );
+$classic_second             = strpos( $classic_paragraph_output, 'Classic paragraph two' );
+$classic_first_ad           = strpos( $classic_paragraph_output, 'data-npcink-ad-promotion="' . $promotion_id . '"' );
+$classic_third              = strpos( $classic_paragraph_output, 'Classic paragraph three' );
+$check(
+	is_int( $classic_second ) && is_int( $classic_first_ad ) && $classic_second < $classic_first_ad,
+	'Classic paragraph delivery rendered before the requested rendered paragraph.'
+);
+$check(
+	is_int( $classic_third ) && $classic_first_ad < $classic_third,
+	'Classic paragraph delivery rendered after the wrong rendered paragraph.'
+);
+wp_delete_post( $second_paragraph_promotion_id, true );
+$check( null === get_post( $second_paragraph_promotion_id ), 'The second paragraph Promotion fixture was not removed.' );
 
 wp_set_current_user( 1 );
 update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'block' );
@@ -635,6 +791,36 @@ $assert_preflight_error(
 	'Core REST allowed a Promotion with an invalid schedule to publish.'
 );
 $check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected schedule publish changed the Promotion status.' );
+
+$invalid_paragraph_draft_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'draft',
+		'content' => '<!-- wp:paragraph --><p>REST paragraph preflight creative</p><!-- /wp:paragraph -->',
+		'meta'    => array(
+			Post_Types::LOCATION_META         => 'content_after_paragraph',
+			Post_Types::PARAGRAPH_NUMBER_META => 0,
+			Post_Types::PAGE_SCOPE_META       => 'all',
+			Post_Types::INCLUDE_IDS_META      => array(),
+			Post_Types::EXCLUDE_IDS_META      => array(),
+		),
+	)
+);
+$check( 200 === $invalid_paragraph_draft_response->get_status(), 'Core REST did not preserve an incomplete paragraph Promotion draft.' );
+$check(
+	0 === (int) get_post_meta( $rest_promotion_id, Post_Types::PARAGRAPH_NUMBER_META, true ),
+	'Core REST silently replaced the invalid draft paragraph number with its default.'
+);
+$invalid_paragraph_publish_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array( 'status' => 'publish' )
+);
+$assert_preflight_error(
+	$invalid_paragraph_publish_response,
+	'promotion_paragraph_invalid',
+	'Core REST allowed an invalid paragraph number to publish.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected paragraph publish changed the Promotion status.' );
 
 $invalid_calendar_response = $write_promotion_via_rest(
 	$rest_promotion_id,

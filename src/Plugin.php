@@ -19,6 +19,7 @@ use Npcink\Ad\Data\Repository;
 use Npcink\Ad\Domain\Eligibility_Evaluator;
 use Npcink\Ad\Domain\Overlap_Detector;
 use Npcink\Ad\Frontend\Delivery;
+use Npcink\Ad\Frontend\Paragraph_Inserter;
 use Npcink\Ad\Frontend\Preview_Request;
 use Npcink\Ad\Frontend\Renderer;
 use Npcink\Ad\REST\Core_Rest_Guard;
@@ -38,10 +39,12 @@ final class Plugin {
 	public function init(): void {
 		$repository = new Repository();
 		$evaluator  = new Eligibility_Evaluator();
+		$paragraph_inserter = new Paragraph_Inserter();
 		$delivery   = new Delivery(
 			$repository,
 			$evaluator,
-			new Renderer()
+			new Renderer(),
+			$paragraph_inserter
 		);
 		$blocks    = new Blocks( $delivery );
 		$preview   = new Preview_Request( $delivery, $repository );

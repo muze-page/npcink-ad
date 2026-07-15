@@ -110,10 +110,14 @@ if ( ! function_exists( __NAMESPACE__ . '\\remove_filter' ) ) {
 	 *
 	 * @param string $hook_name Filter hook.
 	 * @param mixed  $callback  Filter callback.
+	 * @param int    $priority  Filter priority.
 	 */
-	function remove_filter( string $hook_name, mixed $callback ): bool {
-		unset( $callback );
+	function remove_filter( string $hook_name, mixed $callback, int $priority = 10 ): bool {
 		$GLOBALS['npcink_ad_test_preview_filters'][] = 'remove:' . $hook_name;
+		$GLOBALS['npcink_ad_test_preview_removed_callbacks'][] = array(
+			'method'   => is_array( $callback ) && isset( $callback[1] ) ? (string) $callback[1] : '',
+			'priority' => $priority,
+		);
 
 		return true;
 	}

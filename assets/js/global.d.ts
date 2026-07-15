@@ -8,11 +8,15 @@ interface Window {
 		publicContentIds: number[];
 		publishedAutomaticPromotions: Array< {
 			id: number;
-			location: 'content_before' | 'content_after';
+			location:
+				| 'content_before'
+				| 'content_after'
+				| 'content_after_paragraph';
 			pageScope: 'all' | 'selected';
 			includeIds: number[];
 			excludeIds: number[];
 			device: 'all' | 'desktop' | 'mobile';
+			paragraphNumber: number;
 			startAt: string;
 			endAt: string;
 			scheduleValid: boolean;

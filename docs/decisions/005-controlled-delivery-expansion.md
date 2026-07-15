@@ -13,7 +13,7 @@ Automatic locations also allow more than one published Promotion to match the sa
 
 ## Decision
 
-Npcink Ad 0.2 is a controlled extension of the single-Promotion model. This ADR defines the implementation boundary; accepting it does not mean that the following capabilities already exist.
+Npcink Ad 0.2 is a controlled extension of the single-Promotion model. This ADR defines the implementation boundary. The automatic-content guard, overlap advisory, and after-paragraph step are now implemented; the later ordered steps remain governed by this boundary until completed.
 
 ### Automatic-content page contract
 
@@ -41,7 +41,7 @@ Npcink Ad 0.2 is a controlled extension of the single-Promotion model. This ADR 
 
 Implementation proceeds in this order:
 
-1. **After the Nth paragraph** — add one bounded automatic content position for standard posts and pages. It must preserve main-query/main-loop safeguards and the shared eligibility and rendering path.
+1. **After the Nth paragraph (implemented)** — add one bounded automatic content position for standard posts and pages. It preserves main-query/main-loop safeguards and the shared eligibility and rendering path; ADR 006 defines its exact anchor behavior.
 2. **Collapsed advanced editorial scope** — add an advanced section for the standard `post`/`page` types and, where applicable, WordPress categories and tags. Existing simple page inclusion and exclusion remains the primary path; this is not a generic boolean targeting engine or arbitrary taxonomy/CPT support.
 3. **Manual-block and device guidance** — make the explicit block-placement workflow clearer and document the fixed device boundary: mobile at `781px` and below, desktop at `782px` and above. No third device class is introduced.
 

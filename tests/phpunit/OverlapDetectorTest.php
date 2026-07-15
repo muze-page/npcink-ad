@@ -210,6 +210,41 @@ final class OverlapDetectorTest extends TestCase {
 	}
 
 	/**
+	 * Paragraph placements overlap only when their validated anchors are equal.
+	 */
+	public function test_paragraph_placement_compares_the_configured_anchor(): void {
+		$detector  = new Overlap_Detector();
+		$candidate = array_replace(
+			$this->promotion(),
+			array(
+				'location'         => 'content_after_paragraph',
+				'paragraph_number' => 3,
+			)
+		);
+		$same      = array_replace(
+			$this->promotion( 2 ),
+			array(
+				'location'         => 'content_after_paragraph',
+				'paragraph_number' => 3,
+			)
+		);
+
+		self::assertTrue( $detector->may_overlap( $candidate, $same ) );
+		self::assertFalse(
+			$detector->may_overlap(
+				$candidate,
+				array_replace( $same, array( 'paragraph_number' => 4 ) )
+			)
+		);
+		self::assertFalse(
+			$detector->may_overlap(
+				$candidate,
+				array_replace( $same, array( 'paragraph_number_valid' => false ) )
+			)
+		);
+	}
+
+	/**
 	 * Batch lookup returns unique published Promotion IDs only.
 	 */
 	public function test_finds_unique_overlapping_published_ids(): void {
@@ -239,6 +274,8 @@ final class OverlapDetectorTest extends TestCase {
 			'id'             => $id,
 			'status'         => 'publish',
 			'location'       => 'content_after',
+			'paragraph_number' => 3,
+			'paragraph_number_valid' => true,
 			'page_scope'     => 'all',
 			'include_ids'    => array(),
 			'exclude_ids'    => array(),

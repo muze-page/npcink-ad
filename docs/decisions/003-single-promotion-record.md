@@ -18,7 +18,8 @@ Npcink Ad 0.1 uses one `npcink_promotion` custom post type as the complete publi
 - `post_title` and `post_content` contain the promotion and use the native block editor.
 - `post_status` is the only draft/published/paused state.
 - Registered typed metadata contains the placement rules:
-  - `_npcink_ad_location`: `block`, `content_before`, or `content_after`;
+  - `_npcink_ad_location`: `block`, `content_before`, `content_after`, or the ADR 006 extension `content_after_paragraph`;
+  - `_npcink_ad_paragraph_number`: an integer from 1 through 20 for paragraph placement, defaulting to 3;
   - `_npcink_ad_page_scope`: `all` or `selected`;
   - `_npcink_ad_include_ids`: a bounded list of post IDs used by `selected` scope;
   - `_npcink_ad_exclude_ids`: a bounded list of post IDs excluded from either scope;
@@ -26,7 +27,7 @@ Npcink Ad 0.1 uses one `npcink_promotion` custom post type as the complete publi
   - `_npcink_ad_start_at`: an optional WordPress-local start datetime;
   - `_npcink_ad_end_at`: an optional WordPress-local end datetime.
 - The dynamic block stores a `promotionId`, not a placement relationship.
-- Automatic before/after delivery queries published promotions by location and evaluates the same record.
+- Automatic before/after delivery queries published promotions by location; paragraph delivery groups the same records by their validated paragraph number. Every path evaluates the same record.
 - Manual block and shortcode delivery reference the promotion directly.
 
 Do not create a hidden one-to-one placement record. That approach retains two sources of publication truth and introduces save transactions and orphan states without providing a user-facing capability.
@@ -66,4 +67,3 @@ Rejected. Individually registered typed metadata provides clearer validation, RE
 - The admin menu exposes one promotion collection and one editing workflow.
 - Reuse across independently controlled placements is deferred until observed demand proves that the extra entity is worth its user and maintenance cost.
 - Tests must prove that no placement record, runtime option cache, tracking event, or custom table is created by the workflow.
-

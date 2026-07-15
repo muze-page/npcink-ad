@@ -104,6 +104,27 @@ final class PromotionStatusActionTest extends TestCase {
 	}
 
 	/**
+	 * Stored invalid paragraph placement returns its stable configuration reason.
+	 */
+	public function test_resume_preflight_returns_stable_reason_for_an_invalid_paragraph(): void {
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::LOCATION_META ]         = 'content_after_paragraph';
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::PARAGRAPH_NUMBER_META ] = 0;
+
+		self::assertSame( 'promotion_paragraph_invalid', $this->resume_blocking_reason() );
+	}
+
+	/**
+	 * The invalid-paragraph notice tells an operator how to correct the value.
+	 */
+	public function test_invalid_paragraph_notice_contains_actionable_guidance(): void {
+		$message = $this->notice_message( 'promotion_paragraph_invalid' );
+
+		self::assertNotNull( $message );
+		self::assertSame( 'error', $message['type'] );
+		self::assertStringContainsString( 'Choose a paragraph number from 1 to 20.', $message['text'] );
+	}
+
+	/**
 	 * Resume queries include IDs once and intersects exclusions with that result.
 	 */
 	public function test_resume_does_not_query_exclusion_only_ids(): void {
@@ -221,6 +242,19 @@ final class PromotionStatusActionTest extends TestCase {
 		$method = new ReflectionMethod( $action, 'resume_blocking_reason' );
 
 		return $method->invoke( $action, 1 );
+	}
+
+	/**
+	 * Invoke the private notice seam for one result code.
+	 *
+	 * @param string $notice Notice code.
+	 * @return array{type: string, text: string}|null
+	 */
+	private function notice_message( string $notice ): ?array {
+		$action = new Promotion_Status_Action( new Repository(), new Eligibility_Evaluator() );
+		$method = new ReflectionMethod( $action, 'notice_message' );
+
+		return $method->invoke( $action, $notice );
 	}
 
 	/**

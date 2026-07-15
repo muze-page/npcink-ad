@@ -1,26 +1,38 @@
-import { parse, type BlockInstance } from '@wordpress/blocks';
+import { getBlockType, parse, type BlockInstance } from '@wordpress/blocks';
 
 export type PromotionPreflightIssueCode =
 	| 'empty_content'
 	| 'selected_scope_without_targets'
-	| 'invalid_schedule_order';
+	| 'invalid_schedule_order'
+	| 'invalid_paragraph_number';
 
 interface PromotionPreflightInput {
 	content: string;
+	location?:
+		| 'block'
+		| 'content_before'
+		| 'content_after'
+		| 'content_after_paragraph';
 	pageScope: 'all' | 'selected';
 	includeIds: readonly number[];
 	excludeIds: readonly number[];
+	paragraphNumber?: number;
 	startAt?: string;
 	endAt?: string;
 }
 
 export interface PromotionOverlapRule {
 	id?: number;
-	location: 'block' | 'content_before' | 'content_after';
+	location:
+		| 'block'
+		| 'content_before'
+		| 'content_after'
+		| 'content_after_paragraph';
 	pageScope: 'all' | 'selected';
 	includeIds: readonly number[];
 	excludeIds: readonly number[];
 	device: 'all' | 'desktop' | 'mobile';
+	paragraphNumber?: number;
 	startAt?: string;
 	endAt?: string;
 	scheduleValid?: boolean;
@@ -30,6 +42,20 @@ export interface EffectivePromotionTargetIds {
 	includeIds: number[];
 	excludeIds: number[];
 }
+
+export type ParagraphAnchorInspection =
+	| {
+			state: 'available' | 'missing';
+			source: 'blocks' | 'html';
+			paragraphCount: number;
+	  }
+	| {
+			state: 'unavailable';
+	  };
+
+export const DEFAULT_PARAGRAPH_NUMBER = 3;
+export const MIN_PARAGRAPH_NUMBER = 1;
+export const MAX_PARAGRAPH_NUMBER = 20;
 
 const meaningfulElementPattern =
 	/<(?:img|picture|video|audio|iframe|object|embed|svg|canvas|input)\b/i;
@@ -183,6 +209,158 @@ export function getEffectivePromotionTargetIds(
 	};
 }
 
+/**
+ * Validate a paragraph anchor without coercing explicit invalid values to the
+ * default. Missing metadata is the only case that receives the default of 3.
+ *
+ * @param value Stored or edited paragraph number.
+ */
+export function effectiveParagraphNumber( value?: number ): number {
+	return value === undefined ? DEFAULT_PARAGRAPH_NUMBER : value;
+}
+
+/**
+ * Check the bounded paragraph-number contract.
+ *
+ * @param value Paragraph number to validate.
+ */
+export function isValidParagraphNumber( value: number ): boolean {
+	return (
+		Number.isInteger( value ) &&
+		value >= MIN_PARAGRAPH_NUMBER &&
+		value <= MAX_PARAGRAPH_NUMBER
+	);
+}
+
+function blocksAreReliable( blocks: readonly BlockInstance[] ): boolean {
+	return blocks.every(
+		( block ) => block.isValid && blocksAreReliable( block.innerBlocks )
+	);
+}
+
+function serializedBlockNamesAreRegistered( content: string ): boolean {
+	const blockNames = content.matchAll(
+		/<!--\s+wp:([a-z0-9-]+(?:\/[a-z0-9-]+)?)(?=\s|\/?-->)/gi
+	);
+	let foundOpeningDelimiter = false;
+
+	for ( const match of blockNames ) {
+		foundOpeningDelimiter = true;
+		const name = match[ 1 ].includes( '/' )
+			? match[ 1 ]
+			: `core/${ match[ 1 ] }`;
+		if ( ! getBlockType( name ) ) {
+			return false;
+		}
+	}
+
+	return foundOpeningDelimiter;
+}
+
+/**
+ * Confirm that Classic source contains no material outside explicit paragraphs
+ * that wpautop could turn into another paragraph.
+ *
+ * This deliberately recognizes only complete p elements, WordPress's own
+ * wpautop block boundaries, and HTML whitespace. Text, comments, entities,
+ * inline elements, malformed markup, and unfamiliar wrappers all remain
+ * unverified instead of being reimplemented as a browser-side wpautop clone.
+ *
+ * @param content Serialized Classic post content.
+ */
+function canVerifyClassicMissingAnchor( content: string ): boolean {
+	const withoutExplicitParagraphs = content.replace(
+		/<p(?:\s[^>]*)?>[\s\S]*?<\/p\s*>/gi,
+		''
+	);
+	const withoutWpautopBlockBoundaries = withoutExplicitParagraphs.replace(
+		/<\/?(?:table|thead|tfoot|caption|col|colgroup|tbody|tr|td|th|div|dl|dd|dt|ul|ol|li|pre|form|map|area|blockquote|address|style|p|h[1-6]|hr|fieldset|legend|section|article|aside|hgroup|header|footer|nav|figure|figcaption|details|menu|summary)\b[^>]*>/gi,
+		''
+	);
+
+	return /^[\t\n\f\r ]*$/.test( withoutWpautopBlockBoundaries );
+}
+
+/**
+ * Inspect a saved post/page body for the requested paragraph anchor.
+ *
+ * Gutenberg content counts only top-level core/paragraph blocks. Content
+ * without block delimiters uses the browser HTML parser and counts explicit p
+ * elements. Existing elements can prove an anchor available, while a missing
+ * result is reported only when no remaining source could be paragraphized by
+ * wpautop. Parser failures and ambiguous Classic source are unavailable.
+ *
+ * @param content         Serialized target post/page content.
+ * @param paragraphNumber Requested top-level paragraph number.
+ */
+export function inspectParagraphAnchor(
+	content: string,
+	paragraphNumber: number
+): ParagraphAnchorInspection {
+	if ( ! isValidParagraphNumber( paragraphNumber ) ) {
+		return { state: 'unavailable' };
+	}
+
+	if ( /<!--\s+wp:/i.test( content ) ) {
+		try {
+			if ( ! serializedBlockNamesAreRegistered( content ) ) {
+				return { state: 'unavailable' };
+			}
+
+			const blocks = parse( content );
+			if ( blocks.length === 0 || ! blocksAreReliable( blocks ) ) {
+				return { state: 'unavailable' };
+			}
+
+			const paragraphCount = blocks.filter(
+				( block ) => block.name === 'core/paragraph'
+			).length;
+
+			return {
+				state:
+					paragraphCount >= paragraphNumber ? 'available' : 'missing',
+				source: 'blocks',
+				paragraphCount,
+			};
+		} catch {
+			return { state: 'unavailable' };
+		}
+	}
+
+	if ( typeof DOMParser === 'undefined' ) {
+		return { state: 'unavailable' };
+	}
+	if ( ! /<p(?:\s|>)/i.test( content ) ) {
+		return { state: 'unavailable' };
+	}
+
+	try {
+		const document = new DOMParser().parseFromString(
+			content,
+			'text/html'
+		);
+		const paragraphCount = document.body.querySelectorAll( 'p' ).length;
+		if ( paragraphCount >= paragraphNumber ) {
+			return {
+				state: 'available',
+				source: 'html',
+				paragraphCount,
+			};
+		}
+		if ( ! canVerifyClassicMissingAnchor( content ) ) {
+			return { state: 'unavailable' };
+		}
+
+		return {
+			state: 'missing',
+			source: 'html',
+			paragraphCount,
+		};
+	} catch {
+		return { state: 'unavailable' };
+	}
+}
+
 function effectiveSelectedIds( rule: PromotionOverlapRule ): number[] {
 	const excludedIds = new Set( rule.excludeIds );
 
@@ -305,6 +483,21 @@ export function getPotentiallyOverlappingPromotionIds(
 					) {
 						return false;
 					}
+					if ( candidate.location === 'content_after_paragraph' ) {
+						const candidateParagraph = effectiveParagraphNumber(
+							candidate.paragraphNumber
+						);
+						const publishedParagraph = effectiveParagraphNumber(
+							published.paragraphNumber
+						);
+						if (
+							! isValidParagraphNumber( candidateParagraph ) ||
+							! isValidParagraphNumber( publishedParagraph ) ||
+							candidateParagraph !== publishedParagraph
+						) {
+							return false;
+						}
+					}
 
 					return (
 						devicesMayOverlap( candidate, published ) &&
@@ -319,9 +512,11 @@ export function getPotentiallyOverlappingPromotionIds(
 
 export function getPromotionPreflightIssues( {
 	content,
+	location = 'content_after',
 	pageScope,
 	includeIds,
 	excludeIds,
+	paragraphNumber,
 	startAt,
 	endAt,
 }: PromotionPreflightInput ): PromotionPreflightIssueCode[] {
@@ -336,6 +531,13 @@ export function getPromotionPreflightIssues( {
 	);
 	if ( pageScope === 'selected' && ! hasEligibleTarget ) {
 		issues.push( 'selected_scope_without_targets' );
+	}
+
+	if (
+		location === 'content_after_paragraph' &&
+		! isValidParagraphNumber( effectiveParagraphNumber( paragraphNumber ) )
+	) {
+		issues.push( 'invalid_paragraph_number' );
 	}
 
 	if ( startAt && endAt ) {

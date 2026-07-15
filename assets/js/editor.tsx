@@ -22,18 +22,32 @@ import { registerPlugin } from '@wordpress/plugins';
 
 import {
 	contentContainsPromotionBlock,
+	effectiveParagraphNumber,
 	getEffectivePromotionTargetIds,
 	getPotentiallyOverlappingPromotionIds,
 	getPromotionPreflightIssues,
+	inspectParagraphAnchor,
+	isValidParagraphNumber,
+	MAX_PARAGRAPH_NUMBER,
+	MIN_PARAGRAPH_NUMBER,
 	type PromotionPreflightIssueCode,
 } from './preflight';
+import {
+	advancePublishStatusRecovery,
+	createPublishStatusRecoveryState,
+} from './publish-status-recovery';
 
 interface PromotionMeta {
-	_npcink_ad_location?: 'block' | 'content_before' | 'content_after';
+	_npcink_ad_location?:
+		| 'block'
+		| 'content_before'
+		| 'content_after'
+		| 'content_after_paragraph';
 	_npcink_ad_page_scope?: 'all' | 'selected';
 	_npcink_ad_include_ids?: number[];
 	_npcink_ad_exclude_ids?: number[];
 	_npcink_ad_device?: 'all' | 'desktop' | 'mobile';
+	_npcink_ad_paragraph_number?: number;
 	_npcink_ad_start_at?: string;
 	_npcink_ad_end_at?: string;
 }
@@ -77,6 +91,22 @@ type ManualBlockInspectionState =
 	| 'found'
 	| 'missing'
 	| 'unavailable';
+
+type ParagraphAnchorNoticeState =
+	| {
+			state:
+				| 'not_applicable'
+				| 'no_target'
+				| 'loading'
+				| 'invalid_number'
+				| 'unavailable';
+	  }
+	| {
+			state: 'available' | 'missing';
+			source: 'blocks' | 'html';
+			paragraphCount: number;
+			paragraphNumber: number;
+	  };
 
 const editContextQuery = { context: 'edit' } as const;
 
@@ -153,6 +183,16 @@ function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
 				'Stop showing must be later than Start showing.',
 				'npcink-ad'
 			);
+		case 'invalid_paragraph_number':
+			return sprintf(
+				/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
+				__(
+					'Paragraph number must be a whole number from %1$d to %2$d.',
+					'npcink-ad'
+				),
+				MIN_PARAGRAPH_NUMBER,
+				MAX_PARAGRAPH_NUMBER
+			);
 	}
 }
 
@@ -206,6 +246,111 @@ function ManualBlockInspectionNotice( {
 				<Notice status="info" isDismissible={ false }>
 					{ __(
 						'The selected page body could not be inspected from the editor data. This does not mean the block is missing; verify with the real-page preview.',
+						'npcink-ad'
+					) }
+				</Notice>
+			);
+	}
+}
+
+function ParagraphAnchorNotice( {
+	inspection,
+}: {
+	inspection: ParagraphAnchorNoticeState;
+} ) {
+	switch ( inspection.state ) {
+		case 'not_applicable':
+			return null;
+		case 'no_target':
+			return (
+				<Notice status="info" isDismissible={ false }>
+					{ __(
+						'Choose a published page or post in Real-page preview before checking the paragraph anchor.',
+						'npcink-ad'
+					) }
+				</Notice>
+			);
+		case 'loading':
+			return (
+				<Notice status="info" isDismissible={ false }>
+					<Spinner />
+					{ __(
+						'Checking the selected page body for the paragraph anchor…',
+						'npcink-ad'
+					) }
+				</Notice>
+			);
+		case 'invalid_number':
+			return (
+				<Notice status="warning" isDismissible={ false }>
+					{ sprintf(
+						/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
+						__(
+							'Enter a whole paragraph number from %1$d to %2$d before checking this anchor.',
+							'npcink-ad'
+						),
+						MIN_PARAGRAPH_NUMBER,
+						MAX_PARAGRAPH_NUMBER
+					) }
+				</Notice>
+			);
+		case 'available': {
+			const message =
+				inspection.source === 'blocks'
+					? /* translators: 1: paragraph count, 2: requested paragraph number. */
+					  __(
+							'The saved page body has %1$d top-level paragraph blocks, so the anchor after paragraph %2$d is available.',
+							'npcink-ad'
+					  )
+					: /* translators: 1: paragraph count, 2: requested paragraph number. */
+					  __(
+							'The saved Classic page body has %1$d actual paragraph elements, so the anchor after paragraph %2$d is available.',
+							'npcink-ad'
+					  );
+
+			return (
+				<Notice status="success" isDismissible={ false }>
+					{ sprintf(
+						message,
+						inspection.paragraphCount,
+						inspection.paragraphNumber
+					) }
+				</Notice>
+			);
+		}
+		case 'missing': {
+			const message =
+				inspection.source === 'blocks'
+					? /* translators: 1: paragraph count, 2: requested paragraph number. */
+					  __(
+							'The saved page body has only %1$d top-level paragraph blocks, so the anchor after paragraph %2$d was not found.',
+							'npcink-ad'
+					  )
+					: /* translators: 1: paragraph count, 2: requested paragraph number. */
+					  __(
+							'The saved Classic page body has only %1$d actual paragraph elements, so the anchor after paragraph %2$d was not found.',
+							'npcink-ad'
+					  );
+
+			return (
+				<Notice status="warning" isDismissible={ false }>
+					{ sprintf(
+						message,
+						inspection.paragraphCount,
+						inspection.paragraphNumber
+					) }{ ' ' }
+					{ __(
+						'This anchor check is advisory and does not block publishing.',
+						'npcink-ad'
+					) }
+				</Notice>
+			);
+		}
+		case 'unavailable':
+			return (
+				<Notice status="info" isDismissible={ false }>
+					{ __(
+						'The selected page body could not be inspected reliably for this paragraph anchor. This does not prove the anchor is missing; verify the result with the real-page preview.',
 						'npcink-ad'
 					) }
 				</Notice>
@@ -362,10 +507,20 @@ function PromotionSettingsPanel() {
 			) ?? null ) as SiteBaseRecord | null,
 		[]
 	);
-	const isSaving = useSelect(
-		( select ) =>
-			select( editorStore ).isSavingPost() ||
-			select( editorStore ).isAutosavingPost(),
+	const { isSaving, isAutosaving, persistedStatus, editedStatus } = useSelect(
+		( select ) => {
+			const editor = select( editorStore );
+			const currentPost = editor.getCurrentPost() as ContentRecord;
+
+			return {
+				isSaving: editor.isSavingPost(),
+				isAutosaving: editor.isAutosavingPost(),
+				persistedStatus: String( currentPost?.status ?? '' ),
+				editedStatus: String(
+					editor.getEditedPostAttribute( 'status' ) ?? ''
+				),
+			};
+		},
 		[]
 	);
 	const isDirty = useSelect(
@@ -373,11 +528,35 @@ function PromotionSettingsPanel() {
 		[]
 	);
 	const { editPost, savePost } = useDispatch( editorStore );
+	const publishStatusRecovery = React.useRef(
+		createPublishStatusRecoveryState()
+	);
 	const [ previewTarget, setPreviewTarget ] = React.useState( 0 );
 	const [ previewError, setPreviewError ] = React.useState( '' );
 	const [ confirmedPublicIds, setConfirmedPublicIds ] = React.useState<
 		number[]
 	>( [] );
+
+	// Reconcile before paint so Core UI does not present a failed status as saved.
+	React.useLayoutEffect( () => {
+		const transition = advancePublishStatusRecovery(
+			publishStatusRecovery.current,
+			{
+				isSaving,
+				isAutosaving,
+				persistedStatus,
+				editedStatus,
+			}
+		);
+		publishStatusRecovery.current = transition.state;
+
+		if ( transition.restoreStatus !== null ) {
+			editPost(
+				{ status: transition.restoreStatus },
+				{ undoIgnore: true }
+			);
+		}
+	}, [ editPost, editedStatus, isAutosaving, isSaving, persistedStatus ] );
 
 	const updateMeta = < Key extends keyof PromotionMeta >(
 		key: Key,
@@ -394,6 +573,11 @@ function PromotionSettingsPanel() {
 	const includeIds = normalizeIds( meta._npcink_ad_include_ids );
 	const excludeIds = normalizeIds( meta._npcink_ad_exclude_ids );
 	const pageScope = meta._npcink_ad_page_scope || 'all';
+	const location = meta._npcink_ad_location || 'content_after';
+	const paragraphNumber = effectiveParagraphNumber(
+		meta._npcink_ad_paragraph_number
+	);
+	const paragraphNumberValid = isValidParagraphNumber( paragraphNumber );
 	const settings = window.NpcinkAdEditorSettings;
 	const { includeIds: effectiveIncludeIds, excludeIds: effectiveExcludeIds } =
 		getEffectivePromotionTargetIds( includeIds, excludeIds, [
@@ -407,9 +591,11 @@ function PromotionSettingsPanel() {
 	};
 	const preflightIssues = getPromotionPreflightIssues( {
 		content,
+		location,
 		pageScope,
 		includeIds: effectiveIncludeIds,
 		excludeIds: effectiveExcludeIds,
+		paragraphNumber,
 		startAt: meta._npcink_ad_start_at,
 		endAt: meta._npcink_ad_end_at,
 	} );
@@ -420,11 +606,12 @@ function PromotionSettingsPanel() {
 	const potentiallyOverlappingIds = getPotentiallyOverlappingPromotionIds(
 		{
 			id: postId,
-			location: meta._npcink_ad_location || 'content_after',
+			location,
 			pageScope,
 			includeIds: effectiveIncludeIds,
 			excludeIds: effectiveExcludeIds,
 			device: meta._npcink_ad_device || 'all',
+			paragraphNumber,
 			startAt: meta._npcink_ad_start_at,
 			endAt: meta._npcink_ad_end_at,
 		},
@@ -435,8 +622,8 @@ function PromotionSettingsPanel() {
 		effectiveIncludeIds[ 0 ] ||
 		settings?.defaultTargetId ||
 		0;
-	const isManualBlock =
-		( meta._npcink_ad_location || 'content_after' ) === 'block';
+	const isManualBlock = location === 'block';
+	const isParagraphLocation = location === 'content_after_paragraph';
 	const manualBlockInspection = useSelect(
 		( select ): ManualBlockInspectionState => {
 			if ( ! isManualBlock ) {
@@ -507,6 +694,81 @@ function PromotionSettingsPanel() {
 		},
 		[ isManualBlock, effectivePreviewTarget, postId ]
 	);
+	const paragraphAnchorInspection = useSelect(
+		( select ): ParagraphAnchorNoticeState => {
+			if ( ! isParagraphLocation ) {
+				return { state: 'not_applicable' };
+			}
+			if ( ! paragraphNumberValid ) {
+				return { state: 'invalid_number' };
+			}
+			if ( ! effectivePreviewTarget ) {
+				return { state: 'no_target' };
+			}
+
+			const coreData = select( coreDataStore );
+			const resolution = coreData as typeof coreData &
+				ResolutionSelectors;
+			const postArgs = [
+				'postType',
+				'post',
+				effectivePreviewTarget,
+				editContextQuery,
+			] as const;
+			const pageArgs = [
+				'postType',
+				'page',
+				effectivePreviewTarget,
+				editContextQuery,
+			] as const;
+			const post = coreData.getEntityRecord( ...postArgs ) as
+				| ContentRecord
+				| null
+				| undefined;
+			const page = coreData.getEntityRecord( ...pageArgs ) as
+				| ContentRecord
+				| null
+				| undefined;
+			const target = post ?? page;
+
+			if ( target ) {
+				const rawContent = target.content?.raw;
+				if (
+					target.status !== 'publish' ||
+					typeof rawContent !== 'string'
+				) {
+					return { state: 'unavailable' };
+				}
+
+				const inspection = inspectParagraphAnchor(
+					rawContent,
+					paragraphNumber
+				);
+				return inspection.state === 'unavailable'
+					? inspection
+					: { ...inspection, paragraphNumber };
+			}
+
+			const postResolved = resolution.hasFinishedResolution(
+				'getEntityRecord',
+				postArgs
+			);
+			const pageResolved = resolution.hasFinishedResolution(
+				'getEntityRecord',
+				pageArgs
+			);
+
+			return postResolved && pageResolved
+				? { state: 'unavailable' }
+				: { state: 'loading' };
+		},
+		[
+			isParagraphLocation,
+			effectivePreviewTarget,
+			paragraphNumber,
+			paragraphNumberValid,
+		]
+	);
 
 	const openPreview = async () => {
 		setPreviewError( '' );
@@ -515,6 +777,20 @@ function PromotionSettingsPanel() {
 				__(
 					'Save the promotion before opening a preview.',
 					'npcink-ad'
+				)
+			);
+			return;
+		}
+		if ( isParagraphLocation && ! paragraphNumberValid ) {
+			setPreviewError(
+				sprintf(
+					/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
+					__(
+						'Enter a whole paragraph number from %1$d to %2$d before opening the real-page preview.',
+						'npcink-ad'
+					),
+					MIN_PARAGRAPH_NUMBER,
+					MAX_PARAGRAPH_NUMBER
 				)
 			);
 			return;
@@ -588,7 +864,7 @@ function PromotionSettingsPanel() {
 				<SelectControl
 					__next40pxDefaultSize
 					label={ __( 'Placement', 'npcink-ad' ) }
-					value={ meta._npcink_ad_location || 'content_after' }
+					value={ location }
 					options={ [
 						{
 							label: __( 'After post content', 'npcink-ad' ),
@@ -597,6 +873,10 @@ function PromotionSettingsPanel() {
 						{
 							label: __( 'Before post content', 'npcink-ad' ),
 							value: 'content_before',
+						},
+						{
+							label: __( 'After paragraph N', 'npcink-ad' ),
+							value: 'content_after_paragraph',
 						},
 						{
 							label: __( 'Manual block', 'npcink-ad' ),
@@ -631,6 +911,34 @@ function PromotionSettingsPanel() {
 						)
 					}
 				/>
+				{ isParagraphLocation && (
+					<TextControl
+						__next40pxDefaultSize
+						type="number"
+						label={ __( 'Paragraph number', 'npcink-ad' ) }
+						value={ String( paragraphNumber ) }
+						min={ MIN_PARAGRAPH_NUMBER }
+						max={ MAX_PARAGRAPH_NUMBER }
+						step={ 1 }
+						onChange={ ( value ) => {
+							const parsed =
+								value.trim() === '' ? 0 : Number( value );
+							updateMeta(
+								'_npcink_ad_paragraph_number',
+								Number.isFinite( parsed ) ? parsed : 0
+							);
+						} }
+						help={ sprintf(
+							/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
+							__(
+								'Required. Enter a whole number from %1$d to %2$d. The default is 3.',
+								'npcink-ad'
+							),
+							MIN_PARAGRAPH_NUMBER,
+							MAX_PARAGRAPH_NUMBER
+						) }
+					/>
+				) }
 				{ pageScope === 'selected' && (
 					<ContentPicker
 						label={ __( 'Included content', 'npcink-ad' ) }
@@ -766,9 +1074,26 @@ function PromotionSettingsPanel() {
 						{ previewError }
 					</Notice>
 				) }
+				{ isParagraphLocation && ! paragraphNumberValid && (
+					<Notice status="warning" isDismissible={ false }>
+						{ sprintf(
+							/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
+							__(
+								'Enter a whole paragraph number from %1$d to %2$d before opening the real-page preview.',
+								'npcink-ad'
+							),
+							MIN_PARAGRAPH_NUMBER,
+							MAX_PARAGRAPH_NUMBER
+						) }
+					</Notice>
+				) }
 				<Button
 					variant="secondary"
-					disabled={ isSaving || ! settings }
+					disabled={
+						isSaving ||
+						! settings ||
+						( isParagraphLocation && ! paragraphNumberValid )
+					}
 					isBusy={ isSaving }
 					onClick={ openPreview }
 				>
@@ -784,7 +1109,8 @@ function PromotionSettingsPanel() {
 					preflightIssues.length > 0 ||
 					potentiallyOverlappingIds.length > 0 ||
 					hasSchedule ||
-					isManualBlock
+					isManualBlock ||
+					isParagraphLocation
 				}
 			>
 				{ preflightIssues.length > 0 ? (
@@ -836,6 +1162,9 @@ function PromotionSettingsPanel() {
 					</Notice>
 				) }
 				<ManualBlockInspectionNotice state={ manualBlockInspection } />
+				<ParagraphAnchorNotice
+					inspection={ paragraphAnchorInspection }
+				/>
 				<p>
 					{ __(
 						'These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative.',

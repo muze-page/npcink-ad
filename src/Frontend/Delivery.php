@@ -18,6 +18,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Maps WordPress request data into the pure eligibility policy.
  */
 final class Delivery {
+	private const PARAGRAPH_LOCATION = 'content_after_paragraph';
+
 	/**
 	 * Promotions currently being rendered, used to stop recursive content.
 	 *
@@ -40,6 +42,41 @@ final class Delivery {
 	private array $filtered_content = array();
 
 	/**
+	 * Published paragraph Promotion IDs grouped by validated paragraph number.
+	 *
+	 * @var array<int, list<int>>
+	 */
+	private array $paragraph_groups = array();
+
+	/**
+	 * Whether paragraph groups have been loaded for this request.
+	 *
+	 * @var bool
+	 */
+	private bool $paragraph_groups_loaded = false;
+
+	/**
+	 * Whether priority-8 preparation saw named block content for a post.
+	 *
+	 * @var array<int, bool>
+	 */
+	private array $prepared_block_content = array();
+
+	/**
+	 * Paragraph anchor requested by an authorized real-page preview.
+	 *
+	 * @var array{paragraph_number: int, paragraph_number_valid: bool, post_id: int}|null
+	 */
+	private ?array $paragraph_preview_context = null;
+
+	/**
+	 * Whether normal automatic paragraph preparation is suppressed for preview.
+	 *
+	 * @var bool
+	 */
+	private bool $preview_request_active = false;
+
+	/**
 	 * Authorized real-page preview context for a manual block.
 	 *
 	 * @var array{promotion_id: int, device: string, post_id: int}|null
@@ -56,22 +93,34 @@ final class Delivery {
 	/**
 	 * Compose delivery from native storage, the pure policy, and rendering.
 	 *
-	 * @param Repository            $repository Native WordPress data mapper.
-	 * @param Eligibility_Evaluator $evaluator  Pure delivery policy.
-	 * @param Renderer              $renderer   Safe content renderer.
+	 * @param Repository              $repository Native WordPress data mapper.
+	 * @param Eligibility_Evaluator   $evaluator  Pure delivery policy.
+	 * @param Renderer                $renderer   Safe content renderer.
+	 * @param Paragraph_Inserter|null $paragraph_inserter Paragraph anchor service.
 	 */
 	public function __construct(
 		private readonly Repository $repository,
 		private readonly Eligibility_Evaluator $evaluator,
-		private readonly Renderer $renderer
-	) {}
+		private readonly Renderer $renderer,
+		?Paragraph_Inserter $paragraph_inserter = null
+	) {
+		$this->paragraph_inserter = $paragraph_inserter ?? new Paragraph_Inserter();
+	}
+
+	/**
+	 * Paragraph anchor preparation and rendered HTML insertion.
+	 *
+	 * @var Paragraph_Inserter
+	 */
+	private readonly Paragraph_Inserter $paragraph_inserter;
 
 	/**
 	 * Register shortcode and post-content delivery.
 	 */
 	public function register(): void {
 		add_shortcode( 'npcink_ad', array( $this, 'shortcode' ) );
-		add_filter( 'the_content', array( $this, 'filter_content' ) );
+		add_filter( 'the_content', array( $this, 'prepare_content' ), 8 );
+		add_filter( 'the_content', array( $this, 'filter_content' ), 10 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_style' ) );
 	}
 
@@ -103,10 +152,66 @@ final class Delivery {
 	}
 
 	/**
+	 * Suppress normal automatic markers during any forced preview request.
+	 */
+	public function enable_preview_request(): void {
+		$this->preview_request_active = true;
+	}
+
+	/**
+	 * Prepare one paragraph anchor for an authorized real-page preview.
+	 *
+	 * @param int  $paragraph_number       Requested top-level or rendered paragraph.
+	 * @param bool $paragraph_number_valid Whether the stored anchor is valid.
+	 * @param int  $post_id                Real page used by the preview.
+	 */
+	public function enable_paragraph_preview( int $paragraph_number, bool $paragraph_number_valid, int $post_id ): void {
+		$this->preview_request_active    = true;
+		$this->paragraph_preview_context = array(
+			'paragraph_number'       => $paragraph_number,
+			'paragraph_number_valid' => $paragraph_number_valid && 1 <= $paragraph_number && 20 >= $paragraph_number,
+			'post_id'                => absint( $post_id ),
+		);
+	}
+
+	/**
 	 * Report whether the real page contained the target promotion block.
 	 */
 	public function has_rendered_block_preview(): bool {
 		return $this->block_preview_rendered;
+	}
+
+	/**
+	 * Insert block paragraph markers before core renders serialized blocks.
+	 *
+	 * Classic content remains untouched here and is counted only after wpautop
+	 * has produced the rendered HTML passed to filter_content().
+	 *
+	 * @param string $content Original serialized post content.
+	 */
+	public function prepare_content( string $content ): string {
+		$post_id = $this->content_post_id();
+		if ( 1 > $post_id ) {
+			return $content;
+		}
+
+		$paragraph_numbers = $this->preview_request_active ? array() : array_keys( $this->get_paragraph_groups() );
+		if ( $this->preview_request_active && null !== $this->paragraph_preview_context ) {
+			$paragraph_numbers = $post_id === $this->paragraph_preview_context['post_id']
+				&& $this->paragraph_preview_context['paragraph_number_valid']
+				? array( $this->paragraph_preview_context['paragraph_number'] )
+				: array();
+		}
+		if ( array() === $paragraph_numbers ) {
+			return $content;
+		}
+
+		$markers  = $this->paragraph_markers( $post_id, $paragraph_numbers );
+		$sentinel = $this->paragraph_sentinel( $post_id );
+		$prepared = $this->paragraph_inserter->prepare_block_content( $content, $markers, $sentinel );
+		$this->prepared_block_content[ $post_id ] = $this->paragraph_inserter->has_block_sentinel( $prepared, $sentinel );
+
+		return $prepared;
 	}
 
 	/**
@@ -121,13 +226,15 @@ final class Delivery {
 	 * @param int         $reserve         Minimum reserved height.
 	 * @param string|null $simulated_device Optional preview device.
 	 * @param int|null    $context_post_id Optional page context override.
+	 * @param bool|null   $content_anchor_available Whether a requested paragraph anchor exists.
 	 */
 	public function render_promotion(
 		int $promotion_id,
 		string $expected_location = 'block',
 		int $reserve = 0,
 		?string $simulated_device = null,
-		?int $context_post_id = null
+		?int $context_post_id = null,
+		?bool $content_anchor_available = null
 	): string {
 		$can_diagnose = current_user_can( 'manage_npcink_ads' );
 		if ( 1 > $promotion_id ) {
@@ -163,15 +270,16 @@ final class Delivery {
 		}
 
 		$post_id = null === $context_post_id ? get_queried_object_id() : absint( $context_post_id );
-		$result  = $this->evaluator->evaluate(
-			$promotion,
-			array(
-				'now'              => current_datetime()->getTimestamp(),
-				'post_id'          => $post_id,
-				'expected_location' => $expected_location,
-				'simulated_device'  => $simulated_device,
-			)
+		$context = array(
+			'now'               => current_datetime()->getTimestamp(),
+			'post_id'           => $post_id,
+			'expected_location' => $expected_location,
+			'simulated_device'  => $simulated_device,
 		);
+		if ( null !== $content_anchor_available ) {
+			$context['content_anchor_available'] = $content_anchor_available;
+		}
+		$result = $this->evaluator->evaluate( $promotion, $context );
 
 		if ( ! $result['allowed'] ) {
 			return $can_diagnose ? $this->renderer->placeholder( $result['reasons'], $reserve ) : '';
@@ -196,13 +304,15 @@ final class Delivery {
 	 * @param string|null $simulated_device  Desktop or mobile preview context.
 	 * @param int|null    $context_post_id   Preview page ID.
 	 * @param int         $reserve           Minimum reserved height.
+	 * @param bool|null   $content_anchor_available Whether a requested paragraph anchor exists.
 	 */
 	public function render_preview(
 		int $promotion_id,
 		string $expected_location = 'block',
 		?string $simulated_device = null,
 		?int $context_post_id = null,
-		int $reserve = 0
+		int $reserve = 0,
+		?bool $content_anchor_available = null
 	): string {
 		if ( ! current_user_can( 'manage_npcink_ads' ) ) {
 			return '';
@@ -220,15 +330,16 @@ final class Delivery {
 		}
 
 		$post_id = null === $context_post_id ? get_queried_object_id() : absint( $context_post_id );
-		$result  = $this->evaluator->evaluate(
-			$promotion,
-			array(
-				'now'               => current_datetime()->getTimestamp(),
-				'post_id'           => $post_id,
-				'expected_location' => $expected_location,
-				'simulated_device'  => $simulated_device,
-			)
+		$context = array(
+			'now'               => current_datetime()->getTimestamp(),
+			'post_id'           => $post_id,
+			'expected_location' => $expected_location,
+			'simulated_device'  => $simulated_device,
 		);
+		if ( null !== $content_anchor_available ) {
+			$context['content_anchor_available'] = $content_anchor_available;
+		}
+		$result = $this->evaluator->evaluate( $promotion, $context );
 
 		$this->rendering[ $promotion_id ] = true;
 		try {
@@ -254,16 +365,98 @@ final class Delivery {
 	}
 
 	/**
+	 * Insert one authorized paragraph preview at its truthful real-page anchor.
+	 *
+	 * A missing anchor is the only paragraph path that appends output to the end:
+	 * the manager still sees the creative, while the evaluator receives an
+	 * explicit unavailable-anchor context and renders content_anchor_missing.
+	 *
+	 * @param string $content          Rendered page content.
+	 * @param int    $promotion_id     Promotion post ID.
+	 * @param int    $paragraph_number Requested paragraph number.
+	 * @param bool   $paragraph_number_valid Whether the stored anchor is valid.
+	 * @param string $device                 Desktop or mobile preview context.
+	 * @param int    $post_id                Real page used by the preview.
+	 */
+	public function insert_paragraph_preview(
+		string $content,
+		int $promotion_id,
+		int $paragraph_number,
+		bool $paragraph_number_valid,
+		string $device,
+		int $post_id
+	): string {
+		if ( ! $paragraph_number_valid || 1 > $paragraph_number || 20 < $paragraph_number ) {
+			return $content . $this->render_preview(
+				$promotion_id,
+				self::PARAGRAPH_LOCATION,
+				$device,
+				$post_id
+			);
+		}
+
+		$markers          = $this->paragraph_markers( $post_id, array( $paragraph_number ) );
+		$sentinel         = $this->paragraph_sentinel( $post_id );
+		$is_block_content = $this->prepared_block_content[ $post_id ] ?? false;
+
+		if ( $is_block_content ) {
+			$anchor_available = in_array(
+				$paragraph_number,
+				$this->paragraph_inserter->available_block_anchors( $content, $markers ),
+				true
+			);
+			$preview          = $this->render_preview(
+				$promotion_id,
+				self::PARAGRAPH_LOCATION,
+				$device,
+				$post_id,
+				0,
+				$anchor_available
+			);
+			$filtered         = $this->paragraph_inserter->replace_block_markers(
+				$content,
+				$markers,
+				$anchor_available ? array( $paragraph_number => $preview ) : array(),
+				$sentinel
+			);
+
+			return $anchor_available ? $filtered : $filtered . $preview;
+		}
+
+		$anchor_available = in_array(
+			$paragraph_number,
+			$this->paragraph_inserter->available_classic_anchors( $content, array( $paragraph_number ) ),
+			true
+		);
+		$preview          = $this->render_preview(
+			$promotion_id,
+			self::PARAGRAPH_LOCATION,
+			$device,
+			$post_id,
+			0,
+			$anchor_available
+		);
+		if ( ! $anchor_available ) {
+			return $content . $preview;
+		}
+
+		return $this->paragraph_inserter->insert_after_classic_paragraphs(
+			$content,
+			array( $paragraph_number => $preview )
+		);
+	}
+
+	/**
 	 * Add eligible before/after promotions to singular main-loop content.
 	 *
 	 * @param string $content Original post content.
 	 */
 	public function filter_content( string $content ): string {
-		if ( $this->filtering_content || is_admin() || is_feed() || ! is_singular( array( 'post', 'page' ) ) || ! in_the_loop() || ! is_main_query() ) {
+		if ( $this->filtering_content ) {
 			return $content;
 		}
 
-		$post_id = get_the_ID();
+		$post_id = $this->content_post_id();
 		if ( 1 > $post_id ) {
 			return $content;
 		}
@@ -275,9 +468,10 @@ final class Delivery {
 
 		$this->filtering_content = true;
 		try {
-			$before = $this->render_content_location( 'content_before', $post_id );
-			$after  = $this->render_content_location( 'content_after', $post_id );
-			$output = $before . $content . $after;
+			$before            = $this->render_content_location( 'content_before', $post_id );
+			$paragraph_content = $this->insert_paragraph_promotions( $content, $post_id );
+			$after             = $this->render_content_location( 'content_after', $post_id );
+			$output            = $before . $paragraph_content . $after;
 			$this->filtered_content[ $post_id ] = array(
 				'source' => $content,
 				'output' => $output,
@@ -287,6 +481,145 @@ final class Delivery {
 		} finally {
 			$this->filtering_content = false;
 		}
+	}
+
+	/**
+	 * Insert all eligible paragraph Promotions at available anchors.
+	 *
+	 * Missing anchors intentionally produce no normal frontend output.
+	 *
+	 * @param string $content Rendered page content.
+	 * @param int    $post_id Current content post ID.
+	 */
+	private function insert_paragraph_promotions( string $content, int $post_id ): string {
+		$groups = $this->get_paragraph_groups();
+		if ( array() === $groups ) {
+			return $content;
+		}
+
+		$paragraph_numbers = array_keys( $groups );
+		$markers          = $this->paragraph_markers( $post_id, $paragraph_numbers );
+		$sentinel         = $this->paragraph_sentinel( $post_id );
+		$is_block_content = $this->prepared_block_content[ $post_id ] ?? false;
+		if ( $is_block_content ) {
+			$available    = $this->paragraph_inserter->available_block_anchors( $content, $markers );
+			$replacements = $this->render_paragraph_groups( $groups, $available, $post_id );
+
+			return $this->paragraph_inserter->replace_block_markers(
+				$content,
+				$markers,
+				$replacements,
+				$sentinel
+			);
+		}
+
+		$available    = $this->paragraph_inserter->available_classic_anchors( $content, $paragraph_numbers );
+		$replacements = $this->render_paragraph_groups( $groups, $available, $post_id );
+
+		return $this->paragraph_inserter->insert_after_classic_paragraphs( $content, $replacements );
+	}
+
+	/**
+	 * Render only groups whose real content anchor exists.
+	 *
+	 * @param array $groups            Promotion IDs by paragraph number.
+	 * @param array $available_anchors Existing paragraph numbers.
+	 * @param int   $post_id           Current content post ID.
+	 * @return array<int, string>
+	 * @phpstan-param array<int, list<int>> $groups
+	 * @phpstan-param list<int> $available_anchors
+	 */
+	private function render_paragraph_groups( array $groups, array $available_anchors, int $post_id ): array {
+		$replacements = array();
+		foreach ( $available_anchors as $paragraph_number ) {
+			$output = '';
+			foreach ( $groups[ $paragraph_number ] ?? array() as $promotion_id ) {
+				$output .= $this->render_promotion(
+					$promotion_id,
+					self::PARAGRAPH_LOCATION,
+					0,
+					null,
+					$post_id,
+					true
+				);
+			}
+			$replacements[ $paragraph_number ] = $output;
+		}
+
+		return $replacements;
+	}
+
+	/**
+	 * Load and normalize paragraph groups once per request.
+	 *
+	 * @return array<int, list<int>>
+	 */
+	private function get_paragraph_groups(): array {
+		if ( $this->paragraph_groups_loaded ) {
+			return $this->paragraph_groups;
+		}
+
+		$this->paragraph_groups_loaded = true;
+		$groups                        = $this->repository->find_published_paragraph_ids_grouped_by_number();
+		foreach ( $groups as $paragraph_number => $promotion_ids ) {
+			$paragraph_number = (int) $paragraph_number;
+			if ( 1 > $paragraph_number || 20 < $paragraph_number ) {
+				continue;
+			}
+
+			$ids = array_values( array_filter( array_map( 'absint', $promotion_ids ) ) );
+			if ( array() !== $ids ) {
+				$this->paragraph_groups[ $paragraph_number ] = $ids;
+			}
+		}
+		ksort( $this->paragraph_groups, SORT_NUMERIC );
+
+		return $this->paragraph_groups;
+	}
+
+	/**
+	 * Build unique internal markers for requested paragraph numbers.
+	 *
+	 * @param int   $post_id           Current post ID.
+	 * @param array $paragraph_numbers Requested paragraph numbers.
+	 * @return array<int, string>
+	 * @phpstan-param list<int> $paragraph_numbers
+	 */
+	private function paragraph_markers( int $post_id, array $paragraph_numbers ): array {
+		$markers = array();
+		foreach ( $paragraph_numbers as $paragraph_number ) {
+			$paragraph_number = (int) $paragraph_number;
+			if ( 1 <= $paragraph_number && 20 >= $paragraph_number ) {
+				$markers[ $paragraph_number ] = sprintf(
+					'<!-- npcink-ad-paragraph-anchor-%d-%d-%d -->',
+					spl_object_id( $this ),
+					$post_id,
+					$paragraph_number
+				);
+			}
+		}
+
+		return $markers;
+	}
+
+	/**
+	 * Build the internal named-block sentinel for one post.
+	 *
+	 * @param int $post_id Current post ID.
+	 */
+	private function paragraph_sentinel( int $post_id ): string {
+		return sprintf( '<!-- npcink-ad-block-content-%d-%d -->', spl_object_id( $this ), $post_id );
+	}
+
+	/**
+	 * Return the post ID only for supported singular main-loop content.
+	 */
+	private function content_post_id(): int {
+		if ( is_admin() || is_feed() || ! is_singular( array( 'post', 'page' ) ) || ! in_the_loop() || ! is_main_query() ) {
+			return 0;
+		}
+
+		return get_the_ID();
 	}
 
 	/**

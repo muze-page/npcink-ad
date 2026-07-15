@@ -170,6 +170,22 @@ final class PromotionListTest extends TestCase {
 	}
 
 	/**
+	 * Paragraph placement labels expose the anchor without disguising invalid data.
+	 */
+	public function test_paragraph_placement_label_distinguishes_valid_and_invalid_anchors(): void {
+		$method = new ReflectionMethod( $this->promotion_list(), 'location_label' );
+
+		self::assertSame(
+			'After paragraph 7',
+			$method->invoke( $this->promotion_list(), 'content_after_paragraph', 7, true )
+		);
+		self::assertSame(
+			'After paragraph (invalid)',
+			$method->invoke( $this->promotion_list(), 'content_after_paragraph', 3, false )
+		);
+	}
+
+	/**
 	 * List cache aggregates include IDs once and intersects exclusions with them.
 	 */
 	public function test_list_uses_one_aggregated_public_include_lookup(): void {

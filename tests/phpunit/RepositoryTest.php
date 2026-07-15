@@ -91,6 +91,34 @@ final class RepositoryTest extends TestCase {
 		self::assertFalse( $promotion['start_at_valid'] );
 		self::assertSame( 0, $promotion['end_at'] );
 		self::assertTrue( $promotion['end_at_valid'] );
+		self::assertSame( Post_Types::DEFAULT_PARAGRAPH_NUMBER, $promotion['paragraph_number'] );
+		self::assertTrue( $promotion['paragraph_number_valid'] );
+	}
+
+	/**
+	 * Explicit invalid anchors remain distinguishable from absent metadata.
+	 */
+	public function test_find_promotion_preserves_invalid_paragraph_metadata(): void {
+		$GLOBALS['npcink_ad_test_posts'][8] = $this->promotion_post( 8, 'draft' );
+		$GLOBALS['npcink_ad_test_posts'][9] = $this->promotion_post( 9, 'draft' );
+		$GLOBALS['npcink_ad_test_meta'][8]  = array(
+			Post_Types::LOCATION_META         => 'content_after_paragraph',
+			Post_Types::PARAGRAPH_NUMBER_META => 21,
+		);
+		$GLOBALS['npcink_ad_test_meta'][9]  = array(
+			Post_Types::LOCATION_META         => 'content_after_paragraph',
+			Post_Types::PARAGRAPH_NUMBER_META => '',
+		);
+
+		$upper = ( new Repository() )->find_promotion( 8 );
+		$empty = ( new Repository() )->find_promotion( 9 );
+
+		self::assertIsArray( $upper );
+		self::assertSame( 21, $upper['paragraph_number'] );
+		self::assertFalse( $upper['paragraph_number_valid'] );
+		self::assertIsArray( $empty );
+		self::assertSame( 0, $empty['paragraph_number'] );
+		self::assertFalse( $empty['paragraph_number_valid'] );
 	}
 
 	/**
@@ -122,20 +150,27 @@ final class RepositoryTest extends TestCase {
 			3 => $this->promotion_post( 3, 'publish' ),
 			4 => $this->promotion_post( 4, 'publish' ),
 			5 => $this->promotion_post( 5, 'draft' ),
+			6 => $this->promotion_post( 6, 'publish' ),
 		);
 		$GLOBALS['npcink_ad_test_meta']  = array(
 			1 => $this->promotion_meta( 'content_before' ),
 			2 => $this->promotion_meta( 'content_after' ),
-			3 => $this->promotion_meta( '' ),
+			3 => $this->promotion_meta( null ),
 			4 => $this->promotion_meta( 'block' ),
 			5 => $this->promotion_meta( 'content_before' ),
+			6 => array_merge(
+				$this->promotion_meta( 'content_after_paragraph' ),
+				array( Post_Types::PARAGRAPH_NUMBER_META => 7 )
+			),
 		);
 
 		$promotions = ( new Repository() )->find_published_automatic_promotions();
 		$queries    = $GLOBALS['npcink_ad_test_get_posts_queries'];
 
-		self::assertSame( array( 1, 2, 3 ), array_column( $promotions, 'id' ) );
-		self::assertSame( array( 'content_before', 'content_after', 'content_after' ), array_column( $promotions, 'location' ) );
+		self::assertSame( array( 1, 2, 3, 6 ), array_column( $promotions, 'id' ) );
+		self::assertSame( array( 'content_before', 'content_after', 'content_after', 'content_after_paragraph' ), array_column( $promotions, 'location' ) );
+		self::assertSame( array( 3, 3, 3, 7 ), array_column( $promotions, 'paragraph_number' ) );
+		self::assertSame( array( true, true, true, true ), array_column( $promotions, 'paragraph_number_valid' ) );
 		self::assertCount( 1, $queries );
 		self::assertSame( Post_Types::PROMOTION_POST_TYPE, $queries[0]['post_type'] );
 		self::assertSame( 'publish', $queries[0]['post_status'] );
@@ -144,18 +179,73 @@ final class RepositoryTest extends TestCase {
 	}
 
 	/**
+	 * Paragraph delivery IDs are grouped once by valid anchor in query order.
+	 */
+	public function test_published_paragraph_ids_are_grouped_without_invalid_records_or_n_plus_one_queries(): void {
+		$GLOBALS['npcink_ad_test_posts'] = array(
+			10 => $this->promotion_post( 10, 'publish', 2 ),
+			11 => $this->promotion_post( 11, 'publish', 1 ),
+			12 => $this->promotion_post( 12, 'publish', 1 ),
+			13 => $this->promotion_post( 13, 'publish', 2 ),
+			14 => $this->promotion_post( 14, 'publish', 3 ),
+			15 => $this->promotion_post( 15, 'publish', 4 ),
+			16 => $this->promotion_post( 16, 'publish', 1 ),
+			17 => $this->promotion_post( 17, 'draft', 1 ),
+			18 => $this->promotion_post( 18, 'publish', 2 ),
+		);
+		$GLOBALS['npcink_ad_test_meta']  = array(
+			10 => $this->paragraph_meta( 3 ),
+			11 => $this->paragraph_meta( 5 ),
+			12 => $this->paragraph_meta( 3 ),
+			13 => $this->paragraph_meta( 0 ),
+			14 => $this->promotion_meta( 'content_after_paragraph' ),
+			15 => $this->paragraph_meta( 21 ),
+			16 => $this->promotion_meta( 'content_after' ),
+			17 => $this->paragraph_meta( 5 ),
+			18 => $this->paragraph_meta( '' ),
+		);
+
+		$repository = new Repository();
+		$grouped    = $repository->find_published_paragraph_ids_grouped_by_number();
+		$queries    = $GLOBALS['npcink_ad_test_get_posts_queries'];
+
+		self::assertSame(
+			array(
+				5 => array( 11 ),
+				3 => array( 12, 10, 14 ),
+			),
+			$grouped
+		);
+		self::assertCount( 1, $queries );
+		self::assertArrayNotHasKey( 'fields', $queries[0] );
+		self::assertSame(
+			array(
+				'menu_order' => 'ASC',
+				'ID' => 'ASC',
+			),
+			$queries[0]['orderby']
+		);
+		self::assertSame( 'content_after_paragraph', $queries[0]['meta_query'][0]['value'] );
+		self::assertTrue( $queries[0]['update_post_meta_cache'] );
+		self::assertSame( array(), $repository->find_published_ids_by_location( 'content_after_paragraph' ) );
+		self::assertCount( 1, $GLOBALS['npcink_ad_test_get_posts_queries'] );
+	}
+
+	/**
 	 * Build one native Promotion fixture.
 	 *
 	 * @param int    $id     Post ID.
-	 * @param string $status Post status.
+	 * @param string $status     Post status.
+	 * @param int    $menu_order Native ordering value.
 	 */
-	private function promotion_post( int $id, string $status ): WP_Post {
+	private function promotion_post( int $id, string $status, int $menu_order = 0 ): WP_Post {
 		return new WP_Post(
 			array(
 				'ID'           => $id,
 				'post_type'    => Post_Types::PROMOTION_POST_TYPE,
 				'post_status'  => $status,
 				'post_content' => '<p>Creative ' . $id . '</p>',
+				'menu_order'   => $menu_order,
 			)
 		);
 	}
@@ -163,18 +253,35 @@ final class RepositoryTest extends TestCase {
 	/**
 	 * Build complete typed metadata for one Promotion fixture.
 	 *
-	 * @param string $location Stored location, or empty for the default.
+	 * @param string|null $location Stored location, or null when absent.
 	 * @return array<string, mixed>
 	 */
-	private function promotion_meta( string $location ): array {
-		return array(
-			Post_Types::LOCATION_META    => $location,
+	private function promotion_meta( ?string $location ): array {
+		$meta = array(
 			Post_Types::PAGE_SCOPE_META  => 'all',
 			Post_Types::INCLUDE_IDS_META => array(),
 			Post_Types::EXCLUDE_IDS_META => array(),
 			Post_Types::DEVICE_META      => 'all',
 			Post_Types::START_AT_META    => '',
 			Post_Types::END_AT_META      => '',
+		);
+		if ( null !== $location ) {
+			$meta[ Post_Types::LOCATION_META ] = $location;
+		}
+
+		return $meta;
+	}
+
+	/**
+	 * Build paragraph-placement metadata with an explicit raw anchor.
+	 *
+	 * @param mixed $paragraph_number Stored raw paragraph number.
+	 * @return array<string, mixed>
+	 */
+	private function paragraph_meta( mixed $paragraph_number ): array {
+		return array_merge(
+			$this->promotion_meta( 'content_after_paragraph' ),
+			array( Post_Types::PARAGRAPH_NUMBER_META => $paragraph_number )
 		);
 	}
 }
