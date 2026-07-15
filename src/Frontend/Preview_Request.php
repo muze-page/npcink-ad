@@ -81,7 +81,8 @@ final class Preview_Request {
 			wp_die( esc_html__( 'This promotion preview is not available.', 'npcink-ad' ), '', array( 'response' => 403 ) );
 		}
 
-		if ( ! is_singular() || 1 > get_queried_object_id() ) {
+		$target_id = get_queried_object_id();
+		if ( ! $this->supports_preview_target( $promotion, $target_id ) ) {
 			wp_die( esc_html__( 'Promotion previews require a public post or page.', 'npcink-ad' ), '', array( 'response' => 400 ) );
 		}
 
@@ -91,7 +92,7 @@ final class Preview_Request {
 			$this->delivery->enable_block_preview(
 				$promotion_id,
 				$this->device,
-				get_queried_object_id()
+				$target_id
 			);
 		}
 
@@ -103,6 +104,27 @@ final class Preview_Request {
 
 		remove_filter( 'the_content', array( $this->delivery, 'filter_content' ) );
 		add_filter( 'the_content', array( $this, 'filter_content' ), 999 );
+	}
+
+	/**
+	 * Keep automatic real-page previews on the same post/page boundary as delivery.
+	 *
+	 * Manual block previews retain the existing explicit singular-target path.
+	 *
+	 * @param array<string, mixed> $promotion Promotion domain data.
+	 * @param int                  $target_id Current queried post ID.
+	 */
+	private function supports_preview_target( array $promotion, int $target_id ): bool {
+		if ( ! is_singular() || 1 > $target_id ) {
+			return false;
+		}
+
+		$location = isset( $promotion['location'] ) ? (string) $promotion['location'] : 'content_after';
+		if ( ! in_array( $location, array( 'content_before', 'content_after' ), true ) ) {
+			return true;
+		}
+
+		return in_array( get_post_type( $target_id ), array( 'post', 'page' ), true );
 	}
 
 	/**

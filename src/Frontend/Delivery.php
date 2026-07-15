@@ -259,7 +259,7 @@ final class Delivery {
 	 * @param string $content Original post content.
 	 */
 	public function filter_content( string $content ): string {
-		if ( $this->filtering_content || is_admin() || is_feed() || ! is_singular() || ! in_the_loop() || ! is_main_query() ) {
+		if ( $this->filtering_content || is_admin() || is_feed() || ! is_singular( array( 'post', 'page' ) ) || ! in_the_loop() || ! is_main_query() ) {
 			return $content;
 		}
 
