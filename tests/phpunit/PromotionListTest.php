@@ -9,6 +9,7 @@ use Npcink\Ad\Admin\Promotion_List;
 use Npcink\Ad\Data\Post_Types;
 use Npcink\Ad\Data\Repository;
 use Npcink\Ad\Domain\Eligibility_Evaluator;
+use Npcink\Ad\Domain\Overlap_Detector;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -60,7 +61,7 @@ final class PromotionListTest extends TestCase {
 	 */
 	#[DataProvider( 'status_labels' )]
 	public function test_status_label_is_truthful( string $status, string $expected_label ): void {
-		$list   = new Promotion_List( new Repository(), new Eligibility_Evaluator() );
+		$list   = $this->promotion_list();
 		$method = new ReflectionMethod( $list, 'status_label' );
 		$label  = $method->invoke(
 			$list,
@@ -86,7 +87,7 @@ final class PromotionListTest extends TestCase {
 	 */
 	public function test_status_buttons_use_standalone_footer_forms(): void {
 		$GLOBALS['npcink_ad_test_titles'][7] = 'Summer promotion';
-		$list          = new Promotion_List( new Repository(), new Eligibility_Evaluator() );
+		$list          = $this->promotion_list();
 		$publish_button = $this->render_status_action( $list, 7, 'publish' );
 		$draft_button   = $this->render_status_action( $list, 8, 'draft' );
 
@@ -118,7 +119,7 @@ final class PromotionListTest extends TestCase {
 	 * An empty footer queue emits no markup.
 	 */
 	public function test_empty_status_form_queue_outputs_nothing(): void {
-		$list = new Promotion_List( new Repository(), new Eligibility_Evaluator() );
+		$list = $this->promotion_list();
 
 		ob_start();
 		$list->render_status_forms();
@@ -129,7 +130,7 @@ final class PromotionListTest extends TestCase {
 	 * Promotion list editing stays on the validated block-editor path.
 	 */
 	public function test_disables_native_quick_and_bulk_edit_and_forces_block_editor(): void {
-		$list = new Promotion_List( new Repository(), new Eligibility_Evaluator() );
+		$list = $this->promotion_list();
 
 		self::assertFalse( $list->disable_quick_edit( true, Post_Types::PROMOTION_POST_TYPE ) );
 		self::assertTrue( $list->disable_quick_edit( true, 'post' ) );
@@ -198,7 +199,7 @@ final class PromotionListTest extends TestCase {
 		);
 		$GLOBALS['npcink_ad_test_public_ids'] = range( 2, 100, 2 );
 		$GLOBALS['wp_query']                  = new WP_Query( array( $first, $second ) );
-		$list                                = new Promotion_List( new Repository(), new Eligibility_Evaluator() );
+		$list                                = $this->promotion_list();
 		$method                              = new ReflectionMethod( $list, 'promotion' );
 
 		$first_promotion  = $method->invoke( $list, 101 );
@@ -211,6 +212,60 @@ final class PromotionListTest extends TestCase {
 		self::assertSame( array( 2 ), $first_promotion['exclude_ids'] );
 		self::assertSame( range( 52, 100, 2 ), $second_promotion['include_ids'] );
 		self::assertSame( array( 52 ), $second_promotion['exclude_ids'] );
+	}
+
+	/**
+	 * Placement advisories batch candidate and public-target queries for the list.
+	 */
+	public function test_placement_column_shows_a_batched_non_blocking_overlap_hint(): void {
+		$current = new WP_Post(
+			array(
+				'ID'           => 201,
+				'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+				'post_status'  => 'draft',
+				'post_content' => '<p>Current</p>',
+			)
+		);
+		$overlap = new WP_Post(
+			array(
+				'ID'           => 202,
+				'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => '<p>Overlap</p>',
+			)
+		);
+		$mobile = new WP_Post(
+			array(
+				'ID'           => 203,
+				'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => '<p>Mobile only</p>',
+			)
+		);
+		$GLOBALS['npcink_ad_test_posts'] = array(
+			201 => $current,
+			202 => $overlap,
+			203 => $mobile,
+		);
+		$GLOBALS['npcink_ad_test_meta']  = array(
+			201 => $this->automatic_selected_meta( array( 10, 11 ), 'desktop' ),
+			202 => $this->automatic_selected_meta( array( 11, 12 ), 'desktop' ),
+			203 => $this->automatic_selected_meta( array( 11 ), 'mobile' ),
+		);
+		$GLOBALS['npcink_ad_test_public_ids'] = array( 10, 11, 12 );
+		$GLOBALS['wp_query']                  = new WP_Query( array( $current, $overlap, $mobile ) );
+		$list                                = $this->promotion_list();
+
+		ob_start();
+		$list->render_column( 'npcink_ad_location', 201 );
+		$output  = (string) ob_get_clean();
+		$queries = $GLOBALS['npcink_ad_test_get_posts_queries'];
+
+		self::assertStringContainsString( 'After content', $output );
+		self::assertStringContainsString( 'May appear together with 1 published promotion.', $output );
+		self::assertCount( 2, $queries );
+		self::assertSame( Post_Types::PROMOTION_POST_TYPE, $queries[0]['post_type'] );
+		self::assertSame( array( 10, 11, 12 ), $queries[1]['post__in'] );
 	}
 
 	/**
@@ -232,6 +287,33 @@ final class PromotionListTest extends TestCase {
 			Post_Types::START_AT_META    => '',
 			Post_Types::END_AT_META      => '',
 		);
+	}
+
+	/**
+	 * Build one selected automatic-placement fixture.
+	 *
+	 * @param array  $include_ids Included public content IDs.
+	 * @param string $device      Stored device rule.
+	 * @return array<string, mixed>
+	 * @phpstan-param list<int> $include_ids
+	 */
+	private function automatic_selected_meta( array $include_ids, string $device ): array {
+		return array(
+			Post_Types::LOCATION_META    => 'content_after',
+			Post_Types::PAGE_SCOPE_META  => 'selected',
+			Post_Types::INCLUDE_IDS_META => $include_ids,
+			Post_Types::EXCLUDE_IDS_META => array(),
+			Post_Types::DEVICE_META      => $device,
+			Post_Types::START_AT_META    => '',
+			Post_Types::END_AT_META      => '',
+		);
+	}
+
+	/**
+	 * Compose the list presenter with both pure policies.
+	 */
+	private function promotion_list(): Promotion_List {
+		return new Promotion_List( new Repository(), new Eligibility_Evaluator(), new Overlap_Detector() );
 	}
 
 	/**

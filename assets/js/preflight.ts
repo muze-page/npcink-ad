@@ -14,6 +14,23 @@ interface PromotionPreflightInput {
 	endAt?: string;
 }
 
+export interface PromotionOverlapRule {
+	id?: number;
+	location: 'block' | 'content_before' | 'content_after';
+	pageScope: 'all' | 'selected';
+	includeIds: readonly number[];
+	excludeIds: readonly number[];
+	device: 'all' | 'desktop' | 'mobile';
+	startAt?: string;
+	endAt?: string;
+	scheduleValid?: boolean;
+}
+
+export interface EffectivePromotionTargetIds {
+	includeIds: number[];
+	excludeIds: number[];
+}
+
 const meaningfulElementPattern =
 	/<(?:img|picture|video|audio|iframe|object|embed|svg|canvas|input)\b/i;
 const customDynamicBlockPattern =
@@ -139,6 +156,165 @@ function localDateTimeValue( value: string ): number | null {
 	}
 
 	return parsed.getTime();
+}
+
+/**
+ * Keep only targets confirmed as public standard posts/pages by the server or
+ * by a ContentPicker selection made during this editor session.
+ *
+ * @param includeIds       Current raw include IDs.
+ * @param excludeIds       Current raw exclude IDs.
+ * @param publicContentIds IDs confirmed as public posts/pages.
+ */
+export function getEffectivePromotionTargetIds(
+	includeIds: readonly number[],
+	excludeIds: readonly number[],
+	publicContentIds: readonly number[]
+): EffectivePromotionTargetIds {
+	const publicLookup = new Set( publicContentIds );
+
+	return {
+		includeIds: [ ...new Set( includeIds ) ].filter(
+			( id ) => id > 0 && publicLookup.has( id )
+		),
+		excludeIds: [ ...new Set( excludeIds ) ].filter(
+			( id ) => id > 0 && publicLookup.has( id )
+		),
+	};
+}
+
+function effectiveSelectedIds( rule: PromotionOverlapRule ): number[] {
+	const excludedIds = new Set( rule.excludeIds );
+
+	return [ ...new Set( rule.includeIds ) ].filter(
+		( id ) => id > 0 && ! excludedIds.has( id )
+	);
+}
+
+function pageScopesMayOverlap(
+	candidate: PromotionOverlapRule,
+	published: PromotionOverlapRule
+): boolean {
+	if ( candidate.pageScope === 'all' && published.pageScope === 'all' ) {
+		return true;
+	}
+
+	if (
+		candidate.pageScope === 'selected' &&
+		published.pageScope === 'selected'
+	) {
+		const publishedIds = new Set( effectiveSelectedIds( published ) );
+
+		return effectiveSelectedIds( candidate ).some( ( id ) =>
+			publishedIds.has( id )
+		);
+	}
+
+	const selected = candidate.pageScope === 'selected' ? candidate : published;
+	const all = candidate.pageScope === 'all' ? candidate : published;
+	const allExclusions = new Set( all.excludeIds );
+
+	return effectiveSelectedIds( selected ).some(
+		( id ) => ! allExclusions.has( id )
+	);
+}
+
+function schedulesMayOverlap(
+	candidate: PromotionOverlapRule,
+	published: PromotionOverlapRule
+): boolean {
+	if (
+		candidate.scheduleValid === false ||
+		published.scheduleValid === false
+	) {
+		return false;
+	}
+
+	const candidateStart = candidate.startAt
+		? localDateTimeValue( candidate.startAt )
+		: 0;
+	const candidateEnd = candidate.endAt
+		? localDateTimeValue( candidate.endAt )
+		: 0;
+	const publishedStart = published.startAt
+		? localDateTimeValue( published.startAt )
+		: 0;
+	const publishedEnd = published.endAt
+		? localDateTimeValue( published.endAt )
+		: 0;
+
+	if (
+		candidateStart === null ||
+		candidateEnd === null ||
+		publishedStart === null ||
+		publishedEnd === null ||
+		( candidateStart > 0 &&
+			candidateEnd > 0 &&
+			candidateEnd <= candidateStart ) ||
+		( publishedStart > 0 &&
+			publishedEnd > 0 &&
+			publishedEnd <= publishedStart )
+	) {
+		return false;
+	}
+
+	return ! (
+		( candidateEnd > 0 && candidateEnd <= publishedStart ) ||
+		( publishedEnd > 0 && publishedEnd <= candidateStart )
+	);
+}
+
+function devicesMayOverlap(
+	candidate: PromotionOverlapRule,
+	published: PromotionOverlapRule
+): boolean {
+	return (
+		candidate.device === 'all' ||
+		published.device === 'all' ||
+		candidate.device === published.device
+	);
+}
+
+/**
+ * Mirror the server overlap policy for immediate, non-blocking editor advice.
+ *
+ * PHP remains authoritative. This intentionally answers only whether two
+ * automatic rules may share a standard post/page context; it does not select a
+ * winner or change publication eligibility.
+ *
+ * @param candidate           Current unsaved editor rule.
+ * @param publishedPromotions Other published automatic rules from the server.
+ */
+export function getPotentiallyOverlappingPromotionIds(
+	candidate: PromotionOverlapRule,
+	publishedPromotions: readonly PromotionOverlapRule[]
+): number[] {
+	if ( candidate.location === 'block' ) {
+		return [];
+	}
+
+	return [
+		...new Set(
+			publishedPromotions
+				.filter( ( published ) => {
+					if (
+						! published.id ||
+						published.id === candidate.id ||
+						published.location !== candidate.location ||
+						published.location === 'block'
+					) {
+						return false;
+					}
+
+					return (
+						devicesMayOverlap( candidate, published ) &&
+						schedulesMayOverlap( candidate, published ) &&
+						pageScopesMayOverlap( candidate, published )
+					);
+				} )
+				.map( ( published ) => published.id as number )
+		),
+	];
 }
 
 export function getPromotionPreflightIssues( {

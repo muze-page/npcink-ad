@@ -22,6 +22,8 @@ import { registerPlugin } from '@wordpress/plugins';
 
 import {
 	contentContainsPromotionBlock,
+	getEffectivePromotionTargetIds,
+	getPotentiallyOverlappingPromotionIds,
 	getPromotionPreflightIssues,
 	type PromotionPreflightIssueCode,
 } from './preflight';
@@ -373,6 +375,9 @@ function PromotionSettingsPanel() {
 	const { editPost, savePost } = useDispatch( editorStore );
 	const [ previewTarget, setPreviewTarget ] = React.useState( 0 );
 	const [ previewError, setPreviewError ] = React.useState( '' );
+	const [ confirmedPublicIds, setConfirmedPublicIds ] = React.useState<
+		number[]
+	>( [] );
 
 	const updateMeta = < Key extends keyof PromotionMeta >(
 		key: Key,
@@ -389,11 +394,22 @@ function PromotionSettingsPanel() {
 	const includeIds = normalizeIds( meta._npcink_ad_include_ids );
 	const excludeIds = normalizeIds( meta._npcink_ad_exclude_ids );
 	const pageScope = meta._npcink_ad_page_scope || 'all';
+	const settings = window.NpcinkAdEditorSettings;
+	const { includeIds: effectiveIncludeIds, excludeIds: effectiveExcludeIds } =
+		getEffectivePromotionTargetIds( includeIds, excludeIds, [
+			...( settings?.publicContentIds ?? [] ),
+			...confirmedPublicIds,
+		] );
+	const confirmPublicId = ( id: number ) => {
+		setConfirmedPublicIds( ( current ) =>
+			current.includes( id ) ? current : [ ...current, id ]
+		);
+	};
 	const preflightIssues = getPromotionPreflightIssues( {
 		content,
 		pageScope,
-		includeIds,
-		excludeIds,
+		includeIds: effectiveIncludeIds,
+		excludeIds: effectiveExcludeIds,
 		startAt: meta._npcink_ad_start_at,
 		endAt: meta._npcink_ad_end_at,
 	} );
@@ -401,9 +417,24 @@ function PromotionSettingsPanel() {
 		meta._npcink_ad_start_at || meta._npcink_ad_end_at
 	);
 	const timezone = siteTimezoneLabel( site );
-	const settings = window.NpcinkAdEditorSettings;
+	const potentiallyOverlappingIds = getPotentiallyOverlappingPromotionIds(
+		{
+			id: postId,
+			location: meta._npcink_ad_location || 'content_after',
+			pageScope,
+			includeIds: effectiveIncludeIds,
+			excludeIds: effectiveExcludeIds,
+			device: meta._npcink_ad_device || 'all',
+			startAt: meta._npcink_ad_start_at,
+			endAt: meta._npcink_ad_end_at,
+		},
+		settings?.publishedAutomaticPromotions ?? []
+	);
 	const effectivePreviewTarget =
-		previewTarget || includeIds[ 0 ] || settings?.defaultTargetId || 0;
+		previewTarget ||
+		effectiveIncludeIds[ 0 ] ||
+		settings?.defaultTargetId ||
+		0;
 	const isManualBlock =
 		( meta._npcink_ad_location || 'content_after' ) === 'block';
 	const manualBlockInspection = useSelect(
@@ -608,12 +639,13 @@ function PromotionSettingsPanel() {
 							'npcink-ad'
 						) }
 						selectedIds={ includeIds }
-						onAdd={ ( id ) =>
+						onAdd={ ( id ) => {
+							confirmPublicId( id );
 							updateMeta( '_npcink_ad_include_ids', [
 								...includeIds,
 								id,
-							] )
-						}
+							] );
+						} }
 						onRemove={ ( id ) =>
 							updateMeta(
 								'_npcink_ad_include_ids',
@@ -695,12 +727,13 @@ function PromotionSettingsPanel() {
 							'npcink-ad'
 						) }
 						selectedIds={ excludeIds }
-						onAdd={ ( id ) =>
+						onAdd={ ( id ) => {
+							confirmPublicId( id );
 							updateMeta( '_npcink_ad_exclude_ids', [
 								...excludeIds,
 								id,
-							] )
-						}
+							] );
+						} }
 						onRemove={ ( id ) =>
 							updateMeta(
 								'_npcink_ad_exclude_ids',
@@ -748,7 +781,10 @@ function PromotionSettingsPanel() {
 			<PluginPrePublishPanel
 				title={ __( 'Npcink Ad delivery preflight', 'npcink-ad' ) }
 				initialOpen={
-					preflightIssues.length > 0 || hasSchedule || isManualBlock
+					preflightIssues.length > 0 ||
+					potentiallyOverlappingIds.length > 0 ||
+					hasSchedule ||
+					isManualBlock
 				}
 			>
 				{ preflightIssues.length > 0 ? (
@@ -765,6 +801,24 @@ function PromotionSettingsPanel() {
 					<Notice status="info" isDismissible={ false }>
 						{ __(
 							'No errors were found in the current editor fields. Public selected targets are confirmed by the server when publishing or scheduling.',
+							'npcink-ad'
+						) }
+					</Notice>
+				) }
+				{ potentiallyOverlappingIds.length > 0 && (
+					<Notice status="warning" isDismissible={ false }>
+						{ sprintf(
+							/* translators: %d: number of other published promotions that may share a delivery context. */
+							_n(
+								'This promotion may appear together with %d other published promotion in some post or page contexts.',
+								'This promotion may appear together with %d other published promotions in some post or page contexts.',
+								potentiallyOverlappingIds.length,
+								'npcink-ad'
+							),
+							potentiallyOverlappingIds.length
+						) }{ ' ' }
+						{ __(
+							'This advisory does not block publishing.',
 							'npcink-ad'
 						) }
 					</Notice>
