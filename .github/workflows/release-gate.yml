@@ -2,11 +2,6 @@ name: Release Gate
 
 on:
   workflow_dispatch:
-    inputs:
-      preview_path:
-        description: 'Optional E2E preview URL/path'
-        required: false
-        type: string
   push:
     tags:
       - 'v*'
@@ -15,10 +10,8 @@ jobs:
   release-gate:
     runs-on: ubuntu-latest
     env:
-      MAGICK_AD_E2E_PREVIEW_PATH: ${{ github.event.inputs.preview_path || vars.MAGICK_AD_E2E_PREVIEW_PATH }}
-      MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB: 180
-      MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB: 60
-      MAGICK_AD_BUNDLE_BUDGET_STRICT: 1
+      MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB: 40
+      MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,12 +19,14 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -39,7 +34,10 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Install dependencies
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Run release gate
@@ -50,11 +48,4 @@ jobs:
         with:
           name: magick-ad-release
           path: dist/*.zip
-
-      - name: Upload playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report
-          if-no-files-found: ignore
+          if-no-files-found: error

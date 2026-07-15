@@ -1,139 +1,57 @@
 # Magick AD WP
 
-WordPress 广告插件，提供广告投放配置、前端渲染、统计追踪、兼容体检与调试能力。
+Magick AD 0.2 是一个处于 pre-GA 阶段的原生 WordPress 广告投放基线。它刻意只保留“创建广告、关联投放位、服务端判断、服务端渲染”这一条闭环。
 
-## 文档入口
+> 0.2 是破坏性重置，不提供 0.1 开发数据、REST API、Options 或自定义表迁移。升级测试环境前请清除旧数据。
 
-- 快速上手：`docs/quickstart.md`
-- 兼容指引：`docs/compatibility-guide.md`
-- 排障手册：`docs/troubleshooting.md`
-- 架构总览：`docs/architecture-overview.md`
-- 发布手册：`docs/release-playbook.md`
+## 当前边界
 
-## 主要能力
+- 广告：`magick_ad` CPT；广告内容使用区块内容，`_magick_ad_end_at` 保存可选的 WordPress 本地日期时间字符串。
+- 投放位：`magick_ad_placement` CPT；typed meta 为 `_magick_ad_ad_id`、`_magick_ad_location` 和 `_magick_ad_device`。
+- 两个 CPT 使用 WordPress 核心 REST 支撑编辑器，但所有相关端点均要求 `manage_magick_ads`，广告创意不是匿名公开 API。
+- 展示决策：纯 PHP evaluator 返回 `allowed` 和稳定 reason codes。
+- 渲染：动态区块和自动位置都在服务端执行相同的发布状态、过期时间和设备判断。
+- 区块只保存 `placementId`、`reserveHeight` 和 `preview`，不复制广告内容。
 
-- 广告配置：页面范围、插入位置、设备、登录态与展示规则
-- 模板库：系统预设 + 自定义模板（支持分类、收藏、置顶）
-- 统计追踪：曝光/点击、维度统计、失败原因码
-- 可靠性：异步队列 + 写入失败回退队列 + Cron 回收
-- 兼容体检：节点插入、Cron、队列、同意门控检查
-- 兼容报告：后台一键导出 JSON/Markdown
+架构决策见 [ADR 001](docs/decisions/001-pre-ga-native-wordpress-baseline.md)，模块边界见 [架构总览](docs/architecture-overview.md)。
 
-## 开发命令
+## 明确不做
+
+0.2 不包含统计追踪、报表、A/B 测试、CMP/同意检测、Popup 搭建器、任意自定义 JavaScript、模板迁移、自定义 REST 控制器、自定义数据库表或管理端 SPA。这些能力只有在真实使用需求和隐私边界明确后才会重新评估。
+
+## 开发
+
+要求 PHP 8.1+、Node.js 20+、pnpm 10 和 Composer 2。
 
 ```bash
-pnpm install
-pnpm run start
+composer install
+pnpm install --frozen-lockfile
+
+composer check
+pnpm check
 pnpm run build
-pnpm run dist
-pnpm run release
 ```
 
-## 发布门禁
+`composer check` 依次运行 PHPUnit、WordPress Coding Standards 和 PHPStan。PHPUnit 覆盖纯展示决策；`tests/playground/` 提供可复用的打包插件集成 fixture，验证激活、CPT/meta、动态区块、短代码、服务端渲染、匿名 REST 边界和过期广告拒绝。浏览器中的编辑器交互仍需发布前人工 smoke test。
+
+```bash
+bash scripts/release-gate.sh
+WP_VERSION=6.5 PHP_VERSION=8.1 tests/playground/run.sh
+WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
+```
+
+## 发布包
 
 ```bash
 bash scripts/release-gate.sh
 ```
 
-门禁默认执行：
+发布门禁执行 PHP 语法检查、Composer 检查、前端 type/lint 检查、一次生产构建、严格包体预算、固定目录打包和 zip 内容校验。产物位于 `dist/magick-ad-<version>.zip`，包内顶层目录固定为 `magick-ad`。
 
-- 前端构建
-- 前端包体预算检查（`build/index.js`、`build/index.css`）
-- PHP 语法检查（本机有 `php` 时）
-- 可选 E2E（设置 `MAGICK_AD_E2E_PREVIEW_PATH` 时）
-- 生成并校验发布 zip
-
-可用环境变量：
-
-- `MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB`（默认 `180`）
-- `MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB`（默认 `60`）
-- `MAGICK_AD_BUNDLE_BUDGET_STRICT`（默认 `1`，设为 `0` 时仅告警不失败）
-
-## 回滚脚本
+POT 生成不属于可重复发布打包过程，需要时单独运行：
 
 ```bash
-bash scripts/rollback.sh <release-zip> <plugin-target-dir>
-```
-
-## 发布包检查（可选）
-
-```bash
-wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table
-find "wp-content/plugins/magick-ad/dist/magick-ad" -name "*.php" -print0 | xargs -0 -n 1 php -l
-```
-
-检查PHP错误
-
-```shell
-cd "/Users/muze/Local Sites/magick-ad/app/public/wp-content/plugins/magick-ad"
-
-find . -type f -name "*.php" \
-  ! -path "./dist/*" \
-  ! -path "./vendor/*" \
-  ! -path "./node_modules/*" \
-  -print0 | xargs -0 -n1 php -l
-
-```
-
-## E2E
-
-默认预览地址：`http://magick-ad.local/`
-
-首次运行（或浏览器缓存损坏）：
-
-```bash
-pnpm exec playwright install chromium chromium-headless-shell
-```
-
-全量 E2E：
-
-```bash
-MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
-MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
-pnpm run test:e2e
-```
-
-分场景 E2E：
-
-```bash
-# A. 无同意（应被门控）
-MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
-MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
-MAGICK_AD_E2E_HAS_CONSENT=0 \
-pnpm exec playwright test tests/e2e/tracking-advanced.spec.js -g "respects consent guard"
-
-# B. 已同意（应允许统计）
-MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
-MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
-MAGICK_AD_E2E_HAS_CONSENT=1 \
-pnpm exec playwright test tests/e2e/tracking-advanced.spec.js -g "respects consent guard"
-
-# C. 兼容矩阵（设备 + 同意组合）
-MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
-MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
-pnpm exec playwright test tests/e2e/compatibility-matrix.spec.js --project=chromium
-```
-
-发布门禁（构建 + PHP 语法检查 + 可选 E2E + 打包）：
-
-```bash
-MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
-MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
-bash scripts/release-gate.sh
-```
-
-说明：`scripts/release-gate.sh` 已支持“浏览器已安装时自动跳过 install”。
-
-如果你需要本地强制非延迟加载 tracking runtime（仅测试环境）：
-
-```php
-<?php
-/**
- * 本地 E2E：强制 magick-ad-track 立即加载
- * 建议放到 wp-content/mu-plugins/magick-ad-e2e-force-track.php
- * 仅用于本地/测试环境，不建议生产启用。
- */
-add_filter('magick_ad_track_defer', static function ($defer) {
-    return false;
-}, 10, 4);
+wp i18n make-pot . languages/magick-ad.pot \
+  --domain=magick-ad \
+  --exclude=node_modules,build,assets/js,docs,dist,vendor
 ```

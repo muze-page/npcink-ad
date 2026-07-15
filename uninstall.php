@@ -1,95 +1,101 @@
 <?php
+/**
+ * Remove all Magick AD data.
+ *
+ * @package MagickAD
+ */
 
-if (!defined('WP_UNINSTALL_PLUGIN')) {
-    exit;
+if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+	exit;
 }
 
-global $wpdb;
+/**
+ * Remove Magick AD data from the current site in the network.
+ */
+function magick_ad_uninstall_site_data(): void {
+	global $wpdb;
 
-$magick_ad_tables = array(
-    $wpdb->prefix . 'magick_ad_stats',
-    $wpdb->prefix . 'magick_ad_stats_log',
-    $wpdb->prefix . 'magick_ad_stats_dim',
-    $wpdb->prefix . 'magick_ad_stats_variant',
-    $wpdb->prefix . 'magick_ad_stats_event',
-);
+	$magick_ad_post_ids = get_posts(
+		array(
+			'post_type'      => array( 'magick_ad', 'magick_ad_placement' ),
+			'post_status'    => array( 'publish', 'future', 'draft', 'pending', 'private', 'trash', 'auto-draft', 'inherit' ),
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		)
+	);
+	foreach ( $magick_ad_post_ids as $magick_ad_post_id ) {
+		wp_delete_post( (int) $magick_ad_post_id, true );
+	}
 
-foreach ($magick_ad_tables as $magick_ad_table) {
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Uninstall schema cleanup.
-    $wpdb->query($wpdb->prepare('DROP TABLE IF EXISTS %i', $magick_ad_table));
+	$magick_ad_option_patterns = array(
+		'magick_ad_%',
+		'_transient_magick_ad_%',
+		'_transient_timeout_magick_ad_%',
+	);
+	foreach ( $magick_ad_option_patterns as $magick_ad_option_pattern ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit uninstall cleanup.
+		$wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i WHERE option_name LIKE %s',
+				$wpdb->options,
+				$wpdb->esc_like( rtrim( $magick_ad_option_pattern, '%' ) ) . '%'
+			)
+		);
+	}
+
+	$magick_ad_legacy_tables = array(
+		$wpdb->prefix . 'magick_ad_stats',
+		$wpdb->prefix . 'magick_ad_stats_log',
+		$wpdb->prefix . 'magick_ad_stats_dim',
+		$wpdb->prefix . 'magick_ad_stats_variant',
+		$wpdb->prefix . 'magick_ad_stats_event',
+	);
+	foreach ( $magick_ad_legacy_tables as $magick_ad_legacy_table ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Explicit legacy table cleanup during uninstall.
+		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $magick_ad_legacy_table ) );
+	}
+
+	$magick_ad_roles = wp_roles();
+	foreach ( $magick_ad_roles->role_objects as $magick_ad_role ) {
+		if ( $magick_ad_role->has_cap( 'manage_magick_ads' ) ) {
+			$magick_ad_role->remove_cap( 'manage_magick_ads' );
+		}
+	}
+	remove_role( 'magick_ad_manager' );
 }
 
-$magick_ad_option_like = $wpdb->esc_like('magick_ad_') . '%';
-$magick_ad_transient_like = $wpdb->esc_like('_transient_magick_ad_') . '%';
-$magick_ad_transient_timeout_like = $wpdb->esc_like('_transient_timeout_magick_ad_') . '%';
+if ( is_multisite() ) {
+	$magick_ad_site_ids = get_sites(
+		array(
+			'fields' => 'ids',
+			'number' => 0,
+		)
+	);
+	foreach ( $magick_ad_site_ids as $magick_ad_site_id ) {
+		switch_to_blog( (int) $magick_ad_site_id );
+		try {
+			magick_ad_uninstall_site_data();
+		} finally {
+			restore_current_blog();
+		}
+	}
 
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-$wpdb->query(
-    $wpdb->prepare(
-        'DELETE FROM %i WHERE option_name LIKE %s',
-        $wpdb->options,
-        $magick_ad_option_like
-    )
-);
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-$wpdb->query(
-    $wpdb->prepare(
-        'DELETE FROM %i WHERE option_name LIKE %s',
-        $wpdb->options,
-        $magick_ad_transient_like
-    )
-);
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-$wpdb->query(
-    $wpdb->prepare(
-        'DELETE FROM %i WHERE option_name LIKE %s',
-        $wpdb->options,
-        $magick_ad_transient_timeout_like
-    )
-);
-
-if (is_multisite()) {
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-    $wpdb->query(
-        $wpdb->prepare(
-            'DELETE FROM %i WHERE meta_key LIKE %s',
-            $wpdb->sitemeta,
-            $magick_ad_option_like
-        )
-    );
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-    $wpdb->query(
-        $wpdb->prepare(
-            'DELETE FROM %i WHERE meta_key LIKE %s',
-            $wpdb->sitemeta,
-            $wpdb->esc_like('_site_transient_magick_ad_') . '%'
-        )
-    );
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-    $wpdb->query(
-        $wpdb->prepare(
-            'DELETE FROM %i WHERE meta_key LIKE %s',
-            $wpdb->sitemeta,
-            $wpdb->esc_like('_site_transient_timeout_magick_ad_') . '%'
-        )
-    );
-}
-
-if (function_exists('remove_role')) {
-    remove_role('magick_ad_manager');
-    $magick_ad_admin = get_role('administrator');
-    if ($magick_ad_admin?->has_cap('manage_magick_ads')) {
-        $magick_ad_admin->remove_cap('manage_magick_ads');
-    }
-}
-
-$magick_ad_ads = get_posts(array(
-    'post_type' => 'magick_ad',
-    'post_status' => 'any',
-    'numberposts' => -1,
-    'fields' => 'ids',
-));
-
-foreach ($magick_ad_ads as $magick_ad_ad_id) {
-    wp_delete_post($magick_ad_ad_id, true);
+	global $wpdb;
+	$magick_ad_network_patterns = array(
+		'magick_ad_%',
+		'_site_transient_magick_ad_%',
+		'_site_transient_timeout_magick_ad_%',
+	);
+	foreach ( $magick_ad_network_patterns as $magick_ad_network_pattern ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit network uninstall cleanup.
+		$wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i WHERE meta_key LIKE %s',
+				$wpdb->sitemeta,
+				$wpdb->esc_like( rtrim( $magick_ad_network_pattern, '%' ) ) . '%'
+			)
+		);
+	}
+} else {
+	magick_ad_uninstall_site_data();
 }

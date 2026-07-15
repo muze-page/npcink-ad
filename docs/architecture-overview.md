@@ -1,103 +1,74 @@
-# Magick AD Architecture Overview
+# Magick AD 0.2 Architecture Overview
 
-## 1. 总览
+## 1. 核心链路
 
-Magick AD 是一个 WordPress 广告投放插件，核心链路为：
+0.2 只有一条运行链路：
 
-1. 后台配置广告与系统设置
-2. 前端按规则匹配并渲染广告
-3. 追踪接口接收曝光/点击并写入统计
-4. 异步队列与 Cron 回收保障高峰稳定性
-5. 兼容体检与兼容报告支撑部署排查
+1. 管理员使用 WordPress 原生编辑器维护广告和投放位。
+2. 动态区块或 WordPress 内容钩子提供一个投放位 ID。
+3. 服务端加载投放位及其广告，交给纯 `Eligibility_Evaluator` 判断。
+4. 判断通过后服务端渲染广告区块内容；拒绝时返回稳定 reason code，前台不输出广告。
 
-## 2. 关键模块
+没有浏览器端广告解析、追踪写入或异步数据管线。
 
-- `src/Plugin.php`：插件生命周期入口
-- `src/Admin/Admin.php`：后台菜单、资产注入、初始 tab 路由
-- `src/Frontend/Frontend.php`：广告匹配、渲染、插入策略
-- `src/REST/Routes.php`：REST 路由注册
-- `src/REST/Controllers/Track_Controller.php`：追踪写入、签名校验、去重、降级写入
-- `src/REST/Controllers/System_Settings_Controller.php`：系统设置读写
-- `src/REST/Controllers/Compatibility_Report_Controller.php`：兼容报告导出
-- `src/Data/Template_Migrator.php`：模板 schema 迁移
-- `src/Utils/Consent.php`：CMP/同意信号适配层
-- `src/Utils/Stats_Queue.php`：统计队列与回退队列
-- `src/Utils/Stats_Cron.php`：统计落库计划任务
+## 2. 数据模型
 
-## 3. 关键数据
+### `magick_ad`
 
-- CPT：`magick_ad`
-- Options：
-  - `magick_ad_slots`
-  - `magick_ad_tracking_*`
-  - `magick_ad_stats_*`
-  - `magick_ad_template_*`
-- 自定义表：
-  - `wp_magick_ad_stats`
-  - `wp_magick_ad_stats_dim`
-  - `wp_magick_ad_stats_variant`
-  - `wp_magick_ad_stats_event`
-  - `wp_magick_ad_stats_log`
+- `post_content`：广告区块内容。
+- `post_status`：发布控制。
+- `_magick_ad_end_at`：可选的 WordPress 本地日期时间字符串（`Y-m-d H:i:s`）；Repository 使用站点时区转换为 evaluator 所需的 Unix timestamp。
 
-## 4. 追踪与可靠性策略
+### `magick_ad_placement`
 
-Track 写入优先级：
+- `post_status`：发布控制。
+- `_magick_ad_ad_id`：关联广告 ID。
+- `_magick_ad_location`：投放位置。
+- `_magick_ad_device`：`all`、`desktop` 或 `mobile`。
 
-1. 统计累计器（可用时）
-2. 异步队列
-3. 直写数据库
-4. 直写失败时进入回退队列（fail-open，避免高峰 5xx）
-5. Cron 周期回收队列与回退队列
+所有业务 meta 都必须通过 `register_post_meta()` 提供类型、sanitize callback、auth callback 和 REST schema。两个 CPT 使用 WordPress 核心 REST 支撑编辑器，但整个相关路由前缀均要求 `manage_magick_ads`；发布状态不会让广告创意成为匿名公开 API。CPT、meta、状态和内容是唯一事实来源；运行时不得再复制到 Options 或自定义表。
 
-## 5. 同意与合规
+## 3. 模块边界
 
-- 同意入口：`Consent::has_consent()`
-- 兼容常见 CMP 信号，并支持自定义：
+- 插件入口负责版本门控、常量、自动加载和启动，不包含业务判断。
+- 数据模块只负责注册两个 CPT 和 typed meta。
+- `MagickAD\Domain\Eligibility_Evaluator` 不调用 WordPress API，因此可以使用普通 PHPUnit 确定性测试。
+- 展示协调层负责加载 WordPress 对象、构造 evaluator 输入并渲染内容。
+- 动态区块仅保存投放位引用和编辑器表现属性；自动位置复用同一展示协调层。
+
+## 4. 展示规则
+
+Evaluator 返回：
 
 ```php
-add_filter('magick_ad_has_consent', function ($has_consent) {
-    return $has_consent;
-});
+array(
+    'allowed' => true,
+    'reasons' => array(),
+);
 ```
 
-- 启用同意门控时，未同意不会写追踪统计。
+拒绝原因是稳定的内部诊断契约：
 
-## 6. 模板体系
+- `placement_not_published`
+- `ad_missing`
+- `ad_not_published`
+- `ad_expired`
+- `ad_content_empty`
+- `device_mismatch`
 
-- 系统模板来源：`src/Blocks/Patterns.php`
-- 模板 schema：`templateVersion`
-- 迁移器负责将旧字段映射到最新属性，保证旧模板继续可用。
+新增规则必须先扩充纯 evaluator 测试，再接入 WordPress 协调层。
 
-## 7. 管理端前端
+## 5. 明确删除的边界
 
-- 入口：`assets/js/index.js`
-- 主路由：`assets/js/sections/App.js`
-  - `ads`：广告配置
-  - `report`：统计看板
-  - `compatibility`：兼容报告
+0.1 的自定义 REST 控制器、管理端 SPA、统计表、事件追踪、队列、Cron、CMP 猜测、A/B、模板与迁移器均不属于 0.2。完整决策和替代方案见 `docs/decisions/001-pre-ga-native-wordpress-baseline.md`。
 
-## 8. 前端分包与性能预算
+## 6. 质量和发布
 
-- 入口：`assets/js/index.js`
-- 路由级按需加载：`assets/js/sections/App.js`
-- 面板级按需加载：`assets/js/sections/AdsConfig.js`
-- 模板库重逻辑按需加载：`assets/js/hooks/useTemplateLibrary.js`
+- PHPUnit：纯业务规则。
+- PHPCS：单一 WordPress Coding Standards 规则集。
+- PHPStan：WordPress stubs 和插件常量 bootstrap。
+- 前端：TypeScript/type lint、样式 lint、生产构建和包体预算。
+- 发布：固定 `magick-ad` 根目录，校验完整运行时必需文件，并禁止开发依赖、源前端、测试和文档进入 zip。
+- WordPress 集成：`tests/playground/` 从发布 zip 安装插件，验证激活、CPT/meta、动态区块、短代码、匿名 REST 权限和过期广告拒绝。
 
-当前预算门禁（`scripts/release-gate.sh`）：
-
-- `build/index.js <= 180 KiB`
-- `build/index.css <= 60 KiB`
-
-预算可通过环境变量覆盖：
-
-- `MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB`
-- `MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB`
-- `MAGICK_AD_BUNDLE_BUDGET_STRICT`（`1` 失败门禁，`0` 仅告警）
-
-## 9. 发布体系
-
-- 门禁脚本：`scripts/release-gate.sh`
-- 回滚脚本：`scripts/rollback.sh`
-- CI 工作流：
-  - `.github/workflows/ci.yml`
-  - `.github/workflows/release-gate.yml`
+Playground fixture 覆盖服务端 WordPress 集成，但不替代浏览器级区块编辑器交互。发布前仍需在真实浏览器中完成选择投放位、保存文章和前台查看的显式人工检查。

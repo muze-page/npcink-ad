@@ -2,59 +2,29 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "🚀 启动 Local 环境 (Site 2 - PHP 8.2)",
+      "label": "Magick AD: PHP checks",
       "type": "shell",
-      "command": "/Users/muze/Library/Application\\ Support/Local/ssh-entry/woSvhUMpg.sh",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new",
-        "focus": true,
-        "echo": false,
-        "close": true
-      },
-      "runOptions": {
-        "runOn": "folderOpen"
-      }
-    },
-    {
-      "label": "🧪 Magick AD: PHP 语法检查",
-      "type": "shell",
-      "command": "find . -type f -name \"*.php\" ! -path \"./dist/*\" ! -path \"./vendor/*\" ! -path \"./node_modules/*\" -print0 | xargs -0 -n1 php -l",
+      "command": "composer check",
       "options": {
         "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "focus": true
       },
       "problemMatcher": []
     },
     {
-      "label": "🧪 Magick AD: 核心 E2E (tracking + matrix)",
+      "label": "Magick AD: Frontend checks",
       "type": "shell",
-      "command": "MAGICK_AD_E2E_PREVIEW_PATH=\"http://magick-ad.local/\" MAGICK_AD_E2E_REQUIRE_CONSENT=1 pnpm exec playwright test tests/e2e/tracking.spec.js tests/e2e/compatibility-matrix.spec.js --project=chromium",
+      "command": "pnpm check",
       "options": {
         "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "focus": true
       },
       "problemMatcher": []
     },
     {
-      "label": "📦 Magick AD: Release Gate",
+      "label": "Magick AD: Release gate",
       "type": "shell",
-      "command": "MAGICK_AD_E2E_PREVIEW_PATH=\"http://magick-ad.local/\" MAGICK_AD_E2E_REQUIRE_CONSENT=1 bash scripts/release-gate.sh",
+      "command": "bash scripts/release-gate.sh",
       "options": {
         "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "focus": true
       },
       "problemMatcher": []
     }

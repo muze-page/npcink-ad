@@ -1,8 +1,9 @@
 /.git
 /.github
-/.gitee
 /.pnpm-store
 /node_modules
+/vendor
+/.phpunit.cache
 /tests
 /docs
 /assets/js
@@ -16,13 +17,13 @@
 /README.en.md
 /phpcs.xml
 /phpstan.neon
-/psalm.xml
-/playwright.config.js
+/phpunit.xml.dist
 /tsconfig.json
 /webpack.config.js
 /pnpm-lock.yaml
 /package.json
 /composer.json
+/composer.lock
 /build/*.map
 /playwright-report
 /test-results

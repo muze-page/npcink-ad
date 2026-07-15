@@ -1,19 +1,35 @@
 {
     "name": "magick-ad/wp-plugin",
+    "description": "Native WordPress advertising placements.",
     "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
     "require": {
         "php": ">=8.1"
     },
     "require-dev": {
-        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-        "phpstan/phpstan": "^1.11",
-        "szepeviktor/phpstan-wordpress": "^1.3",
-        "vimeo/psalm": "^5.26",
-        "wp-coding-standards/wpcs": "^3.0"
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.1",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^10.5",
+        "szepeviktor/phpstan-wordpress": "^2.0",
+        "wp-coding-standards/wpcs": "^3.2"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "platform": {
+            "php": "8.1.0"
+        },
+        "sort-packages": true
     },
     "scripts": {
+        "test": "phpunit -c phpunit.xml.dist",
         "lint:phpcs": "phpcs -p",
-        "lint:phpstan": "phpstan analyse -c phpstan.neon",
-        "lint:psalm": "psalm --no-progress"
+        "lint:phpstan": "phpstan analyse -c phpstan.neon --no-progress --memory-limit=1G",
+        "check": [
+            "@test",
+            "@lint:phpcs",
+            "@lint:phpstan"
+        ]
     }
 }

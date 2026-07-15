@@ -1,0 +1,38 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "Magick AD smoke test",
+    "author": "Magick AD",
+    "description": "Installs the packaged plugin and runs its WordPress integration smoke test."
+  },
+  "preferredVersions": {
+    "php": "8.1",
+    "wp": "6.5"
+  },
+  "steps": [
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "bundled",
+        "path": "/magick-ad.zip"
+      },
+      "options": {
+        "activate": true,
+        "targetFolderName": "magick-ad"
+      },
+      "ifAlreadyInstalled": "overwrite"
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/magick-ad-smoke.php",
+      "data": {
+        "resource": "bundled",
+        "path": "/smoke.php"
+      }
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require '/wordpress/magick-ad-smoke.php';"
+    }
+  ]
+}
