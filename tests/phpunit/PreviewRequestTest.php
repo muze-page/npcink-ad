@@ -337,7 +337,7 @@ final class PreviewRequestTest extends TestCase {
 	private function promotion_meta( string $location, ?int $paragraph_number = null ): array {
 		$meta = array(
 			Post_Types::LOCATION_META    => $location,
-			Post_Types::PAGE_SCOPE_META  => 'all',
+			Post_Types::CONTENT_SCOPE_META => 'all',
 			Post_Types::INCLUDE_IDS_META => array(),
 			Post_Types::EXCLUDE_IDS_META => array(),
 			Post_Types::DEVICE_META      => 'all',

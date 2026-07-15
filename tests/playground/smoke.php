@@ -6,10 +6,13 @@
  */
 
 use Npcink\Ad\Admin\Preview_Page;
+use Npcink\Ad\Admin\Promotion_List;
+use Npcink\Ad\Admin\Promotion_Status_Action;
 use Npcink\Ad\Blocks\Blocks;
 use Npcink\Ad\Data\Post_Types;
 use Npcink\Ad\Data\Repository;
 use Npcink\Ad\Domain\Eligibility_Evaluator;
+use Npcink\Ad\Domain\Overlap_Detector;
 use Npcink\Ad\Frontend\Classic_Paragraph_Tag_Processor;
 use Npcink\Ad\Frontend\Delivery;
 use Npcink\Ad\Frontend\Paragraph_Inserter;
@@ -69,9 +72,11 @@ $check( get_role( 'editor' )->has_cap( 'manage_npcink_ads' ), 'Editors did not r
 $promotion_meta = get_registered_meta_keys( 'post', 'npcink_promotion' );
 $required_meta  = array(
 	'_npcink_ad_location',
-	'_npcink_ad_page_scope',
+	'_npcink_ad_content_scope',
 	'_npcink_ad_include_ids',
 	'_npcink_ad_exclude_ids',
+	'_npcink_ad_category_ids',
+	'_npcink_ad_tag_ids',
 	'_npcink_ad_device',
 	'_npcink_ad_start_at',
 	'_npcink_ad_end_at',
@@ -82,6 +87,9 @@ foreach ( $required_meta as $meta_key ) {
 }
 $check( 'array' === $promotion_meta['_npcink_ad_include_ids']['type'], 'Include IDs meta is not typed as an array.' );
 $check( 'array' === $promotion_meta['_npcink_ad_exclude_ids']['type'], 'Exclude IDs meta is not typed as an array.' );
+$check( 'array' === $promotion_meta['_npcink_ad_category_ids']['type'], 'Category IDs meta is not typed as an array.' );
+$check( 'array' === $promotion_meta['_npcink_ad_tag_ids']['type'], 'Tag IDs meta is not typed as an array.' );
+$check( ! isset( $promotion_meta['_npcink_ad_page_scope'] ), 'The removed page-scope meta is still registered.' );
 $check( 'integer' === $promotion_meta['_npcink_ad_paragraph_number']['type'], 'Paragraph number meta is not typed as an integer.' );
 $check( 3 === $promotion_meta['_npcink_ad_paragraph_number']['default'], 'Paragraph number meta does not default to 3.' );
 $check( shortcode_exists( 'npcink_ad' ), 'The npcink_ad shortcode was not registered.' );
@@ -167,6 +175,104 @@ $page_b_id = wp_insert_post(
 );
 $check( ! is_wp_error( $page_b_id ), 'Could not create target page B.' );
 
+$post_taxonomies = get_object_taxonomies( 'post' );
+$check( in_array( 'category', $post_taxonomies, true ), 'Standard posts did not expose the Core category taxonomy.' );
+$check( in_array( 'post_tag', $post_taxonomies, true ), 'Standard posts did not expose the Core post-tag taxonomy.' );
+$check( array() === get_object_taxonomies( 'page' ), 'Standard pages unexpectedly exposed category or tag taxonomies.' );
+
+$category_result = wp_insert_term(
+	'Promotion scope category',
+	'category',
+	array( 'slug' => 'npcink-ad-scope-category' )
+);
+$check( ! is_wp_error( $category_result ), 'Could not create the editorial-scope category.' );
+$category_id = absint( is_array( $category_result ) ? ( $category_result['term_id'] ?? 0 ) : 0 );
+$check( 0 < $category_id, 'The editorial-scope category did not return a term ID.' );
+
+$child_category_result = wp_insert_term(
+	'Promotion scope child category',
+	'category',
+	array(
+		'slug'   => 'npcink-ad-scope-child-category',
+		'parent' => $category_id,
+	)
+);
+$check( ! is_wp_error( $child_category_result ), 'Could not create the editorial-scope child category.' );
+$child_category_id = absint( is_array( $child_category_result ) ? ( $child_category_result['term_id'] ?? 0 ) : 0 );
+$check( 0 < $child_category_id, 'The editorial-scope child category did not return a term ID.' );
+
+$tag_result = wp_insert_term(
+	'Promotion scope tag',
+	'post_tag',
+	array( 'slug' => 'npcink-ad-scope-tag' )
+);
+$check( ! is_wp_error( $tag_result ), 'Could not create the editorial-scope tag.' );
+$tag_id = absint( is_array( $tag_result ) ? ( $tag_result['term_id'] ?? 0 ) : 0 );
+$check( 0 < $tag_id, 'The editorial-scope tag did not return a term ID.' );
+
+$category_post_id = wp_insert_post(
+	array(
+		'post_type'     => 'post',
+		'post_status'   => 'publish',
+		'post_title'    => 'Category scope target',
+		'post_content'  => '<p>Category target body</p>',
+		'post_category' => array( $category_id ),
+	),
+	true
+);
+$check( ! is_wp_error( $category_post_id ), 'Could not create the category target post.' );
+$category_post_id = absint( $category_post_id );
+
+$child_category_post_id = wp_insert_post(
+	array(
+		'post_type'     => 'post',
+		'post_status'   => 'publish',
+		'post_title'    => 'Child category scope target',
+		'post_content'  => '<p>Child category target body</p>',
+		'post_category' => array( $child_category_id ),
+	),
+	true
+);
+$check( ! is_wp_error( $child_category_post_id ), 'Could not create the child-category target post.' );
+$child_category_post_id = absint( $child_category_post_id );
+
+$tag_post_id = wp_insert_post(
+	array(
+		'post_type'    => 'post',
+		'post_status'  => 'publish',
+		'post_title'   => 'Tag scope target',
+		'post_content' => '<p>Tag target body</p>',
+	),
+	true
+);
+$check( ! is_wp_error( $tag_post_id ), 'Could not create the tag target post.' );
+$tag_post_id = absint( $tag_post_id );
+$tag_assignment = wp_set_post_terms( $tag_post_id, array( $tag_id ), 'post_tag', false );
+$check( ! is_wp_error( $tag_assignment ), 'Could not assign the editorial-scope tag.' );
+
+$plain_post_id = wp_insert_post(
+	array(
+		'post_type'    => 'post',
+		'post_status'  => 'publish',
+		'post_title'   => 'Plain scope target',
+		'post_content' => '<p>Plain target body</p>',
+	),
+	true
+);
+$check( ! is_wp_error( $plain_post_id ), 'Could not create the plain target post.' );
+$plain_post_id = absint( $plain_post_id );
+
+$check(
+	in_array( $category_id, wp_get_post_categories( $category_post_id ), true ),
+	'The category target did not retain its direct category relationship.'
+);
+$check(
+	array( $tag_id ) === wp_get_post_terms( $tag_post_id, 'post_tag', array( 'fields' => 'ids' ) ),
+	'The tag target did not retain its direct tag relationship.'
+);
+$check( array() === wp_get_post_terms( $plain_post_id, 'post_tag', array( 'fields' => 'ids' ) ), 'A plain post unexpectedly received a tag.' );
+$check( array() !== wp_get_post_categories( $plain_post_id ), 'A published standard post did not receive a default category.' );
+
 $original_timezone_string = get_option( 'timezone_string' );
 $original_gmt_offset      = get_option( 'gmt_offset' );
 try {
@@ -183,7 +289,7 @@ try {
 	$boundary_promotion = array(
 		'status'      => 'publish',
 		'content'     => '<p>Schedule boundary creative</p>',
-		'page_scope'  => 'all',
+		'content_scope' => 'all',
 		'include_ids' => array(),
 		'exclude_ids' => array(),
 		'start_at'    => $shanghai_timestamp,
@@ -231,14 +337,14 @@ $check(
 	'content_after' === get_post_meta( $promotion_id, Post_Types::LOCATION_META, true ),
 	'A new promotion did not default to after-content delivery.'
 );
-$default_location_ids = ( new Repository() )->find_published_ids_by_location( 'content_after' );
+$default_location_ids = ( new Repository() )->find_published_automatic_catalog()['location_ids']['content_after'];
 $check(
 	in_array( $promotion_id, $default_location_ids, true ),
 	'A promotion using the registered default location was omitted from automatic delivery.'
 );
 
 update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'block' );
-update_post_meta( $promotion_id, Post_Types::PAGE_SCOPE_META, 'selected' );
+update_post_meta( $promotion_id, Post_Types::CONTENT_SCOPE_META, 'selected' );
 update_post_meta( $promotion_id, Post_Types::INCLUDE_IDS_META, array( $page_a_id ) );
 update_post_meta( $promotion_id, Post_Types::EXCLUDE_IDS_META, array() );
 update_post_meta( $promotion_id, Post_Types::DEVICE_META, 'mobile' );
@@ -277,7 +383,8 @@ $set_main_singular = static function ( int $post_id ): void {
 	$wp_query->queried_object  = $post;
 	$wp_query->queried_object_id = $post_id;
 	$wp_query->is_singular     = true;
-	$wp_query->is_page         = true;
+	$wp_query->is_page         = 'page' === $post->post_type;
+	$wp_query->is_single       = 'post' === $post->post_type;
 	$wp_query->in_the_loop     = true;
 	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Required for is_main_query() in the integration fixture.
 	$wp_the_query = $wp_query;
@@ -304,7 +411,7 @@ $wrong_page           = $delivery->render_promotion( $promotion_id, 'block', 0, 
 $check( str_contains( $normal_mobile_target, 'Playground smoke creative' ), 'Normal delivery incorrectly server-filtered a mobile promotion.' );
 $check( str_contains( $preview_mobile, 'Playground smoke creative' ), 'Matching mobile preview did not render.' );
 $check( '' === $preview_desktop, 'Desktop preview rendered a mobile-only promotion.' );
-$check( '' === $wrong_page, 'A selected-page promotion rendered on a non-included page.' );
+$check( '' === $wrong_page, 'A selected-content Promotion rendered on a non-included page.' );
 
 wp_set_current_user( 1 );
 update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'content_before' );
@@ -323,11 +430,11 @@ $check(
 	'Repeated the_content filtering duplicated an automatic promotion.'
 );
 $set_main_singular( $page_b_id );
-$check( ! str_contains( $before_delivery->filter_content( '<p>Page body</p>' ), 'Playground smoke creative' ), 'Automatic delivery ignored selected-page scope.' );
+$check( ! str_contains( $before_delivery->filter_content( '<p>Page body</p>' ), 'Playground smoke creative' ), 'Automatic delivery ignored selected-content scope.' );
 
 wp_set_current_user( 1 );
 update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'content_after' );
-update_post_meta( $promotion_id, Post_Types::PAGE_SCOPE_META, 'all' );
+update_post_meta( $promotion_id, Post_Types::CONTENT_SCOPE_META, 'all' );
 update_post_meta( $promotion_id, Post_Types::EXCLUDE_IDS_META, array( $page_b_id ) );
 wp_set_current_user( 0 );
 $set_main_singular( $page_a_id );
@@ -344,7 +451,7 @@ $check( ! str_contains( $after_delivery->filter_content( '<p>Page body</p>' ), '
 wp_set_current_user( 1 );
 update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'content_after_paragraph' );
 update_post_meta( $promotion_id, Post_Types::PARAGRAPH_NUMBER_META, 2 );
-update_post_meta( $promotion_id, Post_Types::PAGE_SCOPE_META, 'all' );
+update_post_meta( $promotion_id, Post_Types::CONTENT_SCOPE_META, 'all' );
 update_post_meta( $promotion_id, Post_Types::EXCLUDE_IDS_META, array() );
 $second_paragraph_promotion_id = wp_insert_post(
 	array(
@@ -489,7 +596,7 @@ $check( null === get_post( $second_paragraph_promotion_id ), 'The second paragra
 
 wp_set_current_user( 1 );
 update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'block' );
-update_post_meta( $promotion_id, Post_Types::PAGE_SCOPE_META, 'selected' );
+update_post_meta( $promotion_id, Post_Types::CONTENT_SCOPE_META, 'selected' );
 update_post_meta( $promotion_id, Post_Types::INCLUDE_IDS_META, array( $page_a_id ) );
 update_post_meta( $promotion_id, Post_Types::EXCLUDE_IDS_META, array() );
 update_post_meta( $promotion_id, Post_Types::DEVICE_META, 'mobile' );
@@ -634,10 +741,209 @@ $check(
 remove_filter( 'the_content', array( $fallback_request, 'filter_content' ), 999 );
 $_GET = array();
 
+$set_editorial_scope = static function (
+	string $scope,
+	array $category_ids = array(),
+	array $tag_ids = array(),
+	array $include_ids = array(),
+	array $exclude_ids = array(),
+	string $location = 'content_after'
+) use ( $promotion_id ): void {
+	wp_set_current_user( 1 );
+	update_post_meta( $promotion_id, Post_Types::LOCATION_META, $location );
+	update_post_meta( $promotion_id, Post_Types::CONTENT_SCOPE_META, $scope );
+	update_post_meta( $promotion_id, Post_Types::CATEGORY_IDS_META, $category_ids );
+	update_post_meta( $promotion_id, Post_Types::TAG_IDS_META, $tag_ids );
+	update_post_meta( $promotion_id, Post_Types::INCLUDE_IDS_META, $include_ids );
+	update_post_meta( $promotion_id, Post_Types::EXCLUDE_IDS_META, $exclude_ids );
+	update_post_meta( $promotion_id, Post_Types::DEVICE_META, 'all' );
+	update_post_meta( $promotion_id, Post_Types::START_AT_META, '' );
+	update_post_meta( $promotion_id, Post_Types::END_AT_META, '' );
+};
+$normal_scope_output = static function ( int $target_id, string $location = 'content_after' ) use ( $promotion_id ): string {
+	wp_set_current_user( 0 );
+
+	return ( new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() ) )
+		->render_promotion( $promotion_id, $location, 0, null, $target_id );
+};
+$preview_scope_output = static function ( int $target_id, string $location = 'content_after' ) use ( $promotion_id ): string {
+	wp_set_current_user( 1 );
+
+	return ( new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() ) )
+		->render_preview( $promotion_id, $location, 'desktop', $target_id );
+};
+$list_status = static function () use ( $promotion_id ): string {
+	$promotion = ( new Repository() )->find_promotion( $promotion_id );
+	if ( null === $promotion ) {
+		return '';
+	}
+
+	$list   = new Promotion_List( new Repository(), new Eligibility_Evaluator(), new Overlap_Detector() );
+	$method = new ReflectionMethod( $list, 'status_label' );
+
+	return (string) $method->invoke( $list, $promotion );
+};
+$resume_blocking_reason = static function () use ( $promotion_id ): ?string {
+	$status_action = new Promotion_Status_Action( new Repository(), new Eligibility_Evaluator() );
+	$method        = new ReflectionMethod( $status_action, 'resume_blocking_reason' );
+
+	return $method->invoke( $status_action, $promotion_id );
+};
+
+$set_editorial_scope( 'all' );
+$check(
+	str_contains( $normal_scope_output( $category_post_id ), 'Playground smoke creative' ),
+	'The all scope did not render on a standard post.'
+);
+$check(
+	str_contains( $normal_scope_output( $page_a_id ), 'Playground smoke creative' ),
+	'The all scope did not render on a standard page.'
+);
+
+$set_editorial_scope( 'posts' );
+$check(
+	str_contains( $normal_scope_output( $category_post_id ), 'Playground smoke creative' ),
+	'The posts scope did not render on a standard post.'
+);
+$check( '' === $normal_scope_output( $page_a_id ), 'The posts scope rendered on a standard page.' );
+
+$set_editorial_scope( 'pages' );
+$check(
+	str_contains( $normal_scope_output( $page_a_id ), 'Playground smoke creative' ),
+	'The pages scope did not render on a standard page.'
+);
+$check( '' === $normal_scope_output( $category_post_id ), 'The pages scope rendered on a standard post.' );
+
+$set_editorial_scope( 'terms', array( $category_id ) );
+$category_output = $normal_scope_output( $category_post_id );
+$category_preview = $preview_scope_output( $category_post_id );
+$check( str_contains( $category_output, 'Playground smoke creative' ), 'A direct category match did not render normally.' );
+$check( ! str_contains( $category_preview, 'is-blocked' ), 'A direct category match was blocked in real-page preview.' );
+$check( __( 'Rule ready', 'npcink-ad' ) === $list_status(), 'The list did not report a valid category rule as ready.' );
+$check( '' === $normal_scope_output( $tag_post_id ), 'A category rule matched a tag-only post.' );
+$check( '' === $normal_scope_output( $page_a_id ), 'A category rule matched a standard page.' );
+$check(
+	'' === $normal_scope_output( $child_category_post_id ),
+	'A parent category rule implicitly expanded to a child-only relationship.'
+);
+
+$set_main_singular( $category_post_id );
+wp_set_current_user( 0 );
+$automatic_term_output = ( new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() ) )
+	->filter_content( '<p>Category target body</p>' );
+$check(
+	str_contains( $automatic_term_output, 'Playground smoke creative' ),
+	'The automatic the_content path did not use the direct category relationship.'
+);
+
+$removed_category = wp_remove_object_terms( $category_post_id, $category_id, 'category' );
+$check( ! is_wp_error( $removed_category ), 'Could not remove the direct category relationship.' );
+$check( '' === $normal_scope_output( $category_post_id ), 'A removed category relationship remained eligible.' );
+$check(
+	str_contains( $preview_scope_output( $category_post_id ), 'npcink-ad-preview-verdict is-blocked' ),
+	'Real-page preview did not immediately report the removed category relationship.'
+);
+$check(
+	__( 'Rule ready', 'npcink-ad' ) === $list_status(),
+	'The list incorrectly treated a valid dynamic term rule as a configuration error.'
+);
+$restored_category = wp_set_post_terms( $category_post_id, array( $category_id ), 'category', false );
+$check( ! is_wp_error( $restored_category ), 'Could not restore the direct category relationship.' );
+$check(
+	str_contains( $normal_scope_output( $category_post_id ), 'Playground smoke creative' ),
+	'A restored category relationship did not become immediately eligible.'
+);
+
+$set_editorial_scope( 'terms', array(), array( $tag_id ) );
+$check(
+	str_contains( $normal_scope_output( $tag_post_id ), 'Playground smoke creative' ),
+	'A direct tag match did not render normally.'
+);
+$check( '' === $normal_scope_output( $plain_post_id ), 'A tag rule matched a post with no tags.' );
+
+$set_editorial_scope(
+	'selected',
+	array( $category_id ),
+	array( $tag_id ),
+	array( $page_a_id )
+);
+$check(
+	str_contains( $normal_scope_output( $page_a_id ), 'Playground smoke creative' ),
+	'The selected scope did not render on its explicit public page.'
+);
+$check(
+	'' === $normal_scope_output( $category_post_id ),
+	'The selected scope combined stale category metadata with explicit IDs.'
+);
+$set_editorial_scope(
+	'selected',
+	array(),
+	array(),
+	array( $page_a_id ),
+	array( $page_a_id )
+);
+$check( '' === $normal_scope_output( $page_a_id ), 'An explicit exclusion did not override selected inclusion.' );
+
+$set_editorial_scope( 'terms', array( 999999999 ), array(), array(), array(), 'block' );
+$check(
+	str_contains( $normal_scope_output( $page_a_id, 'block' ), 'Playground smoke creative' ),
+	'A manual block treated an advanced automatic scope as a term requirement.'
+);
+$set_editorial_scope( 'terms', array( 999999999 ), array(), array(), array( $page_a_id ), 'block' );
+$check( '' === $normal_scope_output( $page_a_id, 'block' ), 'A manual block ignored its explicit ID exclusion.' );
+
+$set_editorial_scope( 'terms' );
+$check( __( 'Needs completion', 'npcink-ad' ) === $list_status(), 'The list did not fail closed for an empty term scope.' );
+$check( '' === $normal_scope_output( $category_post_id ), 'An empty term scope rendered normally.' );
+$check(
+	str_contains( $preview_scope_output( $category_post_id ), 'npcink-ad-preview-verdict is-blocked' ),
+	'Real-page preview did not expose the empty term scope as blocked.'
+);
+$check(
+	'promotion_targets_empty' === $resume_blocking_reason(),
+	'Resume preflight did not reject an empty term scope.'
+);
+
+$set_editorial_scope( 'terms', array( 999999999 ) );
+$invalid_promotion = ( new Repository() )->find_promotion( $promotion_id );
+$check(
+	is_array( $invalid_promotion ) && false === $invalid_promotion['terms_valid'],
+	'The repository did not fail closed for a missing category ID.'
+);
+$check( __( 'Needs completion', 'npcink-ad' ) === $list_status(), 'The list did not fail closed for an invalid term scope.' );
+$check( '' === $normal_scope_output( $category_post_id ), 'An invalid term scope rendered normally.' );
+$check(
+	str_contains( $preview_scope_output( $category_post_id ), 'npcink-ad-preview-verdict is-blocked' ),
+	'Real-page preview did not expose the invalid term scope as blocked.'
+);
+$check(
+	'promotion_terms_invalid' === $resume_blocking_reason(),
+	'Resume preflight did not reject an invalid term scope.'
+);
+
+$set_editorial_scope( 'terms', array(), array( $tag_id ) );
+$check( null === $resume_blocking_reason(), 'Resume preflight rejected a valid direct-tag scope.' );
+
+$set_editorial_scope( 'terms', array( $category_id ) );
+$check(
+	str_contains( $normal_scope_output( $category_post_id ), 'Playground smoke creative' ),
+	'The category fixture was not eligible before term deletion.'
+);
+$deleted_category = wp_delete_term( $category_id, 'category' );
+$check( true === $deleted_category, 'Could not delete the non-default configured category.' );
+$check( '' === $normal_scope_output( $category_post_id ), 'A deleted configured category widened or retained delivery.' );
+$check( __( 'Needs completion', 'npcink-ad' ) === $list_status(), 'The list did not expose a deleted configured category.' );
+$check(
+	'promotion_terms_invalid' === $resume_blocking_reason(),
+	'Resume preflight did not reject a deleted configured category.'
+);
+
 wp_set_current_user( 1 );
-update_post_meta( $promotion_id, Post_Types::PAGE_SCOPE_META, 'selected' );
+update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'block' );
+update_post_meta( $promotion_id, Post_Types::CONTENT_SCOPE_META, 'selected' );
 update_post_meta( $promotion_id, Post_Types::INCLUDE_IDS_META, array( $page_a_id ) );
 update_post_meta( $promotion_id, Post_Types::EXCLUDE_IDS_META, array() );
+update_post_meta( $promotion_id, Post_Types::DEVICE_META, 'mobile' );
 update_post_meta(
 	$promotion_id,
 	Post_Types::START_AT_META,
@@ -743,6 +1049,76 @@ $assert_preflight_error(
 );
 $check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected future schedule changed the Promotion status.' );
 
+$invalid_terms_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<!-- wp:paragraph --><p>REST editorial-scope creative</p><!-- /wp:paragraph -->',
+		'meta'    => array(
+			Post_Types::LOCATION_META      => 'content_after',
+			Post_Types::CONTENT_SCOPE_META => 'terms',
+			Post_Types::CATEGORY_IDS_META  => array( $category_id ),
+			Post_Types::TAG_IDS_META       => array(),
+			Post_Types::EXCLUDE_IDS_META   => array(),
+		),
+	)
+);
+$assert_preflight_error(
+	$invalid_terms_response,
+	'promotion_terms_invalid',
+	'Core REST allowed a Promotion referencing a deleted category to publish.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected invalid-term publish changed the Promotion status.' );
+
+$empty_terms_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<!-- wp:paragraph --><p>REST editorial-scope creative</p><!-- /wp:paragraph -->',
+		'meta'    => array(
+			Post_Types::LOCATION_META      => 'content_after',
+			Post_Types::CONTENT_SCOPE_META => 'terms',
+			Post_Types::CATEGORY_IDS_META  => array(),
+			Post_Types::TAG_IDS_META       => array(),
+			Post_Types::EXCLUDE_IDS_META   => array(),
+		),
+	)
+);
+$assert_preflight_error(
+	$empty_terms_response,
+	'promotion_targets_empty',
+	'Core REST allowed a term scope with no configured terms to publish.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected empty-term publish changed the Promotion status.' );
+
+$valid_terms_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<!-- wp:paragraph --><p>REST editorial-scope creative</p><!-- /wp:paragraph -->',
+		'meta'    => array(
+			Post_Types::LOCATION_META      => 'content_after',
+			Post_Types::CONTENT_SCOPE_META => 'terms',
+			Post_Types::CATEGORY_IDS_META  => array(),
+			Post_Types::TAG_IDS_META       => array( $tag_id ),
+			Post_Types::EXCLUDE_IDS_META   => array(),
+		),
+	)
+);
+$check( 200 === $valid_terms_response->get_status(), 'Core REST rejected a valid direct-tag scope.' );
+$check( 'publish' === get_post_status( $rest_promotion_id ), 'Core REST did not publish the valid direct-tag scope.' );
+$check(
+	array( $tag_id ) === get_post_meta( $rest_promotion_id, Post_Types::TAG_IDS_META, true ),
+	'Core REST did not persist the valid direct-tag scope.'
+);
+wp_update_post(
+	array(
+		'ID'          => $rest_promotion_id,
+		'post_status' => 'draft',
+	)
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'The valid term fixture could not return to draft for later preflight checks.' );
+
 $non_public_target_id = wp_insert_post(
 	array(
 		'post_type'   => 'page',
@@ -758,7 +1134,7 @@ $invalid_targets_response = $write_promotion_via_rest(
 		'status'  => 'publish',
 		'content' => '<!-- wp:paragraph --><p>REST preflight creative</p><!-- /wp:paragraph -->',
 		'meta'    => array(
-			Post_Types::PAGE_SCOPE_META  => 'selected',
+			Post_Types::CONTENT_SCOPE_META => 'selected',
 			Post_Types::INCLUDE_IDS_META => array( absint( $non_public_target_id ), 999999999 ),
 			Post_Types::EXCLUDE_IDS_META => array(),
 		),
@@ -777,7 +1153,7 @@ $invalid_schedule_response = $write_promotion_via_rest(
 		'status'  => 'publish',
 		'content' => '<!-- wp:paragraph --><p>REST preflight creative</p><!-- /wp:paragraph -->',
 		'meta'    => array(
-			Post_Types::PAGE_SCOPE_META  => 'all',
+			Post_Types::CONTENT_SCOPE_META => 'all',
 			Post_Types::INCLUDE_IDS_META => array(),
 			Post_Types::EXCLUDE_IDS_META => array(),
 			Post_Types::START_AT_META    => '2026-01-15 09:00:00',
@@ -800,7 +1176,7 @@ $invalid_paragraph_draft_response = $write_promotion_via_rest(
 		'meta'    => array(
 			Post_Types::LOCATION_META         => 'content_after_paragraph',
 			Post_Types::PARAGRAPH_NUMBER_META => 0,
-			Post_Types::PAGE_SCOPE_META       => 'all',
+			Post_Types::CONTENT_SCOPE_META    => 'all',
 			Post_Types::INCLUDE_IDS_META      => array(),
 			Post_Types::EXCLUDE_IDS_META      => array(),
 		),
@@ -829,7 +1205,7 @@ $invalid_calendar_response = $write_promotion_via_rest(
 		'content' => '<!-- wp:paragraph --><p>REST preflight creative</p><!-- /wp:paragraph -->',
 		'meta'    => array(
 			Post_Types::LOCATION_META    => 'block',
-			Post_Types::PAGE_SCOPE_META  => 'selected',
+			Post_Types::CONTENT_SCOPE_META => 'selected',
 			Post_Types::INCLUDE_IDS_META => array( $page_a_id ),
 			Post_Types::EXCLUDE_IDS_META => array(),
 			Post_Types::DEVICE_META      => 'all',
@@ -854,7 +1230,7 @@ $valid_publish_response = $write_promotion_via_rest(
 		'content' => '<!-- wp:paragraph --><p>REST preflight creative</p><!-- /wp:paragraph -->',
 		'meta'    => array(
 			Post_Types::LOCATION_META    => 'block',
-			Post_Types::PAGE_SCOPE_META  => 'selected',
+			Post_Types::CONTENT_SCOPE_META => 'selected',
 			Post_Types::INCLUDE_IDS_META => array( $page_a_id ),
 			Post_Types::EXCLUDE_IDS_META => array(),
 			Post_Types::DEVICE_META      => 'all',
@@ -888,7 +1264,7 @@ $valid_future_response   = $write_promotion_via_rest(
 		'date_gmt' => $future_fixture_date_gmt->format( 'Y-m-d\TH:i:s' ),
 		'meta'     => array(
 			Post_Types::LOCATION_META    => 'block',
-			Post_Types::PAGE_SCOPE_META  => 'selected',
+			Post_Types::CONTENT_SCOPE_META => 'selected',
 			Post_Types::INCLUDE_IDS_META => array( $page_a_id ),
 			Post_Types::EXCLUDE_IDS_META => array(),
 			Post_Types::DEVICE_META      => 'mobile',
@@ -916,8 +1292,8 @@ $check(
 	'The valid future Promotion did not persist its location.'
 );
 $check(
-	'selected' === get_post_meta( $future_promotion_id, Post_Types::PAGE_SCOPE_META, true ),
-	'The valid future Promotion did not persist its page scope.'
+	'selected' === get_post_meta( $future_promotion_id, Post_Types::CONTENT_SCOPE_META, true ),
+	'The valid future Promotion did not persist its content scope.'
 );
 $check(
 	array( $page_a_id ) === get_post_meta( $future_promotion_id, Post_Types::INCLUDE_IDS_META, true ),

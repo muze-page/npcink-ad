@@ -3,19 +3,31 @@ import { getBlockType, parse, type BlockInstance } from '@wordpress/blocks';
 export type PromotionPreflightIssueCode =
 	| 'empty_content'
 	| 'selected_scope_without_targets'
+	| 'terms_scope_without_terms'
 	| 'invalid_schedule_order'
 	| 'invalid_paragraph_number';
 
+export type PromotionContentScope =
+	| 'all'
+	| 'posts'
+	| 'pages'
+	| 'terms'
+	| 'selected';
+
+export type PromotionLocation =
+	| 'block'
+	| 'content_before'
+	| 'content_after'
+	| 'content_after_paragraph';
+
 interface PromotionPreflightInput {
 	content: string;
-	location?:
-		| 'block'
-		| 'content_before'
-		| 'content_after'
-		| 'content_after_paragraph';
-	pageScope: 'all' | 'selected';
+	location?: PromotionLocation;
+	contentScope: PromotionContentScope;
 	includeIds: readonly number[];
 	excludeIds: readonly number[];
+	categoryIds?: readonly number[];
+	tagIds?: readonly number[];
 	paragraphNumber?: number;
 	startAt?: string;
 	endAt?: string;
@@ -23,14 +35,13 @@ interface PromotionPreflightInput {
 
 export interface PromotionOverlapRule {
 	id?: number;
-	location:
-		| 'block'
-		| 'content_before'
-		| 'content_after'
-		| 'content_after_paragraph';
-	pageScope: 'all' | 'selected';
+	location: PromotionLocation;
+	contentScope: PromotionContentScope;
 	includeIds: readonly number[];
 	excludeIds: readonly number[];
+	categoryIds: readonly number[];
+	tagIds: readonly number[];
+	termsValid: boolean;
 	device: 'all' | 'desktop' | 'mobile';
 	paragraphNumber?: number;
 	startAt?: string;
@@ -41,6 +52,12 @@ export interface PromotionOverlapRule {
 export interface EffectivePromotionTargetIds {
 	includeIds: number[];
 	excludeIds: number[];
+}
+
+export interface EffectivePromotionTermSelection {
+	categoryIds: number[];
+	tagIds: number[];
+	termsValid: boolean;
 }
 
 export type ParagraphAnchorInspection =
@@ -56,6 +73,24 @@ export type ParagraphAnchorInspection =
 export const DEFAULT_PARAGRAPH_NUMBER = 3;
 export const MIN_PARAGRAPH_NUMBER = 1;
 export const MAX_PARAGRAPH_NUMBER = 20;
+
+/**
+ * Keep manual block placement inside its intentionally smaller scope contract.
+ * Advanced automatic selections are reset in the same editor transaction that
+ * changes placement, while their term metadata remains stored but inactive.
+ *
+ * @param contentScope Current canonical content scope.
+ * @param location     Next placement.
+ */
+export function contentScopeForPlacement(
+	contentScope: PromotionContentScope,
+	location: PromotionLocation
+): PromotionContentScope {
+	return location === 'block' &&
+		[ 'posts', 'pages', 'terms' ].includes( contentScope )
+		? 'all'
+		: contentScope;
+}
 
 const meaningfulElementPattern =
 	/<(?:img|picture|video|audio|iframe|object|embed|svg|canvas|input)\b/i;
@@ -206,6 +241,43 @@ export function getEffectivePromotionTargetIds(
 		excludeIds: [ ...new Set( excludeIds ) ].filter(
 			( id ) => id > 0 && publicLookup.has( id )
 		),
+	};
+}
+
+/**
+ * Keep only term IDs confirmed by the server for stored metadata or by a
+ * TermPicker choice made during this editor session.
+ *
+ * A terms scope is valid only when it contains at least one term and every
+ * configured term is confirmed. PHP remains authoritative at publication.
+ *
+ * @param categoryIds      Current raw category IDs.
+ * @param tagIds           Current raw tag IDs.
+ * @param validCategoryIds Confirmed category IDs.
+ * @param validTagIds      Confirmed tag IDs.
+ */
+export function getEffectivePromotionTermSelection(
+	categoryIds: readonly number[],
+	tagIds: readonly number[],
+	validCategoryIds: readonly number[],
+	validTagIds: readonly number[]
+): EffectivePromotionTermSelection {
+	const categories = [ ...new Set( categoryIds ) ].filter( ( id ) => id > 0 );
+	const tags = [ ...new Set( tagIds ) ].filter( ( id ) => id > 0 );
+	const validCategories = new Set( validCategoryIds );
+	const validTags = new Set( validTagIds );
+	const effectiveCategories = categories.filter( ( id ) =>
+		validCategories.has( id )
+	);
+	const effectiveTags = tags.filter( ( id ) => validTags.has( id ) );
+
+	return {
+		categoryIds: effectiveCategories,
+		tagIds: effectiveTags,
+		termsValid:
+			categories.length + tags.length > 0 &&
+			effectiveCategories.length === categories.length &&
+			effectiveTags.length === tags.length,
 	};
 }
 
@@ -369,17 +441,32 @@ function effectiveSelectedIds( rule: PromotionOverlapRule ): number[] {
 	);
 }
 
-function pageScopesMayOverlap(
-	candidate: PromotionOverlapRule,
-	published: PromotionOverlapRule
-): boolean {
-	if ( candidate.pageScope === 'all' && published.pageScope === 'all' ) {
+function scopeHasPossibleTargets( rule: PromotionOverlapRule ): boolean {
+	if ( rule.contentScope === 'selected' ) {
+		return effectiveSelectedIds( rule ).length > 0;
+	}
+
+	if ( rule.contentScope !== 'terms' ) {
 		return true;
 	}
 
+	return rule.termsValid && rule.categoryIds.length + rule.tagIds.length > 0;
+}
+
+function contentScopesMayOverlap(
+	candidate: PromotionOverlapRule,
+	published: PromotionOverlapRule
+): boolean {
 	if (
-		candidate.pageScope === 'selected' &&
-		published.pageScope === 'selected'
+		! scopeHasPossibleTargets( candidate ) ||
+		! scopeHasPossibleTargets( published )
+	) {
+		return false;
+	}
+
+	if (
+		candidate.contentScope === 'selected' &&
+		published.contentScope === 'selected'
 	) {
 		const publishedIds = new Set( effectiveSelectedIds( published ) );
 
@@ -388,13 +475,43 @@ function pageScopesMayOverlap(
 		);
 	}
 
-	const selected = candidate.pageScope === 'selected' ? candidate : published;
-	const all = candidate.pageScope === 'all' ? candidate : published;
-	const allExclusions = new Set( all.excludeIds );
+	if (
+		candidate.contentScope === 'selected' ||
+		published.contentScope === 'selected'
+	) {
+		const selected =
+			candidate.contentScope === 'selected' ? candidate : published;
+		const broad =
+			candidate.contentScope === 'selected' ? published : candidate;
+		const broadExclusions = new Set( broad.excludeIds );
 
-	return effectiveSelectedIds( selected ).some(
-		( id ) => ! allExclusions.has( id )
-	);
+		return effectiveSelectedIds( selected ).some(
+			( id ) => ! broadExclusions.has( id )
+		);
+	}
+
+	if (
+		candidate.contentScope === 'all' ||
+		published.contentScope === 'all'
+	) {
+		return true;
+	}
+
+	if (
+		( candidate.contentScope === 'posts' &&
+			published.contentScope === 'pages' ) ||
+		( candidate.contentScope === 'pages' &&
+			published.contentScope === 'posts' ) ||
+		( candidate.contentScope === 'pages' &&
+			published.contentScope === 'terms' ) ||
+		( candidate.contentScope === 'terms' &&
+			published.contentScope === 'pages' )
+	) {
+		return false;
+	}
+
+	// Different category/tag sets may still match the same multi-term post.
+	return true;
 }
 
 function schedulesMayOverlap(
@@ -502,7 +619,7 @@ export function getPotentiallyOverlappingPromotionIds(
 					return (
 						devicesMayOverlap( candidate, published ) &&
 						schedulesMayOverlap( candidate, published ) &&
-						pageScopesMayOverlap( candidate, published )
+						contentScopesMayOverlap( candidate, published )
 					);
 				} )
 				.map( ( published ) => published.id as number )
@@ -513,9 +630,11 @@ export function getPotentiallyOverlappingPromotionIds(
 export function getPromotionPreflightIssues( {
 	content,
 	location = 'content_after',
-	pageScope,
+	contentScope,
 	includeIds,
 	excludeIds,
+	categoryIds = [],
+	tagIds = [],
 	paragraphNumber,
 	startAt,
 	endAt,
@@ -529,8 +648,15 @@ export function getPromotionPreflightIssues( {
 	const hasEligibleTarget = includeIds.some(
 		( id ) => ! excludeIds.includes( id )
 	);
-	if ( pageScope === 'selected' && ! hasEligibleTarget ) {
+	if ( contentScope === 'selected' && ! hasEligibleTarget ) {
 		issues.push( 'selected_scope_without_targets' );
+	}
+	if (
+		contentScope === 'terms' &&
+		categoryIds.length === 0 &&
+		tagIds.length === 0
+	) {
+		issues.push( 'terms_scope_without_terms' );
 	}
 
 	if (

@@ -13,8 +13,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/PromotionStatusWordPressStubs.php';
+require_once __DIR__ . '/PromotionStatusWordPressPost.php';
 require_once __DIR__ . '/PromotionPreflightWordPressClasses.php';
 require_once __DIR__ . '/PromotionPreflightWordPressRequest.php';
+require_once __DIR__ . '/EditorialScopeWordPressStubs.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Post_Types.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Repository.php';
 require_once dirname( __DIR__, 2 ) . '/src/REST/Promotion_Preflight.php';
@@ -30,6 +32,9 @@ final class PromotionPreflightTest extends TestCase {
 		$GLOBALS['npcink_ad_test_posts']             = array();
 		$GLOBALS['npcink_ad_test_meta']              = array();
 		$GLOBALS['npcink_ad_test_get_posts_queries'] = array();
+		$GLOBALS['npcink_ad_test_get_terms_queries'] = array();
+		$GLOBALS['npcink_ad_test_get_terms_errors']  = array();
+		$GLOBALS['npcink_ad_test_term_taxonomies']   = array();
 	}
 
 	/**
@@ -41,9 +46,12 @@ final class PromotionPreflightTest extends TestCase {
 		$preflight  = new Promotion_Preflight( $repository, $evaluator );
 		$promotion  = array(
 			'content'        => '<p>Creative</p>',
-			'page_scope'     => 'all',
+			'content_scope'  => 'all',
 			'include_ids'    => array(),
 			'exclude_ids'    => array(),
+			'category_ids'   => array(),
+			'tag_ids'        => array(),
+			'terms_valid'    => true,
 			'start_at'       => 0,
 			'start_at_valid' => true,
 			'end_at'         => 0,
@@ -146,6 +154,142 @@ final class PromotionPreflightTest extends TestCase {
 		);
 
 		self::assertSame( $prepared, $this->preflight()->validate_before_save( $prepared, $request ) );
+	}
+
+	/**
+	 * An active automatic term scope must contain at least one selected term.
+	 */
+	public function test_publish_rejects_empty_active_term_scope(): void {
+		$result = $this->preflight()->validate_before_save(
+			$this->prepared_post( 'publish' ),
+			$this->request_with_meta(
+				array(
+					Post_Types::LOCATION_META      => 'content_after',
+					Post_Types::CONTENT_SCOPE_META => 'terms',
+				)
+			)
+		);
+
+		self::assertInstanceOf( WP_Error::class, $result );
+		self::assertSame( array( 'promotion_targets_empty' ), $result->get_error_data()['reasons'] );
+	}
+
+	/**
+	 * Existing terms are publishable even when no current post uses them.
+	 */
+	public function test_publish_accepts_existing_term_without_content_matches(): void {
+		$GLOBALS['npcink_ad_test_term_taxonomies']['category'] = array( 7 );
+		$prepared = $this->prepared_post( 'publish' );
+		$request  = $this->request_with_meta(
+			array(
+				Post_Types::LOCATION_META      => 'content_after',
+				Post_Types::CONTENT_SCOPE_META => 'terms',
+				Post_Types::CATEGORY_IDS_META  => array( 7 ),
+			)
+		);
+
+		self::assertSame( $prepared, $this->preflight()->validate_before_save( $prepared, $request ) );
+	}
+
+	/**
+	 * Wrong-taxonomy IDs retain evidence and block publication.
+	 */
+	public function test_publish_rejects_term_id_from_wrong_taxonomy(): void {
+		$GLOBALS['npcink_ad_test_term_taxonomies'] = array(
+			'category' => array(),
+			'post_tag' => array( 7 ),
+		);
+		$result = $this->preflight()->validate_before_save(
+			$this->prepared_post( 'publish' ),
+			$this->request_with_meta(
+				array(
+					Post_Types::LOCATION_META      => 'content_after',
+					Post_Types::CONTENT_SCOPE_META => 'terms',
+					Post_Types::CATEGORY_IDS_META  => array( 7 ),
+				)
+			)
+		);
+
+		self::assertInstanceOf( WP_Error::class, $result );
+		self::assertSame( array( 'promotion_terms_invalid' ), $result->get_error_data()['reasons'] );
+	}
+
+	/**
+	 * A failed term-existence query blocks publication.
+	 */
+	public function test_publish_fails_closed_when_term_validation_query_fails(): void {
+		$GLOBALS['npcink_ad_test_term_taxonomies']['category'] = array( 7 );
+		$GLOBALS['npcink_ad_test_get_terms_errors']            = array( 'category' );
+		$result = $this->preflight()->validate_before_save(
+			$this->prepared_post( 'publish' ),
+			$this->request_with_meta(
+				array(
+					Post_Types::LOCATION_META      => 'content_after',
+					Post_Types::CONTENT_SCOPE_META => 'terms',
+					Post_Types::CATEGORY_IDS_META  => array( 7 ),
+				)
+			)
+		);
+
+		self::assertInstanceOf( WP_Error::class, $result );
+		self::assertSame( array( 'promotion_terms_invalid' ), $result->get_error_data()['reasons'] );
+	}
+
+	/**
+	 * Metadata overrides are validated as one recomputed candidate.
+	 */
+	public function test_request_term_override_recomputes_stored_validity(): void {
+		$GLOBALS['npcink_ad_test_posts'][1] = new WP_Post(
+			array(
+				'ID'           => 1,
+				'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+				'post_status'  => 'draft',
+				'post_content' => '<p>Stored creative</p>',
+			)
+		);
+		$GLOBALS['npcink_ad_test_meta'][1]  = array(
+			Post_Types::LOCATION_META      => 'content_after',
+			Post_Types::CONTENT_SCOPE_META => 'terms',
+			Post_Types::CATEGORY_IDS_META  => array( 7 ),
+			Post_Types::TAG_IDS_META       => array(),
+			Post_Types::START_AT_META      => '',
+			Post_Types::END_AT_META        => '',
+		);
+		$GLOBALS['npcink_ad_test_term_taxonomies']['category'] = array( 7 );
+		$prepared     = $this->prepared_post( 'publish' );
+		$prepared->ID = 1;
+
+		$result = $this->preflight()->validate_before_save(
+			$prepared,
+			$this->request_with_meta( array( Post_Types::CATEGORY_IDS_META => array( 8 ) ) )
+		);
+
+		self::assertInstanceOf( WP_Error::class, $result );
+		self::assertSame( array( 'promotion_terms_invalid' ), $result->get_error_data()['reasons'] );
+	}
+
+	/**
+	 * Hidden term values never block non-term or manual publication.
+	 */
+	public function test_hidden_term_values_are_not_validated(): void {
+		foreach (
+			array(
+				array( 'content_after', 'posts' ),
+				array( 'block', 'terms' ),
+			) as [ $location, $scope ]
+		) {
+			$prepared = $this->prepared_post( 'publish' );
+			$request  = $this->request_with_meta(
+				array(
+					Post_Types::LOCATION_META      => $location,
+					Post_Types::CONTENT_SCOPE_META => $scope,
+					Post_Types::CATEGORY_IDS_META  => array( 999 ),
+				)
+			);
+			self::assertSame( $prepared, $this->preflight()->validate_before_save( $prepared, $request ) );
+		}
+
+		self::assertSame( array(), $GLOBALS['npcink_ad_test_get_terms_queries'] );
 	}
 
 	/**

@@ -28,9 +28,12 @@ final class EligibilityEvaluatorTest extends TestCase {
 			'location'    => 'block',
 			'paragraph_number' => 3,
 			'paragraph_number_valid' => true,
-			'page_scope'  => 'all',
+			'content_scope' => 'all',
 			'include_ids' => array(),
 			'exclude_ids' => array(),
+			'category_ids' => array(),
+			'tag_ids'      => array(),
+			'terms_valid'  => true,
 			'device'      => 'all',
 			'start_at'    => self::NOW - 3600,
 			'start_at_valid' => true,
@@ -50,6 +53,10 @@ final class EligibilityEvaluatorTest extends TestCase {
 			'post_id'          => self::POST_ID,
 			'expected_location' => 'block',
 			'simulated_device'  => null,
+			'post_type'         => 'post',
+			'category_ids'      => array(),
+			'tag_ids'           => array(),
+			'content_terms_available' => true,
 		);
 	}
 
@@ -67,14 +74,14 @@ final class EligibilityEvaluatorTest extends TestCase {
 			),
 			'selected scope without IDs'   => array(
 				array(
-					'page_scope'  => 'selected',
+					'content_scope' => 'selected',
 					'include_ids' => array(),
 				),
 				array( 'promotion_targets_empty' ),
 			),
 			'all selected IDs excluded'    => array(
 				array(
-					'page_scope'  => 'selected',
+					'content_scope' => 'selected',
 					'include_ids' => array( 42, 43 ),
 					'exclude_ids' => array( 42, 43 ),
 				),
@@ -82,9 +89,43 @@ final class EligibilityEvaluatorTest extends TestCase {
 			),
 			'selected effective ID remains' => array(
 				array(
-					'page_scope'  => 'selected',
+					'content_scope' => 'selected',
 					'include_ids' => array( 42, 43 ),
 					'exclude_ids' => array( 42 ),
+				),
+				array(),
+			),
+			'automatic terms without IDs'   => array(
+				array(
+					'location'      => 'content_after',
+					'content_scope' => 'terms',
+				),
+				array( 'promotion_targets_empty' ),
+			),
+			'automatic terms with invalid ID' => array(
+				array(
+					'location'      => 'content_after',
+					'content_scope' => 'terms',
+					'category_ids'  => array( 7 ),
+					'terms_valid'   => false,
+				),
+				array( 'promotion_terms_invalid' ),
+			),
+			'valid terms may currently match no posts' => array(
+				array(
+					'location'      => 'content_after',
+					'content_scope' => 'terms',
+					'tag_ids'       => array( 8 ),
+					'terms_valid'   => true,
+				),
+				array(),
+			),
+			'manual terms ignore hidden invalid values' => array(
+				array(
+					'location'      => 'block',
+					'content_scope' => 'terms',
+					'category_ids'  => array( 7 ),
+					'terms_valid'   => false,
 				),
 				array(),
 			),
@@ -188,6 +229,25 @@ final class EligibilityEvaluatorTest extends TestCase {
 
 		self::assertSame( array() === $expected_reasons, $result['valid'] );
 		self::assertSame( $expected_reasons, $result['reasons'] );
+	}
+
+	/**
+	 * Active term scope cannot bypass existence validation by omitting its flag.
+	 */
+	public function test_active_terms_fail_closed_without_validity_evidence(): void {
+		$promotion = array_replace(
+			$this->valid_promotion(),
+			array(
+				'location'      => 'content_after',
+				'content_scope' => 'terms',
+				'category_ids'  => array( 7 ),
+			)
+		);
+		unset( $promotion['terms_valid'] );
+
+		$result = ( new Eligibility_Evaluator() )->validate_configuration( $promotion );
+
+		self::assertSame( array( 'promotion_terms_invalid' ), $result['reasons'] );
 	}
 
 	/**
@@ -392,24 +452,24 @@ final class EligibilityEvaluatorTest extends TestCase {
 	}
 
 	/**
-	 * Selected scope requires the current page in the include list.
+	 * Selected scope requires the current content in the include list.
 	 */
-	public function test_selected_page_scope_requires_an_included_page(): void {
+	public function test_selected_content_scope_requires_included_content(): void {
 		$promotion                = $this->valid_promotion();
-		$promotion['page_scope']  = 'selected';
+		$promotion['content_scope'] = 'selected';
 		$promotion['include_ids'] = array( self::POST_ID + 1 );
 
 		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $this->matching_context() );
 
-		self::assertSame( array( 'page_not_included' ), $result['reasons'] );
+		self::assertSame( array( 'content_not_included' ), $result['reasons'] );
 	}
 
 	/**
-	 * Selected scope allows an explicitly included page.
+	 * Selected scope allows explicitly included content.
 	 */
-	public function test_selected_page_scope_allows_an_included_page(): void {
+	public function test_selected_content_scope_allows_included_content(): void {
 		$promotion                = $this->valid_promotion();
-		$promotion['page_scope']  = 'selected';
+		$promotion['content_scope'] = 'selected';
 		$promotion['include_ids'] = array( self::POST_ID );
 
 		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $this->matching_context() );
@@ -418,16 +478,141 @@ final class EligibilityEvaluatorTest extends TestCase {
 	}
 
 	/**
-	 * Exclusion takes precedence over all-page and selected-page scope.
+	 * Provide automatic content-type and direct-term scope boundaries.
 	 *
-	 * @param string $scope            Page scope.
+	 * @return array<string, array{string, string, list<int>, list<int>, list<int>, list<int>, bool, list<string>}>
+	 */
+	public static function automatic_content_scopes(): array {
+		return array(
+			'all post'                    => array( 'all', 'post', array(), array(), array(), array(), true, array() ),
+			'all page'                    => array( 'all', 'page', array(), array(), array(), array(), true, array() ),
+			'all custom type'             => array( 'all', 'product', array(), array(), array(), array(), true, array( 'content_type_mismatch' ) ),
+			'posts post'                  => array( 'posts', 'post', array(), array(), array(), array(), true, array() ),
+			'posts page'                  => array( 'posts', 'page', array(), array(), array(), array(), true, array( 'content_type_mismatch' ) ),
+			'pages page'                  => array( 'pages', 'page', array(), array(), array(), array(), true, array() ),
+			'pages post'                  => array( 'pages', 'post', array(), array(), array(), array(), true, array( 'content_type_mismatch' ) ),
+			'terms category match'        => array( 'terms', 'post', array( 7 ), array(), array( 7 ), array(), true, array() ),
+			'terms tag match'             => array( 'terms', 'post', array(), array( 8 ), array(), array( 8 ), true, array() ),
+			'terms no match'              => array( 'terms', 'post', array( 7 ), array( 8 ), array( 9 ), array( 10 ), true, array( 'post_terms_mismatch' ) ),
+			'term IDs remain taxonomy scoped' => array( 'terms', 'post', array( 7 ), array(), array(), array( 7 ), true, array( 'post_terms_mismatch' ) ),
+			'terms unavailable'           => array( 'terms', 'post', array( 7 ), array(), array(), array(), false, array( 'content_terms_unavailable' ) ),
+			'terms reject pages by type'  => array( 'terms', 'page', array( 7 ), array(), array(), array(), false, array( 'content_type_mismatch' ) ),
+		);
+	}
+
+	/**
+	 * Automatic delivery applies the five frozen content-scope modes.
+	 *
+	 * @param string $scope            Content scope.
+	 * @param string $post_type        Current post type.
+	 * @param array  $selected_cats    Selected category IDs.
+	 * @param array  $selected_tags    Selected tag IDs.
+	 * @param array  $current_cats     Current category IDs.
+	 * @param array  $current_tags     Current tag IDs.
+	 * @param bool   $terms_available  Whether relationships were readable.
+	 * @param array  $expected_reasons Expected reason codes.
+	 * @phpstan-param list<int> $selected_cats
+	 * @phpstan-param list<int> $selected_tags
+	 * @phpstan-param list<int> $current_cats
+	 * @phpstan-param list<int> $current_tags
+	 * @phpstan-param list<string> $expected_reasons
+	 */
+	#[DataProvider( 'automatic_content_scopes' )]
+	public function test_applies_automatic_content_scopes(
+		string $scope,
+		string $post_type,
+		array $selected_cats,
+		array $selected_tags,
+		array $current_cats,
+		array $current_tags,
+		bool $terms_available,
+		array $expected_reasons
+	): void {
+		$promotion = array_replace(
+			$this->valid_promotion(),
+			array(
+				'location'      => 'content_after',
+				'content_scope' => $scope,
+				'category_ids'  => $selected_cats,
+				'tag_ids'       => $selected_tags,
+			)
+		);
+		$context = array_replace(
+			$this->matching_context(),
+			array(
+				'expected_location'       => 'content_after',
+				'post_type'               => $post_type,
+				'category_ids'            => $current_cats,
+				'tag_ids'                 => $current_tags,
+				'content_terms_available' => $terms_available,
+			)
+		);
+
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $context );
+
+		self::assertSame( array() === $expected_reasons, $result['allowed'] );
+		self::assertSame( $expected_reasons, $result['reasons'] );
+	}
+
+	/**
+	 * Manual block and shortcode delivery treat advanced scopes as all content.
+	 */
+	public function test_manual_delivery_ignores_posts_pages_and_terms_scopes(): void {
+		$context = array_replace(
+			$this->matching_context(),
+			array(
+				'post_type'               => 'product',
+				'content_terms_available' => false,
+			)
+		);
+
+		foreach ( array( 'posts', 'pages', 'terms' ) as $scope ) {
+			$promotion = array_replace(
+				$this->valid_promotion(),
+				array(
+					'content_scope' => $scope,
+					'terms_valid'   => false,
+				)
+			);
+			self::assertTrue( ( new Eligibility_Evaluator() )->evaluate( $promotion, $context )['allowed'], $scope );
+		}
+	}
+
+	/**
+	 * Automatic selected scope remains an explicit standard-content ID list.
+	 */
+	public function test_automatic_selected_scope_requires_explicit_standard_content(): void {
+		$promotion = array_replace(
+			$this->valid_promotion(),
+			array(
+				'location'      => 'content_after',
+				'content_scope' => 'selected',
+				'include_ids'   => array( self::POST_ID ),
+			)
+		);
+		$context                      = $this->matching_context();
+		$context['expected_location'] = 'content_after';
+
+		self::assertTrue( ( new Eligibility_Evaluator() )->evaluate( $promotion, $context )['allowed'] );
+
+		$context['post_type'] = 'product';
+		self::assertSame(
+			array( 'content_type_mismatch' ),
+			( new Eligibility_Evaluator() )->evaluate( $promotion, $context )['reasons']
+		);
+	}
+
+	/**
+	 * Exclusion takes precedence over every manual content scope.
+	 *
+	 * @param string $scope            Content scope.
 	 * @param array  $expected_reasons Expected reason codes.
 	 * @phpstan-param list<string> $expected_reasons
 	 */
-	#[DataProvider( 'page_scopes' )]
-	public function test_excluded_page_is_always_rejected( string $scope, array $expected_reasons ): void {
+	#[DataProvider( 'content_scopes' )]
+	public function test_excluded_content_is_always_rejected( string $scope, array $expected_reasons ): void {
 		$promotion                = $this->valid_promotion();
-		$promotion['page_scope']  = $scope;
+		$promotion['content_scope'] = $scope;
 		$promotion['include_ids'] = array( self::POST_ID );
 		$promotion['exclude_ids'] = array( self::POST_ID );
 
@@ -437,14 +622,17 @@ final class EligibilityEvaluatorTest extends TestCase {
 	}
 
 	/**
-	 * Provide supported page scopes.
+	 * Provide supported manual content scopes.
 	 *
 	 * @return array<string, array{string, list<string>}>
 	 */
-	public static function page_scopes(): array {
+	public static function content_scopes(): array {
 		return array(
-			'all'      => array( 'all', array( 'page_excluded' ) ),
-			'selected' => array( 'selected', array( 'promotion_targets_empty', 'page_excluded' ) ),
+			'all'      => array( 'all', array( 'content_excluded' ) ),
+			'posts'    => array( 'posts', array( 'content_excluded' ) ),
+			'pages'    => array( 'pages', array( 'content_excluded' ) ),
+			'terms'    => array( 'terms', array( 'content_excluded' ) ),
+			'selected' => array( 'selected', array( 'promotion_targets_empty', 'content_excluded' ) ),
 		);
 	}
 
@@ -457,7 +645,7 @@ final class EligibilityEvaluatorTest extends TestCase {
 			array(
 				'content'     => '',
 				'status'      => 'draft',
-				'page_scope'  => 'selected',
+				'content_scope' => 'selected',
 				'include_ids' => array(),
 				'device'      => 'mobile',
 			)
@@ -473,7 +661,7 @@ final class EligibilityEvaluatorTest extends TestCase {
 				'promotion_content_empty',
 				'promotion_targets_empty',
 				'promotion_not_published',
-				'page_not_included',
+				'content_not_included',
 				'location_mismatch',
 				'device_mismatch',
 			),

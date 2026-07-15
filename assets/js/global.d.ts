@@ -6,15 +6,20 @@ interface Window {
 		nonce: string;
 		defaultTargetId: number;
 		publicContentIds: number[];
+		validCategoryIds: number[];
+		validTagIds: number[];
 		publishedAutomaticPromotions: Array< {
 			id: number;
 			location:
 				| 'content_before'
 				| 'content_after'
 				| 'content_after_paragraph';
-			pageScope: 'all' | 'selected';
+			contentScope: 'all' | 'posts' | 'pages' | 'terms' | 'selected';
 			includeIds: number[];
 			excludeIds: number[];
+			categoryIds: number[];
+			tagIds: number[];
+			termsValid: boolean;
 			device: 'all' | 'desktop' | 'mobile';
 			paragraphNumber: number;
 			startAt: string;

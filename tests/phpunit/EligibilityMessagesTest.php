@@ -29,4 +29,24 @@ final class EligibilityMessagesTest extends TestCase {
 			)
 		);
 	}
+
+	/**
+	 * Editorial scope configuration and runtime failures remain diagnosable.
+	 */
+	public function test_editorial_scope_reason_codes_have_messages(): void {
+		$messages = Eligibility_Messages::messages(
+			array(
+				'promotion_terms_invalid',
+				'content_type_mismatch',
+				'post_terms_mismatch',
+				'content_terms_unavailable',
+			)
+		);
+
+		self::assertCount( 4, $messages );
+		self::assertStringContainsString( 'unavailable or could not be validated', $messages[0] );
+		self::assertStringContainsString( 'content type', $messages[1] );
+		self::assertStringContainsString( 'does not match', $messages[2] );
+		self::assertStringContainsString( 'could not be read', $messages[3] );
+	}
 }

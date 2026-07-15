@@ -267,7 +267,7 @@ final class Promotion_Status_Action {
 		}
 
 		$promotion['status'] = 'publish';
-		if ( 'selected' === ( $promotion['page_scope'] ?? 'all' ) ) {
+		if ( 'selected' === ( $promotion['content_scope'] ?? 'all' ) ) {
 			$include_ids = $this->post_ids( $promotion['include_ids'] ?? array() );
 			$exclude_ids = $this->post_ids( $promotion['exclude_ids'] ?? array() );
 			$promotion['include_ids'] = $this->repository->filter_public_content_ids( $include_ids );
@@ -288,6 +288,7 @@ final class Promotion_Status_Action {
 		$allowed_reasons = array(
 			'promotion_content_empty',
 			'promotion_targets_empty',
+			'promotion_terms_invalid',
 			'promotion_schedule_invalid',
 			'promotion_paragraph_invalid',
 		);
@@ -324,7 +325,7 @@ final class Promotion_Status_Action {
 			),
 			'resumed'            => array(
 				'type' => 'success',
-				'text' => __( 'The promotion was published. Delivery still depends on its schedule and page rules.', 'npcink-ad' ),
+				'text' => __( 'The promotion was published. Delivery still depends on its schedule and content rules.', 'npcink-ad' ),
 			),
 			'already_paused'     => array(
 				'type' => 'info',
@@ -351,6 +352,7 @@ final class Promotion_Status_Action {
 		$configuration_reasons = array(
 			'promotion_content_empty',
 			'promotion_targets_empty',
+			'promotion_terms_invalid',
 			'promotion_schedule_invalid',
 			'promotion_paragraph_invalid',
 		);

@@ -22,7 +22,9 @@ import { registerPlugin } from '@wordpress/plugins';
 
 import {
 	contentContainsPromotionBlock,
+	contentScopeForPlacement,
 	effectiveParagraphNumber,
+	getEffectivePromotionTermSelection,
 	getEffectivePromotionTargetIds,
 	getPotentiallyOverlappingPromotionIds,
 	getPromotionPreflightIssues,
@@ -30,6 +32,8 @@ import {
 	isValidParagraphNumber,
 	MAX_PARAGRAPH_NUMBER,
 	MIN_PARAGRAPH_NUMBER,
+	type PromotionContentScope,
+	type PromotionLocation,
 	type PromotionPreflightIssueCode,
 } from './preflight';
 import {
@@ -38,14 +42,12 @@ import {
 } from './publish-status-recovery';
 
 interface PromotionMeta {
-	_npcink_ad_location?:
-		| 'block'
-		| 'content_before'
-		| 'content_after'
-		| 'content_after_paragraph';
-	_npcink_ad_page_scope?: 'all' | 'selected';
+	_npcink_ad_location?: PromotionLocation;
+	_npcink_ad_content_scope?: PromotionContentScope;
 	_npcink_ad_include_ids?: number[];
 	_npcink_ad_exclude_ids?: number[];
+	_npcink_ad_category_ids?: number[];
+	_npcink_ad_tag_ids?: number[];
 	_npcink_ad_device?: 'all' | 'desktop' | 'mobile';
 	_npcink_ad_paragraph_number?: number;
 	_npcink_ad_start_at?: string;
@@ -70,6 +72,11 @@ interface ContentRecord {
 interface ContentOption {
 	label: string;
 	value: string;
+}
+
+interface TermRecord {
+	id: number;
+	name: string;
 }
 
 interface SiteBaseRecord {
@@ -175,7 +182,12 @@ function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
 			);
 		case 'selected_scope_without_targets':
 			return __(
-				'Add at least one valid included post or page that is not also excluded when Pages is set to Only selected content.',
+				'Add at least one valid included post or page that is not also excluded when Content scope is set to Only selected content.',
+				'npcink-ad'
+			);
+		case 'terms_scope_without_terms':
+			return __(
+				'Choose at least one available category or tag when Content scope is set to Posts in selected categories or tags.',
 				'npcink-ad'
 			);
 		case 'invalid_schedule_order':
@@ -474,6 +486,140 @@ function ContentPicker( {
 	);
 }
 
+function TermPicker( {
+	taxonomy,
+	label,
+	help,
+	selectedIds,
+	onAdd,
+	onRemove,
+}: {
+	taxonomy: 'category' | 'post_tag';
+	label: string;
+	help: string;
+	selectedIds: number[];
+	onAdd: ( id: number ) => void;
+	onRemove: ( id: number ) => void;
+} ) {
+	const [ filter, setFilter ] = React.useState( '' );
+	const searchQuery = React.useMemo(
+		() => ( {
+			context: 'view',
+			hide_empty: false,
+			order: 'asc',
+			orderby: 'name',
+			per_page: 20,
+			search: filter || undefined,
+			_fields: 'id,name',
+		} ),
+		[ filter ]
+	);
+	const selectedQuery = React.useMemo(
+		() => ( {
+			context: 'view',
+			hide_empty: false,
+			include: selectedIds,
+			orderby: 'include',
+			per_page: Math.max( selectedIds.length, 1 ),
+			_fields: 'id,name',
+		} ),
+		[ selectedIds ]
+	);
+
+	const { searchRecords, selectedRecords } = useSelect(
+		( select ) => {
+			const coreData = select( coreDataStore );
+			return {
+				searchRecords: coreData.getEntityRecords(
+					'taxonomy',
+					taxonomy,
+					searchQuery
+				) as TermRecord[] | null,
+				selectedRecords:
+					selectedIds.length === 0
+						? []
+						: ( coreData.getEntityRecords(
+								'taxonomy',
+								taxonomy,
+								selectedQuery
+						  ) as TermRecord[] | null ),
+			};
+		},
+		[ taxonomy, searchQuery, selectedQuery, selectedIds.length ]
+	);
+
+	const records = [
+		...( selectedRecords ?? [] ),
+		...( searchRecords ?? [] ),
+	];
+	const labels = new Map(
+		records.map( ( record ) => [ record.id, record.name ] )
+	);
+	const options: ContentOption[] = ( searchRecords ?? [] )
+		.filter( ( record ) => ! selectedIds.includes( record.id ) )
+		.map( ( record ) => ( {
+			label: record.name,
+			value: String( record.id ),
+		} ) );
+	const isLoading = searchRecords === null || selectedRecords === null;
+	const removeLabel =
+		taxonomy === 'category'
+			? /* translators: %s: category name. */ __(
+					'Remove category %s',
+					'npcink-ad'
+			  )
+			: /* translators: %s: tag name. */ __(
+					'Remove tag %s',
+					'npcink-ad'
+			  );
+
+	return (
+		<div className="npcink-ad-content-picker">
+			<ComboboxControl
+				__next40pxDefaultSize
+				label={ label }
+				help={ help }
+				value={ null }
+				options={ options }
+				isLoading={ isLoading }
+				onFilterValueChange={ setFilter }
+				onChange={ ( value ) => {
+					const id = Number.parseInt( value || '', 10 );
+					if ( id > 0 ) {
+						onAdd( id );
+						setFilter( '' );
+					}
+				} }
+			/>
+			{ isLoading && <Spinner /> }
+			{ selectedIds.length > 0 && selectedRecords !== null && (
+				<ul className="npcink-ad-content-picker__selected">
+					{ selectedIds.map( ( id ) => {
+						const termName = labels.get( id ) || `#${ id }`;
+
+						return (
+							<li key={ id }>
+								<span>{ termName }</span>
+								<Button
+									variant="tertiary"
+									isDestructive
+									onClick={ () => onRemove( id ) }
+									aria-label={ sprintf(
+										removeLabel,
+										termName
+									) }
+								>
+									{ __( 'Remove', 'npcink-ad' ) }
+								</Button>
+							</li>
+						);
+					} ) }
+				</ul>
+			) }
+		</div>
+	);
+}
+
 function PromotionSettings() {
 	const postType = useSelect(
 		( select ) => select( editorStore ).getCurrentPostType(),
@@ -536,6 +682,12 @@ function PromotionSettingsPanel() {
 	const [ confirmedPublicIds, setConfirmedPublicIds ] = React.useState<
 		number[]
 	>( [] );
+	const [ confirmedCategoryIds, setConfirmedCategoryIds ] = React.useState<
+		number[]
+	>( [] );
+	const [ confirmedTagIds, setConfirmedTagIds ] = React.useState< number[] >(
+		[]
+	);
 
 	// Reconcile before paint so Core UI does not present a failed status as saved.
 	React.useLayoutEffect( () => {
@@ -572,8 +724,12 @@ function PromotionSettingsPanel() {
 
 	const includeIds = normalizeIds( meta._npcink_ad_include_ids );
 	const excludeIds = normalizeIds( meta._npcink_ad_exclude_ids );
-	const pageScope = meta._npcink_ad_page_scope || 'all';
+	const categoryIds = normalizeIds( meta._npcink_ad_category_ids );
+	const tagIds = normalizeIds( meta._npcink_ad_tag_ids );
 	const location = meta._npcink_ad_location || 'content_after';
+	const isManualBlock = location === 'block';
+	const rawContentScope = meta._npcink_ad_content_scope || 'all';
+	const contentScope = contentScopeForPlacement( rawContentScope, location );
 	const paragraphNumber = effectiveParagraphNumber(
 		meta._npcink_ad_paragraph_number
 	);
@@ -589,12 +745,38 @@ function PromotionSettingsPanel() {
 			current.includes( id ) ? current : [ ...current, id ]
 		);
 	};
+	const {
+		categoryIds: effectiveCategoryIds,
+		tagIds: effectiveTagIds,
+		termsValid,
+	} = getEffectivePromotionTermSelection(
+		categoryIds,
+		tagIds,
+		[ ...( settings?.validCategoryIds ?? [] ), ...confirmedCategoryIds ],
+		[ ...( settings?.validTagIds ?? [] ), ...confirmedTagIds ]
+	);
+	const confirmCategoryId = ( id: number ) => {
+		setConfirmedCategoryIds( ( current ) =>
+			current.includes( id ) ? current : [ ...current, id ]
+		);
+	};
+	const confirmTagId = ( id: number ) => {
+		setConfirmedTagIds( ( current ) =>
+			current.includes( id ) ? current : [ ...current, id ]
+		);
+	};
+	const termsNeedAttention =
+		contentScope === 'terms' &&
+		( ! termsValid ||
+			effectiveCategoryIds.length + effectiveTagIds.length === 0 );
 	const preflightIssues = getPromotionPreflightIssues( {
 		content,
 		location,
-		pageScope,
+		contentScope,
 		includeIds: effectiveIncludeIds,
 		excludeIds: effectiveExcludeIds,
+		categoryIds: effectiveCategoryIds,
+		tagIds: effectiveTagIds,
 		paragraphNumber,
 		startAt: meta._npcink_ad_start_at,
 		endAt: meta._npcink_ad_end_at,
@@ -607,9 +789,12 @@ function PromotionSettingsPanel() {
 		{
 			id: postId,
 			location,
-			pageScope,
+			contentScope,
 			includeIds: effectiveIncludeIds,
 			excludeIds: effectiveExcludeIds,
+			categoryIds: effectiveCategoryIds,
+			tagIds: effectiveTagIds,
+			termsValid,
 			device: meta._npcink_ad_device || 'all',
 			paragraphNumber,
 			startAt: meta._npcink_ad_start_at,
@@ -622,7 +807,6 @@ function PromotionSettingsPanel() {
 		effectiveIncludeIds[ 0 ] ||
 		settings?.defaultTargetId ||
 		0;
-	const isManualBlock = location === 'block';
 	const isParagraphLocation = location === 'content_after_paragraph';
 	const manualBlockInspection = useSelect(
 		( select ): ManualBlockInspectionState => {
@@ -883,31 +1067,80 @@ function PromotionSettingsPanel() {
 							value: 'block',
 						},
 					] }
-					onChange={ ( value ) =>
-						updateMeta(
-							'_npcink_ad_location',
-							value as PromotionMeta[ '_npcink_ad_location' ]
-						)
-					}
+					onChange={ ( value ) => {
+						const nextLocation = value as PromotionLocation;
+						const nextContentScope = contentScopeForPlacement(
+							rawContentScope,
+							nextLocation
+						);
+
+						editPost( {
+							meta: {
+								...meta,
+								_npcink_ad_location: nextLocation,
+								_npcink_ad_content_scope: nextContentScope,
+							},
+						} );
+					} }
 				/>
 				<SelectControl
 					__next40pxDefaultSize
-					label={ __( 'Pages', 'npcink-ad' ) }
-					value={ pageScope }
-					options={ [
-						{
-							label: __( 'All posts and pages', 'npcink-ad' ),
-							value: 'all',
-						},
-						{
-							label: __( 'Only selected content', 'npcink-ad' ),
-							value: 'selected',
-						},
-					] }
+					label={ __( 'Content scope', 'npcink-ad' ) }
+					value={ contentScope }
+					options={
+						isManualBlock
+							? [
+									{
+										label: __(
+											'All posts and pages',
+											'npcink-ad'
+										),
+										value: 'all',
+									},
+									{
+										label: __(
+											'Only selected content',
+											'npcink-ad'
+										),
+										value: 'selected',
+									},
+							  ]
+							: [
+									{
+										label: __(
+											'All posts and pages',
+											'npcink-ad'
+										),
+										value: 'all',
+									},
+									{
+										label: __( 'All posts', 'npcink-ad' ),
+										value: 'posts',
+									},
+									{
+										label: __( 'All pages', 'npcink-ad' ),
+										value: 'pages',
+									},
+									{
+										label: __(
+											'Posts in selected categories or tags',
+											'npcink-ad'
+										),
+										value: 'terms',
+									},
+									{
+										label: __(
+											'Only selected content',
+											'npcink-ad'
+										),
+										value: 'selected',
+									},
+							  ]
+					}
 					onChange={ ( value ) =>
 						updateMeta(
-							'_npcink_ad_page_scope',
-							value as PromotionMeta[ '_npcink_ad_page_scope' ]
+							'_npcink_ad_content_scope',
+							value as PromotionMeta[ '_npcink_ad_content_scope' ]
 						)
 					}
 				/>
@@ -939,7 +1172,7 @@ function PromotionSettingsPanel() {
 						) }
 					/>
 				) }
-				{ pageScope === 'selected' && (
+				{ contentScope === 'selected' && (
 					<ContentPicker
 						label={ __( 'Included content', 'npcink-ad' ) }
 						help={ __(
@@ -1025,9 +1258,84 @@ function PromotionSettingsPanel() {
 					) }
 				/>
 				<PanelBody
-					title={ __( 'Advanced page exclusions', 'npcink-ad' ) }
+					title={
+						termsNeedAttention
+							? __(
+									'Advanced editorial scope — needs attention',
+									'npcink-ad'
+							  )
+							: __( 'Advanced editorial scope', 'npcink-ad' )
+					}
 					initialOpen={ false }
 				>
+					{ contentScope === 'terms' && (
+						<>
+							<p>
+								{ __(
+									'Categories and tags use ANY matching and apply only to standard posts. Exact excluded content always takes priority.',
+									'npcink-ad'
+								) }
+							</p>
+							{ ! termsValid &&
+								categoryIds.length + tagIds.length > 0 && (
+									<Notice
+										status="warning"
+										isDismissible={ false }
+									>
+										{ __(
+											'Some selected categories or tags are no longer available. Remove them before publishing.',
+											'npcink-ad'
+										) }
+									</Notice>
+								) }
+							<TermPicker
+								taxonomy="category"
+								label={ __( 'Categories', 'npcink-ad' ) }
+								help={ __(
+									'Choose one or more categories.',
+									'npcink-ad'
+								) }
+								selectedIds={ categoryIds }
+								onAdd={ ( id ) => {
+									confirmCategoryId( id );
+									updateMeta( '_npcink_ad_category_ids', [
+										...categoryIds,
+										id,
+									] );
+								} }
+								onRemove={ ( id ) =>
+									updateMeta(
+										'_npcink_ad_category_ids',
+										categoryIds.filter(
+											( item ) => item !== id
+										)
+									)
+								}
+							/>
+							<TermPicker
+								taxonomy="post_tag"
+								label={ __( 'Tags', 'npcink-ad' ) }
+								help={ __(
+									'Choose one or more tags.',
+									'npcink-ad'
+								) }
+								selectedIds={ tagIds }
+								onAdd={ ( id ) => {
+									confirmTagId( id );
+									updateMeta( '_npcink_ad_tag_ids', [
+										...tagIds,
+										id,
+									] );
+								} }
+								onRemove={ ( id ) =>
+									updateMeta(
+										'_npcink_ad_tag_ids',
+										tagIds.filter( ( item ) => item !== id )
+									)
+								}
+							/>
+						</>
+					) }
 					<ContentPicker
 						label={ __( 'Excluded content', 'npcink-ad' ) }
 						help={ __(
@@ -1126,7 +1434,7 @@ function PromotionSettingsPanel() {
 				) : (
 					<Notice status="info" isDismissible={ false }>
 						{ __(
-							'No errors were found in the current editor fields. Public selected targets are confirmed by the server when publishing or scheduling.',
+							'No empty-scope, schedule, content, or paragraph errors were found in the current editor fields. Public selected targets and category or tag availability are confirmed by the server when publishing or scheduling.',
 							'npcink-ad'
 						) }
 					</Notice>

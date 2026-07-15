@@ -34,8 +34,8 @@ msgstr ""
 
 #: src/Admin/Menu.php:38
 #: src/Admin/Menu.php:39
-#: src/Data/Post_Types.php:77
-#: src/Data/Post_Types.php:86
+#: src/Data/Post_Types.php:79
+#: src/Data/Post_Types.php:88
 msgid "Promotions"
 msgstr ""
 
@@ -101,7 +101,7 @@ msgstr ""
 
 #: src/Admin/Promotion_List.php:165
 #: build/index.js:9
-msgid "Pages"
+msgid "Content scope"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:166
@@ -145,54 +145,76 @@ msgstr ""
 msgid "Resume"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:370
+#: src/Admin/Promotion_List.php:373
+#: build/index.js:9
+msgid "All posts"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:376
+#: build/index.js:9
+msgid "All pages"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:381
+msgid "Posts matching categories/tags"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:382
+msgid "Configured terms:"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:384
+msgid "Invalid category/tag selection"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:394
+msgid "Selected public posts/pages:"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:397
 #: build/index.js:9
 msgid "All posts and pages"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:373
+#: src/Admin/Promotion_List.php:403
 msgid "Configured exclusions:"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:382
-msgid "Selected public posts/pages:"
-msgstr ""
-
-#: src/Admin/Promotion_List.php:420
+#: src/Admin/Promotion_List.php:442
 msgid "After paragraph (invalid)"
 msgstr ""
 
 #. translators: %d: paragraph number after which the Promotion appears.
-#: src/Admin/Promotion_List.php:425
+#: src/Admin/Promotion_List.php:447
 #, php-format
 msgid "After paragraph %d"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:431
+#: src/Admin/Promotion_List.php:453
 msgid "Block"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:432
+#: src/Admin/Promotion_List.php:454
 msgid "Before content"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:433
+#: src/Admin/Promotion_List.php:455
 msgid "After content"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:436
+#: src/Admin/Promotion_List.php:458
 msgid "Unknown"
 msgstr ""
 
 #. translators: %d: number of published Promotions with intersecting automatic delivery rules.
-#: src/Admin/Promotion_List.php:455
+#: src/Admin/Promotion_List.php:477
 #, php-format
 msgid "May appear together with %d published promotion."
 msgid_plural "May appear together with %d published promotions."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Promotion_List.php:474
+#: src/Admin/Promotion_List.php:496
 msgid "No end time"
 msgstr ""
 
@@ -216,31 +238,31 @@ msgstr ""
 msgid "You are not allowed to publish promotions."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:322
+#: src/Admin/Promotion_Status_Action.php:324
 msgid "The promotion is paused."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:326
-msgid "The promotion was published. Delivery still depends on its schedule and page rules."
+#: src/Admin/Promotion_Status_Action.php:328
+msgid "The promotion was published. Delivery still depends on its schedule and content rules."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:330
+#: src/Admin/Promotion_Status_Action.php:332
 msgid "The promotion was already paused."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:334
+#: src/Admin/Promotion_Status_Action.php:336
 msgid "The promotion was already published."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:338
+#: src/Admin/Promotion_Status_Action.php:340
 msgid "Only published or draft promotions can use this status action."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:342
+#: src/Admin/Promotion_Status_Action.php:344
 msgid "The promotion status could not be changed."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:363
+#: src/Admin/Promotion_Status_Action.php:367
 msgid "The promotion was not resumed:"
 msgstr ""
 
@@ -310,37 +332,37 @@ msgstr ""
 msgid "Share a concise update and add a link to the next step."
 msgstr ""
 
-#: src/Data/Post_Types.php:78
+#: src/Data/Post_Types.php:80
 #: src/Frontend/Renderer.php:52
 #: build/index.js:1
 msgid "Promotion"
 msgstr ""
 
-#: src/Data/Post_Types.php:79
+#: src/Data/Post_Types.php:81
 msgid "Add New Promotion"
 msgstr ""
 
-#: src/Data/Post_Types.php:80
+#: src/Data/Post_Types.php:82
 msgid "Edit Promotion"
 msgstr ""
 
-#: src/Data/Post_Types.php:81
+#: src/Data/Post_Types.php:83
 msgid "New Promotion"
 msgstr ""
 
-#: src/Data/Post_Types.php:82
+#: src/Data/Post_Types.php:84
 msgid "View Promotion"
 msgstr ""
 
-#: src/Data/Post_Types.php:83
+#: src/Data/Post_Types.php:85
 msgid "Search Promotions"
 msgstr ""
 
-#: src/Data/Post_Types.php:84
+#: src/Data/Post_Types.php:86
 msgid "No promotions found."
 msgstr ""
 
-#: src/Data/Post_Types.php:85
+#: src/Data/Post_Types.php:87
 msgid "No promotions found in Trash."
 msgstr ""
 
@@ -391,42 +413,58 @@ msgid "The promotion has no content."
 msgstr ""
 
 #: src/Presentation/Eligibility_Messages.php:35
-msgid "Select at least one target page that is not excluded."
+msgid "Select at least one valid delivery target that is not excluded."
 msgstr ""
 
 #: src/Presentation/Eligibility_Messages.php:36
-msgid "Choose a paragraph number from 1 to 20."
+msgid "One or more selected categories or tags are unavailable or could not be validated."
 msgstr ""
 
 #: src/Presentation/Eligibility_Messages.php:37
-msgid "The promotion end time must be later than its start time."
+msgid "Choose a paragraph number from 1 to 20."
 msgstr ""
 
 #: src/Presentation/Eligibility_Messages.php:38
-msgid "This page is not included."
+msgid "The promotion end time must be later than its start time."
 msgstr ""
 
 #: src/Presentation/Eligibility_Messages.php:39
-msgid "This page is excluded."
+msgid "This content is not explicitly included."
 msgstr ""
 
 #: src/Presentation/Eligibility_Messages.php:40
-msgid "The promotion location does not match this delivery method."
+msgid "This content is excluded."
 msgstr ""
 
 #: src/Presentation/Eligibility_Messages.php:41
-msgid "The selected paragraph is not available in this content."
+msgid "This content type is not included."
 msgstr ""
 
 #: src/Presentation/Eligibility_Messages.php:42
-msgid "The promotion does not target the simulated device."
+msgid "This post does not match the selected categories or tags."
 msgstr ""
 
 #: src/Presentation/Eligibility_Messages.php:43
+msgid "This post's categories or tags could not be read."
+msgstr ""
+
+#: src/Presentation/Eligibility_Messages.php:44
+msgid "The promotion location does not match this delivery method."
+msgstr ""
+
+#: src/Presentation/Eligibility_Messages.php:45
+msgid "The selected paragraph is not available in this content."
+msgstr ""
+
+#: src/Presentation/Eligibility_Messages.php:46
+msgid "The promotion does not target the simulated device."
+msgstr ""
+
+#: src/Presentation/Eligibility_Messages.php:47
 msgid "The promotion recursively includes itself."
 msgstr ""
 
-#: src/Presentation/Eligibility_Messages.php:53
+#: src/Presentation/Eligibility_Messages.php:57
 msgid "This promotion is not eligible to render."
 msgstr ""
 
@@ -434,7 +472,7 @@ msgstr ""
 msgid "You are not allowed to access Npcink Ad resources."
 msgstr ""
 
-#: src/REST/Promotion_Preflight.php:94
+#: src/REST/Promotion_Preflight.php:96
 msgid "The promotion cannot be published until its delivery settings are complete."
 msgstr ""
 
@@ -580,6 +618,18 @@ msgstr ""
 msgid "Remove"
 msgstr ""
 
+#. translators: %s: category name.
+#: build/index.js:8
+#, js-format
+msgid "Remove category %s"
+msgstr ""
+
+#. translators: %s: tag name.
+#: build/index.js:8
+#, js-format
+msgid "Remove tag %s"
+msgstr ""
+
 #: build/index.js:8
 msgid "configured in WordPress"
 msgstr ""
@@ -614,6 +664,10 @@ msgstr ""
 
 #: build/index.js:9
 msgid "Only selected content"
+msgstr ""
+
+#: build/index.js:9
+msgid "Posts in selected categories or tags"
 msgstr ""
 
 #: build/index.js:9
@@ -658,7 +712,35 @@ msgid "Stop showing"
 msgstr ""
 
 #: build/index.js:12
-msgid "Advanced page exclusions"
+msgid "Advanced editorial scope — needs attention"
+msgstr ""
+
+#: build/index.js:12
+msgid "Advanced editorial scope"
+msgstr ""
+
+#: build/index.js:12
+msgid "Categories and tags use ANY matching and apply only to standard posts. Exact excluded content always takes priority."
+msgstr ""
+
+#: build/index.js:12
+msgid "Some selected categories or tags are no longer available. Remove them before publishing."
+msgstr ""
+
+#: build/index.js:12
+msgid "Categories"
+msgstr ""
+
+#: build/index.js:12
+msgid "Choose one or more categories."
+msgstr ""
+
+#: build/index.js:12
+msgid "Tags"
+msgstr ""
+
+#: build/index.js:12
+msgid "Choose one or more tags."
 msgstr ""
 
 #: build/index.js:12
@@ -721,7 +803,11 @@ msgid "Add promotion content before publishing."
 msgstr ""
 
 #: build/index.js:14
-msgid "Add at least one valid included post or page that is not also excluded when Pages is set to Only selected content."
+msgid "Add at least one valid included post or page that is not also excluded when Content scope is set to Only selected content."
+msgstr ""
+
+#: build/index.js:14
+msgid "Choose at least one available category or tag when Content scope is set to Posts in selected categories or tags."
 msgstr ""
 
 #: build/index.js:14
@@ -735,7 +821,7 @@ msgid "Paragraph number must be a whole number from %1$d to %2$d."
 msgstr ""
 
 #: build/index.js:15
-msgid "No errors were found in the current editor fields. Public selected targets are confirmed by the server when publishing or scheduling."
+msgid "No empty-scope, schedule, content, or paragraph errors were found in the current editor fields. Public selected targets and category or tag availability are confirmed by the server when publishing or scheduling."
 msgstr ""
 
 #. translators: %d: number of other published promotions that may share a delivery context.

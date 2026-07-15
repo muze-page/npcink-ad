@@ -13,6 +13,16 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
  * Remove Npcink Ad data from the current site in the network.
  */
 function npcink_ad_uninstall_site_data(): void {
+	$npcink_ad_scope_meta_keys = array(
+		'_npcink_ad_content_scope',
+		'_npcink_ad_category_ids',
+		'_npcink_ad_tag_ids',
+		'_npcink_ad_page_scope',
+	);
+	foreach ( $npcink_ad_scope_meta_keys as $npcink_ad_scope_meta_key ) {
+		delete_post_meta_by_key( $npcink_ad_scope_meta_key );
+	}
+
 	$npcink_ad_post_ids = get_posts(
 		array(
 			'post_type'      => 'npcink_promotion',

@@ -80,7 +80,9 @@ final class Promotion_Preflight {
 			$this->apply_meta( $promotion, $meta );
 		}
 
-		if ( 'selected' === $promotion['page_scope'] ) {
+		$this->recompute_terms_valid( $promotion );
+
+		if ( 'selected' === $promotion['content_scope'] ) {
 			$promotion['include_ids'] = $this->repository->filter_public_content_ids( $promotion['include_ids'] );
 		}
 
@@ -109,14 +111,20 @@ final class Promotion_Preflight {
 		if ( array_key_exists( Post_Types::LOCATION_META, $meta ) ) {
 			$promotion['location'] = Post_Types::sanitize_location( $meta[ Post_Types::LOCATION_META ] );
 		}
-		if ( array_key_exists( Post_Types::PAGE_SCOPE_META, $meta ) ) {
-			$promotion['page_scope'] = Post_Types::sanitize_page_scope( $meta[ Post_Types::PAGE_SCOPE_META ] );
+		if ( array_key_exists( Post_Types::CONTENT_SCOPE_META, $meta ) ) {
+			$promotion['content_scope'] = Post_Types::sanitize_content_scope( $meta[ Post_Types::CONTENT_SCOPE_META ] );
 		}
 		if ( array_key_exists( Post_Types::INCLUDE_IDS_META, $meta ) ) {
 			$promotion['include_ids'] = Post_Types::sanitize_post_ids( $meta[ Post_Types::INCLUDE_IDS_META ] );
 		}
 		if ( array_key_exists( Post_Types::EXCLUDE_IDS_META, $meta ) ) {
 			$promotion['exclude_ids'] = Post_Types::sanitize_post_ids( $meta[ Post_Types::EXCLUDE_IDS_META ] );
+		}
+		if ( array_key_exists( Post_Types::CATEGORY_IDS_META, $meta ) ) {
+			$promotion['category_ids'] = Post_Types::sanitize_post_ids( $meta[ Post_Types::CATEGORY_IDS_META ] );
+		}
+		if ( array_key_exists( Post_Types::TAG_IDS_META, $meta ) ) {
+			$promotion['tag_ids'] = Post_Types::sanitize_post_ids( $meta[ Post_Types::TAG_IDS_META ] );
 		}
 		if ( array_key_exists( Post_Types::DEVICE_META, $meta ) ) {
 			$promotion['device'] = Post_Types::sanitize_device( $meta[ Post_Types::DEVICE_META ] );
@@ -141,6 +149,31 @@ final class Promotion_Preflight {
 	}
 
 	/**
+	 * Recompute term-ID validity after all request metadata overrides are applied.
+	 *
+	 * Hidden term fields are intentionally ignored outside an automatic terms
+	 * scope, so stale values cannot block an unrelated publish transition.
+	 *
+	 * @param array<string, mixed> $promotion Candidate Promotion data.
+	 */
+	private function recompute_terms_valid( array &$promotion ): void {
+		$promotion['terms_valid'] = true;
+		if (
+			'terms' !== ( $promotion['content_scope'] ?? 'all' )
+			|| ! in_array( $promotion['location'] ?? 'content_after', array( 'content_before', 'content_after', 'content_after_paragraph' ), true )
+		) {
+			return;
+		}
+
+		$category_ids = Post_Types::sanitize_post_ids( $promotion['category_ids'] ?? array() );
+		$tag_ids      = Post_Types::sanitize_post_ids( $promotion['tag_ids'] ?? array() );
+		$promotion['category_ids'] = $category_ids;
+		$promotion['tag_ids']      = $tag_ids;
+		$promotion['terms_valid']  = $category_ids === $this->repository->filter_existing_term_ids( $category_ids, 'category' )
+			&& $tag_ids === $this->repository->filter_existing_term_ids( $tag_ids, 'post_tag' );
+	}
+
+	/**
 	 * Build the same defaults registered for a new native Promotion.
 	 *
 	 * @return array<string, mixed>
@@ -153,9 +186,12 @@ final class Promotion_Preflight {
 			'location'    => 'content_after',
 			'paragraph_number' => Post_Types::DEFAULT_PARAGRAPH_NUMBER,
 			'paragraph_number_valid' => true,
-			'page_scope'  => 'all',
+			'content_scope' => 'all',
 			'include_ids' => array(),
 			'exclude_ids' => array(),
+			'category_ids' => array(),
+			'tag_ids'      => array(),
+			'terms_valid'  => true,
 			'device'      => 'all',
 			'start_at'    => 0,
 			'start_at_valid' => true,

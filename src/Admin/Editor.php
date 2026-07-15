@@ -49,6 +49,8 @@ final class Editor {
 			'nonce'                        => wp_create_nonce( 'npcink_ad_preview_' . $post->ID ),
 			'defaultTargetId'              => self::default_target_id(),
 			'publicContentIds'              => $overlap_settings['publicContentIds'],
+			'validCategoryIds'              => $overlap_settings['validCategoryIds'],
+			'validTagIds'                   => $overlap_settings['validTagIds'],
 			'publishedAutomaticPromotions' => $overlap_settings['publishedAutomaticPromotions'],
 		);
 
@@ -70,7 +72,7 @@ final class Editor {
 	 * @param array<string, mixed>|null        $current         Stored current Promotion.
 	 * @param int                              $current_id      Current Promotion ID.
 	 * @param Repository                       $repository      Public-content query service.
-	 * @return array{publicContentIds: list<int>, publishedAutomaticPromotions: list<array{id: int, location: string, pageScope: string, includeIds: list<int>, excludeIds: list<int>, device: string, paragraphNumber: int, startAt: string, endAt: string, scheduleValid: bool}>}
+	 * @return array{publicContentIds: list<int>, validCategoryIds: list<int>, validTagIds: list<int>, publishedAutomaticPromotions: list<array{id: int, location: string, contentScope: string, includeIds: list<int>, excludeIds: list<int>, categoryIds: list<int>, tagIds: list<int>, termsValid: bool, device: string, paragraphNumber: int, startAt: string, endAt: string, scheduleValid: bool}>}
 	 */
 	private static function editor_overlap_settings( array $promotions, ?array $current, int $current_id, Repository $repository ): array {
 		$normalized  = array();
@@ -84,6 +86,12 @@ final class Editor {
 					)
 				)
 			);
+		$current_category_ids = null === $current
+			? array()
+			: Post_Types::sanitize_post_ids( $current['category_ids'] ?? array() );
+		$current_tag_ids      = null === $current
+			? array()
+			: Post_Types::sanitize_post_ids( $current['tag_ids'] ?? array() );
 		$candidate_ids = $current_ids;
 		foreach ( $promotions as $promotion ) {
 			$promotion_id = isset( $promotion['id'] ) ? absint( $promotion['id'] ) : 0;
@@ -91,20 +99,26 @@ final class Editor {
 				continue;
 			}
 
-			$include_ids   = Post_Types::sanitize_post_ids( $promotion['include_ids'] ?? array() );
-			$exclude_ids   = Post_Types::sanitize_post_ids( $promotion['exclude_ids'] ?? array() );
+			$include_ids    = Post_Types::sanitize_post_ids( $promotion['include_ids'] ?? array() );
+			$exclude_ids    = Post_Types::sanitize_post_ids( $promotion['exclude_ids'] ?? array() );
+			$category_ids   = Post_Types::sanitize_post_ids( $promotion['category_ids'] ?? array() );
+			$tag_ids        = Post_Types::sanitize_post_ids( $promotion['tag_ids'] ?? array() );
 			$candidate_ids = array_merge( $candidate_ids, $include_ids, $exclude_ids );
 			$normalized[] = array(
-				'promotion'  => $promotion,
-				'id'         => $promotion_id,
-				'pageScope'  => Post_Types::sanitize_page_scope( $promotion['page_scope'] ?? '' ),
-				'includeIds' => $include_ids,
-				'excludeIds' => $exclude_ids,
+				'promotion'   => $promotion,
+				'id'          => $promotion_id,
+				'contentScope' => Post_Types::sanitize_content_scope( $promotion['content_scope'] ?? '' ),
+				'includeIds'  => $include_ids,
+				'excludeIds'  => $exclude_ids,
+				'categoryIds' => $category_ids,
+				'tagIds'      => $tag_ids,
 			);
 		}
 
 		$public_lookup      = array_fill_keys( $repository->filter_public_content_ids( $candidate_ids ), true );
 		$public_content_ids = array_values( array_filter( $current_ids, static fn ( int $id ): bool => isset( $public_lookup[ $id ] ) ) );
+		$valid_category_ids = $repository->filter_existing_term_ids( $current_category_ids, 'category' );
+		$valid_tag_ids      = $repository->filter_existing_term_ids( $current_tag_ids, 'post_tag' );
 		$rules = array();
 		foreach ( $normalized as $item ) {
 			$promotion        = $item['promotion'];
@@ -115,7 +129,7 @@ final class Editor {
 				: Post_Types::DEFAULT_PARAGRAPH_NUMBER;
 			$include_ids      = array_values( array_filter( $item['includeIds'], static fn ( int $id ): bool => isset( $public_lookup[ $id ] ) ) );
 			$exclude_ids      = array_values( array_filter( $item['excludeIds'], static fn ( int $id ): bool => isset( $public_lookup[ $id ] ) ) );
-			if ( 'selected' === $item['pageScope'] ) {
+			if ( 'selected' === $item['contentScope'] ) {
 				$include_lookup = array_fill_keys( $include_ids, true );
 				$exclude_ids    = array_values( array_filter( $exclude_ids, static fn ( int $id ): bool => isset( $include_lookup[ $id ] ) ) );
 			} else {
@@ -125,9 +139,12 @@ final class Editor {
 			$rules[] = array(
 				'id'              => $item['id'],
 				'location'        => Post_Types::sanitize_location( $promotion['location'] ?? '' ),
-				'pageScope'       => $item['pageScope'],
+				'contentScope'    => $item['contentScope'],
 				'includeIds'      => $include_ids,
 				'excludeIds'      => $exclude_ids,
+				'categoryIds'     => $item['categoryIds'],
+				'tagIds'          => $item['tagIds'],
+				'termsValid'      => (bool) ( $promotion['terms_valid'] ?? true ),
 				'device'          => Post_Types::sanitize_device( $promotion['device'] ?? '' ),
 				'paragraphNumber' => $paragraph_number,
 				'startAt'         => self::local_datetime( $start_at ),
@@ -139,6 +156,8 @@ final class Editor {
 
 		return array(
 			'publicContentIds'              => $public_content_ids,
+			'validCategoryIds'              => $valid_category_ids,
+			'validTagIds'                   => $valid_tag_ids,
 			'publishedAutomaticPromotions' => $rules,
 		);
 	}
