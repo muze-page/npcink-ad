@@ -17,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Read-only repository for promotions.
  */
 final class Repository {
+	private const PUBLIC_CONTENT_QUERY_BATCH = 500;
+
 	/**
 	 * Get a promotion as normalized domain data.
 	 *
@@ -33,6 +35,9 @@ final class Repository {
 			return null;
 		}
 
+		$start_at = $this->parse_datetime( (string) get_post_meta( $post->ID, Post_Types::START_AT_META, true ) );
+		$end_at   = $this->parse_datetime( (string) get_post_meta( $post->ID, Post_Types::END_AT_META, true ) );
+
 		return array(
 			'id'          => $post->ID,
 			'status'      => $post->post_status,
@@ -42,8 +47,10 @@ final class Repository {
 			'include_ids' => Post_Types::sanitize_post_ids( get_post_meta( $post->ID, Post_Types::INCLUDE_IDS_META, true ) ),
 			'exclude_ids' => Post_Types::sanitize_post_ids( get_post_meta( $post->ID, Post_Types::EXCLUDE_IDS_META, true ) ),
 			'device'      => Post_Types::sanitize_device( get_post_meta( $post->ID, Post_Types::DEVICE_META, true ) ),
-			'start_at'    => $this->datetime_to_timestamp( (string) get_post_meta( $post->ID, Post_Types::START_AT_META, true ) ),
-			'end_at'      => $this->datetime_to_timestamp( (string) get_post_meta( $post->ID, Post_Types::END_AT_META, true ) ),
+			'start_at'    => $start_at['timestamp'],
+			'start_at_valid' => $start_at['valid'],
+			'end_at'      => $end_at['timestamp'],
+			'end_at_valid' => $end_at['valid'],
 		);
 	}
 
@@ -97,17 +104,101 @@ final class Repository {
 	}
 
 	/**
+	 * Keep only published posts and pages from an aggregated ID list.
+	 *
+	 * Management preflight uses this method to distinguish stored IDs from
+	 * targets that can actually provide a public delivery context. Frontend
+	 * delivery does not call it, avoiding an extra query on every request.
+	 *
+	 * @param array<int, int|string> $ids Candidate post IDs.
+	 * @return list<int>
+	 */
+	public function filter_public_content_ids( array $ids ): array {
+		$ids = $this->normalize_post_ids( $ids );
+		if ( array() === $ids ) {
+			return array();
+		}
+
+		$published_ids = array();
+		foreach ( array_chunk( $ids, self::PUBLIC_CONTENT_QUERY_BATCH ) as $chunk ) {
+			$published_ids = array_merge(
+				$published_ids,
+				get_posts(
+					array(
+						'post_type'              => array( 'post', 'page' ),
+						'post_status'            => 'publish',
+						'post__in'               => $chunk,
+						'posts_per_page'         => count( $chunk ),
+						'fields'                 => 'ids',
+						'orderby'                => 'post__in',
+						'no_found_rows'          => true,
+						'update_post_meta_cache' => false,
+						'update_post_term_cache' => false,
+					)
+				)
+			);
+		}
+
+		return array_values( array_map( 'absint', $published_ids ) );
+	}
+
+	/**
+	 * Parse an optional WordPress-local datetime and preserve input validity.
+	 *
+	 * Empty values are valid open boundaries. A non-empty invalid calendar
+	 * value must remain distinguishable from an intentionally open boundary.
+	 *
+	 * @param string $value WordPress-local datetime.
+	 * @return array{timestamp: int, valid: bool}
+	 */
+	public function parse_datetime( string $value ): array {
+		if ( '' === $value ) {
+			return array(
+				'timestamp' => 0,
+				'valid'     => true,
+			);
+		}
+
+		$date   = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $value, wp_timezone() );
+		$errors = DateTimeImmutable::getLastErrors();
+		$valid  = false !== $date
+			&& ( false === $errors || ( 0 === $errors['warning_count'] && 0 === $errors['error_count'] ) )
+			&& $date->format( 'Y-m-d H:i:s' ) === $value;
+
+		return array(
+			'timestamp' => $valid ? $date->getTimestamp() : 0,
+			'valid'     => $valid,
+		);
+	}
+
+	/**
 	 * Parse a WordPress-local datetime without relying on PHP's server timezone.
 	 *
 	 * @param string $value WordPress-local datetime.
 	 */
-	private function datetime_to_timestamp( string $value ): int {
-		if ( '' === $value ) {
-			return 0;
+	public function datetime_to_timestamp( string $value ): int {
+		return $this->parse_datetime( $value )['timestamp'];
+	}
+
+	/**
+	 * Normalize an aggregated public-target query without the metadata cap.
+	 *
+	 * @param array<int, int|string> $ids Candidate post IDs.
+	 * @return list<int>
+	 */
+	private function normalize_post_ids( array $ids ): array {
+		$normalized = array();
+		foreach ( $ids as $raw_id ) {
+			if ( ! is_int( $raw_id ) && ( ! is_string( $raw_id ) || 1 !== preg_match( '/^[1-9][0-9]*$/', $raw_id ) ) ) {
+				continue;
+			}
+
+			$id = filter_var( $raw_id, FILTER_VALIDATE_INT, array( 'options' => array( 'min_range' => 1 ) ) );
+			if ( false !== $id ) {
+				$normalized[ $id ] = $id;
+			}
 		}
 
-		$date = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $value, wp_timezone() );
-
-		return false === $date ? 0 : $date->getTimestamp();
+		return array_values( $normalized );
 	}
 }

@@ -174,6 +174,8 @@ REQUIRED_ZIP_ENTRIES=(
   "${PLUGIN_DIR_NAME}/src/Admin/Menu.php"
   "${PLUGIN_DIR_NAME}/src/Admin/Editor.php"
   "${PLUGIN_DIR_NAME}/src/Admin/Preview_Page.php"
+  "${PLUGIN_DIR_NAME}/src/Admin/Promotion_List.php"
+  "${PLUGIN_DIR_NAME}/src/Admin/Promotion_Status_Action.php"
   "${PLUGIN_DIR_NAME}/src/Blocks/Blocks.php"
   "${PLUGIN_DIR_NAME}/src/Blocks/Patterns.php"
   "${PLUGIN_DIR_NAME}/src/Data/Post_Types.php"
@@ -183,7 +185,9 @@ REQUIRED_ZIP_ENTRIES=(
   "${PLUGIN_DIR_NAME}/src/Frontend/Delivery.php"
   "${PLUGIN_DIR_NAME}/src/Frontend/Preview_Request.php"
   "${PLUGIN_DIR_NAME}/src/Frontend/Renderer.php"
+  "${PLUGIN_DIR_NAME}/src/Presentation/Eligibility_Messages.php"
   "${PLUGIN_DIR_NAME}/src/REST/Core_Rest_Guard.php"
+  "${PLUGIN_DIR_NAME}/src/REST/Promotion_Preflight.php"
   "${PLUGIN_DIR_NAME}/src/Lifecycle.php"
   "${PLUGIN_DIR_NAME}/src/Plugin.php"
 )

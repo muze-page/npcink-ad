@@ -18,6 +18,8 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 * Configure location, page scope, exclusions, schedule, and device in the same editor.
 * Preview the promotion inside a real page and switch between desktop and mobile context.
 * Read a truthful verdict explaining why the promotion will or will not display.
+* Review rule status, placement, page scope, stop time, and inactivity reasons directly in the Promotion list.
+* Catch empty creative, missing public targets, invalid schedules, and unverified manual-block placement before publication.
 * Publish, pause, or expire one Promotion record without a separate placement object.
 * Deliver from the server without visitor tracking, custom tables, or required frontend JavaScript.
 * Use the bundled Simplified Chinese translation in both PHP screens and the block editor.
@@ -57,5 +59,6 @@ No. Version 0.1 defines a new pre-GA contract and has no compatibility adapters 
 * Introduce the Npcink Ad brand and single Promotion publishing model.
 * Add same-editor location, page, schedule, and device rules.
 * Add truthful real-page desktop/mobile preview and server-rendered delivery.
+* Add shared-rule publication preflight, list diagnostics, and inline pause/resume controls.
 * Keep the default runtime free of visitor tracking, custom tables, and external requests.
 * Add complete bundled Simplified Chinese PHP and JavaScript translations.

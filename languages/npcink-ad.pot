@@ -63,31 +63,167 @@ msgstr ""
 msgid "The preview page does not have a public URL."
 msgstr ""
 
-#: src/Admin/Preview_Page.php:123
-#: build/index.js:3
+#: src/Admin/Preview_Page.php:125
+#: build/index.js:6
 msgid "Real-page preview"
 msgstr ""
 
-#: src/Admin/Preview_Page.php:124
+#: src/Admin/Preview_Page.php:126
 msgid "The promotion is rendered by the same server policy used on the live site. Preview mode may show blocked creative, but its verdict remains truthful."
 msgstr ""
 
-#: src/Admin/Preview_Page.php:127
-#: build/index.js:3
+#: src/Admin/Preview_Page.php:129
+#: build/index.js:4
 msgid "Desktop"
 msgstr ""
 
-#: src/Admin/Preview_Page.php:128
-#: build/index.js:3
+#: src/Admin/Preview_Page.php:130
+#: build/index.js:4
 msgid "Mobile"
 msgstr ""
 
-#: src/Admin/Preview_Page.php:130
+#: src/Admin/Preview_Page.php:132
 msgid "Back to promotion"
 msgstr ""
 
-#: src/Admin/Preview_Page.php:135
+#: src/Admin/Preview_Page.php:137
 msgid "Npcink Ad real-page preview"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:146
+msgid "Rule status"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:147
+#: build/index.js:4
+msgid "Placement"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:148
+#: build/index.js:4
+msgid "Pages"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:149
+msgid "Stops"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:150
+msgid "Why not"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:235
+msgid "Needs completion"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:238
+msgid "Paused"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:241
+#: src/Admin/Promotion_List.php:247
+msgid "Not started"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:244
+msgid "Not published"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:250
+msgid "Ended"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:253
+msgid "Rule ready"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:274
+msgid "Pause"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:275
+msgid "Resume"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:346
+#: build/index.js:4
+msgid "All posts and pages"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:349
+msgid "Configured exclusions:"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:358
+msgid "Selected public posts/pages:"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:389
+msgid "Block"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:390
+msgid "Before content"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:391
+msgid "After content"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:394
+msgid "Unknown"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:404
+msgid "No end time"
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:75
+msgid "Promotion status changes require a POST request."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:89
+msgid "The promotion status request is invalid."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:100
+msgid "The requested promotion does not exist."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:109
+msgid "You are not allowed to change this promotion status."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:116
+msgid "You are not allowed to publish promotions."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:322
+msgid "The promotion is paused."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:326
+msgid "The promotion was published. Delivery still depends on its schedule and page rules."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:330
+msgid "The promotion was already paused."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:334
+msgid "The promotion was already published."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:338
+msgid "Only published or draft promotions can use this status action."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:342
+msgid "The promotion status could not be changed."
+msgstr ""
+
+#: src/Admin/Promotion_Status_Action.php:363
+msgid "The promotion was not resumed:"
 msgstr ""
 
 #: src/Blocks/Blocks.php:45
@@ -157,7 +293,7 @@ msgid "Share a concise update and add a link to the next step."
 msgstr ""
 
 #: src/Data/Post_Types.php:74
-#: src/Frontend/Renderer.php:50
+#: src/Frontend/Renderer.php:52
 #: build/index.js:1
 msgid "Promotion"
 msgstr ""
@@ -202,66 +338,78 @@ msgstr ""
 msgid "Manual block preview is shown after the page content. The live position is controlled by where the block is inserted."
 msgstr ""
 
-#: src/Frontend/Renderer.php:66
+#: src/Frontend/Renderer.php:68
 msgid "Eligible: this promotion will display in the selected page and device context."
 msgstr ""
 
 #. translators: %s: one or more promotion eligibility explanations.
-#: src/Frontend/Renderer.php:70
+#: src/Frontend/Renderer.php:72
 #, php-format
 msgid "Not currently eligible: %s"
 msgstr ""
 
-#: src/Frontend/Renderer.php:96
+#: src/Frontend/Renderer.php:98
 msgid "Npcink Ad:"
 msgstr ""
 
-#: src/Frontend/Renderer.php:110
+#: src/Presentation/Eligibility_Messages.php:30
 msgid "Select a promotion."
 msgstr ""
 
-#: src/Frontend/Renderer.php:111
+#: src/Presentation/Eligibility_Messages.php:31
 msgid "The promotion is not published."
 msgstr ""
 
-#: src/Frontend/Renderer.php:112
+#: src/Presentation/Eligibility_Messages.php:32
 msgid "The promotion has not started."
 msgstr ""
 
-#: src/Frontend/Renderer.php:113
+#: src/Presentation/Eligibility_Messages.php:33
 msgid "The promotion has expired."
 msgstr ""
 
-#: src/Frontend/Renderer.php:114
+#: src/Presentation/Eligibility_Messages.php:34
 msgid "The promotion has no content."
 msgstr ""
 
-#: src/Frontend/Renderer.php:115
+#: src/Presentation/Eligibility_Messages.php:35
+msgid "Select at least one target page that is not excluded."
+msgstr ""
+
+#: src/Presentation/Eligibility_Messages.php:36
+msgid "The promotion end time must be later than its start time."
+msgstr ""
+
+#: src/Presentation/Eligibility_Messages.php:37
 msgid "This page is not included."
 msgstr ""
 
-#: src/Frontend/Renderer.php:116
+#: src/Presentation/Eligibility_Messages.php:38
 msgid "This page is excluded."
 msgstr ""
 
-#: src/Frontend/Renderer.php:117
+#: src/Presentation/Eligibility_Messages.php:39
 msgid "The promotion location does not match this delivery method."
 msgstr ""
 
-#: src/Frontend/Renderer.php:118
+#: src/Presentation/Eligibility_Messages.php:40
 msgid "The promotion does not target the simulated device."
 msgstr ""
 
-#: src/Frontend/Renderer.php:119
+#: src/Presentation/Eligibility_Messages.php:41
 msgid "The promotion recursively includes itself."
 msgstr ""
 
-#: src/Frontend/Renderer.php:129
+#: src/Presentation/Eligibility_Messages.php:51
 msgid "This promotion is not eligible to render."
 msgstr ""
 
 #: src/REST/Core_Rest_Guard.php:46
 msgid "You are not allowed to access Npcink Ad resources."
+msgstr ""
+
+#: src/REST/Promotion_Preflight.php:94
+msgid "The promotion cannot be published until its delivery settings are complete."
 msgstr ""
 
 #: build/index.js:1
@@ -316,6 +464,26 @@ msgstr ""
 msgid "Check that the selected promotion is configured for block placement."
 msgstr ""
 
+#: build/index.js:1
+msgid "Choose a published page or post in Real-page preview before checking manual block placement."
+msgstr ""
+
+#: build/index.js:1
+msgid "Checking the selected page body for a matching promotion block…"
+msgstr ""
+
+#: build/index.js:1
+msgid "A matching promotion block was found in the selected page body."
+msgstr ""
+
+#: build/index.js:1
+msgid "This promotion block was not found in the selected page body. A template or synced pattern may still insert it, so verify the result with the real-page preview."
+msgstr ""
+
+#: build/index.js:1
+msgid "The selected page body could not be inspected from the editor data. This does not mean the block is missing; verify with the real-page preview."
+msgstr ""
+
 #. translators: 1: content title, 2: content type.
 #: build/index.js:2
 #, js-format
@@ -341,105 +509,142 @@ msgid "Remove"
 msgstr ""
 
 #: build/index.js:3
+msgid "configured in WordPress"
+msgstr ""
+
+#: build/index.js:3
 msgid "Npcink Ad delivery"
 msgstr ""
 
-#: build/index.js:3
-msgid "Placement"
-msgstr ""
+#. translators: %d: number of delivery configuration errors.
+#: build/index.js:4
+#, js-format
+msgid "%d delivery configuration error needs review before publishing."
+msgid_plural "%d delivery configuration errors need review before publishing."
+msgstr[0] ""
+msgstr[1] ""
 
-#: build/index.js:3
+#: build/index.js:4
 msgid "After post content"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:4
 msgid "Before post content"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:4
 msgid "Manual block"
 msgstr ""
 
-#: build/index.js:3
-msgid "Pages"
-msgstr ""
-
-#: build/index.js:3
-msgid "All posts and pages"
-msgstr ""
-
-#: build/index.js:3
+#: build/index.js:4
 msgid "Only selected content"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:4
 msgid "Included content"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:4
 msgid "The promotion can appear only on these published posts and pages."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:4
 msgid "Device"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:4
 msgid "All devices"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:4
 msgid "Start showing"
 msgstr ""
 
-#: build/index.js:3
-msgid "Optional. Uses the site timezone."
+#. translators: %s: site timezone name or UTC offset.
+#: build/index.js:5
+#: build/index.js:6
+#, js-format
+msgid "Optional. Uses the site timezone: %s."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:5
 msgid "Stop showing"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Advanced page exclusions"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Excluded content"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "The promotion never appears on these posts and pages."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Preview page"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Choose the real post or page whose theme and layout should be used."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Save the promotion before opening a preview."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Choose a published page or post to use as the preview context."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Allow pop-ups for this site, then try preview again."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Preparing preview…"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "The promotion could not be saved. Resolve the editor error, then try again."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Save and open preview"
+msgstr ""
+
+#: build/index.js:6
+msgid "Open preview"
+msgstr ""
+
+#: build/index.js:6
+msgid "Npcink Ad delivery preflight"
+msgstr ""
+
+#: build/index.js:6
+msgid "Add promotion content before publishing."
+msgstr ""
+
+#: build/index.js:6
+msgid "Add at least one valid included post or page that is not also excluded when Pages is set to Only selected content."
+msgstr ""
+
+#: build/index.js:6
+msgid "Stop showing must be later than Start showing."
+msgstr ""
+
+#: build/index.js:6
+msgid "No errors were found in the current editor fields. Public selected targets are confirmed by the server when publishing or scheduling."
+msgstr ""
+
+#. translators: %s: site timezone name or UTC offset.
+#: build/index.js:7
+#, js-format
+msgid "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use."
+msgstr ""
+
+#: build/index.js:7
+msgid "These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative."
 msgstr ""

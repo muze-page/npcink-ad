@@ -115,9 +115,6 @@
             "Start showing": [
                 "\u5f00\u59cb\u5c55\u793a"
             ],
-            "Optional. Uses the site timezone.": [
-                "\u53ef\u9009\u3002\u4f7f\u7528\u7ad9\u70b9\u65f6\u533a\u3002"
-            ],
             "Stop showing": [
                 "\u505c\u6b62\u5c55\u793a"
             ],
@@ -153,6 +150,54 @@
             ],
             "Save and open preview": [
                 "\u4fdd\u5b58\u5e76\u6253\u5f00\u9884\u89c8"
+            ],
+            "Choose a published page or post in Real-page preview before checking manual block placement.": [
+                "\u8bf7\u5148\u5728\u201c\u771f\u5b9e\u9875\u9762\u9884\u89c8\u201d\u4e2d\u9009\u62e9\u5df2\u53d1\u5e03\u7684\u9875\u9762\u6216\u6587\u7ae0\uff0c\u518d\u68c0\u67e5\u624b\u52a8\u533a\u5757\u4f4d\u7f6e\u3002"
+            ],
+            "Checking the selected page body for a matching promotion block\u2026": [
+                "\u6b63\u5728\u68c0\u67e5\u6240\u9009\u9875\u9762\u6b63\u6587\u4e2d\u662f\u5426\u6709\u5339\u914d\u7684\u63a8\u5e7f\u533a\u5757\u2026"
+            ],
+            "A matching promotion block was found in the selected page body.": [
+                "\u5df2\u5728\u6240\u9009\u9875\u9762\u6b63\u6587\u4e2d\u627e\u5230\u5339\u914d\u7684\u63a8\u5e7f\u533a\u5757\u3002"
+            ],
+            "This promotion block was not found in the selected page body. A template or synced pattern may still insert it, so verify the result with the real-page preview.": [
+                "\u6240\u9009\u9875\u9762\u6b63\u6587\u4e2d\u672a\u627e\u5230\u6b64\u63a8\u5e7f\u533a\u5757\u3002\u6a21\u677f\u6216\u540c\u6b65\u6837\u677f\u4ecd\u53ef\u80fd\u63d2\u5165\u5b83\uff0c\u8bf7\u901a\u8fc7\u771f\u5b9e\u9875\u9762\u9884\u89c8\u6838\u9a8c\u7ed3\u679c\u3002"
+            ],
+            "The selected page body could not be inspected from the editor data. This does not mean the block is missing; verify with the real-page preview.": [
+                "\u65e0\u6cd5\u901a\u8fc7\u7f16\u8f91\u5668\u6570\u636e\u68c0\u67e5\u6240\u9009\u9875\u9762\u6b63\u6587\u3002\u8fd9\u5e76\u4e0d\u8868\u793a\u533a\u5757\u7f3a\u5931\uff0c\u8bf7\u901a\u8fc7\u771f\u5b9e\u9875\u9762\u9884\u89c8\u6838\u9a8c\u3002"
+            ],
+            "configured in WordPress": [
+                "WordPress \u4e2d\u7684\u914d\u7f6e"
+            ],
+            "%d delivery configuration error needs review before publishing.": [
+                "\u53d1\u5e03\u524d\u6709 %d \u4e2a\u6295\u653e\u914d\u7f6e\u95ee\u9898\u9700\u8981\u68c0\u67e5\u3002"
+            ],
+            "Optional. Uses the site timezone: %s.": [
+                "\u53ef\u9009\u3002\u4f7f\u7528\u7ad9\u70b9\u65f6\u533a\uff1a%s\u3002"
+            ],
+            "Npcink Ad delivery preflight": [
+                "Npcink Ad \u6295\u653e\u9884\u68c0"
+            ],
+            "Add promotion content before publishing.": [
+                "\u53d1\u5e03\u524d\u8bf7\u6dfb\u52a0\u63a8\u5e7f\u5185\u5bb9\u3002"
+            ],
+            "Add at least one valid included post or page that is not also excluded when Pages is set to Only selected content.": [
+                "\u5f53\u9875\u9762\u8303\u56f4\u8bbe\u4e3a\u201c\u4ec5\u6240\u9009\u5185\u5bb9\u201d\u65f6\uff0c\u8bf7\u81f3\u5c11\u6dfb\u52a0\u4e00\u7bc7\u6709\u6548\u4e14\u672a\u88ab\u6392\u9664\u7684\u6587\u7ae0\u6216\u9875\u9762\u3002"
+            ],
+            "Stop showing must be later than Start showing.": [
+                "\u505c\u6b62\u5c55\u793a\u65f6\u95f4\u5fc5\u987b\u665a\u4e8e\u5f00\u59cb\u5c55\u793a\u65f6\u95f4\u3002"
+            ],
+            "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use.": [
+                "\u6392\u671f\u65f6\u95f4\u4f7f\u7528\u7ad9\u70b9\u65f6\u533a\uff08%s\uff09\u3002\u6574\u9875\u7f13\u5b58\u548c CDN \u9700\u8981\u5408\u9002\u7684 TTL \u6216\u6e05\u7406\u7b56\u7565\uff1b\u7f13\u5b58\u9875\u9762\u4ecd\u5728\u4f7f\u7528\u65f6\uff0c\u65e0\u6cd5\u4fdd\u8bc1\u5206\u949f\u7ea7\u5207\u6362\u3002"
+            ],
+            "These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative.": [
+                "\u8fd9\u4e9b\u7f16\u8f91\u5668\u68c0\u67e5\u4e0d\u4f1a\u963b\u6b62\u4fdd\u5b58\u3002PHP \u6295\u653e\u5224\u5b9a\u548c Core REST \u54cd\u5e94\u4ecd\u662f\u6700\u7ec8\u4f9d\u636e\u3002"
+            ],
+            "Open preview": [
+                "\u6253\u5f00\u9884\u89c8"
+            ],
+            "No errors were found in the current editor fields. Public selected targets are confirmed by the server when publishing or scheduling.": [
+                "\u5f53\u524d\u7f16\u8f91\u5668\u5b57\u6bb5\u672a\u53d1\u73b0\u9519\u8bef\u3002\u53d1\u5e03\u6216\u6392\u7a0b\u65f6\uff0c\u670d\u52a1\u7aef\u4f1a\u786e\u8ba4\u6240\u9009\u516c\u5f00\u76ee\u6807\u662f\u5426\u6709\u6548\u3002"
             ]
         }
     }

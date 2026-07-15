@@ -157,6 +157,46 @@ $page_b_id = wp_insert_post(
 );
 $check( ! is_wp_error( $page_b_id ), 'Could not create target page B.' );
 
+$original_timezone_string = get_option( 'timezone_string' );
+$original_gmt_offset      = get_option( 'gmt_offset' );
+try {
+	update_option( 'timezone_string', 'Asia/Shanghai' );
+	update_option( 'gmt_offset', 8 );
+
+	$repository         = new Repository();
+	$shanghai_timestamp = $repository->datetime_to_timestamp( '2026-01-15 08:00:00' );
+	$check(
+		gmmktime( 0, 0, 0, 1, 15, 2026 ) === $shanghai_timestamp,
+		'The repository did not parse a WordPress-local datetime in the configured site timezone.'
+	);
+
+	$boundary_promotion = array(
+		'status'      => 'publish',
+		'content'     => '<p>Schedule boundary creative</p>',
+		'page_scope'  => 'all',
+		'include_ids' => array(),
+		'exclude_ids' => array(),
+		'start_at'    => $shanghai_timestamp,
+		'end_at'      => $shanghai_timestamp + HOUR_IN_SECONDS,
+	);
+	$evaluator          = new Eligibility_Evaluator();
+	$at_start           = $evaluator->assess_readiness( $boundary_promotion, $boundary_promotion['start_at'] );
+	$before_end         = $evaluator->assess_readiness( $boundary_promotion, $boundary_promotion['end_at'] - 1 );
+	$at_end             = $evaluator->assess_readiness( $boundary_promotion, $boundary_promotion['end_at'] );
+	$check( $at_start['ready'], 'The shared evaluator did not treat the start boundary as inclusive.' );
+	$check( $before_end['ready'], 'The shared evaluator rejected the final second before the end boundary.' );
+	$check( ! $at_end['ready'], 'The shared evaluator did not treat the end boundary as exclusive.' );
+	$check(
+		in_array( 'promotion_expired', $at_end['reasons'], true ),
+		'The shared evaluator omitted the expired reason at the end boundary.'
+	);
+} finally {
+	update_option( 'timezone_string', $original_timezone_string );
+	update_option( 'gmt_offset', $original_gmt_offset );
+}
+$check( get_option( 'timezone_string' ) === $original_timezone_string, 'The smoke did not restore the site timezone string.' );
+$check( get_option( 'gmt_offset' ) === $original_gmt_offset, 'The smoke did not restore the site GMT offset.' );
+
 $promotion_id = wp_insert_post(
 	array(
 		'post_type'    => 'npcink_promotion',
@@ -401,6 +441,10 @@ $_GET          = array(
 $block_preview_delivery = new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() );
 $block_preview_request  = new Preview_Request( $block_preview_delivery, new Repository() );
 $block_preview_request->activate();
+$check(
+	defined( 'DONOTCACHEPAGE' ) && true === DONOTCACHEPAGE,
+	'An authorized real-page preview did not disable full-page caching.'
+);
 $positioned_block = ( new Blocks( $block_preview_delivery ) )->render(
 	array(
 		'promotionId' => $promotion_id,
@@ -473,6 +517,241 @@ if ( 0 === did_action( 'rest_api_init' ) ) {
 }
 
 wp_set_current_user( 1 );
+$check( current_user_can( 'manage_npcink_ads' ), 'The REST write smoke did not run as the current administrator.' );
+$write_promotion_via_rest = static function ( ?int $promotion_id, array $params ): WP_REST_Response {
+	$route   = '/wp/v2/npcink_promotion' . ( null === $promotion_id ? '' : '/' . $promotion_id );
+	$request = new WP_REST_Request( 'POST', $route );
+	$request->set_body_params( $params );
+
+	return rest_do_request( $request );
+};
+$assert_preflight_error  = static function (
+	WP_REST_Response $response,
+	string $expected_reason,
+	string $message
+) use ( $check ): void {
+	$data    = $response->get_data();
+	$reasons = is_array( $data ) && isset( $data['data']['reasons'] ) && is_array( $data['data']['reasons'] )
+		? $data['data']['reasons']
+		: array();
+
+	$check( 400 === $response->get_status(), $message . ' The REST response was not HTTP 400.' );
+	$check(
+		is_array( $data ) && 'npcink_ad_promotion_not_ready' === ( $data['code'] ?? '' ),
+		$message . ' The REST response omitted the preflight error code.'
+	);
+	$check( in_array( $expected_reason, $reasons, true ), $message . ' The REST response omitted the expected reason.' );
+};
+
+$blank_draft_response = $write_promotion_via_rest(
+	null,
+	array(
+		'status'  => 'draft',
+		'title'   => 'REST preflight smoke promotion',
+		'content' => '',
+	)
+);
+$blank_draft_data     = $blank_draft_response->get_data();
+$rest_promotion_id    = is_array( $blank_draft_data ) ? absint( $blank_draft_data['id'] ?? 0 ) : 0;
+$check( 201 === $blank_draft_response->get_status(), 'Core REST did not allow an empty Promotion draft to be created.' );
+$check( 0 < $rest_promotion_id, 'Core REST did not return the created Promotion draft ID.' );
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'The empty REST Promotion was not saved as a draft.' );
+
+$empty_publish_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status' => 'publish',
+	)
+);
+$assert_preflight_error(
+	$empty_publish_response,
+	'promotion_content_empty',
+	'Core REST allowed an empty Promotion to publish.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected empty publish changed the Promotion status.' );
+
+$future_date           = current_datetime()->modify( '+1 day' );
+$future_date_gmt       = $future_date->setTimezone( new DateTimeZone( 'UTC' ) );
+$empty_future_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'   => 'future',
+		'date'     => $future_date->format( 'Y-m-d\TH:i:s' ),
+		'date_gmt' => $future_date_gmt->format( 'Y-m-d\TH:i:s' ),
+	)
+);
+$assert_preflight_error(
+	$empty_future_response,
+	'promotion_content_empty',
+	'Core REST allowed an empty Promotion to bypass preflight through future scheduling.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected future schedule changed the Promotion status.' );
+
+$non_public_target_id = wp_insert_post(
+	array(
+		'post_type'   => 'page',
+		'post_status' => 'draft',
+		'post_title'  => 'Non-public REST preflight target',
+	),
+	true
+);
+$check( ! is_wp_error( $non_public_target_id ), 'Could not create the non-public REST preflight target.' );
+$invalid_targets_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<!-- wp:paragraph --><p>REST preflight creative</p><!-- /wp:paragraph -->',
+		'meta'    => array(
+			Post_Types::PAGE_SCOPE_META  => 'selected',
+			Post_Types::INCLUDE_IDS_META => array( absint( $non_public_target_id ), 999999999 ),
+			Post_Types::EXCLUDE_IDS_META => array(),
+		),
+	)
+);
+$assert_preflight_error(
+	$invalid_targets_response,
+	'promotion_targets_empty',
+	'Core REST allowed a selected Promotion with no public target to publish.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected target publish changed the Promotion status.' );
+
+$invalid_schedule_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<!-- wp:paragraph --><p>REST preflight creative</p><!-- /wp:paragraph -->',
+		'meta'    => array(
+			Post_Types::PAGE_SCOPE_META  => 'all',
+			Post_Types::INCLUDE_IDS_META => array(),
+			Post_Types::EXCLUDE_IDS_META => array(),
+			Post_Types::START_AT_META    => '2026-01-15 09:00:00',
+			Post_Types::END_AT_META      => '2026-01-15 09:00:00',
+		),
+	)
+);
+$assert_preflight_error(
+	$invalid_schedule_response,
+	'promotion_schedule_invalid',
+	'Core REST allowed a Promotion with an invalid schedule to publish.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected schedule publish changed the Promotion status.' );
+
+$invalid_calendar_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<!-- wp:paragraph --><p>REST preflight creative</p><!-- /wp:paragraph -->',
+		'meta'    => array(
+			Post_Types::LOCATION_META    => 'block',
+			Post_Types::PAGE_SCOPE_META  => 'selected',
+			Post_Types::INCLUDE_IDS_META => array( $page_a_id ),
+			Post_Types::EXCLUDE_IDS_META => array(),
+			Post_Types::DEVICE_META      => 'all',
+			Post_Types::START_AT_META    => '2026-02-31 12:00:00',
+			Post_Types::END_AT_META      => '2026-03-02 12:00:00',
+		),
+	)
+);
+$assert_preflight_error(
+	$invalid_calendar_response,
+	'promotion_schedule_invalid',
+	'Core REST allowed a Promotion with a formatted but impossible calendar date to publish.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected invalid calendar date changed the Promotion status.' );
+
+$valid_start = current_datetime()->modify( '-1 hour' )->format( 'Y-m-d H:i:s' );
+$valid_end   = current_datetime()->modify( '+1 hour' )->format( 'Y-m-d H:i:s' );
+$valid_publish_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<!-- wp:paragraph --><p>REST preflight creative</p><!-- /wp:paragraph -->',
+		'meta'    => array(
+			Post_Types::LOCATION_META    => 'block',
+			Post_Types::PAGE_SCOPE_META  => 'selected',
+			Post_Types::INCLUDE_IDS_META => array( $page_a_id ),
+			Post_Types::EXCLUDE_IDS_META => array(),
+			Post_Types::DEVICE_META      => 'all',
+			Post_Types::START_AT_META    => $valid_start,
+			Post_Types::END_AT_META      => $valid_end,
+		),
+	)
+);
+$check( 200 === $valid_publish_response->get_status(), 'Core REST rejected a complete and valid Promotion configuration.' );
+$check( 'publish' === get_post_status( $rest_promotion_id ), 'Core REST did not publish the valid Promotion.' );
+$check(
+	array( $page_a_id ) === get_post_meta( $rest_promotion_id, Post_Types::INCLUDE_IDS_META, true ),
+	'Core REST did not persist the valid public target.'
+);
+
+wp_delete_post( absint( $non_public_target_id ), true );
+wp_delete_post( $rest_promotion_id, true );
+$check( null === get_post( $rest_promotion_id ), 'The REST preflight fixture was not removed before later smoke assertions.' );
+
+$future_fixture_date     = current_datetime()->modify( '+2 days' );
+$future_fixture_date_gmt = $future_fixture_date->setTimezone( new DateTimeZone( 'UTC' ) );
+$future_fixture_start    = $future_fixture_date->modify( '+1 hour' )->format( 'Y-m-d H:i:s' );
+$future_fixture_end      = $future_fixture_date->modify( '+1 day' )->format( 'Y-m-d H:i:s' );
+$valid_future_response   = $write_promotion_via_rest(
+	null,
+	array(
+		'status'   => 'future',
+		'title'    => 'Valid future REST preflight promotion',
+		'content'  => '<!-- wp:paragraph --><p>Scheduled REST preflight creative</p><!-- /wp:paragraph -->',
+		'date'     => $future_fixture_date->format( 'Y-m-d\TH:i:s' ),
+		'date_gmt' => $future_fixture_date_gmt->format( 'Y-m-d\TH:i:s' ),
+		'meta'     => array(
+			Post_Types::LOCATION_META    => 'block',
+			Post_Types::PAGE_SCOPE_META  => 'selected',
+			Post_Types::INCLUDE_IDS_META => array( $page_a_id ),
+			Post_Types::EXCLUDE_IDS_META => array(),
+			Post_Types::DEVICE_META      => 'mobile',
+			Post_Types::START_AT_META    => $future_fixture_start,
+			Post_Types::END_AT_META      => $future_fixture_end,
+		),
+	)
+);
+$valid_future_data       = $valid_future_response->get_data();
+$future_promotion_id     = is_array( $valid_future_data ) ? absint( $valid_future_data['id'] ?? 0 ) : 0;
+$future_promotion        = get_post( $future_promotion_id );
+$check( 201 === $valid_future_response->get_status(), 'Core REST rejected a complete and valid future Promotion.' );
+$check( $future_promotion instanceof WP_Post, 'Core REST did not create the valid future Promotion.' );
+$check( 'future' === $future_promotion->post_status, 'The valid future Promotion was not scheduled.' );
+$check(
+	$future_fixture_date->format( 'Y-m-d H:i:s' ) === $future_promotion->post_date,
+	'The valid future Promotion did not persist its local schedule date.'
+);
+$check(
+	$future_fixture_date_gmt->format( 'Y-m-d H:i:s' ) === $future_promotion->post_date_gmt,
+	'The valid future Promotion did not persist its GMT schedule date.'
+);
+$check(
+	'block' === get_post_meta( $future_promotion_id, Post_Types::LOCATION_META, true ),
+	'The valid future Promotion did not persist its location.'
+);
+$check(
+	'selected' === get_post_meta( $future_promotion_id, Post_Types::PAGE_SCOPE_META, true ),
+	'The valid future Promotion did not persist its page scope.'
+);
+$check(
+	array( $page_a_id ) === get_post_meta( $future_promotion_id, Post_Types::INCLUDE_IDS_META, true ),
+	'The valid future Promotion did not persist its public target.'
+);
+$check(
+	'mobile' === get_post_meta( $future_promotion_id, Post_Types::DEVICE_META, true ),
+	'The valid future Promotion did not persist its device rule.'
+);
+$check(
+	get_post_meta( $future_promotion_id, Post_Types::START_AT_META, true ) === $future_fixture_start,
+	'The valid future Promotion did not persist its custom start time.'
+);
+$check(
+	get_post_meta( $future_promotion_id, Post_Types::END_AT_META, true ) === $future_fixture_end,
+	'The valid future Promotion did not persist its custom end time.'
+);
+wp_delete_post( $future_promotion_id, true );
+$check( null === get_post( $future_promotion_id ), 'The valid future fixture was not removed before later smoke assertions.' );
+
 $admin_collection_request = new WP_REST_Request( 'GET', '/wp/v2/npcink_promotion' );
 $admin_collection_request->set_query_params(
 	array(

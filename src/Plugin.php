@@ -10,6 +10,8 @@ namespace Npcink\Ad;
 use Npcink\Ad\Admin\Editor;
 use Npcink\Ad\Admin\Menu;
 use Npcink\Ad\Admin\Preview_Page;
+use Npcink\Ad\Admin\Promotion_List;
+use Npcink\Ad\Admin\Promotion_Status_Action;
 use Npcink\Ad\Blocks\Blocks;
 use Npcink\Ad\Blocks\Patterns;
 use Npcink\Ad\Data\Post_Types;
@@ -19,6 +21,7 @@ use Npcink\Ad\Frontend\Delivery;
 use Npcink\Ad\Frontend\Preview_Request;
 use Npcink\Ad\Frontend\Renderer;
 use Npcink\Ad\REST\Core_Rest_Guard;
+use Npcink\Ad\REST\Promotion_Preflight;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -33,13 +36,15 @@ final class Plugin {
 	 */
 	public function init(): void {
 		$repository = new Repository();
-		$delivery = new Delivery(
+		$evaluator  = new Eligibility_Evaluator();
+		$delivery   = new Delivery(
 			$repository,
-			new Eligibility_Evaluator(),
+			$evaluator,
 			new Renderer()
 		);
-		$blocks  = new Blocks( $delivery );
-		$preview = new Preview_Request( $delivery, $repository );
+		$blocks    = new Blocks( $delivery );
+		$preview   = new Preview_Request( $delivery, $repository );
+		$preflight = new Promotion_Preflight( $repository, $evaluator );
 
 		add_action( 'init', array( $this, 'load_textdomain' ), 1 );
 		add_action( 'init', array( Post_Types::class, 'register' ), 5 );
@@ -47,13 +52,19 @@ final class Plugin {
 		add_action( 'init', array( Patterns::class, 'register' ), 15 );
 		add_action( 'init', array( $blocks, 'register' ), 20 );
 		$preview->register();
+		$preflight->register();
 		Core_Rest_Guard::register();
 		Lifecycle::register_new_site_hook();
 
 		if ( is_admin() ) {
+			$promotion_list   = new Promotion_List( $repository, $evaluator );
+			$promotion_action = new Promotion_Status_Action( $repository, $evaluator );
+
 			add_action( 'admin_menu', array( Menu::class, 'register' ) );
 			add_action( 'admin_menu', array( Preview_Page::class, 'register' ), 20 );
 			add_action( 'enqueue_block_editor_assets', array( Editor::class, 'enqueue' ) );
+			$promotion_list->register();
+			$promotion_action->register();
 		}
 	}
 
