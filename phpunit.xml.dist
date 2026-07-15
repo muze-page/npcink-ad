@@ -7,7 +7,7 @@
          failOnWarning="true"
          failOnRisky="true">
     <testsuites>
-        <testsuite name="Magick AD unit tests">
+        <testsuite name="Npcink Ad unit tests">
             <directory suffix="Test.php">tests/phpunit</directory>
         </testsuite>
     </testsuites>

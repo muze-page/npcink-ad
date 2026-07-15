@@ -1,25 +1,26 @@
-# Magick AD WP
+# Npcink Ad
 
-Magick AD 0.2 是一个处于 pre-GA 阶段的原生 WordPress 广告投放基线。它刻意只保留“创建广告、关联投放位、服务端判断、服务端渲染”这一条闭环。
+Npcink Ad 0.1 是一个 WordPress 原生、隐私优先的站内推广发布工具。核心流程只有一条：**创建推广内容 → 设置展示规则 → 在真实页面预览运行结论 → 发布或暂停**。
 
-> 0.2 是破坏性重置，不提供 0.1 开发数据、REST API、Options 或自定义表迁移。升级测试环境前请清除旧数据。
+> 0.1 是全新的 pre-GA 契约，不提供旧开发数据、API、区块或存储标识的兼容层。
 
-## 当前边界
+## 产品边界
 
-- 广告：`magick_ad` CPT；广告内容使用区块内容，`_magick_ad_end_at` 保存可选的 WordPress 本地日期时间字符串。
-- 投放位：`magick_ad_placement` CPT；typed meta 为 `_magick_ad_ad_id`、`_magick_ad_location` 和 `_magick_ad_device`。
-- 两个 CPT 使用 WordPress 核心 REST 支撑编辑器，但所有相关端点均要求 `manage_magick_ads`，广告创意不是匿名公开 API。
-- 展示决策：纯 PHP evaluator 返回 `allowed` 和稳定 reason codes。
-- 渲染：动态区块和自动位置都在服务端执行相同的发布状态、过期时间和设备判断。
-- 区块只保存 `placementId`、`reserveHeight` 和 `preview`，不复制广告内容。
+- 唯一内容类型：`npcink_promotion`。标题、区块内容、草稿/发布状态和全部展示规则都在同一条记录中。
+- 规则 meta：位置、页面范围、包含/排除页面、设备、开始时间和结束时间，全部通过 typed meta 注册。
+- 位置只有手动区块、正文前和正文后三种；区块和短代码直接引用 Promotion ID。
+- 真实页面预览使用站点主题和同一套 PHP evaluator；预览可以让管理者看见被规则阻止的创意，但运行结论不会伪造为成功。
+- 正式投放由服务端判断发布状态、页面和时间；设备可见性使用 CSS 断点，避免全页缓存按 User-Agent 串设备。
+- 管理 REST 需要 `manage_npcink_ads`；插件激活时把该能力授予 administrator 和 editor。
+- 默认没有追踪请求、访客 Cookie、自定义表、统计队列或必需的前端 JavaScript。
 
-架构决策见 [ADR 001](docs/decisions/001-pre-ga-native-wordpress-baseline.md)，模块边界见 [架构总览](docs/architecture-overview.md)。
+产品取舍见 [产品契约](docs/product-contract.md)，数据模型见 [ADR 003](docs/decisions/003-single-promotion-record.md)，模块边界见 [架构总览](docs/architecture-overview.md)。
 
 ## 明确不做
 
-0.2 不包含统计追踪、报表、A/B 测试、CMP/同意检测、Popup 搭建器、任意自定义 JavaScript、模板迁移、自定义 REST 控制器、自定义数据库表或管理端 SPA。这些能力只有在真实使用需求和隐私边界明确后才会重新评估。
+0.1 不包含 AdSense 管理、统计追踪、报表、A/B 测试、CMP、Popup、频控、地理定向、任意 PHP/JavaScript、模板市场、自定义数据库表或旧管理端 SPA。新增能力必须先证明它能缩短或降低“正确发布一条推广”的成本。
 
-## 开发
+## 开发与验证
 
 要求 PHP 8.1+、Node.js 20+、pnpm 10 和 Composer 2。
 
@@ -29,16 +30,17 @@ pnpm install --frozen-lockfile
 
 composer check
 pnpm check
-pnpm run build
+bash scripts/release-gate.sh
 ```
 
-`composer check` 依次运行 PHPUnit、WordPress Coding Standards 和 PHPStan。PHPUnit 覆盖纯展示决策；`tests/playground/` 提供可复用的打包插件集成 fixture，验证激活、CPT/meta、动态区块、短代码、服务端渲染、匿名 REST 边界和过期广告拒绝。浏览器中的编辑器交互仍需发布前人工 smoke test。
+WordPress Playground 覆盖最低和当前版本：
 
 ```bash
-bash scripts/release-gate.sh
 WP_VERSION=6.5 PHP_VERSION=8.1 tests/playground/run.sh
 WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 ```
+
+Playground 会验证单 Promotion 数据模型、typed meta、页面/时间/设备规则、区块/短代码/自动位置、匿名 REST 拒绝、无 Placement/Options/自定义表以及显式卸载清理。真实编辑器与主题页面交互仍需在 Local 中做浏览器验收。
 
 ## 发布包
 
@@ -46,12 +48,6 @@ WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 bash scripts/release-gate.sh
 ```
 
-发布门禁执行 PHP 语法检查、Composer 检查、前端 type/lint 检查、一次生产构建、严格包体预算、固定目录打包和 zip 内容校验。产物位于 `dist/magick-ad-<version>.zip`，包内顶层目录固定为 `magick-ad`。
+产物为 `dist/npcink-ad-0.1.0.zip`，包内顶层目录固定为 `npcink-ad/`。发布门禁会校验构建体积、必需文件、禁止内容及发布包中不存在旧品牌运行标识。
 
-POT 生成不属于可重复发布打包过程，需要时单独运行：
-
-```bash
-wp i18n make-pot . languages/magick-ad.pot \
-  --domain=magick-ad \
-  --exclude=node_modules,build,assets/js,docs,dist,vendor
-```
+排期依赖页面在时间边界后重新生成。使用第三方整页缓存时，需要配置相应缓存 TTL 或在 Promotion 变更和排期边界清理缓存；0.1 不宣称能穿透任意缓存实现分钟级排期。

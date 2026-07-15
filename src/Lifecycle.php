@@ -2,13 +2,13 @@
 /**
  * Single-site and multisite lifecycle operations.
  *
- * @package MagickAD
+ * @package NpcinkAd
  */
 
-namespace MagickAD;
+namespace Npcink\Ad;
 
-use MagickAD\Data\Post_Types;
-use MagickAD\Data\Roles;
+use Npcink\Ad\Data\Post_Types;
+use Npcink\Ad\Data\Roles;
 use WP_Site;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -19,17 +19,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Applies lifecycle work to every affected site in a network.
  */
 final class Lifecycle {
-	/**
-	 * Obsolete action names whose scheduled events must be removed.
-	 *
-	 * @var list<string>
-	 */
-	private const LEGACY_CRON_HOOKS = array(
-		'magick_ad_flush_stats_cache',
-		'magick_ad_cleanup_stats_dim',
-		'magick_ad_cleanup_diagnostics_log',
-	);
-
 	/**
 	 * Activate the plugin on one site or every site in the current network.
 	 *
@@ -55,7 +44,6 @@ final class Lifecycle {
 		self::for_each_affected_site(
 			$network_wide,
 			static function (): void {
-				self::clear_legacy_cron();
 				flush_rewrite_rules();
 			}
 		);
@@ -71,13 +59,13 @@ final class Lifecycle {
 	}
 
 	/**
-	 * Provision a new site when Magick AD is network active.
+	 * Provision a new site when Npcink Ad is network active.
 	 *
 	 * @param WP_Site $site Newly initialized site.
 	 */
 	public static function initialize_site( WP_Site $site ): void {
 		$network_plugins = get_network_option( $site->network_id, 'active_sitewide_plugins', array() );
-		$plugin_file     = plugin_basename( MAGICK_AD_FILE );
+		$plugin_file     = plugin_basename( NPCINK_AD_FILE );
 		if ( ! is_array( $network_plugins ) || ! isset( $network_plugins[ $plugin_file ] ) ) {
 			return;
 		}
@@ -118,15 +106,6 @@ final class Lifecycle {
 			} finally {
 				restore_current_blog();
 			}
-		}
-	}
-
-	/**
-	 * Remove all scheduled events registered by the discarded runtime.
-	 */
-	private static function clear_legacy_cron(): void {
-		foreach ( self::LEGACY_CRON_HOOKS as $legacy_hook ) {
-			wp_clear_scheduled_hook( $legacy_hook );
 		}
 	}
 }

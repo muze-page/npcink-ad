@@ -2,52 +2,43 @@
 /**
  * Native admin menu registration.
  *
- * @package MagickAD
+ * @package NpcinkAd
  */
 
-namespace MagickAD\Admin;
+namespace Npcink\Ad\Admin;
 
-use MagickAD\Data\Post_Types;
+use Npcink\Ad\Data\Post_Types;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Adds one menu containing the two native post type list screens.
+ * Adds one menu for the native promotion workflow.
  */
 final class Menu {
 	/**
-	 * Register the Magick AD menu and native list submenus.
+	 * Register the Npcink Ad menu and promotion list submenu.
 	 */
 	public static function register(): void {
-		$ads_url        = 'edit.php?post_type=' . Post_Types::AD_POST_TYPE;
-		$placements_url = 'edit.php?post_type=' . Post_Types::PLACEMENT_POST_TYPE;
+		$promotions_url = 'edit.php?post_type=' . Post_Types::PROMOTION_POST_TYPE;
 
 		add_menu_page(
-			__( 'Magick AD', 'magick-ad' ),
-			__( 'Magick AD', 'magick-ad' ),
-			'manage_magick_ads',
-			$ads_url,
+			__( 'Npcink Ad', 'npcink-ad' ),
+			__( 'Npcink Ad', 'npcink-ad' ),
+			'manage_npcink_ads',
+			$promotions_url,
 			'',
 			'dashicons-megaphone',
 			25
 		);
 
 		add_submenu_page(
-			$ads_url,
-			__( 'Ads', 'magick-ad' ),
-			__( 'Ads', 'magick-ad' ),
-			'manage_magick_ads',
-			$ads_url
-		);
-
-		add_submenu_page(
-			$ads_url,
-			__( 'Placements', 'magick-ad' ),
-			__( 'Placements', 'magick-ad' ),
-			'manage_magick_ads',
-			$placements_url
+			$promotions_url,
+			__( 'Promotions', 'npcink-ad' ),
+			__( 'Promotions', 'npcink-ad' ),
+			'manage_npcink_ads',
+			$promotions_url
 		);
 	}
 }

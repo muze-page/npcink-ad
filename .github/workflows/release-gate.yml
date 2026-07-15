@@ -10,8 +10,8 @@ jobs:
   release-gate:
     runs-on: ubuntu-latest
     env:
-      MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB: 40
-      MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB: 20
+      NPCINK_AD_BUNDLE_MAX_INDEX_JS_KB: 40
+      NPCINK_AD_BUNDLE_MAX_INDEX_CSS_KB: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -43,9 +43,12 @@ jobs:
       - name: Run release gate
         run: bash scripts/release-gate.sh
 
+      - name: Run current WordPress Playground matrix
+        run: WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
+
       - name: Upload release zip
         uses: actions/upload-artifact@v7
         with:
-          name: magick-ad-release
+          name: npcink-ad-release
           path: dist/*.zip
           if-no-files-found: error

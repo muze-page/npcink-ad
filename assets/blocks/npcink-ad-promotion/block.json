@@ -1,14 +1,14 @@
 {
     "$schema": "https://schemas.wp.org/trunk/block.json",
     "apiVersion": 3,
-    "name": "magick-ad/ad",
-    "title": "Magick AD（广告位）",
+    "name": "npcink-ad/promotion",
+    "title": "Npcink Ad Promotion",
     "category": "widgets",
     "icon": "megaphone",
-    "description": "在文章或模板中插入一个 Magick AD 广告位入口。",
-    "textdomain": "magick-ad",
-    "editorScript": "magick-ad-block-editor",
-    "editorStyle": "magick-ad-block-editor",
+    "description": "Insert a server-rendered Npcink Ad promotion.",
+    "textdomain": "npcink-ad",
+    "editorScript": "npcink-ad-block-editor",
+    "editorStyle": "npcink-ad-block-editor",
     "supports": {
         "html": false,
         "anchor": true,
@@ -18,7 +18,7 @@
         ]
     },
     "attributes": {
-        "placementId": {
+        "promotionId": {
             "type": "integer",
             "default": 0
         },

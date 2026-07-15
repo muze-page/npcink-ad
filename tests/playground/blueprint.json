@@ -1,9 +1,9 @@
 {
   "$schema": "https://playground.wordpress.net/blueprint-schema.json",
   "meta": {
-    "title": "Magick AD smoke test",
-    "author": "Magick AD",
-    "description": "Installs the packaged plugin and runs its WordPress integration smoke test."
+    "title": "Npcink Ad smoke test",
+    "author": "Npcink",
+    "description": "Installs the packaged plugin and verifies the single-promotion WordPress integration."
   },
   "preferredVersions": {
     "php": "8.1",
@@ -14,17 +14,17 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "bundled",
-        "path": "/magick-ad.zip"
+        "path": "/npcink-ad.zip"
       },
       "options": {
         "activate": true,
-        "targetFolderName": "magick-ad"
+        "targetFolderName": "npcink-ad"
       },
       "ifAlreadyInstalled": "overwrite"
     },
     {
       "step": "writeFile",
-      "path": "/wordpress/magick-ad-smoke.php",
+      "path": "/wordpress/npcink-ad-smoke.php",
       "data": {
         "resource": "bundled",
         "path": "/smoke.php"
@@ -32,7 +32,7 @@
     },
     {
       "step": "runPHP",
-      "code": "<?php require '/wordpress/magick-ad-smoke.php';"
+      "code": "<?php require '/wordpress/npcink-ad-smoke.php';"
     }
   ]
 }

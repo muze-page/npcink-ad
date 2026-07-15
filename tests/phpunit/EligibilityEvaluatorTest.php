@@ -2,63 +2,60 @@
 /**
  * Eligibility evaluator contract tests.
  *
- * @package MagickAD
+ * @package NpcinkAd
  */
 
-use MagickAD\Domain\Eligibility_Evaluator;
+use Npcink\Ad\Domain\Eligibility_Evaluator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Covers the pure server-side eligibility policy.
  */
 final class EligibilityEvaluatorTest extends TestCase {
-	private const NOW = 1_800_000_000;
+	private const NOW     = 1_800_000_000;
+	private const POST_ID = 42;
 
 	/**
-	 * Create a valid placement fixture.
+	 * Create a valid promotion fixture.
 	 *
-	 * @return array{status: string, device: string}
+	 * @return array<string, mixed>
 	 */
-	private function valid_placement(): array {
+	private function valid_promotion(): array {
 		return array(
-			'status' => 'publish',
-			'device' => 'all',
+			'status'      => 'publish',
+			'content'     => '<p>Current creative</p>',
+			'location'    => 'block',
+			'page_scope'  => 'all',
+			'include_ids' => array(),
+			'exclude_ids' => array(),
+			'device'      => 'all',
+			'start_at'    => self::NOW - 3600,
+			'end_at'      => self::NOW + 3600,
 		);
 	}
 
 	/**
-	 * Create a valid ad fixture.
+	 * Create a matching request context.
 	 *
-	 * @return array{status: string, end_at: int, content: string}
+	 * @return array<string, mixed>
 	 */
-	private function valid_ad(): array {
+	private function matching_context(): array {
 		return array(
-			'status' => 'publish',
-			'end_at' => self::NOW + 3600,
-			'content' => '<p>Current creative</p>',
+			'now'              => self::NOW,
+			'post_id'          => self::POST_ID,
+			'expected_location' => 'block',
+			'simulated_device'  => null,
 		);
 	}
 
 	/**
-	 * Create a desktop request context.
-	 *
-	 * @return array{now: int, is_mobile: bool}
+	 * A published, current promotion is eligible.
 	 */
-	private function desktop_context(): array {
-		return array(
-			'now'       => self::NOW,
-			'is_mobile' => false,
-		);
-	}
-
-	/**
-	 * A published, current ad is eligible.
-	 */
-	public function test_allows_a_published_current_ad_for_matching_device(): void {
+	public function test_allows_a_published_current_promotion(): void {
 		$result = ( new Eligibility_Evaluator() )->evaluate(
-			$this->valid_placement(),
-			$this->valid_ad(),
-			$this->desktop_context()
+			$this->valid_promotion(),
+			$this->matching_context()
 		);
 
 		self::assertSame(
@@ -71,101 +68,154 @@ final class EligibilityEvaluatorTest extends TestCase {
 	}
 
 	/**
-	 * Draft placements are ineligible.
+	 * Provide independent status, time, and content failures.
+	 *
+	 * @return array<string, array{string, mixed, string}>
 	 */
-	public function test_rejects_an_unpublished_placement(): void {
-		$placement           = $this->valid_placement();
-		$placement['status'] = 'draft';
-
-		$result = ( new Eligibility_Evaluator() )->evaluate(
-			$placement,
-			$this->valid_ad(),
-			$this->desktop_context()
+	public static function promotion_rule_failures(): array {
+		return array(
+			'unpublished' => array( 'status', 'draft', 'promotion_not_published' ),
+			'not started' => array( 'start_at', self::NOW + 1, 'promotion_not_started' ),
+			'expired'     => array( 'end_at', self::NOW, 'promotion_expired' ),
+			'empty'       => array( 'content', '   ', 'promotion_content_empty' ),
 		);
-
-		self::assertFalse( $result['allowed'] );
-		self::assertContains( 'placement_not_published', $result['reasons'] );
 	}
 
 	/**
-	 * A placement cannot render without its referenced ad.
+	 * Status, time, and content failures have stable reason codes.
+	 *
+	 * @param string $field  Promotion field to change.
+	 * @param mixed  $value  Replacement value.
+	 * @param string $reason Expected reason code.
 	 */
-	public function test_rejects_a_missing_ad(): void {
-		$result = ( new Eligibility_Evaluator() )->evaluate(
-			$this->valid_placement(),
-			null,
-			$this->desktop_context()
-		);
+	#[DataProvider( 'promotion_rule_failures' )]
+	public function test_rejects_promotion_rule_failures( string $field, mixed $value, string $reason ): void {
+		$promotion           = $this->valid_promotion();
+		$promotion[ $field ] = $value;
+
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $this->matching_context() );
 
 		self::assertFalse( $result['allowed'] );
-		self::assertContains( 'ad_missing', $result['reasons'] );
+		self::assertSame( array( $reason ), $result['reasons'] );
 	}
 
 	/**
-	 * Draft ads are ineligible.
+	 * A promotion starts exactly at its start timestamp.
 	 */
-	public function test_rejects_an_unpublished_ad(): void {
-		$ad           = $this->valid_ad();
-		$ad['status'] = 'draft';
+	public function test_start_time_is_inclusive(): void {
+		$promotion             = $this->valid_promotion();
+		$promotion['start_at'] = self::NOW;
 
-		$result = ( new Eligibility_Evaluator() )->evaluate(
-			$this->valid_placement(),
-			$ad,
-			$this->desktop_context()
-		);
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $this->matching_context() );
 
-		self::assertFalse( $result['allowed'] );
-		self::assertContains( 'ad_not_published', $result['reasons'] );
+		self::assertTrue( $result['allowed'] );
 	}
 
 	/**
-	 * Ads stop being eligible at their expiry timestamp.
+	 * Selected scope requires the current page in the include list.
 	 */
-	public function test_rejects_an_expired_ad(): void {
-		$ad           = $this->valid_ad();
-		$ad['end_at'] = self::NOW;
+	public function test_selected_page_scope_requires_an_included_page(): void {
+		$promotion                = $this->valid_promotion();
+		$promotion['page_scope']  = 'selected';
+		$promotion['include_ids'] = array( self::POST_ID + 1 );
 
-		$result = ( new Eligibility_Evaluator() )->evaluate(
-			$this->valid_placement(),
-			$ad,
-			$this->desktop_context()
-		);
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $this->matching_context() );
 
-		self::assertFalse( $result['allowed'] );
-		self::assertContains( 'ad_expired', $result['reasons'] );
+		self::assertSame( array( 'page_not_included' ), $result['reasons'] );
 	}
 
 	/**
-	 * Empty creative content is not renderable.
+	 * Selected scope allows an explicitly included page.
 	 */
-	public function test_rejects_an_ad_with_empty_content(): void {
-		$ad            = $this->valid_ad();
-		$ad['content'] = '   ';
+	public function test_selected_page_scope_allows_an_included_page(): void {
+		$promotion                = $this->valid_promotion();
+		$promotion['page_scope']  = 'selected';
+		$promotion['include_ids'] = array( self::POST_ID );
 
-		$result = ( new Eligibility_Evaluator() )->evaluate(
-			$this->valid_placement(),
-			$ad,
-			$this->desktop_context()
-		);
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $this->matching_context() );
 
-		self::assertFalse( $result['allowed'] );
-		self::assertContains( 'ad_content_empty', $result['reasons'] );
+		self::assertTrue( $result['allowed'] );
 	}
 
 	/**
-	 * Device-specific placements must match request context.
+	 * Exclusion takes precedence over all-page and selected-page scope.
+	 *
+	 * @param string $scope Page scope.
 	 */
-	public function test_rejects_a_device_mismatch(): void {
-		$placement           = $this->valid_placement();
-		$placement['device'] = 'mobile';
+	#[DataProvider( 'page_scopes' )]
+	public function test_excluded_page_is_always_rejected( string $scope ): void {
+		$promotion                = $this->valid_promotion();
+		$promotion['page_scope']  = $scope;
+		$promotion['include_ids'] = array( self::POST_ID );
+		$promotion['exclude_ids'] = array( self::POST_ID );
 
-		$result = ( new Eligibility_Evaluator() )->evaluate(
-			$placement,
-			$this->valid_ad(),
-			$this->desktop_context()
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $this->matching_context() );
+
+		self::assertSame( array( 'page_excluded' ), $result['reasons'] );
+	}
+
+	/**
+	 * Provide supported page scopes.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function page_scopes(): array {
+		return array(
+			'all'      => array( 'all' ),
+			'selected' => array( 'selected' ),
 		);
+	}
 
-		self::assertFalse( $result['allowed'] );
-		self::assertContains( 'device_mismatch', $result['reasons'] );
+	/**
+	 * Delivery locations must match.
+	 */
+	public function test_rejects_a_location_mismatch(): void {
+		$context                      = $this->matching_context();
+		$context['expected_location'] = 'content_after';
+
+		$result = ( new Eligibility_Evaluator() )->evaluate( $this->valid_promotion(), $context );
+
+		self::assertSame( array( 'location_mismatch' ), $result['reasons'] );
+	}
+
+	/**
+	 * Preview device simulation rejects a mismatched targeted device.
+	 */
+	public function test_preview_rejects_a_device_mismatch(): void {
+		$promotion                      = $this->valid_promotion();
+		$promotion['device']            = 'mobile';
+		$context                        = $this->matching_context();
+		$context['simulated_device']    = 'desktop';
+
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $context );
+
+		self::assertSame( array( 'device_mismatch' ), $result['reasons'] );
+	}
+
+	/**
+	 * Matching preview simulation allows the targeted device.
+	 */
+	public function test_preview_allows_a_matching_device(): void {
+		$promotion                   = $this->valid_promotion();
+		$promotion['device']         = 'mobile';
+		$context                     = $this->matching_context();
+		$context['simulated_device'] = 'mobile';
+
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $context );
+
+		self::assertTrue( $result['allowed'] );
+	}
+
+	/**
+	 * Normal delivery never server-splits HTML by device.
+	 */
+	public function test_normal_delivery_ignores_device_targeting(): void {
+		$promotion           = $this->valid_promotion();
+		$promotion['device'] = 'mobile';
+
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $this->matching_context() );
+
+		self::assertTrue( $result['allowed'] );
+		self::assertSame( array(), $result['reasons'] );
 	}
 }

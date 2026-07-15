@@ -2,7 +2,7 @@
 /**
  * PHPUnit bootstrap for pure domain tests.
  *
- * @package MagickAD
+ * @package NpcinkAd
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

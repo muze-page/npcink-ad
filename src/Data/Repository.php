@@ -2,10 +2,10 @@
 /**
  * Maps native WordPress posts to the delivery domain.
  *
- * @package MagickAD
+ * @package NpcinkAd
  */
 
-namespace MagickAD\Data;
+namespace Npcink\Ad\Data;
 
 use DateTimeImmutable;
 
@@ -14,64 +14,43 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Read-only repository for ads and placements.
+ * Read-only repository for promotions.
  */
 final class Repository {
 	/**
-	 * Get a placement as domain data.
+	 * Get a promotion as normalized domain data.
 	 *
-	 * @param int $placement_id Placement post ID.
+	 * @param int $promotion_id Promotion post ID.
 	 * @return array<string, mixed>|null
 	 */
-	public function find_placement( int $placement_id ): ?array {
-		$post = get_post( $placement_id );
-		if ( ! $post || Post_Types::PLACEMENT_POST_TYPE !== $post->post_type ) {
+	public function find_promotion( int $promotion_id ): ?array {
+		if ( 1 > $promotion_id ) {
+			return null;
+		}
+
+		$post = get_post( $promotion_id );
+		if ( ! $post || Post_Types::PROMOTION_POST_TYPE !== $post->post_type ) {
 			return null;
 		}
 
 		return array(
-			'id'       => $post->ID,
-			'status'   => $post->post_status,
-			'ad_id'    => (int) get_post_meta( $post->ID, Post_Types::PLACEMENT_AD_META, true ),
-			'location' => Post_Types::sanitize_location(
-				get_post_meta( $post->ID, Post_Types::PLACEMENT_LOCATION, true )
-			),
-			'device'   => Post_Types::sanitize_device(
-				get_post_meta( $post->ID, Post_Types::PLACEMENT_DEVICE_META, true )
-			),
+			'id'          => $post->ID,
+			'status'      => $post->post_status,
+			'content'     => $post->post_content,
+			'location'    => Post_Types::sanitize_location( get_post_meta( $post->ID, Post_Types::LOCATION_META, true ) ),
+			'page_scope'  => Post_Types::sanitize_page_scope( get_post_meta( $post->ID, Post_Types::PAGE_SCOPE_META, true ) ),
+			'include_ids' => Post_Types::sanitize_post_ids( get_post_meta( $post->ID, Post_Types::INCLUDE_IDS_META, true ) ),
+			'exclude_ids' => Post_Types::sanitize_post_ids( get_post_meta( $post->ID, Post_Types::EXCLUDE_IDS_META, true ) ),
+			'device'      => Post_Types::sanitize_device( get_post_meta( $post->ID, Post_Types::DEVICE_META, true ) ),
+			'start_at'    => $this->datetime_to_timestamp( (string) get_post_meta( $post->ID, Post_Types::START_AT_META, true ) ),
+			'end_at'      => $this->datetime_to_timestamp( (string) get_post_meta( $post->ID, Post_Types::END_AT_META, true ) ),
 		);
 	}
 
 	/**
-	 * Get an ad as domain data.
+	 * Find all published promotion IDs for an automatic content location.
 	 *
-	 * @param int $ad_id Ad post ID.
-	 * @return array<string, mixed>|null
-	 */
-	public function find_ad( int $ad_id ): ?array {
-		if ( 1 > $ad_id ) {
-			return null;
-		}
-
-		$post = get_post( $ad_id );
-		if ( ! $post || Post_Types::AD_POST_TYPE !== $post->post_type ) {
-			return null;
-		}
-
-		$end_at = (string) get_post_meta( $post->ID, Post_Types::AD_END_AT_META, true );
-
-		return array(
-			'id'      => $post->ID,
-			'status'  => $post->post_status,
-			'end_at'  => $this->datetime_to_timestamp( $end_at ),
-			'content' => $post->post_content,
-		);
-	}
-
-	/**
-	 * Find all enabled placement IDs for a content location.
-	 *
-	 * @param string $location One of the registered content locations.
+	 * @param string $location One of the automatic content locations.
 	 * @return list<int>
 	 */
 	public function find_published_ids_by_location( string $location ): array {
@@ -79,18 +58,38 @@ final class Repository {
 			return array();
 		}
 
+		$location_query = array(
+			array(
+				'key'     => Post_Types::LOCATION_META,
+				'value'   => $location,
+				'compare' => '=',
+			),
+		);
+		if ( 'content_after' === $location ) {
+			$location_query = array(
+				'relation' => 'OR',
+				...$location_query,
+				array(
+					'key'     => Post_Types::LOCATION_META,
+					'compare' => 'NOT EXISTS',
+				),
+			);
+		}
+
 		$ids = get_posts(
 			array(
-				'post_type'      => Post_Types::PLACEMENT_POST_TYPE,
-				'post_status'    => 'publish',
-				'posts_per_page' => -1,
-				'fields'         => 'ids',
-				'orderby'        => array(
+				'post_type'              => Post_Types::PROMOTION_POST_TYPE,
+				'post_status'            => 'publish',
+				'posts_per_page'         => -1,
+				'fields'                 => 'ids',
+				'orderby'                => array(
 					'menu_order' => 'ASC',
 					'ID'         => 'ASC',
 				),
-				'meta_key'       => Post_Types::PLACEMENT_LOCATION,
-				'meta_value'     => $location,
+				'meta_query'             => $location_query,
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
 			)
 		);
 
@@ -98,9 +97,9 @@ final class Repository {
 	}
 
 	/**
-	 * Parse a WordPress local datetime without relying on PHP's server timezone.
+	 * Parse a WordPress-local datetime without relying on PHP's server timezone.
 	 *
-	 * @param string $value WordPress local datetime.
+	 * @param string $value WordPress-local datetime.
 	 */
 	private function datetime_to_timestamp( string $value ): int {
 		if ( '' === $value ) {

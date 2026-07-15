@@ -1,29 +1,30 @@
 <?php
 /**
- * Dynamic ad placement block registration.
+ * Dynamic promotion placement block registration.
  *
- * @package MagickAD
+ * @package NpcinkAd
  */
 
-namespace MagickAD\Blocks;
+namespace Npcink\Ad\Blocks;
 
-use MagickAD\Frontend\Delivery;
+use Npcink\Ad\Frontend\Delivery;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Registers the one server-rendered Magick AD block.
+ * Registers the one server-rendered Npcink Ad block.
  */
 final class Blocks {
-	private const EDITOR_SCRIPT = 'magick-ad-block-editor';
-	private const EDITOR_STYLE  = 'magick-ad-block-editor';
+	private const EDITOR_SCRIPT = 'npcink-ad-block-editor';
+	private const EDITOR_STYLE  = 'npcink-ad-block-editor';
+	private const FRONTEND_STYLE = 'npcink-ad-frontend';
 
 	/**
 	 * Store the delivery orchestrator used by the render callback.
 	 *
-	 * @param Delivery $delivery Placement delivery orchestrator.
+	 * @param Delivery $delivery Promotion delivery orchestrator.
 	 */
 	public function __construct( private readonly Delivery $delivery ) {}
 
@@ -31,7 +32,7 @@ final class Blocks {
 	 * Register the block, build-produced editor script, and editor styles.
 	 */
 	public function register(): void {
-		$block_dir = MAGICK_AD_PATH . 'assets/blocks/magick-ad-ad';
+		$block_dir = NPCINK_AD_PATH . 'assets/blocks/npcink-ad-promotion';
 		if ( ! file_exists( $block_dir . '/block.json' ) ) {
 			return;
 		}
@@ -49,24 +50,31 @@ final class Blocks {
 	}
 
 	/**
-	 * Render the placement referenced by block attributes.
+	 * Render the promotion referenced by block attributes.
 	 *
 	 * The editor controls whether it calls server-side rendering. The server
-	 * protects delivery diagnostics with the manage_magick_ads capability.
+	 * protects delivery diagnostics with the manage_npcink_ads capability.
 	 *
 	 * @param array<string, mixed> $attributes Block attributes.
 	 */
 	public function render( array $attributes ): string {
-		$placement_id = isset( $attributes['placementId'] ) ? absint( $attributes['placementId'] ) : 0;
-		$reserve       = isset( $attributes['reserveHeight'] ) ? absint( $attributes['reserveHeight'] ) : 0;
-		$content = $this->delivery->render_placement( $placement_id, 'block', $reserve );
+		$promotion_id = isset( $attributes['promotionId'] ) ? absint( $attributes['promotionId'] ) : 0;
+		$reserve      = isset( $attributes['reserveHeight'] ) ? absint( $attributes['reserveHeight'] ) : 0;
+		$is_editor_preview =
+			! empty( $attributes['preview'] ) &&
+			defined( 'REST_REQUEST' ) &&
+			REST_REQUEST &&
+			current_user_can( 'manage_npcink_ads' );
+		$content = $is_editor_preview
+			? $this->delivery->render_preview( $promotion_id, 'block', null, null, $reserve )
+			: $this->delivery->render_promotion( $promotion_id, 'block', $reserve );
 		if ( '' === $content ) {
 			return '';
 		}
 
 		return sprintf(
 			'<div %1$s>%2$s</div>',
-			get_block_wrapper_attributes( array( 'class' => 'magick-ad-block' ) ),
+			get_block_wrapper_attributes( array( 'class' => 'npcink-ad-block' ) ),
 			$content
 		);
 	}
@@ -75,17 +83,17 @@ final class Blocks {
 	 * Register the single generated editor entrypoint and its stylesheet.
 	 */
 	private function register_editor_assets(): void {
-		$asset_file = MAGICK_AD_PATH . 'build/index.asset.php';
+		$asset_file = NPCINK_AD_PATH . 'build/index.asset.php';
 		$asset      = file_exists( $asset_file ) ? require $asset_file : array();
 		$asset      = is_array( $asset ) ? $asset : array();
-		$version    = isset( $asset['version'] ) ? (string) $asset['version'] : MAGICK_AD_VERSION;
+		$version    = isset( $asset['version'] ) ? (string) $asset['version'] : NPCINK_AD_VERSION;
 		$depends    = isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] )
 			? $asset['dependencies']
 			: array();
 
 		wp_register_script(
 			self::EDITOR_SCRIPT,
-			MAGICK_AD_URL . 'build/index.js',
+			NPCINK_AD_URL . 'build/index.js',
 			$depends,
 			$version,
 			true
@@ -93,9 +101,16 @@ final class Blocks {
 
 		wp_register_style(
 			self::EDITOR_STYLE,
-			MAGICK_AD_URL . 'build/index.css',
+			NPCINK_AD_URL . 'build/index.css',
 			array( 'wp-edit-blocks' ),
 			$version
+		);
+
+		wp_register_style(
+			self::FRONTEND_STYLE,
+			NPCINK_AD_URL . 'assets/css/frontend.css',
+			array(),
+			NPCINK_AD_VERSION
 		);
 	}
 }

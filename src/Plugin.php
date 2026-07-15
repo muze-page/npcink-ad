@@ -2,20 +2,23 @@
 /**
  * Runtime composition root.
  *
- * @package MagickAD
+ * @package NpcinkAd
  */
 
-namespace MagickAD;
+namespace Npcink\Ad;
 
-use MagickAD\Admin\Menu;
-use MagickAD\Admin\Meta_Boxes;
-use MagickAD\Blocks\Blocks;
-use MagickAD\Data\Post_Types;
-use MagickAD\Data\Repository;
-use MagickAD\Domain\Eligibility_Evaluator;
-use MagickAD\Frontend\Delivery;
-use MagickAD\Frontend\Renderer;
-use MagickAD\REST\Core_Rest_Guard;
+use Npcink\Ad\Admin\Editor;
+use Npcink\Ad\Admin\Menu;
+use Npcink\Ad\Admin\Preview_Page;
+use Npcink\Ad\Blocks\Blocks;
+use Npcink\Ad\Blocks\Patterns;
+use Npcink\Ad\Data\Post_Types;
+use Npcink\Ad\Data\Repository;
+use Npcink\Ad\Domain\Eligibility_Evaluator;
+use Npcink\Ad\Frontend\Delivery;
+use Npcink\Ad\Frontend\Preview_Request;
+use Npcink\Ad\Frontend\Renderer;
+use Npcink\Ad\REST\Core_Rest_Guard;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -29,23 +32,27 @@ final class Plugin {
 	 * Register runtime hooks.
 	 */
 	public function init(): void {
+		$repository = new Repository();
 		$delivery = new Delivery(
-			new Repository(),
+			$repository,
 			new Eligibility_Evaluator(),
 			new Renderer()
 		);
-		$blocks   = new Blocks( $delivery );
+		$blocks  = new Blocks( $delivery );
+		$preview = new Preview_Request( $delivery, $repository );
 
 		add_action( 'init', array( Post_Types::class, 'register' ), 5 );
 		add_action( 'init', array( $delivery, 'register' ), 10 );
+		add_action( 'init', array( Patterns::class, 'register' ), 15 );
 		add_action( 'init', array( $blocks, 'register' ), 20 );
+		$preview->register();
 		Core_Rest_Guard::register();
 		Lifecycle::register_new_site_hook();
 
 		if ( is_admin() ) {
 			add_action( 'admin_menu', array( Menu::class, 'register' ) );
-			add_action( 'add_meta_boxes', array( Meta_Boxes::class, 'register' ) );
-			add_action( 'save_post', array( Meta_Boxes::class, 'save' ), 10, 2 );
+			add_action( 'admin_menu', array( Preview_Page::class, 'register' ), 20 );
+			add_action( 'enqueue_block_editor_assets', array( Editor::class, 'enqueue' ) );
 		}
 	}
 }

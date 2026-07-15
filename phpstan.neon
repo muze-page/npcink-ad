@@ -5,7 +5,7 @@ parameters:
     level: 6
     paths:
         - src
-        - magick-ad.php
+        - npcink-ad.php
         - uninstall.php
     bootstrapFiles:
         - tests/phpstan/bootstrap.php

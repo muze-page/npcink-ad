@@ -1,11 +1,11 @@
 <?php
 /**
- * Server-side ad and management-placeholder rendering.
+ * Server-side promotion and management-placeholder rendering.
  *
- * @package MagickAD
+ * @package NpcinkAd
  */
 
-namespace MagickAD\Frontend;
+namespace Npcink\Ad\Frontend;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -15,15 +15,17 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Renders trusted post content without recursively invoking the_content.
  */
 final class Renderer {
+	private const FRONTEND_STYLE = 'npcink-ad-frontend';
+
 	/**
-	 * Render an eligible ad.
+	 * Render an eligible promotion.
 	 *
-	 * @param array<string, mixed> $placement Placement data.
-	 * @param array<string, mixed> $ad        Ad data.
+	 * @param array<string, mixed> $promotion Promotion data.
 	 * @param int                  $reserve   Minimum reserved height in pixels.
+	 * @param bool                 $apply_device_rule Whether to apply the stored device class.
 	 */
-	public function render( array $placement, array $ad, int $reserve = 0 ): string {
-		$content = isset( $ad['content'] ) ? (string) $ad['content'] : '';
+	public function render( array $promotion, int $reserve = 0, bool $apply_device_rule = true ): string {
+		$content = isset( $promotion['content'] ) ? (string) $promotion['content'] : '';
 		if ( has_blocks( $content ) ) {
 			$content = do_blocks( $content );
 		} else {
@@ -31,15 +33,50 @@ final class Renderer {
 		}
 		$content = wp_kses_post( $content );
 
-		$placement_id = isset( $placement['id'] ) ? absint( $placement['id'] ) : 0;
-		$style         = $this->reserve_style( $reserve );
+		$promotion_id = isset( $promotion['id'] ) ? absint( $promotion['id'] ) : 0;
+		$device       = $apply_device_rule && isset( $promotion['device'] )
+			? sanitize_key( (string) $promotion['device'] )
+			: 'all';
+		if ( ! in_array( $device, array( 'all', 'desktop', 'mobile' ), true ) ) {
+			$device = 'all';
+		}
+
+		wp_enqueue_style( self::FRONTEND_STYLE );
 
 		return sprintf(
-			'<div class="magick-ad-placement" data-magick-ad-placement="%1$d" aria-label="%2$s"%3$s>%4$s</div>',
-			$placement_id,
-			esc_attr__( 'Advertisement', 'magick-ad' ),
-			$style,
+			'<div class="npcink-ad-promotion npcink-ad-device-%1$s" data-npcink-ad-promotion="%2$d" aria-label="%3$s"%4$s>%5$s</div>',
+			esc_attr( $device ),
+			$promotion_id,
+			esc_attr__( 'Promotion', 'npcink-ad' ),
+			$this->reserve_style( $reserve ),
 			$content
+		);
+	}
+
+	/**
+	 * Force-render creative with a truthful eligibility verdict for managers.
+	 *
+	 * @param array<string, mixed>                        $promotion Promotion data.
+	 * @param array{allowed: bool, reasons: list<string>} $result    Eligibility result.
+	 * @param int                                         $reserve   Minimum reserved height.
+	 */
+	public function render_preview( array $promotion, array $result, int $reserve = 0 ): string {
+		$messages = $this->reason_messages( $result['reasons'] );
+		if ( $result['allowed'] ) {
+			$verdict = __( 'Eligible: this promotion will display in the selected page and device context.', 'npcink-ad' );
+		} else {
+			$verdict = sprintf(
+				/* translators: %s: one or more promotion eligibility explanations. */
+				__( 'Not currently eligible: %s', 'npcink-ad' ),
+				implode( ' ', $messages )
+			);
+		}
+
+		return sprintf(
+			'<div class="npcink-ad-preview"><div class="npcink-ad-preview-verdict%1$s"><strong>%2$s</strong></div>%3$s</div>',
+			$result['allowed'] ? '' : ' is-blocked',
+			esc_html( $verdict ),
+			$this->render( $promotion, $reserve, false )
 		);
 	}
 
@@ -51,16 +88,35 @@ final class Renderer {
 	 * @phpstan-param list<string> $reasons
 	 */
 	public function placeholder( array $reasons, int $reserve = 0 ): string {
+		$messages = $this->reason_messages( $reasons );
+
+		return sprintf(
+			'<div class="npcink-ad-placeholder"%1$s><strong>%2$s</strong> %3$s</div>',
+			$this->reserve_style( $reserve ),
+			esc_html__( 'Npcink Ad:', 'npcink-ad' ),
+			esc_html( implode( ' ', $messages ) )
+		);
+	}
+
+	/**
+	 * Translate stable reason codes without exposing internal identifiers.
+	 *
+	 * @param array $reasons Reason codes.
+	 * @return list<string>
+	 * @phpstan-param list<string> $reasons
+	 */
+	private function reason_messages( array $reasons ): array {
 		$labels = array(
-			'placement_missing'       => __( 'Select a placement.', 'magick-ad' ),
-			'placement_not_published' => __( 'The placement is not published.', 'magick-ad' ),
-			'location_mismatch'       => __( 'The placement location does not match this delivery method.', 'magick-ad' ),
-			'ad_missing'              => __( 'The placement has no valid ad.', 'magick-ad' ),
-			'ad_not_published'        => __( 'The assigned ad is not published.', 'magick-ad' ),
-			'ad_expired'              => __( 'The assigned ad has expired.', 'magick-ad' ),
-			'device_mismatch'         => __( 'The placement does not target this device.', 'magick-ad' ),
-			'ad_content_empty'        => __( 'The assigned ad has no content.', 'magick-ad' ),
-			'recursive_placement'     => __( 'The placement recursively includes itself.', 'magick-ad' ),
+			'promotion_missing'       => __( 'Select a promotion.', 'npcink-ad' ),
+			'promotion_not_published' => __( 'The promotion is not published.', 'npcink-ad' ),
+			'promotion_not_started'   => __( 'The promotion has not started.', 'npcink-ad' ),
+			'promotion_expired'       => __( 'The promotion has expired.', 'npcink-ad' ),
+			'promotion_content_empty' => __( 'The promotion has no content.', 'npcink-ad' ),
+			'page_not_included'       => __( 'This page is not included.', 'npcink-ad' ),
+			'page_excluded'           => __( 'This page is excluded.', 'npcink-ad' ),
+			'location_mismatch'       => __( 'The promotion location does not match this delivery method.', 'npcink-ad' ),
+			'device_mismatch'         => __( 'The promotion does not target the simulated device.', 'npcink-ad' ),
+			'recursive_promotion'     => __( 'The promotion recursively includes itself.', 'npcink-ad' ),
 		);
 		$messages = array();
 		foreach ( $reasons as $reason ) {
@@ -70,15 +126,10 @@ final class Renderer {
 		}
 
 		if ( array() === $messages ) {
-			$messages[] = __( 'This placement is not eligible to render.', 'magick-ad' );
+			$messages[] = __( 'This promotion is not eligible to render.', 'npcink-ad' );
 		}
 
-		return sprintf(
-			'<div class="magick-ad-placeholder"%1$s><strong>%2$s</strong> %3$s</div>',
-			$this->reserve_style( $reserve ),
-			esc_html__( 'Magick AD:', 'magick-ad' ),
-			esc_html( implode( ' ', $messages ) )
-		);
+		return $messages;
 	}
 
 	/**

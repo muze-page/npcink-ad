@@ -1,9 +1,40 @@
-.magick-ad-block-editor {
+.npcink-ad-block-editor {
 	min-height: 120px;
 }
 
-.magick-ad-block-editor__placeholder {
+.npcink-ad-block-editor__placeholder {
 	box-sizing: border-box;
 	min-height: 120px;
 	border: 1px dashed #949494;
+}
+
+.npcink-ad-editor-panel .components-base-control,
+.npcink-ad-editor-panel .components-panel__body {
+	margin-bottom: 16px;
+}
+
+.npcink-ad-content-picker__selected {
+	display: grid;
+	gap: 4px;
+	margin: 8px 0 16px;
+	padding: 0;
+	list-style: none;
+}
+
+.npcink-ad-content-picker__selected li {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-height: 40px;
+	padding: 0 4px 0 12px;
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	background: #fff;
+}
+
+.npcink-ad-content-picker__selected span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }

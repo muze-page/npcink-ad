@@ -1,74 +1,67 @@
-# Magick AD 0.2 Architecture Overview
+# Npcink Ad 0.1 Architecture Overview
 
 ## 1. 核心链路
 
-0.2 只有一条运行链路：
+1. 编辑者在 `npcink_promotion` 的原生区块编辑器中完成创意和展示规则。
+2. 编辑器侧栏通过 Core REST 保存 typed meta，不维护第二份设置对象。
+3. 真实页面预览与正式前台都把 Promotion 和页面上下文交给同一个 `Eligibility_Evaluator`。
+4. 判断通过后由服务端 Renderer 输出区块内容；匿名访问不会看到诊断信息或未发布创意。
+5. Promotion 改为草稿即暂停，开始/结束时间由站点时区解释。
 
-1. 管理员使用 WordPress 原生编辑器维护广告和投放位。
-2. 动态区块或 WordPress 内容钩子提供一个投放位 ID。
-3. 服务端加载投放位及其广告，交给纯 `Eligibility_Evaluator` 判断。
-4. 判断通过后服务端渲染广告区块内容；拒绝时返回稳定 reason code，前台不输出广告。
-
-没有浏览器端广告解析、追踪写入或异步数据管线。
+没有浏览器端规则解析、访客追踪、异步事件管线或自定义数据表。
 
 ## 2. 数据模型
 
-### `magick_ad`
+唯一 CPT 是 `npcink_promotion`：
 
-- `post_content`：广告区块内容。
-- `post_status`：发布控制。
-- `_magick_ad_end_at`：可选的 WordPress 本地日期时间字符串（`Y-m-d H:i:s`）；Repository 使用站点时区转换为 evaluator 所需的 Unix timestamp。
+- `post_title`、`post_content`：标题和原生区块创意；
+- `post_status`：草稿/发布的唯一状态真相；
+- `_npcink_ad_location`：`block | content_before | content_after`；
+- `_npcink_ad_page_scope`：`all | selected`；
+- `_npcink_ad_include_ids`、`_npcink_ad_exclude_ids`：去重、最多 50 个正整数 ID；
+- `_npcink_ad_device`：`all | desktop | mobile`；
+- `_npcink_ad_start_at`、`_npcink_ad_end_at`：可选的 WordPress 本地时间。
 
-### `magick_ad_placement`
-
-- `post_status`：发布控制。
-- `_magick_ad_ad_id`：关联广告 ID。
-- `_magick_ad_location`：投放位置。
-- `_magick_ad_device`：`all`、`desktop` 或 `mobile`。
-
-所有业务 meta 都必须通过 `register_post_meta()` 提供类型、sanitize callback、auth callback 和 REST schema。两个 CPT 使用 WordPress 核心 REST 支撑编辑器，但整个相关路由前缀均要求 `manage_magick_ads`；发布状态不会让广告创意成为匿名公开 API。CPT、meta、状态和内容是唯一事实来源；运行时不得再复制到 Options 或自定义表。
+全部 meta 都有 REST schema、sanitize callback、auth callback 和 revision 支持。管理路由要求 `manage_npcink_ads`，该能力默认授予 administrator 和 editor。
 
 ## 3. 模块边界
 
-- 插件入口负责版本门控、常量、自动加载和启动，不包含业务判断。
-- 数据模块只负责注册两个 CPT 和 typed meta。
-- `MagickAD\Domain\Eligibility_Evaluator` 不调用 WordPress API，因此可以使用普通 PHPUnit 确定性测试。
-- 展示协调层负责加载 WordPress 对象、构造 evaluator 输入并渲染内容。
-- 动态区块仅保存投放位引用和编辑器表现属性；自动位置复用同一展示协调层。
+- `Post_Types`：唯一 CPT、typed meta 与输入规范化；
+- `Repository`：把 WordPress Post/meta 映射为领域数组；
+- `Eligibility_Evaluator`：无 WordPress 调用的纯策略，输出 `allowed + reasons`；
+- `Delivery`：构造页面、位置、时间和预览设备上下文；
+- `Renderer`：安全渲染创意、管理占位和预览结论；
+- `Preview_Request`：校验 capability + nonce，关闭缓存并在真实页面强制显示预览；
+- `Editor` / `Preview_Page`：侧栏设置与桌面/移动 iframe 画布；
+- `Blocks` / `Patterns`：一个动态引用区块和三个 Core block 起步样式。
 
-## 4. 展示规则
+## 4. 稳定 reason codes
 
-Evaluator 返回：
+- `promotion_not_published`
+- `promotion_not_started`
+- `promotion_expired`
+- `promotion_content_empty`
+- `page_not_included`
+- `page_excluded`
+- `location_mismatch`
+- `device_mismatch`（只用于显式预览设备上下文）
 
-```php
-array(
-    'allowed' => true,
-    'reasons' => array(),
-);
-```
+协调层还可产生 `promotion_missing` 与 `recursive_promotion`。新增规则必须先扩充 evaluator 的表驱动测试。
 
-拒绝原因是稳定的内部诊断契约：
+## 5. 预览、安全和缓存
 
-- `placement_not_published`
-- `ad_missing`
-- `ad_not_published`
-- `ad_expired`
-- `ad_content_empty`
-- `device_mismatch`
-
-新增规则必须先扩充纯 evaluator 测试，再接入 WordPress 协调层。
-
-## 5. 明确删除的边界
-
-0.1 的自定义 REST 控制器、管理端 SPA、统计表、事件追踪、队列、Cron、CMP 猜测、A/B、模板与迁移器均不属于 0.2。完整决策和替代方案见 `docs/decisions/001-pre-ga-native-wordpress-baseline.md`。
+- 预览 URL 绑定 Promotion nonce，只允许拥有 `manage_npcink_ads` 的登录用户；
+- 预览响应发送 no-cache 与 noindex 头，匿名请求返回 403；
+- 预览与正式投放共用 evaluator/renderer，唯一差异是管理者可强制看见被规则阻止的创意；
+- 正式设备规则使用 CSS 断点，HTML 不按 User-Agent 分叉；
+- 第三方整页缓存可能延迟发布、暂停和时间边界，0.1 要求站点配置 TTL 或主动清理缓存，不宣称穿透任意缓存。
 
 ## 6. 质量和发布
 
-- PHPUnit：纯业务规则。
-- PHPCS：单一 WordPress Coding Standards 规则集。
-- PHPStan：WordPress stubs 和插件常量 bootstrap。
-- 前端：TypeScript/type lint、样式 lint、生产构建和包体预算。
-- 发布：固定 `magick-ad` 根目录，校验完整运行时必需文件，并禁止开发依赖、源前端、测试和文档进入 zip。
-- WordPress 集成：`tests/playground/` 从发布 zip 安装插件，验证激活、CPT/meta、动态区块、短代码、匿名 REST 权限和过期广告拒绝。
+- PHPUnit：页面、时间、位置和预览设备规则；
+- PHPCS / PHPStan：WordPress 编码、安全与类型边界；
+- TypeScript / JS / CSS lint：编辑器与动态区块；
+- Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、REST、无表/Options、卸载；
+- Local 浏览器：同一编辑页创建规则、真实主题预览、发布/暂停和匿名前台。
 
-Playground fixture 覆盖服务端 WordPress 集成，但不替代浏览器级区块编辑器交互。发布前仍需在真实浏览器中完成选择投放位、保存文章和前台查看的显式人工检查。
+发布包固定为 `npcink-ad/`，包含构建产物、运行 PHP、前端/预览 CSS、`readme.txt` 和许可证，不包含源码 JS、测试、文档或旧品牌运行标识。

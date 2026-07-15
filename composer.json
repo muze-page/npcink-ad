@@ -1,6 +1,6 @@
 {
-    "name": "magick-ad/wp-plugin",
-    "description": "Native WordPress advertising placements.",
+    "name": "npcink/npcink-ad",
+    "description": "Create, preview, and publish site-owned WordPress promotions.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {

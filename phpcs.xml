@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<ruleset name="Magick AD">
-    <description>Magick AD WordPress coding standards.</description>
+<ruleset name="Npcink Ad">
+    <description>Npcink Ad WordPress coding standards.</description>
 
     <arg name="basepath" value="."/>
     <arg name="colors"/>
@@ -9,7 +9,7 @@
     <arg name="warning-severity" value="0"/>
     <arg value="sp"/>
 
-    <file>magick-ad.php</file>
+    <file>npcink-ad.php</file>
     <file>uninstall.php</file>
     <file>src</file>
     <file>tests/phpunit</file>
@@ -31,7 +31,7 @@
     <rule ref="WordPress.WP.Capabilities">
         <properties>
             <property name="custom_capabilities" type="array">
-                <element value="manage_magick_ads"/>
+                <element value="manage_npcink_ads"/>
             </property>
         </properties>
     </rule>

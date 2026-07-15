@@ -1,6 +1,6 @@
 {
-  "name": "magick-ad",
-  "version": "0.2.0",
+  "name": "npcink-ad",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "start": "wp-scripts start --webpack-src-dir=assets/js --webpack-output-dir=build",
@@ -16,7 +16,9 @@
     "@wordpress/components": "wp-7.0",
     "@wordpress/core-data": "wp-7.0",
     "@wordpress/data": "wp-7.0",
+    "@wordpress/editor": "wp-7.0",
     "@wordpress/i18n": "wp-7.0",
+    "@wordpress/plugins": "wp-7.0",
     "@wordpress/scripts": "wp-7.0",
     "@wordpress/server-side-render": "wp-7.0",
     "@types/react": "18.3.27",
@@ -24,6 +26,6 @@
     "@types/wordpress__blocks": "15.10.2",
     "@types/wordpress__server-side-render": "6.15.0",
     "react": "18.3.1",
-    "typescript": "5.9.3"
+    "typescript": "5.3.3"
   }
 }

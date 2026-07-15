@@ -1,25 +1,26 @@
-# Magick AD WP
+# Npcink Ad
 
-Magick AD 0.2 is a pre-GA, WordPress-native advertising placement baseline. It intentionally supports one delivery loop: create an ad, assign it to a placement, evaluate it on the server, and render it on the server.
+Npcink Ad 0.1 is a WordPress-native, privacy-first workflow for site-owned promotions. It has one primary path: **create creative → set delivery rules → verify a real-page verdict → publish or pause**.
 
-> Version 0.2 is a destructive reset. It does not migrate 0.1 development data, REST APIs, options, or custom tables. Discard old test data before activating it.
+> Version 0.1 defines a new pre-GA contract. It provides no compatibility layer for previous development data, APIs, blocks, or storage identifiers.
 
-## Current boundary
+## Product boundary
 
-- Ads use the `magick_ad` post type. Block content is the creative and `_magick_ad_end_at` is an optional WordPress-local datetime string.
-- Placements use the `magick_ad_placement` post type with typed `_magick_ad_ad_id`, `_magick_ad_location`, and `_magick_ad_device` meta.
-- Both post types use WordPress core REST endpoints for the editor, but every related endpoint requires `manage_magick_ads`; ad creative is not an anonymous public API.
-- A pure PHP evaluator returns an `allowed` boolean and stable reason codes.
-- The dynamic block and automatic locations apply the same publish-status, expiry, and device rules on the server.
-- The block stores only `placementId`, `reserveHeight`, and `preview`; it does not duplicate creative content.
+- `npcink_promotion` is the only content type. Title, block content, draft/published state, and every delivery rule live on one record.
+- Typed metadata stores location, page scope, included/excluded content, device, start time, and end time.
+- Locations are limited to a manual block, before content, and after content. The block and shortcode reference a Promotion ID directly.
+- Real-page preview uses the site's theme and the same PHP evaluator as live delivery. Managers may inspect blocked creative, but the verdict remains truthful.
+- Live delivery evaluates status, page, and schedule on the server. CSS breakpoints handle device visibility so cached HTML is not split by User-Agent.
+- Management REST requires `manage_npcink_ads`; activation grants it to WordPress administrators and editors.
+- Default delivery adds no tracking request, visitor cookie, custom table, statistics queue, or required frontend JavaScript.
 
-See [ADR 001](docs/decisions/001-pre-ga-native-wordpress-baseline.md) for the decision and [the architecture overview](docs/architecture-overview.md) for module boundaries.
+See [the product contract](docs/product-contract.md), [ADR 003](docs/decisions/003-single-promotion-record.md), and [the architecture overview](docs/architecture-overview.md).
 
 ## Non-goals
 
-Version 0.2 has no analytics, tracking, reports, A/B tests, CMP or consent detection, popup builder, arbitrary custom JavaScript, template migrations, custom REST controllers, custom database tables, or administration SPA. Those features require evidence from real use and a deliberate privacy and storage contract before reconsideration.
+Version 0.1 has no AdSense management, analytics, tracking, reports, A/B tests, CMP, popup builder, frequency or geographic targeting, arbitrary PHP/JavaScript, template marketplace, custom database table, or legacy administration SPA.
 
-## Development
+## Development and verification
 
 Use PHP 8.1+, Node.js 20+, pnpm 10, and Composer 2.
 
@@ -29,16 +30,17 @@ pnpm install --frozen-lockfile
 
 composer check
 pnpm check
-pnpm run build
+bash scripts/release-gate.sh
 ```
 
-`composer check` runs PHPUnit, WordPress Coding Standards, and PHPStan. PHPUnit covers the pure eligibility policy. The reusable packaged-plugin fixture in `tests/playground/` verifies activation, post types and meta, the dynamic block, the shortcode, server rendering, the anonymous REST boundary, and expired-ad rejection. Browser editor interaction remains a manual pre-release smoke test.
+Run the minimum and current WordPress Playground matrices:
 
 ```bash
-bash scripts/release-gate.sh
 WP_VERSION=6.5 PHP_VERSION=8.1 tests/playground/run.sh
 WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 ```
+
+The fixture verifies the single Promotion model, typed meta, page/time/device rules, block/shortcode/automatic delivery, anonymous REST denial, absence of Placement/options/custom tables, and explicit uninstall cleanup. Browser interaction in the real editor and theme remains a Local release check.
 
 ## Release package
 
@@ -46,12 +48,6 @@ WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 bash scripts/release-gate.sh
 ```
 
-The gate runs PHP syntax checks, Composer checks, frontend type/lint checks, one production build, strict bundle budgets, deterministic staging, and zip-content assertions. It creates `dist/magick-ad-<version>.zip` with the fixed top-level directory `magick-ad`.
+The artifact is `dist/npcink-ad-0.1.0.zip` with the fixed top-level directory `npcink-ad/`. The gate verifies bundle budgets, required files, forbidden content, and the absence of legacy brand identifiers from the package.
 
-POT generation is separate from reproducible packaging:
-
-```bash
-wp i18n make-pot . languages/magick-ad.pot \
-  --domain=magick-ad \
-  --exclude=node_modules,build,assets/js,docs,dist,vendor
-```
+Schedules depend on the page being regenerated at the relevant boundary. Sites with third-party full-page caches must configure an appropriate TTL or purge the affected pages when a Promotion changes; version 0.1 does not claim minute-accurate scheduling through arbitrary caches.

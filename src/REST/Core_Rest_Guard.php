@@ -2,10 +2,10 @@
 /**
  * Authorization boundary for the native core REST controllers.
  *
- * @package MagickAD
+ * @package NpcinkAd
  */
 
-namespace MagickAD\REST;
+namespace Npcink\Ad\REST;
 
 use WP_Error;
 use WP_REST_Request;
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Protects native ad and placement REST resources without custom routes.
+ * Protects the native promotion REST resource without custom routes.
  */
 final class Core_Rest_Guard {
 	/**
@@ -27,7 +27,7 @@ final class Core_Rest_Guard {
 	}
 
 	/**
-	 * Require Magick AD management for all native CPT REST requests.
+	 * Require Npcink Ad management for all native CPT REST requests.
 	 *
 	 * @param mixed           $result  Earlier pre-dispatch result.
 	 * @param WP_REST_Server  $server  REST server instance.
@@ -37,23 +37,23 @@ final class Core_Rest_Guard {
 	public static function authorize( mixed $result, WP_REST_Server $server, WP_REST_Request $request ): mixed {
 		unset( $server );
 
-		if ( ! self::is_protected_route( $request->get_route() ) || current_user_can( 'manage_magick_ads' ) ) {
+		if ( ! self::is_protected_route( $request->get_route() ) || current_user_can( 'manage_npcink_ads' ) ) {
 			return $result;
 		}
 
 		return new WP_Error(
-			'magick_ad_rest_forbidden',
-			__( 'You are not allowed to access Magick AD resources.', 'magick-ad' ),
+			'npcink_ad_rest_forbidden',
+			__( 'You are not allowed to access Npcink Ad resources.', 'npcink-ad' ),
 			array( 'status' => rest_authorization_required_code() )
 		);
 	}
 
 	/**
-	 * Determine whether a route belongs to either native plugin post type.
+	 * Determine whether a route belongs to the native promotion post type.
 	 *
 	 * @param string $route Normalized REST route.
 	 */
 	public static function is_protected_route( string $route ): bool {
-		return 1 === preg_match( '#^/wp/v2/(?:magick_ad|magick_ad_placement)(?:/|$)#', $route );
+		return 1 === preg_match( '#^/wp/v2/npcink_promotion(?:/|$)#', $route );
 	}
 }
