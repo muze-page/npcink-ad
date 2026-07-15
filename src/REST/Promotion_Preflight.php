@@ -121,6 +121,11 @@ final class Promotion_Preflight {
 		if ( array_key_exists( Post_Types::DEVICE_META, $meta ) ) {
 			$promotion['device'] = Post_Types::sanitize_device( $meta[ Post_Types::DEVICE_META ] );
 		}
+		if ( array_key_exists( Post_Types::PARAGRAPH_NUMBER_META, $meta ) ) {
+			$paragraph_number                    = Post_Types::parse_paragraph_number( $meta[ Post_Types::PARAGRAPH_NUMBER_META ] );
+			$promotion['paragraph_number']       = $paragraph_number['number'];
+			$promotion['paragraph_number_valid'] = $paragraph_number['valid'];
+		}
 		if ( array_key_exists( Post_Types::START_AT_META, $meta ) ) {
 			$start_at                    = sanitize_text_field( (string) $meta[ Post_Types::START_AT_META ] );
 			$parsed_start_at             = $this->repository->parse_datetime( $start_at );
@@ -146,6 +151,8 @@ final class Promotion_Preflight {
 			'status'      => 'draft',
 			'content'     => '',
 			'location'    => 'content_after',
+			'paragraph_number' => Post_Types::DEFAULT_PARAGRAPH_NUMBER,
+			'paragraph_number_valid' => true,
 			'page_scope'  => 'all',
 			'include_ids' => array(),
 			'exclude_ids' => array(),

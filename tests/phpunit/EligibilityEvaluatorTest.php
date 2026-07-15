@@ -26,6 +26,8 @@ final class EligibilityEvaluatorTest extends TestCase {
 			'status'      => 'publish',
 			'content'     => '<p>Current creative</p>',
 			'location'    => 'block',
+			'paragraph_number' => 3,
+			'paragraph_number_valid' => true,
 			'page_scope'  => 'all',
 			'include_ids' => array(),
 			'exclude_ids' => array(),
@@ -121,6 +123,52 @@ final class EligibilityEvaluatorTest extends TestCase {
 			'invalid end calendar value'     => array(
 				array( 'end_at_valid' => false ),
 				array( 'promotion_schedule_invalid' ),
+			),
+			'paragraph minimum'              => array(
+				array(
+					'location'         => 'content_after_paragraph',
+					'paragraph_number' => 1,
+				),
+				array(),
+			),
+			'paragraph maximum'              => array(
+				array(
+					'location'         => 'content_after_paragraph',
+					'paragraph_number' => 20,
+				),
+				array(),
+			),
+			'paragraph zero'                 => array(
+				array(
+					'location'               => 'content_after_paragraph',
+					'paragraph_number'       => 0,
+					'paragraph_number_valid' => false,
+				),
+				array( 'promotion_paragraph_invalid' ),
+			),
+			'paragraph above maximum'        => array(
+				array(
+					'location'               => 'content_after_paragraph',
+					'paragraph_number'       => 21,
+					'paragraph_number_valid' => false,
+				),
+				array( 'promotion_paragraph_invalid' ),
+			),
+			'paragraph raw validity failure' => array(
+				array(
+					'location'               => 'content_after_paragraph',
+					'paragraph_number'       => 3,
+					'paragraph_number_valid' => false,
+				),
+				array( 'promotion_paragraph_invalid' ),
+			),
+			'paragraph fields ignored elsewhere' => array(
+				array(
+					'location'               => 'content_after',
+					'paragraph_number'       => 21,
+					'paragraph_number_valid' => false,
+				),
+				array(),
 			),
 		);
 	}
@@ -443,6 +491,43 @@ final class EligibilityEvaluatorTest extends TestCase {
 		$result = ( new Eligibility_Evaluator() )->evaluate( $this->valid_promotion(), $context );
 
 		self::assertSame( array( 'location_mismatch' ), $result['reasons'] );
+	}
+
+	/**
+	 * Paragraph delivery reports when the requested anchor is absent in content.
+	 */
+	public function test_rejects_a_missing_paragraph_content_anchor(): void {
+		$promotion                              = $this->valid_promotion();
+		$promotion['location']                  = 'content_after_paragraph';
+		$context                                = $this->matching_context();
+		$context['expected_location']           = 'content_after_paragraph';
+		$context['content_anchor_available']    = false;
+
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $context );
+
+		self::assertSame( array( 'content_anchor_missing' ), $result['reasons'] );
+	}
+
+	/**
+	 * Anchor availability is optional and applies only to paragraph placement.
+	 */
+	public function test_anchor_context_does_not_affect_other_locations_or_non_false_values(): void {
+		$evaluator = new Eligibility_Evaluator();
+		$context   = $this->matching_context();
+		$context['content_anchor_available'] = false;
+
+		self::assertTrue( $evaluator->evaluate( $this->valid_promotion(), $context )['allowed'] );
+
+		$promotion                    = $this->valid_promotion();
+		$promotion['location']        = 'content_after_paragraph';
+		$context['expected_location'] = 'content_after_paragraph';
+		$context['content_anchor_available'] = true;
+		self::assertTrue( $evaluator->evaluate( $promotion, $context )['allowed'] );
+
+		$context['content_anchor_available'] = null;
+		self::assertTrue( $evaluator->evaluate( $promotion, $context )['allowed'] );
+		unset( $context['content_anchor_available'] );
+		self::assertTrue( $evaluator->evaluate( $promotion, $context )['allowed'] );
 	}
 
 	/**

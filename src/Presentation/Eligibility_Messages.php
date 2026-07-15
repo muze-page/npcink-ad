@@ -33,10 +33,12 @@ final class Eligibility_Messages {
 			'promotion_expired'          => __( 'The promotion has expired.', 'npcink-ad' ),
 			'promotion_content_empty'    => __( 'The promotion has no content.', 'npcink-ad' ),
 			'promotion_targets_empty'    => __( 'Select at least one target page that is not excluded.', 'npcink-ad' ),
+			'promotion_paragraph_invalid' => __( 'Choose a paragraph number from 1 to 20.', 'npcink-ad' ),
 			'promotion_schedule_invalid' => __( 'The promotion end time must be later than its start time.', 'npcink-ad' ),
 			'page_not_included'          => __( 'This page is not included.', 'npcink-ad' ),
 			'page_excluded'              => __( 'This page is excluded.', 'npcink-ad' ),
 			'location_mismatch'          => __( 'The promotion location does not match this delivery method.', 'npcink-ad' ),
+			'content_anchor_missing'     => __( 'The selected paragraph is not available in this content.', 'npcink-ad' ),
 			'device_mismatch'            => __( 'The promotion does not target the simulated device.', 'npcink-ad' ),
 			'recursive_promotion'        => __( 'The promotion recursively includes itself.', 'npcink-ad' ),
 		);

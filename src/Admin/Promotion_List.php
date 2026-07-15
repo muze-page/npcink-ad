@@ -199,7 +199,13 @@ final class Promotion_List {
 				$this->render_status( $promotion );
 				break;
 			case self::LOCATION_COLUMN:
-				echo esc_html( $this->location_label( (string) ( $promotion['location'] ?? '' ) ) );
+				echo esc_html(
+					$this->location_label(
+						(string) ( $promotion['location'] ?? '' ),
+						(int) ( $promotion['paragraph_number'] ?? Post_Types::DEFAULT_PARAGRAPH_NUMBER ),
+						! array_key_exists( 'paragraph_number_valid', $promotion ) || (bool) $promotion['paragraph_number_valid']
+					)
+				);
 				$this->render_overlap_hint( $promotion );
 				break;
 			case self::SCOPE_COLUMN:
@@ -400,9 +406,27 @@ final class Promotion_List {
 	/**
 	 * Get a human-readable placement label.
 	 *
-	 * @param string $location Stored location.
+	 * @param string $location         Stored location.
+	 * @param int    $paragraph_number Stored paragraph number.
+	 * @param bool   $paragraph_valid  Whether the stored anchor was valid.
 	 */
-	private function location_label( string $location ): string {
+	private function location_label(
+		string $location,
+		int $paragraph_number = Post_Types::DEFAULT_PARAGRAPH_NUMBER,
+		bool $paragraph_valid = true
+	): string {
+		if ( 'content_after_paragraph' === $location ) {
+			if ( ! $paragraph_valid ) {
+				return __( 'After paragraph (invalid)', 'npcink-ad' );
+			}
+
+			return sprintf(
+				/* translators: %d: paragraph number after which the Promotion appears. */
+				__( 'After paragraph %d', 'npcink-ad' ),
+				$paragraph_number
+			);
+		}
+
 		$labels = array(
 			'block'          => __( 'Block', 'npcink-ad' ),
 			'content_before' => __( 'Before content', 'npcink-ad' ),
@@ -504,7 +528,7 @@ final class Promotion_List {
 			}
 			$has_automatic_promotion = $has_automatic_promotion || in_array(
 				$promotion['location'] ?? '',
-				array( 'content_before', 'content_after' ),
+				array( 'content_before', 'content_after', 'content_after_paragraph' ),
 				true
 			);
 

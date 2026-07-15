@@ -107,6 +107,35 @@ if ( ! function_exists( 'current_user_can' ) ) {
 	}
 }
 
+if ( ! function_exists( 'register_post_meta' ) ) {
+	/**
+	 * Capture typed post-meta registrations for isolated schema tests.
+	 *
+	 * @param string               $post_type Post type.
+	 * @param string               $meta_key  Metadata key.
+	 * @param array<string, mixed> $args      Registration arguments.
+	 */
+	function register_post_meta( string $post_type, string $meta_key, array $args ): bool {
+		$GLOBALS['npcink_ad_test_registered_post_meta'][ $meta_key ] = array(
+			'post_type' => $post_type,
+			'args'      => $args,
+		);
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'is_wp_error' ) ) {
+	/**
+	 * Check the minimal REST preflight error class.
+	 *
+	 * @param mixed $thing Candidate value.
+	 */
+	function is_wp_error( mixed $thing ): bool {
+		return $thing instanceof WP_Error;
+	}
+}
+
 if ( ! function_exists( 'admin_url' ) ) {
 	/**
 	 * Build a deterministic test admin URL.
@@ -204,6 +233,22 @@ if ( ! function_exists( 'get_post_meta' ) ) {
 	}
 }
 
+if ( ! function_exists( 'metadata_exists' ) ) {
+	/**
+	 * Distinguish absent metadata from an explicitly stored empty value.
+	 *
+	 * @param string $meta_type Object type.
+	 * @param int    $object_id Object ID.
+	 * @param string $meta_key  Metadata key.
+	 */
+	function metadata_exists( string $meta_type, int $object_id, string $meta_key ): bool {
+		unset( $meta_type );
+		$meta = $GLOBALS['npcink_ad_test_meta'] ?? array();
+
+		return array_key_exists( $meta_key, $meta[ $object_id ] ?? array() );
+	}
+}
+
 if ( ! function_exists( 'get_the_title' ) ) {
 	/**
 	 * Get one deterministic test title.
@@ -227,7 +272,7 @@ if ( ! function_exists( 'get_posts' ) ) {
 	 * Return public post/page IDs from an in-memory bounded query.
 	 *
 	 * @param array $args Query arguments.
-	 * @return list<int>
+	 * @return list<int|object>
 	 * @phpstan-param array<string, mixed> $args
 	 */
 	function get_posts( array $args = array() ): array {
@@ -236,23 +281,63 @@ if ( ! function_exists( 'get_posts' ) ) {
 		$posts = $GLOBALS['npcink_ad_test_posts'] ?? array();
 		$ids   = is_array( $args['post__in'] ?? null ) ? $args['post__in'] : array();
 		if ( 'npcink_promotion' === ( $args['post_type'] ?? '' ) && array() === $ids ) {
-			$meta = $GLOBALS['npcink_ad_test_meta'] ?? array();
-			$automatic_posts = array_values(
+			$meta       = $GLOBALS['npcink_ad_test_meta'] ?? array();
+			$meta_query = is_array( $args['meta_query'] ?? null ) ? $args['meta_query'] : array();
+			$matches_meta_query = static function ( array $query, int $post_id ) use ( &$matches_meta_query, $meta ): bool {
+				$results = array();
+				foreach ( $query as $index => $clause ) {
+					if ( 'relation' === $index || ! is_array( $clause ) ) {
+						continue;
+					}
+					if ( isset( $clause['key'] ) ) {
+						$key     = (string) $clause['key'];
+						$exists  = array_key_exists( $key, $meta[ $post_id ] ?? array() );
+						$value   = $exists ? $meta[ $post_id ][ $key ] : null;
+						$compare = strtoupper( (string) ( $clause['compare'] ?? '=' ) );
+						if ( 'NOT EXISTS' === $compare ) {
+							$results[] = ! $exists;
+						} elseif ( 'IN' === $compare ) {
+							$allowed   = is_array( $clause['value'] ?? null ) ? $clause['value'] : array();
+							$results[] = $exists && in_array( $value, $allowed, true );
+						} else {
+							$results[] = $exists && ( $clause['value'] ?? null ) === $value;
+						}
+						continue;
+					}
+
+					$results[] = $matches_meta_query( $clause, $post_id );
+				}
+
+				if ( array() === $results ) {
+					return true;
+				}
+
+				return 'OR' === strtoupper( (string) ( $query['relation'] ?? 'AND' ) )
+					? in_array( true, $results, true )
+					: ! in_array( false, $results, true );
+			};
+			$automatic_posts   = array_values(
 				array_filter(
 					$posts,
-					static function ( object $post ) use ( $meta ): bool {
-						$location = (string) ( $meta[ $post->ID ]['_npcink_ad_location'] ?? '' );
-
+					static function ( object $post ) use ( $args, $matches_meta_query, $meta_query ): bool {
 						return 'npcink_promotion' === ( $post->post_type ?? '' )
-							&& 'publish' === ( $post->post_status ?? '' )
-							&& in_array( $location, array( '', 'content_before', 'content_after' ), true );
+							&& ( $args['post_status'] ?? 'publish' ) === ( $post->post_status ?? '' )
+							&& $matches_meta_query( $meta_query, (int) $post->ID );
 					}
 				)
 			);
 			usort(
 				$automatic_posts,
-				static fn ( object $first, object $second ): int => (int) $first->ID <=> (int) $second->ID
+				static function ( object $first, object $second ): int {
+					$menu_order = (int) ( $first->menu_order ?? 0 ) <=> (int) ( $second->menu_order ?? 0 );
+
+					return 0 !== $menu_order ? $menu_order : (int) $first->ID <=> (int) $second->ID;
+				}
 			);
+
+			if ( 'ids' === ( $args['fields'] ?? '' ) ) {
+				return array_values( array_map( static fn ( object $post ): int => (int) $post->ID, $automatic_posts ) );
+			}
 
 			return $automatic_posts;
 		}

@@ -31,6 +31,16 @@ final class Eligibility_Evaluator {
 			$reasons[] = 'promotion_targets_empty';
 		}
 
+		$location               = isset( $promotion['location'] ) ? (string) $promotion['location'] : 'content_after';
+		$paragraph_number       = isset( $promotion['paragraph_number'] ) ? (int) $promotion['paragraph_number'] : 3;
+		$paragraph_number_valid = ! array_key_exists( 'paragraph_number_valid', $promotion ) || (bool) $promotion['paragraph_number_valid'];
+		if (
+			'content_after_paragraph' === $location
+			&& ( ! $paragraph_number_valid || 1 > $paragraph_number || 20 < $paragraph_number )
+		) {
+			$reasons[] = 'promotion_paragraph_invalid';
+		}
+
 		$start_at = isset( $promotion['start_at'] ) ? (int) $promotion['start_at'] : 0;
 		$end_at   = isset( $promotion['end_at'] ) ? (int) $promotion['end_at'] : 0;
 		$start_at_valid = ! array_key_exists( 'start_at_valid', $promotion ) || (bool) $promotion['start_at_valid'];
@@ -185,6 +195,13 @@ final class Eligibility_Evaluator {
 		$expected_location = isset( $context['expected_location'] ) ? (string) $context['expected_location'] : 'block';
 		if ( ( $promotion['location'] ?? 'content_after' ) !== $expected_location ) {
 			$reasons[] = 'location_mismatch';
+		}
+		if (
+			'content_after_paragraph' === ( $promotion['location'] ?? 'content_after' )
+			&& array_key_exists( 'content_anchor_available', $context )
+			&& false === $context['content_anchor_available']
+		) {
+			$reasons[] = 'content_anchor_missing';
 		}
 
 		$simulated_device = isset( $context['simulated_device'] ) ? (string) $context['simulated_device'] : '';

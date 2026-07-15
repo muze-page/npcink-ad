@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Pure overlap policy with no WordPress API calls.
  */
 final class Overlap_Detector {
-	private const AUTOMATIC_LOCATIONS = array( 'content_before', 'content_after' );
+	private const AUTOMATIC_LOCATIONS = array( 'content_before', 'content_after', 'content_after_paragraph' );
 
 	/**
 	 * Find published Promotions that may share one delivery context.
@@ -73,9 +73,34 @@ final class Overlap_Detector {
 			return false;
 		}
 
-		return $this->devices_overlap( $promotion, $other )
+		return $this->automatic_anchors_overlap( $location, $promotion, $other )
+			&& $this->devices_overlap( $promotion, $other )
 			&& $this->schedules_overlap( $promotion, $other )
 			&& $this->page_scopes_overlap( $promotion, $other );
+	}
+
+	/**
+	 * Keep paragraph placements on the same configured paragraph anchor.
+	 *
+	 * @param string               $location  Shared automatic location.
+	 * @param array<string, mixed> $promotion Candidate Promotion.
+	 * @param array<string, mixed> $other     Published Promotion.
+	 */
+	private function automatic_anchors_overlap( string $location, array $promotion, array $other ): bool {
+		if ( 'content_after_paragraph' !== $location ) {
+			return true;
+		}
+
+		$paragraph_number       = isset( $promotion['paragraph_number'] ) ? (int) $promotion['paragraph_number'] : 3;
+		$other_paragraph_number = isset( $other['paragraph_number'] ) ? (int) $other['paragraph_number'] : 3;
+		$paragraph_valid        = ! array_key_exists( 'paragraph_number_valid', $promotion ) || (bool) $promotion['paragraph_number_valid'];
+		$other_paragraph_valid  = ! array_key_exists( 'paragraph_number_valid', $other ) || (bool) $other['paragraph_number_valid'];
+
+		return $paragraph_valid
+			&& $other_paragraph_valid
+			&& 1 <= $paragraph_number
+			&& 20 >= $paragraph_number
+			&& $paragraph_number === $other_paragraph_number;
 	}
 
 	/**

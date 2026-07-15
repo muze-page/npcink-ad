@@ -53,6 +53,13 @@ if ( ! class_exists( 'WP_Post' ) ) {
 		public string $post_date_gmt;
 
 		/**
+		 * Native ordering value.
+		 *
+		 * @var int
+		 */
+		public int $menu_order;
+
+		/**
 		 * Create a test post record.
 		 *
 		 * @param array<string, int|string> $values Post field values.
@@ -64,6 +71,7 @@ if ( ! class_exists( 'WP_Post' ) ) {
 			$this->post_content  = (string) ( $values['post_content'] ?? '' );
 			$this->post_title    = (string) ( $values['post_title'] ?? '' );
 			$this->post_date_gmt = (string) ( $values['post_date_gmt'] ?? '0000-00-00 00:00:00' );
+			$this->menu_order    = (int) ( $values['menu_order'] ?? 0 );
 		}
 	}
 }

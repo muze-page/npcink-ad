@@ -61,7 +61,7 @@ final class Repository {
 					'relation' => 'OR',
 					array(
 						'key'     => Post_Types::LOCATION_META,
-						'value'   => array( 'content_before', 'content_after' ),
+						'value'   => array( 'content_before', 'content_after', 'content_after_paragraph' ),
 						'compare' => 'IN',
 					),
 					array(
@@ -86,6 +86,55 @@ final class Repository {
 	}
 
 	/**
+	 * Group published paragraph Promotions by their validated paragraph number.
+	 *
+	 * Full post objects keep paragraph metadata in one primed batch. Invalid
+	 * stored anchors remain available through find_promotion() for management
+	 * diagnosis, but never enter a frontend delivery group.
+	 *
+	 * @return array<int, list<int>>
+	 */
+	public function find_published_paragraph_ids_grouped_by_number(): array {
+		$posts = get_posts(
+			array(
+				'post_type'              => Post_Types::PROMOTION_POST_TYPE,
+				'post_status'            => 'publish',
+				'posts_per_page'         => -1,
+				'orderby'                => array(
+					'menu_order' => 'ASC',
+					'ID'         => 'ASC',
+				),
+				'meta_query'             => array(
+					array(
+						'key'     => Post_Types::LOCATION_META,
+						'value'   => 'content_after_paragraph',
+						'compare' => '=',
+					),
+				),
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => true,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$grouped_ids = array();
+		foreach ( $posts as $post ) {
+			if ( ! $post instanceof WP_Post ) {
+				continue;
+			}
+
+			$paragraph = $this->stored_paragraph_number( $post->ID );
+			if ( ! $paragraph['valid'] ) {
+				continue;
+			}
+
+			$grouped_ids[ $paragraph['number'] ][] = $post->ID;
+		}
+
+		return $grouped_ids;
+	}
+
+	/**
 	 * Map one native Promotion post with its typed metadata.
 	 *
 	 * @param WP_Post $post Promotion post.
@@ -94,12 +143,15 @@ final class Repository {
 	private function map_promotion( WP_Post $post ): array {
 		$start_at = $this->parse_datetime( (string) get_post_meta( $post->ID, Post_Types::START_AT_META, true ) );
 		$end_at   = $this->parse_datetime( (string) get_post_meta( $post->ID, Post_Types::END_AT_META, true ) );
+		$paragraph = $this->stored_paragraph_number( $post->ID );
 
 		return array(
 			'id'          => $post->ID,
 			'status'      => $post->post_status,
 			'content'     => $post->post_content,
 			'location'    => Post_Types::sanitize_location( get_post_meta( $post->ID, Post_Types::LOCATION_META, true ) ),
+			'paragraph_number' => $paragraph['number'],
+			'paragraph_number_valid' => $paragraph['valid'],
 			'page_scope'  => Post_Types::sanitize_page_scope( get_post_meta( $post->ID, Post_Types::PAGE_SCOPE_META, true ) ),
 			'include_ids' => Post_Types::sanitize_post_ids( get_post_meta( $post->ID, Post_Types::INCLUDE_IDS_META, true ) ),
 			'exclude_ids' => Post_Types::sanitize_post_ids( get_post_meta( $post->ID, Post_Types::EXCLUDE_IDS_META, true ) ),
@@ -108,6 +160,25 @@ final class Repository {
 			'start_at_valid' => $start_at['valid'],
 			'end_at'      => $end_at['timestamp'],
 			'end_at_valid' => $end_at['valid'],
+		);
+	}
+
+	/**
+	 * Parse stored paragraph metadata while treating absence as the default.
+	 *
+	 * @param int $promotion_id Promotion post ID.
+	 * @return array{number: int, valid: bool}
+	 */
+	private function stored_paragraph_number( int $promotion_id ): array {
+		if ( ! metadata_exists( 'post', $promotion_id, Post_Types::PARAGRAPH_NUMBER_META ) ) {
+			return array(
+				'number' => Post_Types::DEFAULT_PARAGRAPH_NUMBER,
+				'valid'  => true,
+			);
+		}
+
+		return Post_Types::parse_paragraph_number(
+			get_post_meta( $promotion_id, Post_Types::PARAGRAPH_NUMBER_META, true )
 		);
 	}
 
