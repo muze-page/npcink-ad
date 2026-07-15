@@ -10,3 +10,4 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once dirname( __DIR__, 2 ) . '/src/Domain/Eligibility_Evaluator.php';
+require_once dirname( __DIR__, 2 ) . '/src/Domain/Overlap_Detector.php';
