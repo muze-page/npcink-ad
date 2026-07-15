@@ -1,4 +1,4 @@
-# Npcink Ad 0.1 Architecture Overview
+# Npcink Ad Architecture Overview
 
 ## 1. 核心链路
 
@@ -18,8 +18,9 @@
 - `post_status`：草稿/发布的唯一状态真相；
 - `_npcink_ad_location`：`block | content_before | content_after | content_after_paragraph`；
 - `_npcink_ad_paragraph_number`：仅段落位置使用的整数，默认 `3`，有效范围 `1..20`；
-- `_npcink_ad_page_scope`：`all | selected`；
+- `_npcink_ad_content_scope`：`all | posts | pages | terms | selected`；自动投放使用五种互斥范围，手动区块/短代码只保留 `all | selected`，其他高级值由 PHP 按 `all` 处理；
 - `_npcink_ad_include_ids`、`_npcink_ad_exclude_ids`：去重、最多 50 个正整数 ID；
+- `_npcink_ad_category_ids`、`_npcink_ad_tag_ids`：仅用于自动 `terms` 范围的 Core 分类/标签 ID；两组正向 term 为 OR，不展开分类后代，也没有 term exclusion；
 - `_npcink_ad_device`：`all | desktop | mobile`；
 - `_npcink_ad_start_at`、`_npcink_ad_end_at`：可选的 WordPress 本地时间。
 
@@ -28,10 +29,10 @@
 ## 3. 模块边界
 
 - `Post_Types`：唯一 CPT、typed meta 与输入规范化；
-- `Repository`：把 WordPress Post/meta 映射为领域数组；
+- `Repository`：把 WordPress Post/meta 映射为领域数组，并以当前 Core term 状态解析 `category_ids`、`tag_ids` 与派生的 `terms_valid`；
 - `Eligibility_Evaluator`：无 WordPress 调用的纯策略，依次提供配置、就绪度和完整请求判定；
 - `Overlap_Detector`：无 WordPress 调用的纯提示策略，只判断两个自动投放规则是否可能同时展示，不改变资格或发布结果；
-- `Delivery`：构造页面、位置、时间和预览设备上下文；
+- `Delivery`：构造内容 ID、标准 post/page 类型、文章直接分类/标签、位置、时间和预览设备上下文；page 不提供 term 上下文，CPT 不进入自动投放；
 - `Paragraph_Inserter`：在区块渲染前标记顶层段落锚点，并在渲染后替换为服务端输出；Classic 内容由 Core HTML tokenizer 识别真实 `P` closer，排除 comment、raw-text、template 后代和 attribute 中的伪标签；
 - `Renderer`：安全渲染创意、管理占位和预览结论；
 - `Eligibility_Messages`：把稳定 reason codes 映射为所有管理/预览界面共用的文案；
@@ -48,15 +49,19 @@
 - `promotion_expired`
 - `promotion_content_empty`
 - `promotion_targets_empty`
+- `promotion_terms_invalid`
 - `promotion_schedule_invalid`
 - `promotion_paragraph_invalid`
-- `page_not_included`
-- `page_excluded`
+- `content_not_included`
+- `content_excluded`
+- `content_type_mismatch`
+- `post_terms_mismatch`
+- `content_terms_unavailable`
 - `location_mismatch`
 - `content_anchor_missing`（只在真实页面段落预览提供了锚点上下文时产生）
 - `device_mismatch`（只用于显式预览设备上下文）
 
-协调层还可产生 `promotion_missing` 与 `recursive_promotion`。新增规则必须先扩充 evaluator 的表驱动测试。
+`content_not_included` 与 `content_excluded` 同时覆盖标准 post/page ID 范围；pre-GA 不保留旧的 page 命名双码。协调层还可产生 `promotion_missing` 与 `recursive_promotion`。新增规则必须先扩充 evaluator 的表驱动测试。
 
 ## 5. 预览、安全和缓存
 
@@ -72,7 +77,7 @@
 - PHPUnit：配置、页面、时间边界、位置、列表状态和恢复状态机；
 - PHPCS / PHPStan：WordPress 编码、安全与类型边界；
 - TypeScript / JS / CSS lint：编辑器与动态区块；
-- Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、REST 发布预检、真实 `the_content` 优先级 `8 → 9 → 10` 的 marker 复制后单次渲染与残余清理、时区/排期边界、无表/Options、卸载；
-- Local 浏览器：同一编辑页创建规则、真实主题预览、发布/暂停和匿名前台。
+- Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、五种 canonical content scope、真实 Core category/tag 直接关系与动态变更、term fail-closed、REST 发布/恢复预检、真实 `the_content` 优先级 `8 → 9 → 10` 的 marker 复制后单次渲染与残余清理、时区/排期边界、无表/Options、卸载；
+- Local 浏览器：同一编辑页创建规则、列表范围摘要、真实主题预览、发布/暂停和匿名前台。
 
 发布包固定为 `npcink-ad/`，包含构建产物、运行 PHP、前端/预览 CSS、`readme.txt` 和许可证，不包含源码 JS、测试、文档或旧品牌运行标识。
