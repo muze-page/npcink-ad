@@ -24,6 +24,33 @@ $check = static function ( bool $condition, string $message ): void {
 	}
 };
 
+/**
+ * Exception used to observe wp_die() responses without ending the CLI smoke.
+ */
+final class Npcink_Ad_Smoke_Wp_Die_Exception extends RuntimeException {}
+
+$expect_wp_die = static function ( callable $callback ): int {
+	$wp_die_handler = static function ( mixed $message, string $title, array $args ): void {
+		unset( $title );
+		$response = isset( $args['response'] ) ? absint( $args['response'] ) : 0;
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test-only handler preserves wp_die details for assertions.
+		throw new Npcink_Ad_Smoke_Wp_Die_Exception( is_string( $message ) ? $message : 'wp_die', $response );
+	};
+	$wp_die_filter  = static fn (): callable => $wp_die_handler;
+
+	add_filter( 'wp_die_handler', $wp_die_filter );
+	try {
+		$callback();
+	} catch ( Npcink_Ad_Smoke_Wp_Die_Exception $exception ) {
+		return $exception->getCode();
+	} finally {
+		remove_filter( 'wp_die_handler', $wp_die_filter );
+	}
+
+	throw new RuntimeException( 'Expected the request to terminate through wp_die().' );
+};
+
 $check( is_plugin_active( 'npcink-ad/npcink-ad.php' ), 'Packaged plugin was not activated.' );
 $plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/npcink-ad/npcink-ad.php', false, false );
 $check( '/languages' === $plugin_data['DomainPath'], 'The packaged plugin does not declare its languages directory.' );
@@ -140,6 +167,16 @@ $promotion_id = wp_insert_post(
 	true
 );
 $check( ! is_wp_error( $promotion_id ), 'Could not create the smoke promotion.' );
+$subscriber_id = wp_insert_user(
+	array(
+		'user_login' => 'npcink_ad_smoke_subscriber',
+		'user_pass'  => wp_generate_password( 24, true, true ),
+		'user_email' => 'npcink-ad-smoke@example.test',
+		'role'       => 'subscriber',
+	)
+);
+$check( ! is_wp_error( $subscriber_id ), 'Could not create the low-privilege smoke user.' );
+$subscriber_id = absint( $subscriber_id );
 $check(
 	'content_after' === get_post_meta( $promotion_id, Post_Types::LOCATION_META, true ),
 	'A new promotion did not default to after-content delivery.'
@@ -264,7 +301,97 @@ update_post_meta( $promotion_id, Post_Types::START_AT_META, '' );
 update_post_meta( $promotion_id, Post_Types::END_AT_META, '' );
 $set_main_singular( $page_a_id );
 
-$preview_nonce = wp_create_nonce( 'npcink_ad_preview_' . $promotion_id );
+$preview_action = 'npcink_ad_preview_' . $promotion_id;
+
+wp_set_current_user( $subscriber_id );
+$subscriber_preview_nonce = wp_create_nonce( $preview_action );
+$_GET                    = array(
+	'promotion' => (string) $promotion_id,
+	'target'    => (string) $page_a_id,
+	'device'    => 'mobile',
+	'_wpnonce'  => $subscriber_preview_nonce,
+);
+$check(
+	403 === $expect_wp_die(
+		static function (): void {
+			Preview_Page::render();
+		}
+	),
+	'A subscriber accessed the authenticated preview page.'
+);
+
+wp_set_current_user( 1 );
+$wrong_promotion_nonce = wp_create_nonce( 'npcink_ad_preview_' . ( $promotion_id + 1 ) );
+$_GET                  = array(
+	'promotion' => (string) $promotion_id,
+	'target'    => (string) $page_a_id,
+	'device'    => 'mobile',
+	'_wpnonce'  => $wrong_promotion_nonce,
+);
+$check(
+	403 === $expect_wp_die(
+		static function (): void {
+			Preview_Page::render();
+		}
+	),
+	'The preview page accepted a nonce bound to another promotion.'
+);
+
+$preview_nonce = wp_create_nonce( $preview_action );
+$_GET          = array(
+	'promotion' => (string) $promotion_id,
+	'target'    => (string) $page_a_id,
+	'device'    => 'mobile',
+	'_wpnonce'  => $preview_nonce,
+);
+ob_start();
+Preview_Page::render();
+$preview_page_html = (string) ob_get_clean();
+$check( str_contains( $preview_page_html, 'npcink_ad_preview=' . $promotion_id ), 'A manager could not render the bound real-page preview URL.' );
+$check( 1 === substr_count( $preview_page_html, 'aria-current="page"' ), 'The preview page did not expose exactly one current device.' );
+$check(
+	1 === preg_match( '#<a[^>]*aria-current="page"[^>]*>Mobile</a>#', $preview_page_html ),
+	'The mobile preview link did not expose its current state programmatically.'
+);
+
+wp_set_current_user( $subscriber_id );
+$_GET = array(
+	'npcink_ad_preview'        => (string) $promotion_id,
+	'npcink_ad_preview_device' => 'mobile',
+	'npcink_ad_preview_nonce'  => $subscriber_preview_nonce,
+);
+$subscriber_preview_request = new Preview_Request(
+	new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() ),
+	new Repository()
+);
+$check(
+	403 === $expect_wp_die(
+		static function () use ( $subscriber_preview_request ): void {
+			$subscriber_preview_request->activate();
+		}
+	),
+	'A subscriber activated a real-page preview request.'
+);
+
+wp_set_current_user( 1 );
+$_GET = array(
+	'npcink_ad_preview'        => (string) $promotion_id,
+	'npcink_ad_preview_device' => 'mobile',
+	'npcink_ad_preview_nonce'  => $wrong_promotion_nonce,
+);
+$invalid_preview_request = new Preview_Request(
+	new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() ),
+	new Repository()
+);
+$check(
+	403 === $expect_wp_die(
+		static function () use ( $invalid_preview_request ): void {
+			$invalid_preview_request->activate();
+		}
+	),
+	'The real-page preview request accepted a nonce bound to another promotion.'
+);
+
 $_GET          = array(
 	'npcink_ad_preview'        => (string) $promotion_id,
 	'npcink_ad_preview_device' => 'mobile',
@@ -345,6 +472,34 @@ if ( 0 === did_action( 'rest_api_init' ) ) {
 	do_action( 'rest_api_init', $rest_server );
 }
 
+wp_set_current_user( 1 );
+$admin_collection_request = new WP_REST_Request( 'GET', '/wp/v2/npcink_promotion' );
+$admin_collection_request->set_query_params(
+	array(
+		'context' => 'edit',
+		'status'  => 'draft',
+		'include' => array( $promotion_id ),
+	)
+);
+$admin_collection_response = rest_do_request( $admin_collection_request );
+$admin_collection_body     = (string) wp_json_encode( $admin_collection_response->get_data() );
+$check( 200 === $admin_collection_response->get_status(), 'An administrator could not access the protected REST collection.' );
+$check( str_contains( $admin_collection_body, 'Playground smoke creative' ), 'The authorized REST collection omitted the promotion.' );
+
+$admin_single_request = new WP_REST_Request( 'GET', '/wp/v2/npcink_promotion/' . $promotion_id );
+$admin_single_request->set_param( 'context', 'edit' );
+$admin_single_response = rest_do_request( $admin_single_request );
+$admin_single_body     = (string) wp_json_encode( $admin_single_response->get_data() );
+$check( 200 === $admin_single_response->get_status(), 'An administrator could not access the protected REST promotion.' );
+$check( str_contains( $admin_single_body, 'Playground smoke creative' ), 'The authorized REST promotion omitted its creative.' );
+
+wp_set_current_user( $subscriber_id );
+$subscriber_collection_response = rest_do_request( new WP_REST_Request( 'GET', '/wp/v2/npcink_promotion' ) );
+$subscriber_single_response     = rest_do_request( new WP_REST_Request( 'GET', '/wp/v2/npcink_promotion/' . $promotion_id ) );
+$check( 403 === $subscriber_collection_response->get_status(), 'A subscriber accessed the protected REST collection.' );
+$check( 403 === $subscriber_single_response->get_status(), 'A subscriber accessed the protected REST promotion.' );
+
+wp_set_current_user( 0 );
 $collection_response = rest_do_request( new WP_REST_Request( 'GET', '/wp/v2/npcink_promotion' ) );
 $collection_status   = $collection_response->get_status();
 $collection_body     = (string) wp_json_encode( $collection_response->get_data() );
