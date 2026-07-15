@@ -103,10 +103,9 @@ If either answer is missing, the feature stays outside the core product.
 
 ## Accepted 0.2 direction (implementation in progress)
 
-The runtime and required workflow documented above remain the current 0.1 product. [ADR 005](decisions/005-controlled-delivery-expansion.md) accepts a bounded 0.2 delivery direction. Its groundwork is implemented: automatic delivery is limited to standard posts/pages, and management surfaces provide a non-blocking advisory when automatic Promotions may appear together. The following user-facing expansion remains ordered work rather than current capability:
+The runtime and required workflow documented above remain the current 0.1 product. [ADR 005](decisions/005-controlled-delivery-expansion.md) accepts a bounded 0.2 delivery direction. Its groundwork and first delivery step are implemented: automatic delivery is limited to standard posts/pages, management surfaces provide a non-blocking advisory when automatic Promotions may appear together, and a Promotion can be placed after paragraph 1–20 using the semantics in [ADR 006](decisions/006-paragraph-anchor-delivery.md). The remaining expansion stays ordered work rather than current capability:
 
-1. add an after-the-Nth-paragraph automatic location for standard WordPress posts and pages;
-2. add a collapsed advanced editorial scope for standard posts/pages and applicable categories/tags;
-3. improve manual-block guidance and explain the existing desktop/mobile breakpoint.
+1. add a collapsed advanced editorial scope for standard posts/pages and applicable categories/tags;
+2. improve manual-block guidance and explain the existing desktop/mobile breakpoint.
 
 Multiple eligible Promotions at one automatic location continue rendering in deterministic order, while management UI only advises that they **may** appear together. This direction does not add priority, weights, rotation, tablet targeting, arbitrary selectors or hooks, visitor state, tracking, or separate Slot/Placement records.

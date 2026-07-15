@@ -16,10 +16,11 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 
 * Create promotion content with core WordPress blocks.
 * Configure location, page scope, exclusions, schedule, and device in the same editor.
+* Place a promotion after a bounded top-level block paragraph or Classic HTML paragraph without frontend JavaScript.
 * Preview the promotion inside a real page and switch between desktop and mobile context.
 * Read a truthful verdict explaining why the promotion will or will not display.
 * Review rule status, placement, page scope, stop time, and inactivity reasons directly in the Promotion list.
-* Catch empty creative, missing public targets, invalid schedules, and unverified manual-block placement before publication.
+* Catch empty creative, missing public targets, invalid paragraph settings, invalid schedules, and unverified placement before publication.
 * Publish, pause, or expire one Promotion record without a separate placement object.
 * Deliver from the server without visitor tracking, custom tables, or required frontend JavaScript.
 * Use the bundled Simplified Chinese translation in both PHP screens and the block editor.
@@ -30,7 +31,7 @@ Version 0.1 intentionally has no analytics, tracking cookies, external requests,
 
 1. Upload the `npcink-ad` folder to `/wp-content/plugins/` and activate Npcink Ad.
 2. Open Npcink Ad > Promotions and add a Promotion.
-3. Build the creative with WordPress blocks and set its location, pages, device, and optional schedule in the editor sidebar.
+3. Build the creative with WordPress blocks and set its location, pages, device, and optional schedule in the editor sidebar. Paragraph placement accepts 1 through 20 and defaults to 3.
 4. Save and open the real-page preview. Confirm the runtime verdict on desktop and mobile.
 5. Publish the Promotion. Change it to Draft whenever it should be paused.
 
@@ -60,5 +61,6 @@ No. Version 0.1 defines a new pre-GA contract and has no compatibility adapters 
 * Add same-editor location, page, schedule, and device rules.
 * Add truthful real-page desktop/mobile preview and server-rendered delivery.
 * Add shared-rule publication preflight, list diagnostics, and inline pause/resume controls.
+* Add bounded after-paragraph placement with truthful missing-anchor preview evidence.
 * Keep the default runtime free of visitor tracking, custom tables, and external requests.
 * Add complete bundled Simplified Chinese PHP and JavaScript translations.
