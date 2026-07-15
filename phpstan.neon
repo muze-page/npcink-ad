@@ -2,15 +2,17 @@ includes:
     - vendor/szepeviktor/phpstan-wordpress/extension.neon
 
 parameters:
-    level: 5
+    level: 6
     paths:
         - src
-        - magick-ad.php
+        - npcink-ad.php
         - uninstall.php
+    bootstrapFiles:
+        - tests/phpstan/bootstrap.php
     excludePaths:
-        - vendor
-        - node_modules
-        - build
-        - assets/js
-        - dist
-        - docs
+        analyse:
+            - vendor (?)
+            - node_modules (?)
+            - build (?)
+            - dist (?)
+    treatPhpDocTypesAsCertain: false

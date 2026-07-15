@@ -1,103 +1,67 @@
-# Magick AD Architecture Overview
+# Npcink Ad 0.1 Architecture Overview
 
-## 1. 总览
+## 1. 核心链路
 
-Magick AD 是一个 WordPress 广告投放插件，核心链路为：
+1. 编辑者在 `npcink_promotion` 的原生区块编辑器中完成创意和展示规则。
+2. 编辑器侧栏通过 Core REST 保存 typed meta，不维护第二份设置对象。
+3. 真实页面预览与正式前台都把 Promotion 和页面上下文交给同一个 `Eligibility_Evaluator`。
+4. 判断通过后由服务端 Renderer 输出区块内容；匿名访问不会看到诊断信息或未发布创意。
+5. Promotion 改为草稿即暂停，开始/结束时间由站点时区解释。
 
-1. 后台配置广告与系统设置
-2. 前端按规则匹配并渲染广告
-3. 追踪接口接收曝光/点击并写入统计
-4. 异步队列与 Cron 回收保障高峰稳定性
-5. 兼容体检与兼容报告支撑部署排查
+没有浏览器端规则解析、访客追踪、异步事件管线或自定义数据表。
 
-## 2. 关键模块
+## 2. 数据模型
 
-- `src/Plugin.php`：插件生命周期入口
-- `src/Admin/Admin.php`：后台菜单、资产注入、初始 tab 路由
-- `src/Frontend/Frontend.php`：广告匹配、渲染、插入策略
-- `src/REST/Routes.php`：REST 路由注册
-- `src/REST/Controllers/Track_Controller.php`：追踪写入、签名校验、去重、降级写入
-- `src/REST/Controllers/System_Settings_Controller.php`：系统设置读写
-- `src/REST/Controllers/Compatibility_Report_Controller.php`：兼容报告导出
-- `src/Data/Template_Migrator.php`：模板 schema 迁移
-- `src/Utils/Consent.php`：CMP/同意信号适配层
-- `src/Utils/Stats_Queue.php`：统计队列与回退队列
-- `src/Utils/Stats_Cron.php`：统计落库计划任务
+唯一 CPT 是 `npcink_promotion`：
 
-## 3. 关键数据
+- `post_title`、`post_content`：标题和原生区块创意；
+- `post_status`：草稿/发布的唯一状态真相；
+- `_npcink_ad_location`：`block | content_before | content_after`；
+- `_npcink_ad_page_scope`：`all | selected`；
+- `_npcink_ad_include_ids`、`_npcink_ad_exclude_ids`：去重、最多 50 个正整数 ID；
+- `_npcink_ad_device`：`all | desktop | mobile`；
+- `_npcink_ad_start_at`、`_npcink_ad_end_at`：可选的 WordPress 本地时间。
 
-- CPT：`magick_ad`
-- Options：
-  - `magick_ad_slots`
-  - `magick_ad_tracking_*`
-  - `magick_ad_stats_*`
-  - `magick_ad_template_*`
-- 自定义表：
-  - `wp_magick_ad_stats`
-  - `wp_magick_ad_stats_dim`
-  - `wp_magick_ad_stats_variant`
-  - `wp_magick_ad_stats_event`
-  - `wp_magick_ad_stats_log`
+全部 meta 都有 REST schema、sanitize callback、auth callback 和 revision 支持。管理路由要求 `manage_npcink_ads`，该能力默认授予 administrator 和 editor。
 
-## 4. 追踪与可靠性策略
+## 3. 模块边界
 
-Track 写入优先级：
+- `Post_Types`：唯一 CPT、typed meta 与输入规范化；
+- `Repository`：把 WordPress Post/meta 映射为领域数组；
+- `Eligibility_Evaluator`：无 WordPress 调用的纯策略，输出 `allowed + reasons`；
+- `Delivery`：构造页面、位置、时间和预览设备上下文；
+- `Renderer`：安全渲染创意、管理占位和预览结论；
+- `Preview_Request`：校验 capability + nonce，关闭缓存并在真实页面强制显示预览；
+- `Editor` / `Preview_Page`：侧栏设置与桌面/移动 iframe 画布；
+- `Blocks` / `Patterns`：一个动态引用区块和三个 Core block 起步样式。
 
-1. 统计累计器（可用时）
-2. 异步队列
-3. 直写数据库
-4. 直写失败时进入回退队列（fail-open，避免高峰 5xx）
-5. Cron 周期回收队列与回退队列
+## 4. 稳定 reason codes
 
-## 5. 同意与合规
+- `promotion_not_published`
+- `promotion_not_started`
+- `promotion_expired`
+- `promotion_content_empty`
+- `page_not_included`
+- `page_excluded`
+- `location_mismatch`
+- `device_mismatch`（只用于显式预览设备上下文）
 
-- 同意入口：`Consent::has_consent()`
-- 兼容常见 CMP 信号，并支持自定义：
+协调层还可产生 `promotion_missing` 与 `recursive_promotion`。新增规则必须先扩充 evaluator 的表驱动测试。
 
-```php
-add_filter('magick_ad_has_consent', function ($has_consent) {
-    return $has_consent;
-});
-```
+## 5. 预览、安全和缓存
 
-- 启用同意门控时，未同意不会写追踪统计。
+- 预览 URL 绑定 Promotion nonce，只允许拥有 `manage_npcink_ads` 的登录用户；
+- 预览响应发送 no-cache 与 noindex 头，匿名请求返回 403；
+- 预览与正式投放共用 evaluator/renderer，唯一差异是管理者可强制看见被规则阻止的创意；
+- 正式设备规则使用 CSS 断点，HTML 不按 User-Agent 分叉；
+- 第三方整页缓存可能延迟发布、暂停和时间边界，0.1 要求站点配置 TTL 或主动清理缓存，不宣称穿透任意缓存。
 
-## 6. 模板体系
+## 6. 质量和发布
 
-- 系统模板来源：`src/Blocks/Patterns.php`
-- 模板 schema：`templateVersion`
-- 迁移器负责将旧字段映射到最新属性，保证旧模板继续可用。
+- PHPUnit：页面、时间、位置和预览设备规则；
+- PHPCS / PHPStan：WordPress 编码、安全与类型边界；
+- TypeScript / JS / CSS lint：编辑器与动态区块；
+- Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、REST、无表/Options、卸载；
+- Local 浏览器：同一编辑页创建规则、真实主题预览、发布/暂停和匿名前台。
 
-## 7. 管理端前端
-
-- 入口：`assets/js/index.js`
-- 主路由：`assets/js/sections/App.js`
-  - `ads`：广告配置
-  - `report`：统计看板
-  - `compatibility`：兼容报告
-
-## 8. 前端分包与性能预算
-
-- 入口：`assets/js/index.js`
-- 路由级按需加载：`assets/js/sections/App.js`
-- 面板级按需加载：`assets/js/sections/AdsConfig.js`
-- 模板库重逻辑按需加载：`assets/js/hooks/useTemplateLibrary.js`
-
-当前预算门禁（`scripts/release-gate.sh`）：
-
-- `build/index.js <= 180 KiB`
-- `build/index.css <= 60 KiB`
-
-预算可通过环境变量覆盖：
-
-- `MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB`
-- `MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB`
-- `MAGICK_AD_BUNDLE_BUDGET_STRICT`（`1` 失败门禁，`0` 仅告警）
-
-## 9. 发布体系
-
-- 门禁脚本：`scripts/release-gate.sh`
-- 回滚脚本：`scripts/rollback.sh`
-- CI 工作流：
-  - `.github/workflows/ci.yml`
-  - `.github/workflows/release-gate.yml`
+发布包固定为 `npcink-ad/`，包含构建产物、运行 PHP、前端/预览 CSS、`readme.txt` 和许可证，不包含源码 JS、测试、文档或旧品牌运行标识。

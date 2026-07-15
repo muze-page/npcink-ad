@@ -1,82 +1,70 @@
 <?php
+/**
+ * Runtime composition root.
+ *
+ * @package NpcinkAd
+ */
 
-namespace MagickAD;
+namespace Npcink\Ad;
 
-use MagickAD\Admin\Admin;
-use MagickAD\Admin\Privacy;
-use MagickAD\Admin\Site_Health;
-use MagickAD\Blocks\Bindings;
-use MagickAD\Blocks\Blocks;
-use MagickAD\Blocks\Patterns;
-use MagickAD\CLI\Smoke_Command;
-use MagickAD\CLI\Magick_Command;
-use MagickAD\Data\Ads;
-use MagickAD\Data\Ads_Migrator;
-use MagickAD\Data\Placement_Migrator;
-use MagickAD\Data\Schema;
-use MagickAD\Data\Slot_Migrator;
-use MagickAD\Data\Template_Migrator;
-use MagickAD\Frontend\Frontend;
-use MagickAD\Frontend\Template_Tags;
-use MagickAD\REST\Routes;
-use MagickAD\Utils\Debug;
-use MagickAD\Utils\Diagnostics_Cron;
-use MagickAD\Utils\Stats_Cron;
-use MagickAD\Utils\Stats_Dim_Cron;
+use Npcink\Ad\Admin\Editor;
+use Npcink\Ad\Admin\Menu;
+use Npcink\Ad\Admin\Preview_Page;
+use Npcink\Ad\Blocks\Blocks;
+use Npcink\Ad\Blocks\Patterns;
+use Npcink\Ad\Data\Post_Types;
+use Npcink\Ad\Data\Repository;
+use Npcink\Ad\Domain\Eligibility_Evaluator;
+use Npcink\Ad\Frontend\Delivery;
+use Npcink\Ad\Frontend\Preview_Request;
+use Npcink\Ad\Frontend\Renderer;
+use Npcink\Ad\REST\Core_Rest_Guard;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
+/**
+ * Registers the clean-baseline runtime.
+ */
 final class Plugin {
-    private static $instance = null;
+	/**
+	 * Register runtime hooks.
+	 */
+	public function init(): void {
+		$repository = new Repository();
+		$delivery = new Delivery(
+			$repository,
+			new Eligibility_Evaluator(),
+			new Renderer()
+		);
+		$blocks  = new Blocks( $delivery );
+		$preview = new Preview_Request( $delivery, $repository );
 
-    public static function instance(): self {
-        if (null === self::$instance) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
+		add_action( 'init', array( $this, 'load_textdomain' ), 1 );
+		add_action( 'init', array( Post_Types::class, 'register' ), 5 );
+		add_action( 'init', array( $delivery, 'register' ), 10 );
+		add_action( 'init', array( Patterns::class, 'register' ), 15 );
+		add_action( 'init', array( $blocks, 'register' ), 20 );
+		$preview->register();
+		Core_Rest_Guard::register();
+		Lifecycle::register_new_site_hook();
 
-    private function __construct() {}
+		if ( is_admin() ) {
+			add_action( 'admin_menu', array( Menu::class, 'register' ) );
+			add_action( 'admin_menu', array( Preview_Page::class, 'register' ), 20 );
+			add_action( 'enqueue_block_editor_assets', array( Editor::class, 'enqueue' ) );
+		}
+	}
 
-    public function init(): void {
-        add_action('init', array($this, 'register'));
-        add_action('admin_init', array($this, 'maybe_upgrade'));
-    }
-
-    public function register(): void {
-        (new Bindings())->register();
-        (new Blocks())->register();
-        (new Patterns())->register();
-        (new Routes())->register();
-        (new Frontend())->register();
-        (new Template_Tags())->register();
-        if (defined('MAGICK_AD_DEBUG') && MAGICK_AD_DEBUG) {
-            (new Debug())->register();
-        }
-        (new Diagnostics_Cron())->register();
-        (new Stats_Cron())->register();
-        (new Stats_Dim_Cron())->register();
-        Ads::register();
-
-        if (is_admin()) {
-            (new Admin())->register();
-            (new Privacy())->register();
-            (new Site_Health())->register();
-        }
-
-        if (defined('WP_CLI') && WP_CLI) {
-            (new Smoke_Command())->register();
-            (new Magick_Command())->register();
-        }
-    }
-
-    public function maybe_upgrade(): void {
-        Schema::maybe_upgrade();
-        Template_Migrator::maybe_migrate();
-        Ads_Migrator::maybe_migrate();
-        Slot_Migrator::maybe_migrate();
-        Placement_Migrator::maybe_migrate();
-    }
+	/**
+	 * Load bundled translations after WordPress has established the locale.
+	 */
+	public function load_textdomain(): void {
+		load_plugin_textdomain(
+			'npcink-ad',
+			false,
+			dirname( plugin_basename( NPCINK_AD_FILE ) ) . '/languages'
+		);
+	}
 }

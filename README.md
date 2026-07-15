@@ -1,139 +1,62 @@
-# Magick AD WP
+# Npcink Ad
 
-WordPress 广告插件，提供广告投放配置、前端渲染、统计追踪、兼容体检与调试能力。
+Npcink Ad 0.1 是一个 WordPress 原生、隐私优先的站内推广发布工具。核心流程只有一条：**创建推广内容 → 设置展示规则 → 在真实页面预览运行结论 → 发布或暂停**。
 
-## 文档入口
+> 0.1 是全新的 pre-GA 契约，不提供旧开发数据、API、区块或存储标识的兼容层。
 
-- 快速上手：`docs/quickstart.md`
-- 兼容指引：`docs/compatibility-guide.md`
-- 排障手册：`docs/troubleshooting.md`
-- 架构总览：`docs/architecture-overview.md`
-- 发布手册：`docs/release-playbook.md`
+## 产品边界
 
-## 主要能力
+- 唯一内容类型：`npcink_promotion`。标题、区块内容、草稿/发布状态和全部展示规则都在同一条记录中。
+- 规则 meta：位置、页面范围、包含/排除页面、设备、开始时间和结束时间，全部通过 typed meta 注册。
+- 位置只有手动区块、正文前和正文后三种；区块和短代码直接引用 Promotion ID。
+- 真实页面预览使用站点主题和同一套 PHP evaluator；预览可以让管理者看见被规则阻止的创意，但运行结论不会伪造为成功。
+- 正式投放由服务端判断发布状态、页面和时间；设备可见性使用 CSS 断点，避免全页缓存按 User-Agent 串设备。
+- 管理 REST 需要 `manage_npcink_ads`；插件激活时把该能力授予 administrator 和 editor。
+- 默认没有追踪请求、访客 Cookie、自定义表、统计队列或必需的前端 JavaScript。
 
-- 广告配置：页面范围、插入位置、设备、登录态与展示规则
-- 模板库：系统预设 + 自定义模板（支持分类、收藏、置顶）
-- 统计追踪：曝光/点击、维度统计、失败原因码
-- 可靠性：异步队列 + 写入失败回退队列 + Cron 回收
-- 兼容体检：节点插入、Cron、队列、同意门控检查
-- 兼容报告：后台一键导出 JSON/Markdown
+产品取舍见 [产品契约](docs/product-contract.md)，数据模型见 [ADR 003](docs/decisions/003-single-promotion-record.md)，模块边界见 [架构总览](docs/architecture-overview.md)。
 
-## 开发命令
+## 明确不做
+
+0.1 不包含 AdSense 管理、统计追踪、报表、A/B 测试、CMP、Popup、频控、地理定向、任意 PHP/JavaScript、模板市场、自定义数据库表或旧管理端 SPA。新增能力必须先证明它能缩短或降低“正确发布一条推广”的成本。
+
+## 开发与验证
+
+要求 PHP 8.1+、Node.js 20+、pnpm 10、Composer 2、WP-CLI 和 GNU gettext。
 
 ```bash
-pnpm install
-pnpm run start
-pnpm run build
-pnpm run dist
-pnpm run release
+composer install
+pnpm install --frozen-lockfile
+
+composer check
+pnpm check
+bash scripts/release-gate.sh
 ```
 
-## 发布门禁
+插件内置完整的简体中文（`zh_CN`）PHP 与区块编辑器语言包。新增或修改界面文案后执行：
+
+```bash
+composer i18n:refresh
+composer i18n:check
+```
+
+`i18n:refresh` 会从当前 PHP、区块元数据和生产 JavaScript 重新生成翻译模板，并保留已有中文翻译；如出现新字符串，完整性检查会失败，必须先补齐中文译文。
+
+WordPress Playground 覆盖最低和当前版本：
+
+```bash
+WP_VERSION=6.5 PHP_VERSION=8.1 tests/playground/run.sh
+WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
+```
+
+Playground 会验证单 Promotion 数据模型、typed meta、页面/时间/设备规则、区块/短代码/自动位置、匿名 REST 拒绝、无 Placement/Options/自定义表以及显式卸载清理。真实编辑器与主题页面交互仍需在 Local 中做浏览器验收。
+
+## 发布包
 
 ```bash
 bash scripts/release-gate.sh
 ```
 
-门禁默认执行：
+产物为 `dist/npcink-ad-0.1.0.zip`，包内顶层目录固定为 `npcink-ad/`。发布门禁会校验构建体积、必需文件、禁止内容及发布包中不存在旧品牌运行标识。
 
-- 前端构建
-- 前端包体预算检查（`build/index.js`、`build/index.css`）
-- PHP 语法检查（本机有 `php` 时）
-- 可选 E2E（设置 `MAGICK_AD_E2E_PREVIEW_PATH` 时）
-- 生成并校验发布 zip
-
-可用环境变量：
-
-- `MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB`（默认 `180`）
-- `MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB`（默认 `60`）
-- `MAGICK_AD_BUNDLE_BUDGET_STRICT`（默认 `1`，设为 `0` 时仅告警不失败）
-
-## 回滚脚本
-
-```bash
-bash scripts/rollback.sh <release-zip> <plugin-target-dir>
-```
-
-## 发布包检查（可选）
-
-```bash
-wp plugin check "wp-content/plugins/magick-ad/dist/magick-ad" --format=table
-find "wp-content/plugins/magick-ad/dist/magick-ad" -name "*.php" -print0 | xargs -0 -n 1 php -l
-```
-
-检查PHP错误
-
-```shell
-cd "/Users/muze/Local Sites/magick-ad/app/public/wp-content/plugins/magick-ad"
-
-find . -type f -name "*.php" \
-  ! -path "./dist/*" \
-  ! -path "./vendor/*" \
-  ! -path "./node_modules/*" \
-  -print0 | xargs -0 -n1 php -l
-
-```
-
-## E2E
-
-默认预览地址：`http://magick-ad.local/`
-
-首次运行（或浏览器缓存损坏）：
-
-```bash
-pnpm exec playwright install chromium chromium-headless-shell
-```
-
-全量 E2E：
-
-```bash
-MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
-MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
-pnpm run test:e2e
-```
-
-分场景 E2E：
-
-```bash
-# A. 无同意（应被门控）
-MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
-MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
-MAGICK_AD_E2E_HAS_CONSENT=0 \
-pnpm exec playwright test tests/e2e/tracking-advanced.spec.js -g "respects consent guard"
-
-# B. 已同意（应允许统计）
-MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
-MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
-MAGICK_AD_E2E_HAS_CONSENT=1 \
-pnpm exec playwright test tests/e2e/tracking-advanced.spec.js -g "respects consent guard"
-
-# C. 兼容矩阵（设备 + 同意组合）
-MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
-MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
-pnpm exec playwright test tests/e2e/compatibility-matrix.spec.js --project=chromium
-```
-
-发布门禁（构建 + PHP 语法检查 + 可选 E2E + 打包）：
-
-```bash
-MAGICK_AD_E2E_PREVIEW_PATH="http://magick-ad.local/" \
-MAGICK_AD_E2E_REQUIRE_CONSENT=1 \
-bash scripts/release-gate.sh
-```
-
-说明：`scripts/release-gate.sh` 已支持“浏览器已安装时自动跳过 install”。
-
-如果你需要本地强制非延迟加载 tracking runtime（仅测试环境）：
-
-```php
-<?php
-/**
- * 本地 E2E：强制 magick-ad-track 立即加载
- * 建议放到 wp-content/mu-plugins/magick-ad-e2e-force-track.php
- * 仅用于本地/测试环境，不建议生产启用。
- */
-add_filter('magick_ad_track_defer', static function ($defer) {
-    return false;
-}, 10, 4);
-```
+排期依赖页面在时间边界后重新生成。使用第三方整页缓存时，需要配置相应缓存 TTL 或在 Promotion 变更和排期边界清理缓存；0.1 不宣称能穿透任意缓存实现分钟级排期。

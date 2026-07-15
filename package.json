@@ -1,26 +1,31 @@
 {
-  "name": "magick-ad",
+  "name": "npcink-ad",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "start": "wp-scripts start --webpack-src-dir=assets/js --webpack-output-dir=build",
     "build": "wp-scripts build --webpack-src-dir=assets/js --webpack-output-dir=build",
-    "dist": "bash scripts/dist.sh",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "release": "bash scripts/release.sh"
+    "lint:js": "wp-scripts lint-js assets/js webpack.config.js",
+    "lint:style": "wp-scripts lint-style assets/js/index.css",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm run typecheck && pnpm run lint:js && pnpm run lint:style"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^26.19.0",
-    "@playwright/test": "^1.49.0"
-  },
-  "dependencies": {
-    "@wordpress/blocks": "wp-6.9",
-    "@wordpress/block-library": "wp-6.9",
-    "@wordpress/editor": "wp-6.9",
-    "@wordpress/icons": "wp-6.9",
-    "@wordpress/url": "wp-6.9",
-    "recharts": "^2.15.4",
-    "zustand": "^5.0.10"
+    "@wordpress/block-editor": "wp-7.0",
+    "@wordpress/blocks": "wp-7.0",
+    "@wordpress/components": "wp-7.0",
+    "@wordpress/core-data": "wp-7.0",
+    "@wordpress/data": "wp-7.0",
+    "@wordpress/editor": "wp-7.0",
+    "@wordpress/i18n": "wp-7.0",
+    "@wordpress/plugins": "wp-7.0",
+    "@wordpress/scripts": "wp-7.0",
+    "@wordpress/server-side-render": "wp-7.0",
+    "@types/react": "18.3.27",
+    "@types/wordpress__block-editor": "15.0.6",
+    "@types/wordpress__blocks": "15.10.2",
+    "@types/wordpress__server-side-render": "6.15.0",
+    "react": "18.3.1",
+    "typescript": "5.3.3"
   }
 }

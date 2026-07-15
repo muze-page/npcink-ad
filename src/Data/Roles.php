@@ -1,34 +1,29 @@
 <?php
+/**
+ * Plugin capability lifecycle.
+ *
+ * @package NpcinkAd
+ */
 
-namespace MagickAD\Data;
+namespace Npcink\Ad\Data;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
+/**
+ * Manages the single plugin capability.
+ */
 final class Roles {
-    public static function install(): void {
-        add_role(
-            'magick_ad_manager',
-            __('Magick AD 管理员', 'magick-ad'),
-            array(
-                'read' => true,
-                'manage_magick_ads' => true,
-            )
-        );
-
-        $admin = get_role('administrator');
-        if ($admin && !$admin->has_cap('manage_magick_ads')) {
-            $admin->add_cap('manage_magick_ads');
-        }
-    }
-
-    public static function uninstall(): void {
-        remove_role('magick_ad_manager');
-
-        $admin = get_role('administrator');
-        if ($admin && $admin->has_cap('manage_magick_ads')) {
-            $admin->remove_cap('manage_magick_ads');
-        }
-    }
+	/**
+	 * Grant promotion management to WordPress administrators and editors.
+	 */
+	public static function install(): void {
+		foreach ( array( 'administrator', 'editor' ) as $role_name ) {
+			$role = get_role( $role_name );
+			if ( $role && ! $role->has_cap( 'manage_npcink_ads' ) ) {
+				$role->add_cap( 'manage_npcink_ads' );
+			}
+		}
+	}
 }

@@ -1,95 +1,53 @@
 <?php
+/**
+ * Remove all Npcink Ad data.
+ *
+ * @package NpcinkAd
+ */
 
-if (!defined('WP_UNINSTALL_PLUGIN')) {
-    exit;
+if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+	exit;
 }
 
-global $wpdb;
+/**
+ * Remove Npcink Ad data from the current site in the network.
+ */
+function npcink_ad_uninstall_site_data(): void {
+	$npcink_ad_post_ids = get_posts(
+		array(
+			'post_type'      => 'npcink_promotion',
+			'post_status'    => array( 'publish', 'future', 'draft', 'pending', 'private', 'trash', 'auto-draft', 'inherit' ),
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		)
+	);
+	foreach ( $npcink_ad_post_ids as $npcink_ad_post_id ) {
+		wp_delete_post( (int) $npcink_ad_post_id, true );
+	}
 
-$magick_ad_tables = array(
-    $wpdb->prefix . 'magick_ad_stats',
-    $wpdb->prefix . 'magick_ad_stats_log',
-    $wpdb->prefix . 'magick_ad_stats_dim',
-    $wpdb->prefix . 'magick_ad_stats_variant',
-    $wpdb->prefix . 'magick_ad_stats_event',
-);
-
-foreach ($magick_ad_tables as $magick_ad_table) {
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Uninstall schema cleanup.
-    $wpdb->query($wpdb->prepare('DROP TABLE IF EXISTS %i', $magick_ad_table));
+	$npcink_ad_roles = wp_roles();
+	foreach ( $npcink_ad_roles->role_objects as $npcink_ad_role ) {
+		if ( $npcink_ad_role->has_cap( 'manage_npcink_ads' ) ) {
+			$npcink_ad_role->remove_cap( 'manage_npcink_ads' );
+		}
+	}
 }
 
-$magick_ad_option_like = $wpdb->esc_like('magick_ad_') . '%';
-$magick_ad_transient_like = $wpdb->esc_like('_transient_magick_ad_') . '%';
-$magick_ad_transient_timeout_like = $wpdb->esc_like('_transient_timeout_magick_ad_') . '%';
-
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-$wpdb->query(
-    $wpdb->prepare(
-        'DELETE FROM %i WHERE option_name LIKE %s',
-        $wpdb->options,
-        $magick_ad_option_like
-    )
-);
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-$wpdb->query(
-    $wpdb->prepare(
-        'DELETE FROM %i WHERE option_name LIKE %s',
-        $wpdb->options,
-        $magick_ad_transient_like
-    )
-);
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-$wpdb->query(
-    $wpdb->prepare(
-        'DELETE FROM %i WHERE option_name LIKE %s',
-        $wpdb->options,
-        $magick_ad_transient_timeout_like
-    )
-);
-
-if (is_multisite()) {
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-    $wpdb->query(
-        $wpdb->prepare(
-            'DELETE FROM %i WHERE meta_key LIKE %s',
-            $wpdb->sitemeta,
-            $magick_ad_option_like
-        )
-    );
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-    $wpdb->query(
-        $wpdb->prepare(
-            'DELETE FROM %i WHERE meta_key LIKE %s',
-            $wpdb->sitemeta,
-            $wpdb->esc_like('_site_transient_magick_ad_') . '%'
-        )
-    );
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall cleanup.
-    $wpdb->query(
-        $wpdb->prepare(
-            'DELETE FROM %i WHERE meta_key LIKE %s',
-            $wpdb->sitemeta,
-            $wpdb->esc_like('_site_transient_timeout_magick_ad_') . '%'
-        )
-    );
-}
-
-if (function_exists('remove_role')) {
-    remove_role('magick_ad_manager');
-    $magick_ad_admin = get_role('administrator');
-    if ($magick_ad_admin?->has_cap('manage_magick_ads')) {
-        $magick_ad_admin->remove_cap('manage_magick_ads');
-    }
-}
-
-$magick_ad_ads = get_posts(array(
-    'post_type' => 'magick_ad',
-    'post_status' => 'any',
-    'numberposts' => -1,
-    'fields' => 'ids',
-));
-
-foreach ($magick_ad_ads as $magick_ad_ad_id) {
-    wp_delete_post($magick_ad_ad_id, true);
+if ( is_multisite() ) {
+	$npcink_ad_site_ids = get_sites(
+		array(
+			'fields' => 'ids',
+			'number' => 0,
+		)
+	);
+	foreach ( $npcink_ad_site_ids as $npcink_ad_site_id ) {
+		switch_to_blog( (int) $npcink_ad_site_id );
+		try {
+			npcink_ad_uninstall_site_data();
+		} finally {
+			restore_current_blog();
+		}
+	}
+} else {
+	npcink_ad_uninstall_site_data();
 }

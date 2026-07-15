@@ -1,18 +1,18 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
+    "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "Node",
-    "lib": ["DOM", "ES2020"],
-    "jsx": "react-jsx",
-    "strict": false,
-    "noImplicitAny": false,
+    "moduleResolution": "Bundler",
+    "lib": ["DOM", "ES2022"],
+    "jsx": "react",
+    "strict": true,
+    "noImplicitAny": true,
     "skipLibCheck": true,
-    "allowJs": true,
-    "checkJs": false,
+    "allowJs": false,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
+    "noEmit": true,
     "resolveJsonModule": true
   },
   "include": [

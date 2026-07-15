@@ -2,11 +2,6 @@ name: Release Gate
 
 on:
   workflow_dispatch:
-    inputs:
-      preview_path:
-        description: 'Optional E2E preview URL/path'
-        required: false
-        type: string
   push:
     tags:
       - 'v*'
@@ -15,46 +10,48 @@ jobs:
   release-gate:
     runs-on: ubuntu-latest
     env:
-      MAGICK_AD_E2E_PREVIEW_PATH: ${{ github.event.inputs.preview_path || vars.MAGICK_AD_E2E_PREVIEW_PATH }}
-      MAGICK_AD_BUNDLE_MAX_INDEX_JS_KB: 180
-      MAGICK_AD_BUNDLE_MAX_INDEX_CSS_KB: 60
-      MAGICK_AD_BUNDLE_BUDGET_STRICT: 1
+      NPCINK_AD_BUNDLE_MAX_INDEX_JS_KB: 40
+      NPCINK_AD_BUNDLE_MAX_INDEX_CSS_KB: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2, wp-cli
+
+      - name: Install gettext
+        run: sudo apt-get update && sudo apt-get install --yes gettext
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
-          version: 9
+          version: 10
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: pnpm
 
-      - name: Install dependencies
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Run release gate
         run: bash scripts/release-gate.sh
 
-      - name: Upload release zip
-        uses: actions/upload-artifact@v4
-        with:
-          name: magick-ad-release
-          path: dist/*.zip
+      - name: Run current WordPress Playground matrix
+        run: WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 
-      - name: Upload playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Upload release zip
+        uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
-          path: playwright-report
-          if-no-files-found: ignore
+          name: npcink-ad-release
+          path: dist/*.zip
+          if-no-files-found: error

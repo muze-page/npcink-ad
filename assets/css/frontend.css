@@ -1,0 +1,31 @@
+.npcink-ad-promotion {
+	box-sizing: border-box;
+}
+
+@media (max-width: 781px) {
+	.npcink-ad-device-desktop {
+		display: none !important;
+	}
+}
+
+@media (min-width: 782px) {
+	.npcink-ad-device-mobile {
+		display: none !important;
+	}
+}
+
+.npcink-ad-preview-verdict {
+	box-sizing: border-box;
+	margin: 0 0 12px;
+	padding: 10px 12px;
+	border-left: 4px solid #1e8cbe;
+	background: #f0f6fc;
+	color: #1e1e1e;
+	font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.npcink-ad-preview-verdict.is-blocked {
+	border-left-color: #d63638;
+	background: #fcf0f1;
+}
+

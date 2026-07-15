@@ -1,0 +1,38 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "Npcink Ad smoke test",
+    "author": "Npcink",
+    "description": "Installs the packaged plugin and verifies the single-promotion WordPress integration."
+  },
+  "preferredVersions": {
+    "php": "8.1",
+    "wp": "6.5"
+  },
+  "steps": [
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "bundled",
+        "path": "/npcink-ad.zip"
+      },
+      "options": {
+        "activate": true,
+        "targetFolderName": "npcink-ad"
+      },
+      "ifAlreadyInstalled": "overwrite"
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/npcink-ad-smoke.php",
+      "data": {
+        "resource": "bundled",
+        "path": "/smoke.php"
+      }
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require '/wordpress/npcink-ad-smoke.php';"
+    }
+  ]
+}
