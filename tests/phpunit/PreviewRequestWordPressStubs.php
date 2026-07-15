@@ -75,9 +75,18 @@ if ( ! function_exists( __NAMESPACE__ . '\\get_post_type' ) ) {
 	 * @param int $post_id Queried post ID.
 	 */
 	function get_post_type( int $post_id ): string|false {
-		unset( $post_id );
+		$GLOBALS['npcink_ad_test_get_post_type_calls'][] = $post_id;
+		$post = $GLOBALS['npcink_ad_test_posts'][ $post_id ] ?? null;
+		if ( is_object( $post ) && is_string( $post->post_type ?? null ) ) {
+			return $post->post_type;
+		}
+		if ( isset( $GLOBALS['npcink_ad_test_preview_target_type'] ) ) {
+			return $GLOBALS['npcink_ad_test_preview_target_type'];
+		}
 
-		return $GLOBALS['npcink_ad_test_preview_target_type'] ?? false;
+		$post_type = $GLOBALS['npcink_ad_test_singular_post_type'] ?? false;
+
+		return is_string( $post_type ) && '' !== $post_type ? $post_type : false;
 	}
 }
 

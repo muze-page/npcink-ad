@@ -42,6 +42,24 @@ final class Delivery {
 	private array $filtered_content = array();
 
 	/**
+	 * Native content type and direct term relationships cached for this request.
+	 *
+	 * @var array<int, array{post_type: string, terms_loaded: bool, category_ids: list<int>, tag_ids: list<int>, content_terms_available: bool}>
+	 */
+	private array $content_contexts = array();
+
+	/**
+	 * Published automatic domain catalog shared by this delivery request.
+	 *
+	 * @var array{
+	 *     by_id: array<int, array<string, mixed>>,
+	 *     location_ids: array{content_before: list<int>, content_after: list<int>},
+	 *     paragraph_ids: array<int, list<int>>
+	 * }|null
+	 */
+	private ?array $automatic_catalog = null;
+
+	/**
 	 * Published paragraph Promotion IDs grouped by validated paragraph number.
 	 *
 	 * @var array<int, list<int>>
@@ -269,6 +287,42 @@ final class Delivery {
 			return $can_diagnose ? $this->renderer->placeholder( array( 'promotion_missing' ), $reserve ) : '';
 		}
 
+		return $this->render_mapped_promotion(
+			$promotion,
+			$promotion_id,
+			$expected_location,
+			$reserve,
+			$simulated_device,
+			$context_post_id,
+			$content_anchor_available,
+			$can_diagnose
+		);
+	}
+
+	/**
+	 * Evaluate and render one already mapped Promotion domain record.
+	 *
+	 * @param array       $promotion               Promotion domain data.
+	 * @param int         $promotion_id            Promotion post ID.
+	 * @param string      $expected_location       Expected delivery location.
+	 * @param int         $reserve                 Minimum reserved height.
+	 * @param string|null $simulated_device        Optional preview device.
+	 * @param int|null    $context_post_id         Optional page context override.
+	 * @param bool|null   $content_anchor_available Whether a requested paragraph anchor exists.
+	 * @param bool        $can_diagnose             Whether diagnostic placeholders are allowed.
+	 * @phpstan-param array<string, mixed> $promotion
+	 */
+	private function render_mapped_promotion(
+		array $promotion,
+		int $promotion_id,
+		string $expected_location,
+		int $reserve,
+		?string $simulated_device,
+		?int $context_post_id,
+		?bool $content_anchor_available,
+		bool $can_diagnose
+	): string {
+
 		$post_id = null === $context_post_id ? get_queried_object_id() : absint( $context_post_id );
 		$context = array(
 			'now'               => current_datetime()->getTimestamp(),
@@ -276,6 +330,7 @@ final class Delivery {
 			'expected_location' => $expected_location,
 			'simulated_device'  => $simulated_device,
 		);
+		$context = array_merge( $context, $this->automatic_content_context( $promotion, $expected_location, $post_id ) );
 		if ( null !== $content_anchor_available ) {
 			$context['content_anchor_available'] = $content_anchor_available;
 		}
@@ -336,6 +391,7 @@ final class Delivery {
 			'expected_location' => $expected_location,
 			'simulated_device'  => $simulated_device,
 		);
+		$context = array_merge( $context, $this->automatic_content_context( $promotion, $expected_location, $post_id ) );
 		if ( null !== $content_anchor_available ) {
 			$context['content_anchor_available'] = $content_anchor_available;
 		}
@@ -534,11 +590,9 @@ final class Delivery {
 		foreach ( $available_anchors as $paragraph_number ) {
 			$output = '';
 			foreach ( $groups[ $paragraph_number ] ?? array() as $promotion_id ) {
-				$output .= $this->render_promotion(
+				$output .= $this->render_automatic_promotion(
 					$promotion_id,
 					self::PARAGRAPH_LOCATION,
-					0,
-					null,
 					$post_id,
 					true
 				);
@@ -560,7 +614,7 @@ final class Delivery {
 		}
 
 		$this->paragraph_groups_loaded = true;
-		$groups                        = $this->repository->find_published_paragraph_ids_grouped_by_number();
+		$groups                        = $this->automatic_catalog()['paragraph_ids'];
 		foreach ( $groups as $paragraph_number => $promotion_ids ) {
 			$paragraph_number = (int) $paragraph_number;
 			if ( 1 > $paragraph_number || 20 < $paragraph_number ) {
@@ -630,10 +684,164 @@ final class Delivery {
 	 */
 	private function render_content_location( string $location, int $post_id ): string {
 		$output = '';
-		foreach ( $this->repository->find_published_ids_by_location( $location ) as $promotion_id ) {
-			$output .= $this->render_promotion( $promotion_id, $location, 0, null, $post_id );
+		$catalog = $this->automatic_catalog();
+		foreach ( $catalog['location_ids'][ $location ] ?? array() as $promotion_id ) {
+			$output .= $this->render_automatic_promotion( $promotion_id, $location, $post_id );
 		}
 
 		return $output;
+	}
+
+	/**
+	 * Load one Repository-owned automatic catalog for this delivery request.
+	 *
+	 * @return array{
+	 *     by_id: array<int, array<string, mixed>>,
+	 *     location_ids: array{content_before: list<int>, content_after: list<int>},
+	 *     paragraph_ids: array<int, list<int>>
+	 * }
+	 */
+	private function automatic_catalog(): array {
+		if ( null === $this->automatic_catalog ) {
+			$this->automatic_catalog = $this->repository->find_published_automatic_catalog();
+		}
+
+		return $this->automatic_catalog;
+	}
+
+	/**
+	 * Render an automatic Promotion already mapped in the shared catalog.
+	 *
+	 * @param int       $promotion_id            Promotion post ID.
+	 * @param string    $expected_location       Expected automatic location.
+	 * @param int       $post_id                 Current content post ID.
+	 * @param bool|null $content_anchor_available Whether a paragraph anchor exists.
+	 */
+	private function render_automatic_promotion(
+		int $promotion_id,
+		string $expected_location,
+		int $post_id,
+		?bool $content_anchor_available = null
+	): string {
+		$can_diagnose = current_user_can( 'manage_npcink_ads' );
+		if ( 1 > $promotion_id ) {
+			return $can_diagnose ? $this->renderer->placeholder( array( 'promotion_missing' ) ) : '';
+		}
+		if ( isset( $this->rendering[ $promotion_id ] ) ) {
+			return $can_diagnose ? $this->renderer->placeholder( array( 'recursive_promotion' ) ) : '';
+		}
+
+		$promotion = $this->automatic_catalog()['by_id'][ $promotion_id ] ?? null;
+		if ( null === $promotion ) {
+			return $can_diagnose ? $this->renderer->placeholder( array( 'promotion_missing' ) ) : '';
+		}
+
+		return $this->render_mapped_promotion(
+			$promotion,
+			$promotion_id,
+			$expected_location,
+			0,
+			null,
+			$post_id,
+			$content_anchor_available,
+			$can_diagnose
+		);
+	}
+
+	/**
+	 * Map the current standard content object into an automatic-scope context.
+	 *
+	 * Manual block and shortcode delivery intentionally skip this lookup. Direct
+	 * category and tag relationships are loaded only for the terms scope, and all
+	 * values are cached by post ID so normal rendering and real-page preview share
+	 * one request-local source of truth.
+	 *
+	 * @param array<string, mixed> $promotion        Promotion domain data.
+	 * @param string               $expected_location Expected delivery location.
+	 * @param int                  $post_id          Current content post ID.
+	 * @return array{post_type?: string, category_ids?: list<int>, tag_ids?: list<int>, content_terms_available?: bool}
+	 */
+	private function automatic_content_context( array $promotion, string $expected_location, int $post_id ): array {
+		if ( ! in_array( $expected_location, array( 'content_before', 'content_after', 'content_after_paragraph' ), true ) || 1 > $post_id ) {
+			return array();
+		}
+
+		if ( ! isset( $this->content_contexts[ $post_id ] ) ) {
+			$post_type = get_post_type( $post_id );
+			$this->content_contexts[ $post_id ] = array(
+				'post_type'                 => is_string( $post_type ) ? $post_type : '',
+				'terms_loaded'              => false,
+				'category_ids'              => array(),
+				'tag_ids'                   => array(),
+				'content_terms_available'   => false,
+			);
+		}
+
+		$cached = &$this->content_contexts[ $post_id ];
+		if ( 'terms' === ( $promotion['content_scope'] ?? 'all' ) && 'post' === $cached['post_type'] && ! $cached['terms_loaded'] ) {
+			$cached['terms_loaded'] = true;
+			$category_terms         = get_the_terms( $post_id, 'category' );
+			$tag_terms              = get_the_terms( $post_id, 'post_tag' );
+			if ( $this->term_result_is_available( $category_terms ) && $this->term_result_is_available( $tag_terms ) ) {
+				$cached['category_ids']            = $this->normalize_term_ids( false === $category_terms ? array() : $category_terms );
+				$cached['tag_ids']                 = $this->normalize_term_ids( false === $tag_terms ? array() : $tag_terms );
+				$cached['content_terms_available'] = true;
+			}
+		}
+
+		return array(
+			'post_type'                => $cached['post_type'],
+			'category_ids'             => $cached['category_ids'],
+			'tag_ids'                  => $cached['tag_ids'],
+			'content_terms_available'  => $cached['content_terms_available'],
+		);
+	}
+
+	/**
+	 * Treat false as a valid empty relationship set and errors as unavailable.
+	 *
+	 * @param mixed $terms Result from get_the_terms().
+	 */
+	private function term_result_is_available( mixed $terms ): bool {
+		if ( false === $terms ) {
+			return true;
+		}
+		if ( ! is_array( $terms ) ) {
+			return false;
+		}
+
+		foreach ( $terms as $term ) {
+			if ( ! is_object( $term ) ) {
+				return false;
+			}
+
+			$term_id = $term->term_id ?? null;
+			if (
+				( ! is_int( $term_id ) && ( ! is_string( $term_id ) || 1 !== preg_match( '/^[1-9][0-9]*$/', $term_id ) ) )
+				|| 1 > (int) $term_id
+			) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Normalize IDs returned by WordPress's cached term relationship API.
+	 *
+	 * @param array<int, mixed> $terms Assigned term objects.
+	 * @return list<int>
+	 */
+	private function normalize_term_ids( array $terms ): array {
+		$normalized = array();
+		foreach ( $terms as $term ) {
+			$id = is_object( $term ) ? absint( $term->term_id ?? 0 ) : 0;
+			if ( 0 < $id ) {
+				$normalized[ $id ] = $id;
+			}
+		}
+
+		return array_values( $normalized );
 	}
 }

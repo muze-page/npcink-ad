@@ -18,16 +18,18 @@ final class Post_Types {
 	public const PROMOTION_POST_TYPE = 'npcink_promotion';
 
 	public const LOCATION_META         = '_npcink_ad_location';
-	public const PAGE_SCOPE_META       = '_npcink_ad_page_scope';
+	public const CONTENT_SCOPE_META    = '_npcink_ad_content_scope';
 	public const INCLUDE_IDS_META      = '_npcink_ad_include_ids';
 	public const EXCLUDE_IDS_META      = '_npcink_ad_exclude_ids';
+	public const CATEGORY_IDS_META     = '_npcink_ad_category_ids';
+	public const TAG_IDS_META          = '_npcink_ad_tag_ids';
 	public const DEVICE_META           = '_npcink_ad_device';
 	public const START_AT_META         = '_npcink_ad_start_at';
 	public const END_AT_META           = '_npcink_ad_end_at';
 	public const PARAGRAPH_NUMBER_META = '_npcink_ad_paragraph_number';
 
 	public const LOCATIONS                = array( 'block', 'content_before', 'content_after', 'content_after_paragraph' );
-	public const PAGE_SCOPES              = array( 'all', 'selected' );
+	public const CONTENT_SCOPES           = array( 'all', 'posts', 'pages', 'terms', 'selected' );
 	public const DEVICES                  = array( 'all', 'desktop', 'mobile' );
 	public const MAX_POST_IDS             = 50;
 	public const DEFAULT_PARAGRAPH_NUMBER = 3;
@@ -106,9 +108,11 @@ final class Post_Types {
 	 */
 	private static function register_meta(): void {
 		self::register_enum_meta( self::LOCATION_META, 'content_after', self::LOCATIONS, array( self::class, 'sanitize_location' ) );
-		self::register_enum_meta( self::PAGE_SCOPE_META, 'all', self::PAGE_SCOPES, array( self::class, 'sanitize_page_scope' ) );
+		self::register_enum_meta( self::CONTENT_SCOPE_META, 'all', self::CONTENT_SCOPES, array( self::class, 'sanitize_content_scope' ) );
 		self::register_id_list_meta( self::INCLUDE_IDS_META );
 		self::register_id_list_meta( self::EXCLUDE_IDS_META );
+		self::register_id_list_meta( self::CATEGORY_IDS_META );
+		self::register_id_list_meta( self::TAG_IDS_META );
 		self::register_enum_meta( self::DEVICE_META, 'all', self::DEVICES, array( self::class, 'sanitize_device' ) );
 		self::register_datetime_meta( self::START_AT_META );
 		self::register_datetime_meta( self::END_AT_META );
@@ -300,14 +304,14 @@ final class Post_Types {
 	}
 
 	/**
-	 * Sanitize a page scope.
+	 * Sanitize a content scope.
 	 *
 	 * @param mixed $value Raw metadata value.
 	 */
-	public static function sanitize_page_scope( mixed $value ): string {
+	public static function sanitize_content_scope( mixed $value ): string {
 		$value = sanitize_key( (string) $value );
 
-		return in_array( $value, self::PAGE_SCOPES, true ) ? $value : 'all';
+		return in_array( $value, self::CONTENT_SCOPES, true ) ? $value : 'all';
 	}
 
 	/**

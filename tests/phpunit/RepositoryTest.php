@@ -11,6 +11,8 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/PromotionStatusWordPressStubs.php';
 require_once __DIR__ . '/PromotionStatusWordPressPost.php';
+require_once __DIR__ . '/PromotionPreflightWordPressClasses.php';
+require_once __DIR__ . '/EditorialScopeWordPressStubs.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Post_Types.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Repository.php';
 
@@ -25,6 +27,10 @@ final class RepositoryTest extends TestCase {
 		$GLOBALS['npcink_ad_test_posts']             = array();
 		$GLOBALS['npcink_ad_test_meta']              = array();
 		$GLOBALS['npcink_ad_test_get_posts_queries'] = array();
+		$GLOBALS['npcink_ad_test_get_terms_queries'] = array();
+		$GLOBALS['npcink_ad_test_get_terms_errors']  = array();
+		$GLOBALS['npcink_ad_test_get_terms_results'] = array();
+		$GLOBALS['npcink_ad_test_term_taxonomies']   = array();
 		unset( $GLOBALS['npcink_ad_test_public_ids'] );
 	}
 
@@ -141,6 +147,127 @@ final class RepositoryTest extends TestCase {
 	}
 
 	/**
+	 * Existing-term filtering is taxonomy-specific and preserves normalized order.
+	 */
+	public function test_existing_term_filter_is_bounded_to_core_taxonomies(): void {
+		$GLOBALS['npcink_ad_test_term_taxonomies'] = array(
+			'category' => array( 3, 7 ),
+			'post_tag' => array( 7, 9 ),
+		);
+		$repository = new Repository();
+
+		self::assertSame( array( 7, 3 ), $repository->filter_existing_term_ids( array( 7, '3', 7, 9 ), 'category' ) );
+		self::assertSame( array( 7, 9 ), $repository->filter_existing_term_ids( array( 7, 3, 9 ), 'post_tag' ) );
+		self::assertSame( array(), $repository->filter_existing_term_ids( array( 7 ), 'product_cat' ) );
+		self::assertCount( 2, $GLOBALS['npcink_ad_test_get_terms_queries'] );
+	}
+
+	/**
+	 * Term lookup failures fail closed instead of accepting unknown IDs.
+	 */
+	public function test_existing_term_filter_fails_closed_on_query_error(): void {
+		$GLOBALS['npcink_ad_test_term_taxonomies']['category'] = array( 3 );
+		$GLOBALS['npcink_ad_test_get_terms_errors']            = array( 'category' );
+
+		self::assertSame( array(), ( new Repository() )->filter_existing_term_ids( array( 3 ), 'category' ) );
+	}
+
+	/**
+	 * Malformed term-query elements invalidate the complete query result.
+	 */
+	public function test_existing_term_filter_fails_closed_on_malformed_query_elements(): void {
+		$repository = new Repository();
+		$results    = array(
+			'numeric prefix' => array( '7garbage' ),
+			'leading zero'   => array( '07' ),
+			'whitespace'     => array( ' 7' ),
+			'zero'           => array( 0 ),
+			'negative'       => array( -7 ),
+			'float'          => array( 7.0 ),
+			'boolean'        => array( true ),
+			'array'          => array( array( 7 ) ),
+			'object'         => array( (object) array( 'term_id' => 7 ) ),
+			'mixed valid and malformed' => array( 7, '8garbage' ),
+		);
+
+		foreach ( $results as $label => $result ) {
+			$GLOBALS['npcink_ad_test_get_terms_results']['category'] = $result;
+
+			self::assertSame(
+				array(),
+				$repository->filter_existing_term_ids( array( 7, 8 ), 'category' ),
+				(string) $label
+			);
+		}
+	}
+
+	/**
+	 * A non-array term-query result cannot establish taxonomy ownership.
+	 */
+	public function test_existing_term_filter_fails_closed_on_non_array_query_result(): void {
+		$GLOBALS['npcink_ad_test_get_terms_results']['category'] = '7';
+
+		self::assertSame( array(), ( new Repository() )->filter_existing_term_ids( array( 7 ), 'category' ) );
+	}
+
+	/**
+	 * Integer and canonical positive-integer string results remain supported.
+	 */
+	public function test_existing_term_filter_accepts_strict_positive_integer_results(): void {
+		$GLOBALS['npcink_ad_test_get_terms_results']['category'] = array( '3', 7 );
+
+		self::assertSame(
+			array( 7, 3 ),
+			( new Repository() )->filter_existing_term_ids( array( 7, 3, 9 ), 'category' )
+		);
+	}
+
+	/**
+	 * Active automatic term IDs remain raw in the domain with separate validity.
+	 */
+	public function test_active_term_scope_preserves_ids_and_validity(): void {
+		$GLOBALS['npcink_ad_test_posts'][7] = $this->promotion_post( 7, 'publish' );
+		$GLOBALS['npcink_ad_test_meta'][7]  = array_merge(
+			$this->promotion_meta( 'content_after' ),
+			array(
+				Post_Types::CONTENT_SCOPE_META => 'terms',
+				Post_Types::CATEGORY_IDS_META  => array( 3, 4 ),
+				Post_Types::TAG_IDS_META       => array( 9 ),
+			)
+		);
+		$GLOBALS['npcink_ad_test_term_taxonomies'] = array(
+			'category' => array( 3 ),
+			'post_tag' => array( 9 ),
+		);
+
+		$promotion = ( new Repository() )->find_promotion( 7 );
+
+		self::assertIsArray( $promotion );
+		self::assertSame( 'terms', $promotion['content_scope'] );
+		self::assertSame( array( 3, 4 ), $promotion['category_ids'] );
+		self::assertSame( array( 9 ), $promotion['tag_ids'] );
+		self::assertFalse( $promotion['terms_valid'] );
+	}
+
+	/**
+	 * Hidden term values are not queried or validated outside active term scope.
+	 */
+	public function test_hidden_term_ids_do_not_affect_domain_validity(): void {
+		$GLOBALS['npcink_ad_test_posts'][8] = $this->promotion_post( 8, 'publish' );
+		$GLOBALS['npcink_ad_test_meta'][8]  = array_merge(
+			$this->promotion_meta( 'content_after' ),
+			array( Post_Types::CATEGORY_IDS_META => array( 999 ) )
+		);
+
+		$promotion = ( new Repository() )->find_promotion( 8 );
+
+		self::assertIsArray( $promotion );
+		self::assertSame( array( 999 ), $promotion['category_ids'] );
+		self::assertTrue( $promotion['terms_valid'] );
+		self::assertSame( array(), $GLOBALS['npcink_ad_test_get_terms_queries'] );
+	}
+
+	/**
 	 * Published automatic Promotions are loaded and mapped in one query.
 	 */
 	public function test_published_automatic_promotions_are_loaded_as_one_domain_batch(): void {
@@ -179,9 +306,87 @@ final class RepositoryTest extends TestCase {
 	}
 
 	/**
-	 * Paragraph delivery IDs are grouped once by valid anchor in query order.
+	 * Batch mapping resolves every active term rule from two taxonomy catalogs.
 	 */
-	public function test_published_paragraph_ids_are_grouped_without_invalid_records_or_n_plus_one_queries(): void {
+	public function test_published_automatic_promotions_batch_term_catalog_queries(): void {
+		$posts      = array();
+		$meta       = array();
+		$categories = range( 1, 20 );
+		$tags       = range( 101, 120 );
+
+		foreach ( $categories as $offset => $category_id ) {
+			$promotion_id          = $offset + 1;
+			$posts[ $promotion_id ] = $this->promotion_post( $promotion_id, 'publish' );
+			$meta[ $promotion_id ]  = array_merge(
+				$this->promotion_meta( 'content_after' ),
+				array(
+					Post_Types::CONTENT_SCOPE_META => 'terms',
+					Post_Types::CATEGORY_IDS_META  => array( $category_id ),
+					Post_Types::TAG_IDS_META       => array( $tags[ $offset ] ),
+				)
+			);
+		}
+
+		$GLOBALS['npcink_ad_test_posts']           = $posts;
+		$GLOBALS['npcink_ad_test_meta']            = $meta;
+		$GLOBALS['npcink_ad_test_term_taxonomies'] = array(
+			'category' => $categories,
+			'post_tag' => $tags,
+		);
+
+		$promotions = ( new Repository() )->find_published_automatic_promotions();
+		$queries    = $GLOBALS['npcink_ad_test_get_terms_queries'];
+
+		self::assertCount( 20, $promotions );
+		self::assertSame( array_fill( 0, 20, true ), array_column( $promotions, 'terms_valid' ) );
+		self::assertLessThanOrEqual( 2, count( $queries ) );
+		self::assertSame( array( 'category', 'post_tag' ), array_column( $queries, 'taxonomy' ) );
+		self::assertSame( $categories, $queries[0]['include'] );
+		self::assertSame( $tags, $queries[1]['include'] );
+	}
+
+	/**
+	 * A failed taxonomy catalog is shared as fail-closed evidence by the batch.
+	 */
+	public function test_published_automatic_promotions_share_failed_term_catalog_evidence(): void {
+		$GLOBALS['npcink_ad_test_posts'] = array(
+			1 => $this->promotion_post( 1, 'publish' ),
+			2 => $this->promotion_post( 2, 'publish' ),
+		);
+		$GLOBALS['npcink_ad_test_meta']  = array(
+			1 => array_merge(
+				$this->promotion_meta( 'content_after' ),
+				array(
+					Post_Types::CONTENT_SCOPE_META => 'terms',
+					Post_Types::CATEGORY_IDS_META  => array( 7 ),
+					Post_Types::TAG_IDS_META       => array( 17 ),
+				)
+			),
+			2 => array_merge(
+				$this->promotion_meta( 'content_after' ),
+				array(
+					Post_Types::CONTENT_SCOPE_META => 'terms',
+					Post_Types::CATEGORY_IDS_META  => array( 8 ),
+					Post_Types::TAG_IDS_META       => array( 18 ),
+				)
+			),
+		);
+		$GLOBALS['npcink_ad_test_get_terms_results']['category'] = array( 7, '8garbage' );
+		$GLOBALS['npcink_ad_test_get_terms_errors']              = array( 'post_tag' );
+
+		$promotions = ( new Repository() )->find_published_automatic_promotions();
+
+		self::assertSame( array( false, false ), array_column( $promotions, 'terms_valid' ) );
+		self::assertSame(
+			array( 'category', 'post_tag' ),
+			array_column( $GLOBALS['npcink_ad_test_get_terms_queries'], 'taxonomy' )
+		);
+	}
+
+	/**
+	 * The catalog groups valid paragraph IDs in deterministic query order.
+	 */
+	public function test_catalog_groups_paragraph_ids_without_invalid_records(): void {
 		$GLOBALS['npcink_ad_test_posts'] = array(
 			10 => $this->promotion_post( 10, 'publish', 2 ),
 			11 => $this->promotion_post( 11, 'publish', 1 ),
@@ -205,17 +410,18 @@ final class RepositoryTest extends TestCase {
 			18 => $this->paragraph_meta( '' ),
 		);
 
-		$repository = new Repository();
-		$grouped    = $repository->find_published_paragraph_ids_grouped_by_number();
-		$queries    = $GLOBALS['npcink_ad_test_get_posts_queries'];
+		$catalog = ( new Repository() )->find_published_automatic_catalog();
+		$queries = $GLOBALS['npcink_ad_test_get_posts_queries'];
 
 		self::assertSame(
 			array(
 				5 => array( 11 ),
 				3 => array( 12, 10, 14 ),
 			),
-			$grouped
+			$catalog['paragraph_ids']
 		);
+		self::assertSame( array( 16 ), $catalog['location_ids']['content_after'] );
+		self::assertSame( array(), $catalog['location_ids']['content_before'] );
 		self::assertCount( 1, $queries );
 		self::assertArrayNotHasKey( 'fields', $queries[0] );
 		self::assertSame(
@@ -225,10 +431,12 @@ final class RepositoryTest extends TestCase {
 			),
 			$queries[0]['orderby']
 		);
-		self::assertSame( 'content_after_paragraph', $queries[0]['meta_query'][0]['value'] );
+		self::assertSame( 'OR', $queries[0]['meta_query']['relation'] );
+		self::assertSame(
+			array( 'content_before', 'content_after', 'content_after_paragraph' ),
+			$queries[0]['meta_query'][0]['value']
+		);
 		self::assertTrue( $queries[0]['update_post_meta_cache'] );
-		self::assertSame( array(), $repository->find_published_ids_by_location( 'content_after_paragraph' ) );
-		self::assertCount( 1, $GLOBALS['npcink_ad_test_get_posts_queries'] );
 	}
 
 	/**
@@ -258,9 +466,11 @@ final class RepositoryTest extends TestCase {
 	 */
 	private function promotion_meta( ?string $location ): array {
 		$meta = array(
-			Post_Types::PAGE_SCOPE_META  => 'all',
+			Post_Types::CONTENT_SCOPE_META => 'all',
 			Post_Types::INCLUDE_IDS_META => array(),
 			Post_Types::EXCLUDE_IDS_META => array(),
+			Post_Types::CATEGORY_IDS_META => array(),
+			Post_Types::TAG_IDS_META      => array(),
 			Post_Types::DEVICE_META      => 'all',
 			Post_Types::START_AT_META    => '',
 			Post_Types::END_AT_META      => '',

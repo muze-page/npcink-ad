@@ -13,12 +13,12 @@ Automatic locations also allow more than one published Promotion to match the sa
 
 ## Decision
 
-Npcink Ad 0.2 is a controlled extension of the single-Promotion model. This ADR defines the implementation boundary. The automatic-content guard, overlap advisory, and after-paragraph step are now implemented; the later ordered steps remain governed by this boundary until completed.
+Npcink Ad 0.2 is a controlled extension of the single-Promotion model. This ADR defines the implementation boundary. The automatic-content guard, overlap advisory, after-paragraph placement, and canonical editorial content scope are now implemented. The remaining manual-block/device-guidance step stays governed by this boundary until completed.
 
-### Automatic-content page contract
+### Automatic-content contract
 
 - Automatic content locations apply only to the standard WordPress `post` and `page` post types.
-- This contract covers the existing before-content and after-content locations and the planned after-paragraph location.
+- This contract covers the before-content, after-content, and implemented after-paragraph locations.
 - Other custom post types are not implicitly supported merely because they render through `the_content`.
 - The manual Promotion block remains an explicit insertion path and is not expanded into a generic automatic-location contract.
 
@@ -32,7 +32,9 @@ Npcink Ad 0.2 is a controlled extension of the single-Promotion model. This ADR 
 - The minimum advisory comparison uses these bounded semantics:
   - both Promotions use the same automatic location;
   - their schedule windows may intersect, treating start as inclusive and end as exclusive (`start <= now < end`) and an absent boundary as open; windows that only touch at one Promotion's end and the other's start do not intersect;
-  - their effective standard-post/page scopes share at least one possible page after applying each Promotion's exclusions; a scope that can be proven disjoint must not trigger the advisory;
+  - their effective canonical content scopes share at least one possible standard post/page after applying each Promotion's explicit ID exclusions; `posts`/`pages` and `pages`/`terms` are provably disjoint, while `posts`/`terms` and two valid non-empty term scopes remain possible overlaps even when configured term IDs differ;
+  - selected/selected rules retain exact effective-ID comparison; selected versus a broad non-`all` scope stays conservative when the pure detector cannot know the selected object's post type or current terms;
+  - a `terms` scope with invalid terms or no active Core category/tag IDs has no effective published overlap target;
   - their device rules can be visible in the same viewport: `all` intersects either device, and equal device rules intersect, while `desktop` and `mobile` alone do not.
 - The advisory is management evidence, not an `Eligibility_Evaluator` reason code. It does not change runtime eligibility or block publication.
 - Npcink Ad 0.2 does not add priority, weight, rotation, winner selection, or an ad group.
@@ -42,7 +44,7 @@ Npcink Ad 0.2 is a controlled extension of the single-Promotion model. This ADR 
 Implementation proceeds in this order:
 
 1. **After the Nth paragraph (implemented)** — add one bounded automatic content position for standard posts and pages. It preserves main-query/main-loop safeguards and the shared eligibility and rendering path; ADR 006 defines its exact anchor behavior.
-2. **Collapsed advanced editorial scope** — add an advanced section for the standard `post`/`page` types and, where applicable, WordPress categories and tags. Existing simple page inclusion and exclusion remains the primary path; this is not a generic boolean targeting engine or arbitrary taxonomy/CPT support.
+2. **Collapsed advanced editorial scope (implemented)** — use one mutually exclusive `all | posts | pages | terms | selected` content scope for automatic standard-post/page delivery. `terms` directly matches any configured Core category/tag on standard posts; selected content and terms do not form a composite `OR` rule. Existing explicit selection and exclusion remains the simple path. [ADR 007](007-canonical-editorial-scope.md) defines the exact semantics and the intentional boundary against a generic boolean targeting engine or arbitrary taxonomy/CPT support.
 3. **Manual-block and device guidance** — make the explicit block-placement workflow clearer and document the fixed device boundary: mobile at `781px` and below, desktop at `782px` and above. No third device class is introduced.
 
 Each step must be completed and verified before the next step widens the product surface. New eligibility rules remain authoritative in PHP and must be reflected consistently in publication preflight, list explanations, real-page preview, translations, and tests.
@@ -78,8 +80,7 @@ Rejected. ADR 003 remains authoritative: there is no observed need that justifie
 
 ## Consequences
 
-- The 0.1 implementation remains the current runtime until each 0.2 step is implemented and verified.
-- Automatic delivery must gain an explicit standard-`post`/`page` guard before the 0.2 page contract is claimed as complete.
+- The automatic post/page guard, advisory overlap, paragraph anchor, and canonical editorial scope are current runtime behavior; manual-block/device guidance remains unfinished ordered work.
 - Overlap detection is advisory evidence only. Its wording and tests must preserve uncertainty instead of presenting a false conflict guarantee, and the advisory must stay outside eligibility reason codes and publication preflight failures.
 - Rendering all eligible Promotions preserves existing behavior and avoids introducing hidden selection state.
 - The advanced scope must remain collapsed and bounded so the default publishing workflow keeps its current usability budget.

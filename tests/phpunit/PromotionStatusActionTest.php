@@ -14,6 +14,8 @@ use PHPUnit\Framework\TestCase;
 require_once __DIR__ . '/PromotionStatusWordPressStubs.php';
 require_once __DIR__ . '/PromotionStatusWordPressClasses.php';
 require_once __DIR__ . '/PromotionStatusWordPressPost.php';
+require_once __DIR__ . '/PromotionPreflightWordPressClasses.php';
+require_once __DIR__ . '/EditorialScopeWordPressStubs.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Post_Types.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Repository.php';
 require_once dirname( __DIR__, 2 ) . '/src/Presentation/Eligibility_Messages.php';
@@ -28,6 +30,9 @@ final class PromotionStatusActionTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		$GLOBALS['npcink_ad_test_get_posts_queries'] = array();
+		$GLOBALS['npcink_ad_test_get_terms_queries'] = array();
+		$GLOBALS['npcink_ad_test_get_terms_errors']  = array();
+		$GLOBALS['npcink_ad_test_term_taxonomies']   = array();
 		unset( $GLOBALS['npcink_ad_test_public_ids'] );
 		$GLOBALS['npcink_ad_test_posts'] = array(
 			1  => new WP_Post(
@@ -58,9 +63,11 @@ final class PromotionStatusActionTest extends TestCase {
 		$GLOBALS['npcink_ad_test_meta']  = array(
 			1 => array(
 				Post_Types::LOCATION_META    => 'block',
-				Post_Types::PAGE_SCOPE_META  => 'selected',
+				Post_Types::CONTENT_SCOPE_META => 'selected',
 				Post_Types::INCLUDE_IDS_META => array( 10 ),
 				Post_Types::EXCLUDE_IDS_META => array(),
+				Post_Types::CATEGORY_IDS_META => array(),
+				Post_Types::TAG_IDS_META      => array(),
 				Post_Types::DEVICE_META      => 'all',
 				Post_Types::START_AT_META    => '',
 				Post_Types::END_AT_META      => '',
@@ -104,6 +111,51 @@ final class PromotionStatusActionTest extends TestCase {
 	}
 
 	/**
+	 * Resume rejects an empty active automatic term scope.
+	 */
+	public function test_resume_preflight_rejects_empty_active_terms(): void {
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::LOCATION_META ]      = 'content_after';
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::CONTENT_SCOPE_META ] = 'terms';
+
+		self::assertSame( 'promotion_targets_empty', $this->resume_blocking_reason() );
+	}
+
+	/**
+	 * Resume rejects deleted or wrong-taxonomy term IDs.
+	 */
+	public function test_resume_preflight_rejects_invalid_terms(): void {
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::LOCATION_META ]      = 'content_after';
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::CONTENT_SCOPE_META ] = 'terms';
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::CATEGORY_IDS_META ]  = array( 7 );
+		$GLOBALS['npcink_ad_test_term_taxonomies']['post_tag']               = array( 7 );
+
+		self::assertSame( 'promotion_terms_invalid', $this->resume_blocking_reason() );
+	}
+
+	/**
+	 * A valid term can resume even when no current post has that relationship.
+	 */
+	public function test_resume_preflight_accepts_valid_terms_without_content_matches(): void {
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::LOCATION_META ]      = 'content_after';
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::CONTENT_SCOPE_META ] = 'terms';
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::TAG_IDS_META ]       = array( 8 );
+		$GLOBALS['npcink_ad_test_term_taxonomies']['post_tag']               = array( 8 );
+
+		self::assertNull( $this->resume_blocking_reason() );
+	}
+
+	/**
+	 * Manual block delivery ignores hidden advanced term scope values.
+	 */
+	public function test_resume_preflight_ignores_manual_hidden_terms(): void {
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::CONTENT_SCOPE_META ] = 'terms';
+		$GLOBALS['npcink_ad_test_meta'][1][ Post_Types::CATEGORY_IDS_META ]  = array( 999 );
+
+		self::assertNull( $this->resume_blocking_reason() );
+		self::assertSame( array(), $GLOBALS['npcink_ad_test_get_terms_queries'] );
+	}
+
+	/**
 	 * Stored invalid paragraph placement returns its stable configuration reason.
 	 */
 	public function test_resume_preflight_returns_stable_reason_for_an_invalid_paragraph(): void {
@@ -122,6 +174,17 @@ final class PromotionStatusActionTest extends TestCase {
 		self::assertNotNull( $message );
 		self::assertSame( 'error', $message['type'] );
 		self::assertStringContainsString( 'Choose a paragraph number from 1 to 20.', $message['text'] );
+	}
+
+	/**
+	 * Invalid terms have an actionable resume notice.
+	 */
+	public function test_invalid_terms_notice_contains_actionable_guidance(): void {
+		$message = $this->notice_message( 'promotion_terms_invalid' );
+
+		self::assertNotNull( $message );
+		self::assertSame( 'error', $message['type'] );
+		self::assertStringContainsString( 'unavailable or could not be validated', $message['text'] );
 	}
 
 	/**

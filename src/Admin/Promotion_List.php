@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Promotion_List {
 	private const STATUS_COLUMN   = 'npcink_ad_rule_status';
 	private const LOCATION_COLUMN = 'npcink_ad_location';
-	private const SCOPE_COLUMN    = 'npcink_ad_page_scope';
+	private const SCOPE_COLUMN    = 'npcink_ad_content_scope';
 	private const END_AT_COLUMN   = 'npcink_ad_end_at';
 	private const REASONS_COLUMN  = 'npcink_ad_reasons';
 
@@ -162,7 +162,7 @@ final class Promotion_List {
 		$added = array(
 			self::STATUS_COLUMN   => __( 'Rule status', 'npcink-ad' ),
 			self::LOCATION_COLUMN => __( 'Placement', 'npcink-ad' ),
-			self::SCOPE_COLUMN    => __( 'Pages', 'npcink-ad' ),
+			self::SCOPE_COLUMN    => __( 'Content scope', 'npcink-ad' ),
 			self::END_AT_COLUMN   => __( 'Stops', 'npcink-ad' ),
 			self::REASONS_COLUMN  => __( 'Why not', 'npcink-ad' ),
 		);
@@ -361,25 +361,47 @@ final class Promotion_List {
 	}
 
 	/**
-	 * Render the configured page range using management-valid public targets.
+	 * Render the configured canonical content scope.
 	 *
 	 * @param array<string, mixed> $promotion Promotion domain data.
 	 */
 	private function render_scope( array $promotion ): void {
-		if ( 'selected' !== ( $promotion['page_scope'] ?? 'all' ) ) {
-			esc_html_e( 'All posts and pages', 'npcink-ad' );
-			$exclude_count = count( $this->post_ids( $promotion['exclude_ids'] ?? array() ) );
-			if ( 0 < $exclude_count ) {
-				echo '<br /><small>' . esc_html__( 'Configured exclusions:', 'npcink-ad' ) . ' ' . esc_html( (string) $exclude_count ) . '</small>';
-			}
-			return;
+		$scope = $this->content_scope( $promotion );
+
+		switch ( $scope ) {
+			case 'posts':
+				echo esc_html( __( 'All posts', 'npcink-ad' ) );
+				break;
+			case 'pages':
+				echo esc_html( __( 'All pages', 'npcink-ad' ) );
+				break;
+			case 'terms':
+				$term_count = count( $this->post_ids( $promotion['category_ids'] ?? array() ) )
+					+ count( $this->post_ids( $promotion['tag_ids'] ?? array() ) );
+				echo esc_html( __( 'Posts matching categories/tags', 'npcink-ad' ) );
+				echo '<br /><small>' . esc_html( __( 'Configured terms:', 'npcink-ad' ) ) . ' ' . esc_html( (string) $term_count ) . '</small>';
+				if ( 0 === $term_count || ! (bool) ( $promotion['terms_valid'] ?? false ) ) {
+					echo '<br /><small>' . esc_html( __( 'Invalid category/tag selection', 'npcink-ad' ) ) . '</small>';
+				}
+				break;
+			case 'selected':
+				$count = count(
+					array_diff(
+						$this->post_ids( $promotion['include_ids'] ?? array() ),
+						$this->post_ids( $promotion['exclude_ids'] ?? array() )
+					)
+				);
+				echo esc_html( __( 'Selected public posts/pages:', 'npcink-ad' ) ) . ' ' . esc_html( (string) $count );
+				break;
+			default:
+				echo esc_html( __( 'All posts and pages', 'npcink-ad' ) );
+				break;
 		}
 
-		$include_ids = is_array( $promotion['include_ids'] ?? null ) ? $promotion['include_ids'] : array();
-		$exclude_ids = is_array( $promotion['exclude_ids'] ?? null ) ? $promotion['exclude_ids'] : array();
-		$count       = count( array_diff( $include_ids, $exclude_ids ) );
-
-		echo esc_html__( 'Selected public posts/pages:', 'npcink-ad' ) . ' ' . esc_html( (string) $count );
+		$exclude_count = count( $this->post_ids( $promotion['exclude_ids'] ?? array() ) );
+		if ( 0 < $exclude_count ) {
+			echo '<br /><small>' . esc_html( __( 'Configured exclusions:', 'npcink-ad' ) ) . ' ' . esc_html( (string) $exclude_count ) . '</small>';
+		}
 	}
 
 	/**
@@ -492,7 +514,7 @@ final class Promotion_List {
 		}
 
 		$promotion = $this->repository->find_promotion( $post_id );
-		if ( null !== $promotion && 'selected' === ( $promotion['page_scope'] ?? 'all' ) ) {
+		if ( null !== $promotion && 'selected' === $this->content_scope( $promotion ) ) {
 			$promotion = $this->filter_public_targets( $promotion );
 		}
 		$this->promotions[ $post_id ] = $promotion;
@@ -514,14 +536,18 @@ final class Promotion_List {
 			return;
 		}
 
+		$row_posts = array();
+		foreach ( $query->posts as $post ) {
+			if ( $post instanceof WP_Post && Post_Types::PROMOTION_POST_TYPE === $post->post_type ) {
+				$row_posts[] = $post;
+			}
+		}
+		$mapped_rows = $this->repository->map_promotions( $row_posts );
+
 		$selected_ids = array();
 		$has_automatic_promotion = false;
-		foreach ( $query->posts as $post ) {
-			if ( ! $post instanceof WP_Post || Post_Types::PROMOTION_POST_TYPE !== $post->post_type ) {
-				continue;
-			}
-
-			$promotion                  = $this->repository->find_promotion( $post->ID );
+		foreach ( $row_posts as $post ) {
+			$promotion                     = $mapped_rows[ $post->ID ] ?? null;
 			$this->promotions[ $post->ID ] = $promotion;
 			if ( null === $promotion ) {
 				continue;
@@ -532,15 +558,16 @@ final class Promotion_List {
 				true
 			);
 
-			if ( 'selected' === ( $promotion['page_scope'] ?? 'all' ) ) {
+			if ( 'selected' === $this->content_scope( $promotion ) ) {
 				$selected_ids = array_merge( $selected_ids, $this->post_ids( $promotion['include_ids'] ?? array() ) );
 			}
 		}
 
 		if ( $has_automatic_promotion ) {
-			$this->published_automatic_promotions = $this->repository->find_published_automatic_promotions();
+			$catalog                              = $this->repository->find_published_automatic_catalog();
+			$this->published_automatic_promotions = array_values( $catalog['by_id'] );
 			foreach ( $this->published_automatic_promotions as $promotion ) {
-				if ( 'selected' === ( $promotion['page_scope'] ?? 'all' ) ) {
+				if ( 'selected' === $this->content_scope( $promotion ) ) {
 					$selected_ids = array_merge( $selected_ids, $this->post_ids( $promotion['include_ids'] ?? array() ) );
 				}
 			}
@@ -548,13 +575,13 @@ final class Promotion_List {
 
 		$public_lookup = $this->public_content_lookup( $selected_ids );
 		foreach ( $this->promotions as $post_id => $promotion ) {
-			if ( null === $promotion || 'selected' !== ( $promotion['page_scope'] ?? 'all' ) ) {
+			if ( null === $promotion || 'selected' !== $this->content_scope( $promotion ) ) {
 				continue;
 			}
 			$this->promotions[ $post_id ] = $this->apply_public_lookup( $promotion, $public_lookup );
 		}
 		foreach ( $this->published_automatic_promotions as $index => $promotion ) {
-			if ( 'selected' === ( $promotion['page_scope'] ?? 'all' ) ) {
+			if ( 'selected' === $this->content_scope( $promotion ) ) {
 				$this->published_automatic_promotions[ $index ] = $this->apply_public_lookup( $promotion, $public_lookup );
 			}
 		}
@@ -623,6 +650,29 @@ final class Promotion_List {
 		);
 
 		return $promotion;
+	}
+
+	/**
+	 * Resolve the effective scope shown by management surfaces.
+	 *
+	 * Manual blocks only support all or selected content. Advanced automatic
+	 * scopes therefore remain equivalent to all for explicit block placement.
+	 *
+	 * @param array<string, mixed> $promotion Promotion domain data.
+	 */
+	private function content_scope( array $promotion ): string {
+		$scope = isset( $promotion['content_scope'] ) ? (string) $promotion['content_scope'] : 'all';
+		if ( ! in_array( $scope, array( 'all', 'posts', 'pages', 'terms', 'selected' ), true ) ) {
+			$scope = 'all';
+		}
+
+		if ( 'block' === ( $promotion['location'] ?? 'content_after' )
+			&& ! in_array( $scope, array( 'all', 'selected' ), true )
+		) {
+			return 'all';
+		}
+
+		return $scope;
 	}
 
 	/**

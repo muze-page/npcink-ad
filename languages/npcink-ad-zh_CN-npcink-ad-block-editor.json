@@ -91,9 +91,6 @@
             "Manual block": [
                 "\u624b\u52a8\u533a\u5757"
             ],
-            "Pages": [
-                "\u9875\u9762\u8303\u56f4"
-            ],
             "All posts and pages": [
                 "\u6240\u6709\u6587\u7ae0\u548c\u9875\u9762"
             ],
@@ -117,9 +114,6 @@
             ],
             "Stop showing": [
                 "\u505c\u6b62\u5c55\u793a"
-            ],
-            "Advanced page exclusions": [
-                "\u9ad8\u7ea7\u9875\u9762\u6392\u9664"
             ],
             "Excluded content": [
                 "\u6392\u9664\u5185\u5bb9"
@@ -181,9 +175,6 @@
             "Add promotion content before publishing.": [
                 "\u53d1\u5e03\u524d\u8bf7\u6dfb\u52a0\u63a8\u5e7f\u5185\u5bb9\u3002"
             ],
-            "Add at least one valid included post or page that is not also excluded when Pages is set to Only selected content.": [
-                "\u5f53\u9875\u9762\u8303\u56f4\u8bbe\u4e3a\u201c\u4ec5\u6240\u9009\u5185\u5bb9\u201d\u65f6\uff0c\u8bf7\u81f3\u5c11\u6dfb\u52a0\u4e00\u7bc7\u6709\u6548\u4e14\u672a\u88ab\u6392\u9664\u7684\u6587\u7ae0\u6216\u9875\u9762\u3002"
-            ],
             "Stop showing must be later than Start showing.": [
                 "\u505c\u6b62\u5c55\u793a\u65f6\u95f4\u5fc5\u987b\u665a\u4e8e\u5f00\u59cb\u5c55\u793a\u65f6\u95f4\u3002"
             ],
@@ -195,9 +186,6 @@
             ],
             "Open preview": [
                 "\u6253\u5f00\u9884\u89c8"
-            ],
-            "No errors were found in the current editor fields. Public selected targets are confirmed by the server when publishing or scheduling.": [
-                "\u5f53\u524d\u7f16\u8f91\u5668\u5b57\u6bb5\u672a\u53d1\u73b0\u9519\u8bef\u3002\u53d1\u5e03\u6216\u6392\u7a0b\u65f6\uff0c\u670d\u52a1\u7aef\u4f1a\u786e\u8ba4\u6240\u9009\u516c\u5f00\u76ee\u6807\u662f\u5426\u6709\u6548\u3002"
             ],
             "This promotion may appear together with %d other published promotion in some post or page contexts.": [
                 "\u6b64\u63a8\u5e7f\u5728\u67d0\u4e9b\u6587\u7ae0\u6216\u9875\u9762\u60c5\u5883\u4e2d\uff0c\u53ef\u80fd\u4e0e\u53e6\u5916 %d \u4e2a\u5df2\u53d1\u5e03\u63a8\u5e7f\u540c\u65f6\u5c55\u793a\u3002"
@@ -246,6 +234,57 @@
             ],
             "Paragraph number must be a whole number from %1$d to %2$d.": [
                 "\u6bb5\u843d\u53f7\u5fc5\u987b\u662f %1$d \u5230 %2$d \u4e4b\u95f4\u7684\u6574\u6570\u3002"
+            ],
+            "Content scope": [
+                "\u5185\u5bb9\u8303\u56f4"
+            ],
+            "All posts": [
+                "\u6240\u6709\u6587\u7ae0"
+            ],
+            "All pages": [
+                "\u6240\u6709\u9875\u9762"
+            ],
+            "Remove category %s": [
+                "\u79fb\u9664\u5206\u7c7b\u76ee\u5f55 %s"
+            ],
+            "Remove tag %s": [
+                "\u79fb\u9664\u6807\u7b7e %s"
+            ],
+            "Posts in selected categories or tags": [
+                "\u6240\u9009\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u4e2d\u7684\u6587\u7ae0"
+            ],
+            "Advanced editorial scope \u2014 needs attention": [
+                "\u9ad8\u7ea7\u5185\u5bb9\u6295\u653e\u8303\u56f4\u2014\u2014\u9700\u8981\u5904\u7406"
+            ],
+            "Advanced editorial scope": [
+                "\u9ad8\u7ea7\u5185\u5bb9\u6295\u653e\u8303\u56f4"
+            ],
+            "Categories and tags use ANY matching and apply only to standard posts. Exact excluded content always takes priority.": [
+                "\u5206\u7c7b\u76ee\u5f55\u548c\u6807\u7b7e\u6309\u201c\u4efb\u4e00\u5339\u914d\u201d\u751f\u6548\uff0c\u4e14\u4ec5\u9002\u7528\u4e8e\u6807\u51c6\u6587\u7ae0\u3002\u660e\u786e\u6392\u9664\u7684\u5185\u5bb9\u59cb\u7ec8\u4f18\u5148\u3002"
+            ],
+            "Some selected categories or tags are no longer available. Remove them before publishing.": [
+                "\u90e8\u5206\u6240\u9009\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u5df2\u4e0d\u53ef\u7528\u3002\u8bf7\u5148\u79fb\u9664\uff0c\u518d\u53d1\u5e03\u3002"
+            ],
+            "Categories": [
+                "\u5206\u7c7b\u76ee\u5f55"
+            ],
+            "Choose one or more categories.": [
+                "\u8bf7\u9009\u62e9\u4e00\u4e2a\u6216\u591a\u4e2a\u5206\u7c7b\u76ee\u5f55\u3002"
+            ],
+            "Tags": [
+                "\u6807\u7b7e"
+            ],
+            "Choose one or more tags.": [
+                "\u8bf7\u9009\u62e9\u4e00\u4e2a\u6216\u591a\u4e2a\u6807\u7b7e\u3002"
+            ],
+            "Add at least one valid included post or page that is not also excluded when Content scope is set to Only selected content.": [
+                "\u5f53\u5185\u5bb9\u8303\u56f4\u8bbe\u4e3a\u201c\u4ec5\u6240\u9009\u5185\u5bb9\u201d\u65f6\uff0c\u8bf7\u81f3\u5c11\u6dfb\u52a0\u4e00\u7bc7\u6709\u6548\u4e14\u672a\u88ab\u6392\u9664\u7684\u6587\u7ae0\u6216\u9875\u9762\u3002"
+            ],
+            "Choose at least one available category or tag when Content scope is set to Posts in selected categories or tags.": [
+                "\u5f53\u5185\u5bb9\u8303\u56f4\u8bbe\u4e3a\u201c\u6240\u9009\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u4e2d\u7684\u6587\u7ae0\u201d\u65f6\uff0c\u8bf7\u81f3\u5c11\u9009\u62e9\u4e00\u4e2a\u53ef\u7528\u7684\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u3002"
+            ],
+            "No empty-scope, schedule, content, or paragraph errors were found in the current editor fields. Public selected targets and category or tag availability are confirmed by the server when publishing or scheduling.": [
+                "\u5f53\u524d\u7f16\u8f91\u5668\u5b57\u6bb5\u672a\u53d1\u73b0\u6295\u653e\u8303\u56f4\u4e3a\u7a7a\u3001\u6392\u671f\u3001\u5185\u5bb9\u6216\u6bb5\u843d\u76f8\u5173\u9519\u8bef\u3002\u53d1\u5e03\u6216\u6392\u7a0b\u65f6\uff0c\u670d\u52a1\u7aef\u4f1a\u786e\u8ba4\u6240\u9009\u516c\u5f00\u76ee\u6807\u4ee5\u53ca\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u662f\u5426\u53ef\u7528\u3002"
             ]
         }
     }

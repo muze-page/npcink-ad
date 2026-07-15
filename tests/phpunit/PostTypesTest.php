@@ -32,6 +32,52 @@ final class PostTypesTest extends TestCase {
 	}
 
 	/**
+	 * Content scope is a destructive five-value replacement for page scope.
+	 */
+	public function test_content_scope_contract_is_exact_and_defaults_to_all(): void {
+		self::assertSame( '_npcink_ad_content_scope', Post_Types::CONTENT_SCOPE_META );
+		self::assertSame( array( 'all', 'posts', 'pages', 'terms', 'selected' ), Post_Types::CONTENT_SCOPES );
+		self::assertSame( 'all', Post_Types::sanitize_content_scope( '' ) );
+		self::assertSame( 'posts', Post_Types::sanitize_content_scope( 'POSTS' ) );
+		self::assertSame( 'all', Post_Types::sanitize_content_scope( 'unsupported' ) );
+	}
+
+	/**
+	 * Scope and taxonomy metadata share the revisioned REST contract.
+	 */
+	public function test_editorial_scope_meta_is_revisioned_and_typed(): void {
+		$method = new ReflectionMethod( Post_Types::class, 'register_meta' );
+		$method->invoke( null );
+
+		$scope_args = $GLOBALS['npcink_ad_test_registered_post_meta'][ Post_Types::CONTENT_SCOPE_META ]['args'];
+		self::assertSame( 'string', $scope_args['type'] );
+		self::assertSame( 'all', $scope_args['default'] );
+		self::assertTrue( $scope_args['revisions_enabled'] );
+		self::assertSame( Post_Types::CONTENT_SCOPES, $scope_args['show_in_rest']['schema']['enum'] );
+
+		foreach ( array( Post_Types::CATEGORY_IDS_META, Post_Types::TAG_IDS_META ) as $meta_key ) {
+			$args   = $GLOBALS['npcink_ad_test_registered_post_meta'][ $meta_key ]['args'];
+			$schema = $args['show_in_rest']['schema'];
+			self::assertSame( 'array', $args['type'] );
+			self::assertSame( array(), $args['default'] );
+			self::assertTrue( $args['revisions_enabled'] );
+			self::assertSame( Post_Types::MAX_POST_IDS, $schema['maxItems'] );
+			self::assertTrue( $schema['uniqueItems'] );
+			self::assertSame( array( Post_Types::class, 'sanitize_post_ids' ), $args['sanitize_callback'] );
+			self::assertSame( array( Post_Types::class, 'can_manage_meta' ), $args['auth_callback'] );
+		}
+	}
+
+	/**
+	 * Taxonomy lists retain only unique positive IDs within the REST bound.
+	 */
+	public function test_editorial_term_ids_are_positive_unique_and_bounded(): void {
+		$raw_ids = array_merge( array( 0, -1, '2', 2, 'bad' ), range( 3, 70 ) );
+
+		self::assertSame( range( 2, 51 ), Post_Types::sanitize_post_ids( $raw_ids ) );
+	}
+
+	/**
 	 * Core REST enforces integer shape while publish preflight owns the range.
 	 */
 	public function test_paragraph_meta_is_integer_revisioned_and_draft_permissive(): void {

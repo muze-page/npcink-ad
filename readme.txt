@@ -15,11 +15,11 @@ Create, preview, and publish site-owned promotions without a full advertising pl
 Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate cards, campaign creative, and other site-owned promotions.
 
 * Create promotion content with core WordPress blocks.
-* Configure location, page scope, exclusions, schedule, and device in the same editor.
+* Configure location, one canonical content scope, explicit exclusions, schedule, and device in the same editor.
 * Place a promotion after a bounded top-level block paragraph or Classic HTML paragraph without frontend JavaScript.
 * Preview the promotion inside a real page and switch between desktop and mobile context.
 * Read a truthful verdict explaining why the promotion will or will not display.
-* Review rule status, placement, page scope, stop time, and inactivity reasons directly in the Promotion list.
+* Review rule status, placement, content scope, stop time, and inactivity reasons directly in the Promotion list.
 * Catch empty creative, missing public targets, invalid paragraph settings, invalid schedules, and unverified placement before publication.
 * Publish, pause, or expire one Promotion record without a separate placement object.
 * Deliver from the server without visitor tracking, custom tables, or required frontend JavaScript.
@@ -27,11 +27,13 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 
 Version 0.1 intentionally has no analytics, tracking cookies, external requests, A/B testing, ad-network integration, popup builder, arbitrary code execution, or custom database tables.
 
+The current development line implements mutually exclusive content scopes for all standard posts/pages, all posts, all pages, standard posts directly matching selected Core categories/tags, or explicitly selected standard posts/pages. Explicit ID exclusions always win. The remaining 0.2 closeout work is clearer manual-block guidance and an explanation of the existing desktop/mobile breakpoint; that guidance is not yet complete.
+
 == Installation ==
 
 1. Upload the `npcink-ad` folder to `/wp-content/plugins/` and activate Npcink Ad.
 2. Open Npcink Ad > Promotions and add a Promotion.
-3. Build the creative with WordPress blocks and set its location, pages, device, and optional schedule in the editor sidebar. Paragraph placement accepts 1 through 20 and defaults to 3.
+3. Build the creative with WordPress blocks and set its location, content scope, explicit exclusions, device, and optional schedule in the editor sidebar. Paragraph placement accepts 1 through 20 and defaults to 3.
 4. Save and open the real-page preview. Confirm the runtime verdict on desktop and mobile.
 5. Publish the Promotion. Change it to Draft whenever it should be paused.
 

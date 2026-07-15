@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Covers pure location, page, schedule, and device overlap semantics.
+ * Covers pure location, content-scope, schedule, and device overlap semantics.
  */
 final class OverlapDetectorTest extends TestCase {
 	/**
@@ -110,14 +110,14 @@ final class OverlapDetectorTest extends TestCase {
 	}
 
 	/**
-	 * Page overlap accounts for both scopes and their exclusions.
+	 * Content overlap keeps selected IDs exact and broad scopes conservative.
 	 *
-	 * @param array<string, mixed> $promotion_changes Candidate page-rule changes.
-	 * @param array<string, mixed> $other_changes     Published page-rule changes.
+	 * @param array<string, mixed> $promotion_changes Candidate scope changes.
+	 * @param array<string, mixed> $other_changes     Published scope changes.
 	 * @param bool                 $expected          Expected overlap result.
 	 */
-	#[DataProvider( 'page_scope_cases' )]
-	public function test_compares_effective_page_scopes( array $promotion_changes, array $other_changes, bool $expected ): void {
+	#[DataProvider( 'content_scope_cases' )]
+	public function test_compares_effective_content_scopes( array $promotion_changes, array $other_changes, bool $expected ): void {
 		$promotion = array_replace( $this->promotion(), $promotion_changes );
 		$other     = array_replace( $this->promotion( 2 ), $other_changes );
 
@@ -125,67 +125,158 @@ final class OverlapDetectorTest extends TestCase {
 	}
 
 	/**
-	 * Provide all/selected page combinations.
+	 * Provide canonical scope combinations.
 	 *
 	 * @return array<string, array{array<string, mixed>, array<string, mixed>, bool}>
 	 */
-	public static function page_scope_cases(): array {
+	public static function content_scope_cases(): array {
 		return array(
-			'all and all remain possible' => array(
+			'all and all remain possible'           => array(
 				array( 'exclude_ids' => array( 10 ) ),
 				array( 'exclude_ids' => array( 11 ) ),
 				true,
 			),
-			'all accepts selected page'    => array(
+			'posts and pages are disjoint'          => array(
+				array( 'content_scope' => 'posts' ),
+				array( 'content_scope' => 'pages' ),
+				false,
+			),
+			'pages and terms are disjoint'          => array(
+				array( 'content_scope' => 'pages' ),
+				array(
+					'content_scope' => 'terms',
+					'category_ids'  => array( 5 ),
+				),
+				false,
+			),
+			'posts and terms remain possible'       => array(
+				array( 'content_scope' => 'posts' ),
+				array(
+					'content_scope' => 'terms',
+					'tag_ids'       => array( 8 ),
+				),
+				true,
+			),
+			'different term sets remain possible'   => array(
+				array(
+					'content_scope' => 'terms',
+					'category_ids'  => array( 5 ),
+				),
+				array(
+					'content_scope' => 'terms',
+					'tag_ids'       => array( 8 ),
+				),
+				true,
+			),
+			'all accepts selected content'          => array(
 				array(),
 				array(
-					'page_scope' => 'selected',
-					'include_ids' => array( 10 ),
+					'content_scope' => 'selected',
+					'include_ids'   => array( 10 ),
 				),
 				true,
 			),
-			'all excludes selected page'   => array(
+			'broad scope excludes selected content' => array(
 				array( 'exclude_ids' => array( 10 ) ),
 				array(
-					'page_scope' => 'selected',
-					'include_ids' => array( 10 ),
+					'content_scope' => 'selected',
+					'include_ids'   => array( 10 ),
 				),
 				false,
 			),
-			'selected scopes intersect'    => array(
+			'selected and pages stay conservative'  => array(
 				array(
-					'page_scope' => 'selected',
-					'include_ids' => array( 10, 11 ),
+					'content_scope' => 'selected',
+					'include_ids'   => array( 10 ),
+				),
+				array( 'content_scope' => 'pages' ),
+				true,
+			),
+			'selected and terms stay conservative'  => array(
+				array(
+					'content_scope' => 'selected',
+					'include_ids'   => array( 10 ),
 				),
 				array(
-					'page_scope' => 'selected',
-					'include_ids' => array( 11, 12 ),
+					'content_scope' => 'terms',
+					'category_ids'  => array( 5 ),
 				),
 				true,
 			),
-			'own exclusion removes match'  => array(
+			'selected scopes intersect'             => array(
 				array(
-					'page_scope' => 'selected',
-					'include_ids' => array( 10, 11 ),
-					'exclude_ids' => array( 11 ),
+					'content_scope' => 'selected',
+					'include_ids'   => array( 10, 11 ),
 				),
 				array(
-					'page_scope' => 'selected',
-					'include_ids' => array( 11, 12 ),
+					'content_scope' => 'selected',
+					'include_ids'   => array( 11, 12 ),
+				),
+				true,
+			),
+			'own exclusion removes match'           => array(
+				array(
+					'content_scope' => 'selected',
+					'include_ids'   => array( 10, 11 ),
+					'exclude_ids'   => array( 11 ),
+				),
+				array(
+					'content_scope' => 'selected',
+					'include_ids'   => array( 11, 12 ),
 				),
 				false,
 			),
-			'selected scopes are disjoint' => array(
+			'selected scopes are disjoint'          => array(
 				array(
-					'page_scope' => 'selected',
-					'include_ids' => array( 10 ),
+					'content_scope' => 'selected',
+					'include_ids'   => array( 10 ),
 				),
 				array(
-					'page_scope' => 'selected',
-					'include_ids' => array( 11 ),
+					'content_scope' => 'selected',
+					'include_ids'   => array( 11 ),
 				),
 				false,
 			),
+			'empty selected scope has no target'     => array(
+				array(
+					'content_scope' => 'selected',
+					'include_ids'   => array(),
+				),
+				array(),
+				false,
+			),
+			'empty term scope has no target'         => array(
+				array(
+					'content_scope' => 'terms',
+					'category_ids'  => array(),
+					'tag_ids'       => array(),
+				),
+				array(),
+				false,
+			),
+			'invalid term scope has no target'       => array(
+				array(
+					'content_scope' => 'terms',
+					'category_ids'  => array( 5 ),
+					'terms_valid'   => false,
+				),
+				array(),
+				false,
+			),
+		);
+	}
+
+	/**
+	 * Active term rules require current validity evidence from the repository.
+	 */
+	public function test_term_scope_without_validity_evidence_has_no_overlap_target(): void {
+		$promotion                  = $this->promotion();
+		$promotion['content_scope'] = 'terms';
+		$promotion['category_ids']  = array( 5 );
+		unset( $promotion['terms_valid'] );
+
+		self::assertFalse(
+			( new Overlap_Detector() )->may_overlap( $promotion, $this->promotion( 2 ) )
 		);
 	}
 
@@ -276,9 +367,12 @@ final class OverlapDetectorTest extends TestCase {
 			'location'       => 'content_after',
 			'paragraph_number' => 3,
 			'paragraph_number_valid' => true,
-			'page_scope'     => 'all',
+			'content_scope'  => 'all',
 			'include_ids'    => array(),
 			'exclude_ids'    => array(),
+			'category_ids'   => array(),
+			'tag_ids'        => array(),
+			'terms_valid'    => true,
 			'device'         => 'desktop',
 			'start_at'       => 0,
 			'start_at_valid' => true,

@@ -17,6 +17,8 @@ require_once __DIR__ . '/PromotionStatusWordPressStubs.php';
 require_once __DIR__ . '/PromotionStatusWordPressClasses.php';
 require_once __DIR__ . '/PromotionStatusWordPressPost.php';
 require_once __DIR__ . '/PromotionStatusWordPressQuery.php';
+require_once __DIR__ . '/PromotionPreflightWordPressClasses.php';
+require_once __DIR__ . '/EditorialScopeWordPressStubs.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Post_Types.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Repository.php';
 require_once dirname( __DIR__, 2 ) . '/src/Presentation/Eligibility_Messages.php';
@@ -35,6 +37,10 @@ final class PromotionListTest extends TestCase {
 		$GLOBALS['npcink_ad_test_meta']              = array();
 		$GLOBALS['npcink_ad_test_titles']            = array();
 		$GLOBALS['npcink_ad_test_get_posts_queries'] = array();
+		$GLOBALS['npcink_ad_test_get_terms_queries'] = array();
+		$GLOBALS['npcink_ad_test_get_terms_errors']  = array();
+		$GLOBALS['npcink_ad_test_get_terms_results'] = array();
+		$GLOBALS['npcink_ad_test_term_taxonomies']   = array();
 		unset( $GLOBALS['npcink_ad_test_public_ids'], $GLOBALS['wp_query'] );
 	}
 
@@ -66,16 +72,16 @@ final class PromotionListTest extends TestCase {
 		$label  = $method->invoke(
 			$list,
 			array(
-				'id'          => 1,
-				'status'      => $status,
-				'content'     => '<p>Creative</p>',
-				'location'    => 'block',
-				'page_scope'  => 'all',
-				'include_ids' => array(),
-				'exclude_ids' => array(),
-				'device'      => 'all',
-				'start_at'    => 0,
-				'end_at'      => 0,
+				'id'            => 1,
+				'status'        => $status,
+				'content'       => '<p>Creative</p>',
+				'location'      => 'block',
+				'content_scope' => 'all',
+				'include_ids'   => array(),
+				'exclude_ids'   => array(),
+				'device'        => 'all',
+				'start_at'      => 0,
+				'end_at'        => 0,
 			)
 		);
 
@@ -166,6 +172,129 @@ final class PromotionListTest extends TestCase {
 					)
 				)
 			)
+		);
+	}
+
+	/**
+	 * The existing scope column exposes the canonical content contract.
+	 */
+	public function test_columns_rename_the_existing_scope_column_without_adding_another(): void {
+		$columns = $this->promotion_list()->columns(
+			array(
+				'title' => 'Title',
+				'date'  => 'Date',
+			)
+		);
+
+		self::assertSame( 'Content scope', $columns['npcink_ad_content_scope'] );
+		self::assertArrayNotHasKey( 'npcink_ad_page_scope', $columns );
+		self::assertSame( 'Date', $columns['date'] );
+	}
+
+	/**
+	 * Scope summaries stay bounded and expose invalid term configuration.
+	 *
+	 * @param array<string, mixed> $promotion Promotion domain data.
+	 * @param array                $expected  Expected summary fragments.
+	 * @param array                $absent    Fragments that must stay hidden.
+	 */
+	#[DataProvider( 'content_scope_summaries' )]
+	public function test_scope_summary_reflects_the_effective_canonical_scope(
+		array $promotion,
+		array $expected,
+		array $absent = array()
+	): void {
+		$output = $this->render_scope( $promotion );
+
+		foreach ( $expected as $fragment ) {
+			self::assertStringContainsString( $fragment, $output );
+		}
+		foreach ( $absent as $fragment ) {
+			self::assertStringNotContainsString( $fragment, $output );
+		}
+	}
+
+	/**
+	 * Provide canonical management summaries.
+	 *
+	 * @return array<string, array{array<string, mixed>, list<string>, list<string>?}>
+	 */
+	public static function content_scope_summaries(): array {
+		return array(
+			'all content with exclusions' => array(
+				array(
+					'location'      => 'content_after',
+					'content_scope' => 'all',
+					'exclude_ids'   => array( 10, 11 ),
+				),
+				array( 'All posts and pages', 'Configured exclusions: 2' ),
+			),
+			'all posts'                   => array(
+				array(
+					'location'      => 'content_after',
+					'content_scope' => 'posts',
+				),
+				array( 'All posts' ),
+				array( 'All posts and pages' ),
+			),
+			'all pages'                   => array(
+				array(
+					'location'      => 'content_after',
+					'content_scope' => 'pages',
+				),
+				array( 'All pages' ),
+			),
+			'valid term scope'            => array(
+				array(
+					'location'      => 'content_after',
+					'content_scope' => 'terms',
+					'category_ids'  => array( 2, 3 ),
+					'tag_ids'       => array( 7 ),
+					'terms_valid'   => true,
+				),
+				array( 'Posts matching categories/tags', 'Configured terms: 3' ),
+				array( 'Invalid category/tag selection' ),
+			),
+			'invalid term scope'          => array(
+				array(
+					'location'      => 'content_after',
+					'content_scope' => 'terms',
+					'category_ids'  => array( 999 ),
+					'tag_ids'       => array(),
+					'terms_valid'   => false,
+				),
+				array( 'Configured terms: 1', 'Invalid category/tag selection' ),
+			),
+			'empty term scope'            => array(
+				array(
+					'location'      => 'content_after',
+					'content_scope' => 'terms',
+					'category_ids'  => array(),
+					'tag_ids'       => array(),
+					'terms_valid'   => true,
+				),
+				array( 'Configured terms: 0', 'Invalid category/tag selection' ),
+			),
+			'selected public content'     => array(
+				array(
+					'location'      => 'content_after',
+					'content_scope' => 'selected',
+					'include_ids'   => array( 10, 11, 12 ),
+					'exclude_ids'   => array( 11 ),
+				),
+				array( 'Selected public posts/pages: 2', 'Configured exclusions: 1' ),
+			),
+			'manual advanced scope is all' => array(
+				array(
+					'location'      => 'block',
+					'content_scope' => 'terms',
+					'category_ids'  => array(),
+					'tag_ids'       => array(),
+					'terms_valid'   => false,
+				),
+				array( 'All posts and pages' ),
+				array( 'Invalid category/tag selection', 'Configured terms:' ),
+			),
 		);
 	}
 
@@ -285,6 +414,62 @@ final class PromotionListTest extends TestCase {
 	}
 
 	/**
+	 * Twenty term-scoped rows and the overlap catalog use four bounded queries.
+	 */
+	public function test_list_batches_term_validation_for_rows_and_overlap_catalog(): void {
+		$posts      = array();
+		$categories = range( 1, 20 );
+		$tags       = range( 101, 120 );
+		foreach ( $categories as $offset => $category_id ) {
+			$promotion_id = $offset + 1;
+			$post         = new WP_Post(
+				array(
+					'ID'           => $promotion_id,
+					'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+					'post_status'  => 'publish',
+					'post_content' => '<p>Promotion ' . $promotion_id . '</p>',
+				)
+			);
+			$posts[ $promotion_id ] = $post;
+			$GLOBALS['npcink_ad_test_meta'][ $promotion_id ] = array(
+				Post_Types::LOCATION_META      => 'content_after',
+				Post_Types::CONTENT_SCOPE_META => 'terms',
+				Post_Types::INCLUDE_IDS_META   => array(),
+				Post_Types::EXCLUDE_IDS_META   => array(),
+				Post_Types::CATEGORY_IDS_META  => array( $category_id ),
+				Post_Types::TAG_IDS_META       => array( $tags[ $offset ] ),
+				Post_Types::DEVICE_META        => 'all',
+				Post_Types::START_AT_META      => '',
+				Post_Types::END_AT_META        => '',
+			);
+		}
+
+		$GLOBALS['npcink_ad_test_posts'] = $posts;
+		$GLOBALS['npcink_ad_test_term_taxonomies'] = array(
+			'category' => $categories,
+			'post_tag' => $tags,
+		);
+		$GLOBALS['wp_query'] = new WP_Query( array_values( $posts ) );
+		$list               = $this->promotion_list();
+
+		ob_start();
+		$list->render_column( 'npcink_ad_content_scope', 1 );
+		$scope = (string) ob_get_clean();
+		ob_start();
+		$list->render_column( 'npcink_ad_rule_status', 1 );
+		$status = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Posts matching categories/tags', $scope );
+		self::assertStringContainsString( 'Rule ready', $status );
+		self::assertLessThanOrEqual( 4, count( $GLOBALS['npcink_ad_test_get_terms_queries'] ) );
+		self::assertSame(
+			array( 'category', 'post_tag', 'category', 'post_tag' ),
+			array_column( $GLOBALS['npcink_ad_test_get_terms_queries'], 'taxonomy' )
+		);
+		self::assertCount( 1, $GLOBALS['npcink_ad_test_get_posts_queries'] );
+	}
+
+	/**
 	 * Build selected-scope metadata for a list-row fixture.
 	 *
 	 * @param array $include_ids Included content IDs.
@@ -295,13 +480,13 @@ final class PromotionListTest extends TestCase {
 	 */
 	private function selected_meta( array $include_ids, array $exclude_ids ): array {
 		return array(
-			Post_Types::LOCATION_META    => 'block',
-			Post_Types::PAGE_SCOPE_META  => 'selected',
-			Post_Types::INCLUDE_IDS_META => $include_ids,
-			Post_Types::EXCLUDE_IDS_META => $exclude_ids,
-			Post_Types::DEVICE_META      => 'all',
-			Post_Types::START_AT_META    => '',
-			Post_Types::END_AT_META      => '',
+			Post_Types::LOCATION_META      => 'block',
+			Post_Types::CONTENT_SCOPE_META => 'selected',
+			Post_Types::INCLUDE_IDS_META   => $include_ids,
+			Post_Types::EXCLUDE_IDS_META   => $exclude_ids,
+			Post_Types::DEVICE_META        => 'all',
+			Post_Types::START_AT_META      => '',
+			Post_Types::END_AT_META        => '',
 		);
 	}
 
@@ -315,13 +500,13 @@ final class PromotionListTest extends TestCase {
 	 */
 	private function automatic_selected_meta( array $include_ids, string $device ): array {
 		return array(
-			Post_Types::LOCATION_META    => 'content_after',
-			Post_Types::PAGE_SCOPE_META  => 'selected',
-			Post_Types::INCLUDE_IDS_META => $include_ids,
-			Post_Types::EXCLUDE_IDS_META => array(),
-			Post_Types::DEVICE_META      => $device,
-			Post_Types::START_AT_META    => '',
-			Post_Types::END_AT_META      => '',
+			Post_Types::LOCATION_META      => 'content_after',
+			Post_Types::CONTENT_SCOPE_META => 'selected',
+			Post_Types::INCLUDE_IDS_META   => $include_ids,
+			Post_Types::EXCLUDE_IDS_META   => array(),
+			Post_Types::DEVICE_META        => $device,
+			Post_Types::START_AT_META      => '',
+			Post_Types::END_AT_META        => '',
 		);
 	}
 
@@ -352,5 +537,25 @@ final class PromotionListTest extends TestCase {
 		);
 
 		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Render the private scope seam for one domain fixture.
+	 *
+	 * @param array<string, mixed> $promotion Promotion domain data.
+	 * @throws Throwable When the reflected renderer fails.
+	 */
+	private function render_scope( array $promotion ): string {
+		$list   = $this->promotion_list();
+		$method = new ReflectionMethod( $list, 'render_scope' );
+
+		ob_start();
+		try {
+			$method->invoke( $list, $promotion );
+			return (string) ob_get_clean();
+		} catch ( Throwable $throwable ) {
+			ob_end_clean();
+			throw $throwable;
+		}
 	}
 }

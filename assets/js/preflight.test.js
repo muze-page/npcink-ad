@@ -5,12 +5,35 @@ import {
 } from '@wordpress/blocks';
 
 import {
+	contentScopeForPlacement,
 	effectiveParagraphNumber,
 	getEffectivePromotionTargetIds,
+	getEffectivePromotionTermSelection,
 	getPotentiallyOverlappingPromotionIds,
 	getPromotionPreflightIssues,
 	inspectParagraphAnchor,
 } from './preflight';
+
+describe( 'contentScopeForPlacement', () => {
+	test.each( [ 'posts', 'pages', 'terms' ] )(
+		'resets automatic %s scope for manual block placement',
+		( contentScope ) => {
+			expect( contentScopeForPlacement( contentScope, 'block' ) ).toBe(
+				'all'
+			);
+		}
+	);
+
+	test( 'preserves manual-safe and automatic-placement scopes', () => {
+		expect( contentScopeForPlacement( 'all', 'block' ) ).toBe( 'all' );
+		expect( contentScopeForPlacement( 'selected', 'block' ) ).toBe(
+			'selected'
+		);
+		expect( contentScopeForPlacement( 'terms', 'content_after' ) ).toBe(
+			'terms'
+		);
+	} );
+} );
 
 /**
  * Build one complete automatic Promotion rule.
@@ -22,9 +45,12 @@ function promotionRule( overrides = {} ) {
 	return {
 		id: 1,
 		location: 'content_after',
-		pageScope: 'all',
+		contentScope: 'all',
 		includeIds: [],
 		excludeIds: [],
+		categoryIds: [],
+		tagIds: [],
+		termsValid: true,
 		device: 'all',
 		paragraphNumber: 3,
 		startAt: '',
@@ -60,7 +86,7 @@ describe( 'getPotentiallyOverlappingPromotionIds', () => {
 
 	test( 'compares effective selected IDs after both exclusions', () => {
 		const candidate = promotionRule( {
-			pageScope: 'selected',
+			contentScope: 'selected',
 			includeIds: [ 10, 11 ],
 			excludeIds: [ 11 ],
 		} );
@@ -69,12 +95,12 @@ describe( 'getPotentiallyOverlappingPromotionIds', () => {
 			getPotentiallyOverlappingPromotionIds( candidate, [
 				promotionRule( {
 					id: 2,
-					pageScope: 'selected',
+					contentScope: 'selected',
 					includeIds: [ 11, 12 ],
 				} ),
 				promotionRule( {
 					id: 3,
-					pageScope: 'selected',
+					contentScope: 'selected',
 					includeIds: [ 10 ],
 				} ),
 				promotionRule( { id: 4, excludeIds: [ 10 ] } ),
@@ -90,13 +116,13 @@ describe( 'getPotentiallyOverlappingPromotionIds', () => {
 			getPotentiallyOverlappingPromotionIds( candidate, [
 				promotionRule( {
 					id: 2,
-					pageScope: 'selected',
+					contentScope: 'selected',
 					includeIds: [ 10, 11 ],
 					excludeIds: [ 11 ],
 				} ),
 				promotionRule( {
 					id: 3,
-					pageScope: 'selected',
+					contentScope: 'selected',
 					includeIds: [ 12 ],
 				} ),
 			] )
@@ -157,6 +183,128 @@ describe( 'getPotentiallyOverlappingPromotionIds', () => {
 			)
 		).toEqual( [] );
 	} );
+
+	test( 'proves disjoint canonical post, page, and term scopes', () => {
+		expect(
+			getPotentiallyOverlappingPromotionIds(
+				promotionRule( { contentScope: 'posts' } ),
+				[
+					promotionRule( { id: 2, contentScope: 'pages' } ),
+					promotionRule( {
+						id: 3,
+						contentScope: 'terms',
+						categoryIds: [ 10 ],
+					} ),
+					promotionRule( { id: 4 } ),
+				]
+			)
+		).toEqual( [ 3, 4 ] );
+
+		expect(
+			getPotentiallyOverlappingPromotionIds(
+				promotionRule( { contentScope: 'pages' } ),
+				[
+					promotionRule( { id: 2, contentScope: 'posts' } ),
+					promotionRule( {
+						id: 3,
+						contentScope: 'terms',
+						categoryIds: [ 10 ],
+					} ),
+					promotionRule( { id: 4 } ),
+				]
+			)
+		).toEqual( [ 4 ] );
+	} );
+
+	test( 'keeps different valid term sets conservative and ignores invalid terms', () => {
+		const candidate = promotionRule( {
+			contentScope: 'terms',
+			categoryIds: [ 10 ],
+		} );
+
+		expect(
+			getPotentiallyOverlappingPromotionIds( candidate, [
+				promotionRule( {
+					id: 2,
+					contentScope: 'terms',
+					tagIds: [ 20 ],
+				} ),
+				promotionRule( {
+					id: 3,
+					contentScope: 'terms',
+					categoryIds: [ 10 ],
+					termsValid: false,
+				} ),
+			] )
+		).toEqual( [ 2 ] );
+
+		expect(
+			getPotentiallyOverlappingPromotionIds(
+				{ ...candidate, termsValid: false },
+				[ promotionRule( { id: 2 } ) ]
+			)
+		).toEqual( [] );
+		expect(
+			getPotentiallyOverlappingPromotionIds(
+				{ ...candidate, categoryIds: [] },
+				[ promotionRule( { id: 2 } ) ]
+			)
+		).toEqual( [] );
+	} );
+} );
+
+describe( 'current Promotion term normalization', () => {
+	test( 'confirms stored and session-selected terms without hiding invalid IDs', () => {
+		expect(
+			getEffectivePromotionTermSelection(
+				[ 10, 99, 10 ],
+				[ 20 ],
+				[ 10 ],
+				[ 20 ]
+			)
+		).toEqual( {
+			categoryIds: [ 10 ],
+			tagIds: [ 20 ],
+			termsValid: false,
+		} );
+
+		expect(
+			getEffectivePromotionTermSelection(
+				[ 10, 99 ],
+				[ 20 ],
+				[ 10, 99 ],
+				[ 20 ]
+			)
+		).toEqual( {
+			categoryIds: [ 10, 99 ],
+			tagIds: [ 20 ],
+			termsValid: true,
+		} );
+	} );
+
+	test( 'flags an empty effective terms scope without affecting other scopes', () => {
+		expect(
+			getPromotionPreflightIssues( {
+				content: 'Creative',
+				contentScope: 'terms',
+				includeIds: [],
+				excludeIds: [],
+				categoryIds: [],
+				tagIds: [],
+			} )
+		).toContain( 'terms_scope_without_terms' );
+
+		expect(
+			getPromotionPreflightIssues( {
+				content: 'Creative',
+				contentScope: 'posts',
+				includeIds: [],
+				excludeIds: [],
+				categoryIds: [],
+				tagIds: [],
+			} )
+		).not.toContain( 'terms_scope_without_terms' );
+	} );
 } );
 
 describe( 'current Promotion target normalization', () => {
@@ -166,14 +314,14 @@ describe( 'current Promotion target normalization', () => {
 		expect(
 			getPromotionPreflightIssues( {
 				content: 'Creative',
-				pageScope: 'selected',
+				contentScope: 'selected',
 				...effective,
 			} )
 		).toContain( 'selected_scope_without_targets' );
 		expect(
 			getPotentiallyOverlappingPromotionIds(
 				promotionRule( {
-					pageScope: 'selected',
+					contentScope: 'selected',
 					...effective,
 				} ),
 				[ promotionRule( { id: 2 } ) ]
@@ -191,20 +339,20 @@ describe( 'current Promotion target normalization', () => {
 		expect(
 			getPromotionPreflightIssues( {
 				content: 'Creative',
-				pageScope: 'selected',
+				contentScope: 'selected',
 				...effective,
 			} )
 		).not.toContain( 'selected_scope_without_targets' );
 		expect(
 			getPotentiallyOverlappingPromotionIds(
 				promotionRule( {
-					pageScope: 'selected',
+					contentScope: 'selected',
 					...effective,
 				} ),
 				[
 					promotionRule( {
 						id: 2,
-						pageScope: 'selected',
+						contentScope: 'selected',
 						includeIds: [ 10 ],
 					} ),
 				]
@@ -224,7 +372,7 @@ describe( 'paragraph placement preflight', () => {
 				getPromotionPreflightIssues( {
 					content: 'Creative',
 					location: 'content_after_paragraph',
-					pageScope: 'all',
+					contentScope: 'all',
 					includeIds: [],
 					excludeIds: [],
 					paragraphNumber,
@@ -240,7 +388,7 @@ describe( 'paragraph placement preflight', () => {
 				getPromotionPreflightIssues( {
 					content: 'Creative',
 					location: 'content_after_paragraph',
-					pageScope: 'all',
+					contentScope: 'all',
 					includeIds: [],
 					excludeIds: [],
 					paragraphNumber,
@@ -254,7 +402,7 @@ describe( 'paragraph placement preflight', () => {
 			getPromotionPreflightIssues( {
 				content: 'Creative',
 				location: 'content_after',
-				pageScope: 'all',
+				contentScope: 'all',
 				includeIds: [],
 				excludeIds: [],
 				paragraphNumber: 0,
@@ -357,6 +505,8 @@ describe( 'inspectParagraphAnchor', () => {
 	test( 'reports unregistered Gutenberg content as unavailable', () => {
 		expect(
 			inspectParagraphAnchor( '<!-- wp:unknown/widget /-->', 1 )
-		).toEqual( { state: 'unavailable' } );
+		).toEqual( {
+			state: 'unavailable',
+		} );
 	} );
 } );

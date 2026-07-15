@@ -47,8 +47,10 @@ final class Overlap_Detector {
 	 * Determine whether a published Promotion may overlap the candidate.
 	 *
 	 * Schedule windows use the same half-open [start, end) boundary as delivery.
-	 * Page rules are intentionally conservative: two all-page rules may overlap,
-	 * while selected-page rules must retain at least one common effective ID.
+	 * Content rules are intentionally conservative. Only post/page type pairs and
+	 * exact selected-ID sets can prove disjointness without querying the current
+	 * content universe. Term scopes therefore remain possible overlaps even when
+	 * their configured term IDs differ.
 	 *
 	 * @param array<string, mixed> $promotion Candidate Promotion.
 	 * @param array<string, mixed> $other     Published Promotion to compare.
@@ -76,7 +78,7 @@ final class Overlap_Detector {
 		return $this->automatic_anchors_overlap( $location, $promotion, $other )
 			&& $this->devices_overlap( $promotion, $other )
 			&& $this->schedules_overlap( $promotion, $other )
-			&& $this->page_scopes_overlap( $promotion, $other );
+			&& $this->content_scopes_overlap( $promotion, $other );
 	}
 
 	/**
@@ -155,32 +157,93 @@ final class Overlap_Detector {
 	}
 
 	/**
-	 * Compare effective page sets after applying exclusions.
+	 * Compare bounded content scopes after applying explicit ID exclusions.
+	 *
+	 * Selected/selected remains an exact ID comparison. A selected rule paired
+	 * with a broad rule remains conservative because this pure policy does not
+	 * know the selected object's post type or term relationships. Broad scopes
+	 * only prove disjointness for posts/pages and pages/terms.
 	 *
 	 * @param array<string, mixed> $promotion Candidate Promotion.
 	 * @param array<string, mixed> $other     Published Promotion.
 	 */
-	private function page_scopes_overlap( array $promotion, array $other ): bool {
-		$page_scope       = isset( $promotion['page_scope'] ) ? (string) $promotion['page_scope'] : 'all';
-		$other_page_scope = isset( $other['page_scope'] ) ? (string) $other['page_scope'] : 'all';
-		if ( 'all' === $page_scope && 'all' === $other_page_scope ) {
-			return true;
+	private function content_scopes_overlap( array $promotion, array $other ): bool {
+		$scope       = $this->content_scope( $promotion );
+		$other_scope = $this->content_scope( $other );
+
+		if ( ! $this->scope_has_possible_targets( $promotion, $scope )
+			|| ! $this->scope_has_possible_targets( $other, $other_scope )
+		) {
+			return false;
 		}
 
-		if ( 'selected' === $page_scope && 'selected' === $other_page_scope ) {
+		if ( 'selected' === $scope && 'selected' === $other_scope ) {
 			return array() !== array_intersect(
 				$this->effective_selected_ids( $promotion ),
 				$this->effective_selected_ids( $other )
 			);
 		}
 
-		$selected = 'selected' === $page_scope ? $promotion : $other;
-		$all      = 'all' === $page_scope ? $promotion : $other;
+		if ( 'selected' === $scope || 'selected' === $other_scope ) {
+			$selected = 'selected' === $scope ? $promotion : $other;
+			$broad    = 'selected' === $scope ? $other : $promotion;
 
-		return array() !== array_diff(
-			$this->effective_selected_ids( $selected ),
-			$this->normalize_post_ids( $all['exclude_ids'] ?? array() )
+			return array() !== array_diff(
+				$this->effective_selected_ids( $selected ),
+				$this->normalize_post_ids( $broad['exclude_ids'] ?? array() )
+			);
+		}
+
+		return ! $this->broad_scopes_are_disjoint( $scope, $other_scope );
+	}
+
+	/**
+	 * Normalize a content scope without widening malformed values unpredictably.
+	 *
+	 * @param array<string, mixed> $promotion Promotion rule.
+	 */
+	private function content_scope( array $promotion ): string {
+		$scope = isset( $promotion['content_scope'] ) ? (string) $promotion['content_scope'] : 'all';
+
+		return in_array( $scope, array( 'all', 'posts', 'pages', 'terms', 'selected' ), true )
+			? $scope
+			: 'all';
+	}
+
+	/**
+	 * Determine whether a scope can address at least one content object.
+	 *
+	 * @param array<string, mixed> $promotion Promotion rule.
+	 * @param string               $scope     Normalized content scope.
+	 */
+	private function scope_has_possible_targets( array $promotion, string $scope ): bool {
+		if ( 'selected' === $scope ) {
+			return array() !== $this->effective_selected_ids( $promotion );
+		}
+
+		if ( 'terms' !== $scope ) {
+			return true;
+		}
+
+		$terms_valid = (bool) ( $promotion['terms_valid'] ?? false );
+
+		return $terms_valid && array() !== array_merge(
+			$this->normalize_post_ids( $promotion['category_ids'] ?? array() ),
+			$this->normalize_post_ids( $promotion['tag_ids'] ?? array() )
 		);
+	}
+
+	/**
+	 * Return true only for type pairs that cannot share standard content.
+	 *
+	 * @param string $scope       First normalized content scope.
+	 * @param string $other_scope Second normalized content scope.
+	 */
+	private function broad_scopes_are_disjoint( string $scope, string $other_scope ): bool {
+		$pair = array( $scope, $other_scope );
+		sort( $pair );
+
+		return array( 'pages', 'posts' ) === $pair || array( 'pages', 'terms' ) === $pair;
 	}
 
 	/**

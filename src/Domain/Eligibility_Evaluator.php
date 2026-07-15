@@ -24,14 +24,24 @@ final class Eligibility_Evaluator {
 			$reasons[] = 'promotion_content_empty';
 		}
 
-		$page_scope = isset( $promotion['page_scope'] ) ? (string) $promotion['page_scope'] : 'all';
-		$include_ids = $this->normalize_post_ids( $promotion['include_ids'] ?? array() );
-		$exclude_ids = $this->normalize_post_ids( $promotion['exclude_ids'] ?? array() );
-		if ( 'selected' === $page_scope && array() === array_diff( $include_ids, $exclude_ids ) ) {
+		$content_scope = $this->normalize_content_scope( $promotion['content_scope'] ?? 'all' );
+		$include_ids   = $this->normalize_post_ids( $promotion['include_ids'] ?? array() );
+		$exclude_ids   = $this->normalize_post_ids( $promotion['exclude_ids'] ?? array() );
+		if ( 'selected' === $content_scope && array() === array_diff( $include_ids, $exclude_ids ) ) {
 			$reasons[] = 'promotion_targets_empty';
 		}
 
 		$location               = isset( $promotion['location'] ) ? (string) $promotion['location'] : 'content_after';
+		if ( 'terms' === $content_scope && $this->is_automatic_location( $location ) ) {
+			$category_ids = $this->normalize_post_ids( $promotion['category_ids'] ?? array() );
+			$tag_ids      = $this->normalize_post_ids( $promotion['tag_ids'] ?? array() );
+			if ( array() === $category_ids && array() === $tag_ids ) {
+				$reasons[] = 'promotion_targets_empty';
+			} elseif ( ! (bool) ( $promotion['terms_valid'] ?? false ) ) {
+				$reasons[] = 'promotion_terms_invalid';
+			}
+		}
+
 		$paragraph_number       = isset( $promotion['paragraph_number'] ) ? (int) $promotion['paragraph_number'] : 3;
 		$paragraph_number_valid = ! array_key_exists( 'paragraph_number_valid', $promotion ) || (bool) $promotion['paragraph_number_valid'];
 		if (
@@ -181,18 +191,31 @@ final class Eligibility_Evaluator {
 		$readiness = $this->assess_readiness( $promotion, $now );
 		$reasons   = $readiness['reasons'];
 
-		$post_id     = isset( $context['post_id'] ) ? (int) $context['post_id'] : 0;
-		$page_scope  = isset( $promotion['page_scope'] ) ? (string) $promotion['page_scope'] : 'all';
-		$include_ids = $this->normalize_post_ids( $promotion['include_ids'] ?? array() );
-		$exclude_ids = $this->normalize_post_ids( $promotion['exclude_ids'] ?? array() );
-		if ( 'selected' === $page_scope && ! in_array( $post_id, $include_ids, true ) ) {
-			$reasons[] = 'page_not_included';
+		$post_id       = isset( $context['post_id'] ) ? (int) $context['post_id'] : 0;
+		$content_scope = $this->normalize_content_scope( $promotion['content_scope'] ?? 'all' );
+		$include_ids   = $this->normalize_post_ids( $promotion['include_ids'] ?? array() );
+		$exclude_ids   = $this->normalize_post_ids( $promotion['exclude_ids'] ?? array() );
+		if ( 'selected' === $content_scope && ! in_array( $post_id, $include_ids, true ) ) {
+			$reasons[] = 'content_not_included';
 		}
 		if ( in_array( $post_id, $exclude_ids, true ) ) {
-			$reasons[] = 'page_excluded';
+			$reasons[] = 'content_excluded';
 		}
 
 		$expected_location = isset( $context['expected_location'] ) ? (string) $context['expected_location'] : 'block';
+		if ( $this->is_automatic_location( $expected_location ) ) {
+			$post_type = isset( $context['post_type'] ) ? (string) $context['post_type'] : '';
+			if ( ! $this->content_type_matches( $content_scope, $post_type ) ) {
+				$reasons[] = 'content_type_mismatch';
+			} elseif ( 'terms' === $content_scope ) {
+				if ( ! (bool) ( $context['content_terms_available'] ?? false ) ) {
+					$reasons[] = 'content_terms_unavailable';
+				} elseif ( ! $this->post_terms_match( $promotion, $context ) ) {
+					$reasons[] = 'post_terms_mismatch';
+				}
+			}
+		}
+
 		if ( ( $promotion['location'] ?? 'content_after' ) !== $expected_location ) {
 			$reasons[] = 'location_mismatch';
 		}
@@ -240,5 +263,58 @@ final class Eligibility_Evaluator {
 		}
 
 		return array_values( $ids );
+	}
+
+	/**
+	 * Normalize a content-scope value without a WordPress dependency.
+	 *
+	 * @param mixed $value Raw content scope.
+	 */
+	private function normalize_content_scope( mixed $value ): string {
+		$value = (string) $value;
+
+		return in_array( $value, array( 'all', 'posts', 'pages', 'terms', 'selected' ), true ) ? $value : 'all';
+	}
+
+	/**
+	 * Check whether one delivery location is injected automatically.
+	 *
+	 * @param string $location Delivery location.
+	 */
+	private function is_automatic_location( string $location ): bool {
+		return in_array( $location, array( 'content_before', 'content_after', 'content_after_paragraph' ), true );
+	}
+
+	/**
+	 * Match an automatic content scope against the current native post type.
+	 *
+	 * Manual block and shortcode delivery never call this method. Selected
+	 * automatic targets remain limited to the standard public content types.
+	 *
+	 * @param string $content_scope Normalized content scope.
+	 * @param string $post_type     Current post type.
+	 */
+	private function content_type_matches( string $content_scope, string $post_type ): bool {
+		return match ( $content_scope ) {
+			'posts', 'terms' => 'post' === $post_type,
+			'pages'          => 'page' === $post_type,
+			default          => in_array( $post_type, array( 'post', 'page' ), true ),
+		};
+	}
+
+	/**
+	 * Match any directly assigned category or tag.
+	 *
+	 * @param array<string, mixed> $promotion Promotion domain data.
+	 * @param array<string, mixed> $context   Request context.
+	 */
+	private function post_terms_match( array $promotion, array $context ): bool {
+		$selected_categories = $this->normalize_post_ids( $promotion['category_ids'] ?? array() );
+		$selected_tags       = $this->normalize_post_ids( $promotion['tag_ids'] ?? array() );
+		$current_categories  = $this->normalize_post_ids( $context['category_ids'] ?? array() );
+		$current_tags        = $this->normalize_post_ids( $context['tag_ids'] ?? array() );
+
+		return array() !== array_intersect( $selected_categories, $current_categories )
+			|| array() !== array_intersect( $selected_tags, $current_tags );
 	}
 }

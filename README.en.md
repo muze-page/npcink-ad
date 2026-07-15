@@ -7,16 +7,19 @@ Npcink Ad 0.1 is a WordPress-native, privacy-first workflow for site-owned promo
 ## Product boundary
 
 - `npcink_promotion` is the only content type. Title, block content, draft/published state, and every delivery rule live on one record.
-- Typed metadata stores location, page scope, included/excluded content, device, start time, and end time.
-- Locations are limited to a manual block, before content, and after content. The block and shortcode reference a Promotion ID directly.
+- Typed metadata stores location, canonical content scope, included/excluded content, Core category/tag IDs, device, start time, end time, and paragraph number.
+- Locations include a manual block, before content, after content, and after paragraph 1–20 (default paragraph 3). The block and shortcode reference a Promotion ID directly.
+- Gutenberg paragraph placement counts only top-level paragraph blocks; Classic content counts actual `<p>` elements. Live delivery renders nothing when the configured paragraph anchor is missing instead of silently moving the Promotion to the end.
 - Real-page preview uses the site's theme and the same PHP evaluator as live delivery. Managers may inspect blocked creative, but the verdict remains truthful.
-- The Promotion list summarizes rule status, placement, page scope, stop time, and reasons for inactivity, with inline pause/resume actions instead of another screen.
-- Server preflight rejects empty creative, missing public targets, and invalid schedules before publication or scheduling. The editor mirrors those checks and advisory-checks a manual block on the selected preview page.
-- Live delivery evaluates status, page, and schedule on the server. CSS breakpoints handle device visibility so cached HTML is not split by User-Agent.
+- The Promotion list summarizes rule status, placement, content scope, stop time, and reasons for inactivity, with inline pause/resume actions instead of another screen.
+- Server preflight rejects empty creative, missing public targets, invalid paragraph numbers, unavailable configured categories or tags, and invalid schedules before publication or scheduling. The editor mirrors those checks and advisory-checks a manual block or paragraph anchor on the selected preview page.
+- Live delivery evaluates publication status, canonical content scope, and schedule on the server. CSS breakpoints handle device visibility so cached HTML is not split by User-Agent.
 - Management REST requires `manage_npcink_ads`; activation grants it to WordPress administrators and editors.
 - Default delivery adds no tracking request, visitor cookie, custom table, statistics queue, or required frontend JavaScript.
 
 See [the product contract](docs/product-contract.md), [ADR 003](docs/decisions/003-single-promotion-record.md), and [the architecture overview](docs/architecture-overview.md).
+
+The current development line implements [ADR 007](docs/decisions/007-canonical-editorial-scope.md): its mutually exclusive content scope covers all standard posts and pages, all posts, all pages, posts directly related to selected Core categories or tags, or explicitly selected standard posts and pages; explicit ID exclusions always win. The remaining 0.2 closeout is manual-block guidance and clearer explanation of the existing desktop/mobile breakpoints; that work is not complete yet.
 
 ## Non-goals
 
@@ -51,7 +54,7 @@ WP_VERSION=6.5 PHP_VERSION=8.1 tests/playground/run.sh
 WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 ```
 
-The fixture verifies the single Promotion model, typed meta, publish preflight, page/time/device rules, block/shortcode/automatic delivery, manager/subscriber/anonymous REST boundaries, promotion-bound preview nonces, timezone and schedule boundaries, absence of Placement/options/custom tables, and explicit uninstall cleanup. Browser interaction in the editor, list status actions, and theme remains a Local release check.
+The fixture verifies the single Promotion model, typed meta, publish preflight, all five canonical content scopes, direct Core category/tag relationships and their dynamic changes, fail-closed behavior for deleted configured terms, time/device rules, block/shortcode/automatic delivery, top-level Gutenberg and Classic paragraph anchors, manager/subscriber/anonymous REST boundaries, promotion-bound preview nonces, timezone and schedule boundaries, absence of Placement/options/custom tables, and explicit uninstall cleanup. Browser interaction in the editor, list status actions, and theme remains a Local release check.
 
 ## Release package
 

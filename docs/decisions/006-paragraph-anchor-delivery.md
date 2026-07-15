@@ -44,7 +44,7 @@ The implementation must also preserve the current server-rendered, cache-stable 
 
 ### Existing boundaries remain
 
-- Paragraph delivery uses the same standard `post`/`page`, main-query, main-loop, page-scope, schedule, device, permission, rendering, and cache boundaries as the other automatic positions.
+- Paragraph delivery uses the same standard `post`/`page`, main-query, main-loop, canonical content-scope, schedule, device, permission, rendering, and cache boundaries as the other automatic positions.
 - It adds no frontend script, visitor request, tracking state, custom table, cache-provider integration, priority, rotation, or winner selection.
 - The location is not an arbitrary CSS selector, theme hook, shortcode anchor, DOM mutation API, or custom-post-type contract.
 

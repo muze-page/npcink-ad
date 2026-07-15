@@ -155,3 +155,14 @@ if ( ! function_exists( 'esc_attr__' ) ) {
 		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
 	}
 }
+
+if ( ! function_exists( 'esc_html__' ) ) {
+	/**
+	 * Return escaped untranslated fixture text.
+	 *
+	 * @param string $text Source text.
+	 */
+	function esc_html__( string $text ): string {
+		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+	}
+}

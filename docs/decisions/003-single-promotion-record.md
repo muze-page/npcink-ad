@@ -20,9 +20,10 @@ Npcink Ad 0.1 uses one `npcink_promotion` custom post type as the complete publi
 - Registered typed metadata contains the placement rules:
   - `_npcink_ad_location`: `block`, `content_before`, `content_after`, or the ADR 006 extension `content_after_paragraph`;
   - `_npcink_ad_paragraph_number`: an integer from 1 through 20 for paragraph placement, defaulting to 3;
-  - `_npcink_ad_page_scope`: `all` or `selected`;
+  - `_npcink_ad_content_scope`: the ADR 007 canonical `all | posts | pages | terms | selected` scope;
   - `_npcink_ad_include_ids`: a bounded list of post IDs used by `selected` scope;
-  - `_npcink_ad_exclude_ids`: a bounded list of post IDs excluded from either scope;
+  - `_npcink_ad_exclude_ids`: a bounded list of post IDs excluded from every scope;
+  - `_npcink_ad_category_ids`, `_npcink_ad_tag_ids`: bounded Core term IDs used only by automatic `terms` scope;
   - `_npcink_ad_device`: `all`, `desktop`, or `mobile`;
   - `_npcink_ad_start_at`: an optional WordPress-local start datetime;
   - `_npcink_ad_end_at`: an optional WordPress-local end datetime.
@@ -34,7 +35,7 @@ Do not create a hidden one-to-one placement record. That approach retains two so
 
 ## Eligibility and preview contract
 
-One PHP eligibility policy evaluates actual delivery and preview. It returns an allowed flag and stable reason codes for unpublished content, missing content, start and end times, page scope and exclusions, location, and simulated device.
+One PHP eligibility policy evaluates actual delivery and preview. It returns an allowed flag and stable reason codes for unpublished content, missing content, start and end times, canonical content scope, current term validity and matching, explicit exclusions, location, and simulated device. ADR 007 defines the mutually exclusive editorial-scope semantics; it does not introduce another placement record.
 
 Real-page preview may force the creative to render for an authorized manager so its appearance can be inspected, but the accompanying verdict must still report the actual eligibility result. Preview access requires the management capability, a promotion-bound nonce, same-origin navigation, and no-cache response headers. Anonymous requests must never use preview mode or read unpublished promotion content.
 

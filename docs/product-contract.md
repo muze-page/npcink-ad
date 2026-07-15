@@ -1,4 +1,4 @@
-# Npcink Ad 0.1 Product Contract
+# Npcink Ad Product Contract
 
 ## Product identity
 
@@ -24,7 +24,7 @@ The primary job is:
 The default interface exposes three concepts:
 
 1. **Promotion** — the content and its publishing state.
-2. **Placement** — where, on which pages, when, and on which devices it may appear.
+2. **Placement** — where, on which standard content, when, and on which devices it may appear.
 3. **Preview** — the real-page view and the explanation of whether it will appear.
 
 Implementation details such as slots, variants, resolvers, targeting engines, templates, events, queues, and consent adapters must not become primary navigation or required vocabulary.
@@ -35,7 +35,7 @@ One complete vertical workflow is more important than broad feature coverage:
 
 1. Create a promotion using WordPress blocks.
 2. Choose a placement: block, before content, or after content.
-3. Include or exclude pages.
+3. Choose all posts/pages, all posts, all pages, posts matching selected Core categories/tags, or specific published posts/pages; optionally exclude explicit content IDs.
 4. Optionally set a start and end time.
 5. Choose all devices, desktop, or mobile.
 6. Preview on a real page at desktop and mobile widths.
@@ -101,11 +101,18 @@ Every proposed feature must answer both questions:
 
 If either answer is missing, the feature stays outside the core product.
 
-## Accepted 0.2 direction (implementation in progress)
+## Accepted 0.2 direction (partially implemented)
 
-The runtime and required workflow documented above remain the current 0.1 product. [ADR 005](decisions/005-controlled-delivery-expansion.md) accepts a bounded 0.2 delivery direction. Its groundwork and first delivery step are implemented: automatic delivery is limited to standard posts/pages, management surfaces provide a non-blocking advisory when automatic Promotions may appear together, and a Promotion can be placed after paragraph 1–20 using the semantics in [ADR 006](decisions/006-paragraph-anchor-delivery.md). The remaining expansion stays ordered work rather than current capability:
+The runtime remains one bounded Promotion workflow. [ADR 005](decisions/005-controlled-delivery-expansion.md) accepts its controlled 0.2 delivery direction. Automatic delivery is limited to standard posts/pages, management surfaces provide a non-blocking advisory when automatic Promotions may appear together, and a Promotion can be placed after paragraph 1–20 using [ADR 006](decisions/006-paragraph-anchor-delivery.md). [ADR 007](decisions/007-canonical-editorial-scope.md) now defines and implements one mutually exclusive content population:
 
-1. add a collapsed advanced editorial scope for standard posts/pages and applicable categories/tags;
-2. improve manual-block guidance and explain the existing desktop/mobile breakpoint.
+- `all`: all standard posts and pages;
+- `posts`: all standard posts;
+- `pages`: all standard pages;
+- `terms`: standard posts directly matching any configured Core category or tag;
+- `selected`: explicitly selected published standard posts/pages.
+
+Explicit ID exclusions always win. Terms are not combined with selected IDs, do not expand category descendants, do not apply to pages, and do not support custom taxonomies, CPTs, term exclusions, or boolean condition groups. A Promotion that must cover both a special page and a term-selected post population is intentionally split into two reviewable Promotions.
+
+The remaining ordered work is to improve manual-block guidance and explain the existing desktop/mobile breakpoint. This contract does not claim that guidance step is complete.
 
 Multiple eligible Promotions at one automatic location continue rendering in deterministic order, while management UI only advises that they **may** appear together. This direction does not add priority, weights, rotation, tablet targeting, arbitrary selectors or hooks, visitor state, tracking, or separate Slot/Placement records.
