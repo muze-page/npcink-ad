@@ -13,7 +13,44 @@ for required_command in php composer pnpm rsync zip unzip wp msgcmp msgfmt; do
   fi
 done
 
-echo "[release-gate] 1/8 PHP syntax check"
+echo "[release-gate] 1/9 Version contract"
+PLUGIN_VERSION="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p' npcink-ad.php | head -n 1)"
+CONSTANT_VERSION="$(sed -nE "s/^[[:space:]]*define\([[:space:]]*'NPCINK_AD_VERSION',[[:space:]]*'([^']+)'[[:space:]]*\);.*/\1/p" npcink-ad.php | head -n 1)"
+PACKAGE_VERSION="$(php -r '$package = json_decode((string) file_get_contents("package.json"), true, 512, JSON_THROW_ON_ERROR); echo isset($package["version"]) ? $package["version"] : "";')"
+STABLE_TAG="$(sed -nE 's/^Stable tag:[[:space:]]*([^[:space:]]+).*/\1/p' readme.txt | head -n 1)"
+
+if [[ -z "$PLUGIN_VERSION" ]]; then
+  echo "[release-gate] Version is missing from npcink-ad.php" >&2
+  exit 1
+fi
+
+check_version_match() {
+  local label="$1"
+  local actual="$2"
+
+  if [[ -z "$actual" ]]; then
+    echo "[release-gate] ${label} version is missing" >&2
+    exit 1
+  fi
+  if [[ "$actual" != "$PLUGIN_VERSION" ]]; then
+    echo "[release-gate] ${label} version ${actual} does not match plugin version ${PLUGIN_VERSION}" >&2
+    exit 1
+  fi
+}
+
+check_version_match "NPCINK_AD_VERSION" "$CONSTANT_VERSION"
+check_version_match "package.json" "$PACKAGE_VERSION"
+check_version_match "readme.txt Stable tag" "$STABLE_TAG"
+
+if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+  EXPECTED_TAG="v${PLUGIN_VERSION}"
+  if [[ "${GITHUB_REF_NAME:-}" != "$EXPECTED_TAG" ]]; then
+    echo "[release-gate] Tag ${GITHUB_REF_NAME:-<missing>} does not match expected ${EXPECTED_TAG}" >&2
+    exit 1
+  fi
+fi
+
+echo "[release-gate] 2/9 PHP syntax check"
 while IFS= read -r -d '' php_file; do
   php -l "$php_file" >/dev/null
 done < <(
@@ -24,21 +61,21 @@ done < <(
     -print0
 )
 
-echo "[release-gate] 2/8 Composer checks"
+echo "[release-gate] 3/9 Composer checks"
 composer check
 
-echo "[release-gate] 3/8 Frontend type and lint checks"
+echo "[release-gate] 4/9 Frontend type and lint checks"
 pnpm run typecheck
 pnpm run lint:js
 pnpm run lint:style
 
-echo "[release-gate] 4/8 Build production assets once"
+echo "[release-gate] 5/9 Build production assets once"
 pnpm run build
 
-echo "[release-gate] 5/8 Translation catalog checks"
+echo "[release-gate] 6/9 Translation catalog checks"
 composer run i18n:check
 
-echo "[release-gate] 6/8 Build contract and strict bundle budget checks"
+echo "[release-gate] 7/9 Build contract and strict bundle budget checks"
 REQUIRES_WORDPRESS="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Requires at least:[[:space:]]*([^[:space:]]+).*/\1/p' npcink-ad.php | head -n 1)"
 if [[ -z "$REQUIRES_WORDPRESS" ]]; then
   echo "[release-gate] Requires at least is missing from npcink-ad.php" >&2
@@ -86,22 +123,17 @@ if [[ "$BUDGET_FAILED" -eq 1 ]]; then
   exit 1
 fi
 
-echo "[release-gate] 7/8 Build release zip"
+echo "[release-gate] 8/9 Build release zip"
 bash scripts/release.sh
 
-echo "[release-gate] 8/8 Verify artifact"
-PLUGIN_VERSION="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p' npcink-ad.php | head -n 1)"
-if [[ -z "$PLUGIN_VERSION" ]]; then
-  echo "[release-gate] Version is missing from npcink-ad.php" >&2
-  exit 1
-fi
-LATEST_ZIP="dist/${PLUGIN_DIR_NAME}-${PLUGIN_VERSION}.zip"
-if [[ ! -f "$LATEST_ZIP" ]]; then
-  echo "[release-gate] Expected release zip not found: ${LATEST_ZIP}" >&2
+echo "[release-gate] 9/9 Verify artifact"
+RELEASE_ZIP="dist/${PLUGIN_DIR_NAME}-${PLUGIN_VERSION}.zip"
+if [[ ! -f "$RELEASE_ZIP" ]]; then
+  echo "[release-gate] Expected release zip not found: ${RELEASE_ZIP}" >&2
   exit 1
 fi
 
-ZIP_ENTRIES="$(unzip -Z1 "$LATEST_ZIP")"
+ZIP_ENTRIES="$(unzip -Z1 "$RELEASE_ZIP")"
 
 require_zip_entry() {
   local required_entry="$1"
@@ -162,7 +194,7 @@ done
 
 PACKAGE_AUDIT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/npcink-ad-package.XXXXXX")"
 trap 'rm -rf "$PACKAGE_AUDIT_DIR"' EXIT
-unzip -q "$LATEST_ZIP" -d "$PACKAGE_AUDIT_DIR"
+unzip -q "$RELEASE_ZIP" -d "$PACKAGE_AUDIT_DIR"
 if grep -RIni 'magick' "$PACKAGE_AUDIT_DIR/$PLUGIN_DIR_NAME"; then
   echo "[release-gate] Legacy Magick identifier found in release artifact" >&2
   exit 1
@@ -178,4 +210,4 @@ for rejected_prefix in \
   reject_zip_prefix "$rejected_prefix"
 done
 
-echo "[release-gate] OK: ${LATEST_ZIP}"
+echo "[release-gate] OK: ${RELEASE_ZIP}"

@@ -113,9 +113,11 @@ final class Preview_Page {
 			'_wpnonce'  => $nonce,
 		);
 
-		$desktop_url = self::url( array_merge( $base_args, array( 'device' => 'desktop' ) ) );
-		$mobile_url  = self::url( array_merge( $base_args, array( 'device' => 'mobile' ) ) );
-		$edit_url    = get_edit_post_link( $promotion_id, 'raw' );
+		$desktop_url     = self::url( array_merge( $base_args, array( 'device' => 'desktop' ) ) );
+		$mobile_url      = self::url( array_merge( $base_args, array( 'device' => 'mobile' ) ) );
+		$edit_url        = get_edit_post_link( $promotion_id, 'raw' );
+		$desktop_current = 'desktop' === $device ? 'page' : 'false';
+		$mobile_current  = 'mobile' === $device ? 'page' : 'false';
 		?>
 		<div class="wrap npcink-ad-preview-page">
 			<div class="npcink-ad-preview-page__toolbar">
@@ -124,8 +126,8 @@ final class Preview_Page {
 					<p><?php esc_html_e( 'The promotion is rendered by the same server policy used on the live site. Preview mode may show blocked creative, but its verdict remains truthful.', 'npcink-ad' ); ?></p>
 				</div>
 				<div class="npcink-ad-preview-page__actions">
-					<a class="button <?php echo 'desktop' === $device ? 'button-primary' : ''; ?>" href="<?php echo esc_url( $desktop_url ); ?>"><?php esc_html_e( 'Desktop', 'npcink-ad' ); ?></a>
-					<a class="button <?php echo 'mobile' === $device ? 'button-primary' : ''; ?>" href="<?php echo esc_url( $mobile_url ); ?>"><?php esc_html_e( 'Mobile', 'npcink-ad' ); ?></a>
+					<a class="button <?php echo 'desktop' === $device ? 'button-primary' : ''; ?>" href="<?php echo esc_url( $desktop_url ); ?>" aria-current="<?php echo esc_attr( $desktop_current ); ?>"><?php esc_html_e( 'Desktop', 'npcink-ad' ); ?></a>
+					<a class="button <?php echo 'mobile' === $device ? 'button-primary' : ''; ?>" href="<?php echo esc_url( $mobile_url ); ?>" aria-current="<?php echo esc_attr( $mobile_current ); ?>"><?php esc_html_e( 'Mobile', 'npcink-ad' ); ?></a>
 					<?php if ( is_string( $edit_url ) && '' !== $edit_url ) : ?>
 						<a class="button" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Back to promotion', 'npcink-ad' ); ?></a>
 					<?php endif; ?>

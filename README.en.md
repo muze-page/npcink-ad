@@ -49,7 +49,7 @@ WP_VERSION=6.5 PHP_VERSION=8.1 tests/playground/run.sh
 WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 ```
 
-The fixture verifies the single Promotion model, typed meta, page/time/device rules, block/shortcode/automatic delivery, anonymous REST denial, absence of Placement/options/custom tables, and explicit uninstall cleanup. Browser interaction in the real editor and theme remains a Local release check.
+The fixture verifies the single Promotion model, typed meta, page/time/device rules, block/shortcode/automatic delivery, manager/subscriber/anonymous REST boundaries, promotion-bound preview nonces, preview capabilities, absence of Placement/options/custom tables, and explicit uninstall cleanup. Browser interaction in the real editor and theme remains a Local release check.
 
 ## Release package
 
@@ -57,6 +57,6 @@ The fixture verifies the single Promotion model, typed meta, page/time/device ru
 bash scripts/release-gate.sh
 ```
 
-The artifact is `dist/npcink-ad-0.1.0.zip` with the fixed top-level directory `npcink-ad/`. The gate verifies bundle budgets, required files, forbidden content, and the absence of legacy brand identifiers from the package.
+The artifact is `dist/npcink-ad-<Version>.zip` with the fixed top-level directory `npcink-ad/`. The gate requires the plugin header, `NPCINK_AD_VERSION`, `package.json`, and the readme Stable tag to share that version. In a tag-triggered build, `GITHUB_REF_NAME` must be `v<Version>`. It also verifies bundle budgets, required files, forbidden content, and the absence of legacy brand identifiers from the package.
 
 Schedules depend on the page being regenerated at the relevant boundary. Sites with third-party full-page caches must configure an appropriate TTL or purge the affected pages when a Promotion changes; version 0.1 does not claim minute-accurate scheduling through arbitrary caches.
