@@ -8,6 +8,7 @@
 namespace Npcink\Ad\Data;
 
 use DateTimeImmutable;
+use WP_Post;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -31,10 +32,66 @@ final class Repository {
 		}
 
 		$post = get_post( $promotion_id );
-		if ( ! $post || Post_Types::PROMOTION_POST_TYPE !== $post->post_type ) {
+		if ( ! $post instanceof WP_Post || Post_Types::PROMOTION_POST_TYPE !== $post->post_type ) {
 			return null;
 		}
 
+		return $this->map_promotion( $post );
+	}
+
+	/**
+	 * Find every published Promotion assigned to an automatic content location.
+	 *
+	 * Full post objects are requested so WordPress primes their metadata in one
+	 * batch. Mapping the result therefore does not add one query per Promotion.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	public function find_published_automatic_promotions(): array {
+		$posts = get_posts(
+			array(
+				'post_type'              => Post_Types::PROMOTION_POST_TYPE,
+				'post_status'            => 'publish',
+				'posts_per_page'         => -1,
+				'orderby'                => array(
+					'menu_order' => 'ASC',
+					'ID'         => 'ASC',
+				),
+				'meta_query'             => array(
+					'relation' => 'OR',
+					array(
+						'key'     => Post_Types::LOCATION_META,
+						'value'   => array( 'content_before', 'content_after' ),
+						'compare' => 'IN',
+					),
+					array(
+						'key'     => Post_Types::LOCATION_META,
+						'compare' => 'NOT EXISTS',
+					),
+				),
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => true,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$promotions = array();
+		foreach ( $posts as $post ) {
+			if ( $post instanceof WP_Post ) {
+				$promotions[] = $this->map_promotion( $post );
+			}
+		}
+
+		return $promotions;
+	}
+
+	/**
+	 * Map one native Promotion post with its typed metadata.
+	 *
+	 * @param WP_Post $post Promotion post.
+	 * @return array<string, mixed>
+	 */
+	private function map_promotion( WP_Post $post ): array {
 		$start_at = $this->parse_datetime( (string) get_post_meta( $post->ID, Post_Types::START_AT_META, true ) );
 		$end_at   = $this->parse_datetime( (string) get_post_meta( $post->ID, Post_Types::END_AT_META, true ) );
 

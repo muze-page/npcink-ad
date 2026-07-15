@@ -16,6 +16,19 @@ if ( ! function_exists( '__' ) ) {
 	}
 }
 
+if ( ! function_exists( '_n' ) ) {
+	/**
+	 * Return the singular or plural unit-test text.
+	 *
+	 * @param string $single Singular source text.
+	 * @param string $plural Plural source text.
+	 * @param int    $number Item count.
+	 */
+	function _n( string $single, string $plural, int $number ): string {
+		return 1 === $number ? $single : $plural;
+	}
+}
+
 if ( ! function_exists( 'sanitize_key' ) ) {
 	/**
 	 * Sanitize one key for pure unit tests.
@@ -222,6 +235,28 @@ if ( ! function_exists( 'get_posts' ) ) {
 
 		$posts = $GLOBALS['npcink_ad_test_posts'] ?? array();
 		$ids   = is_array( $args['post__in'] ?? null ) ? $args['post__in'] : array();
+		if ( 'npcink_promotion' === ( $args['post_type'] ?? '' ) && array() === $ids ) {
+			$meta = $GLOBALS['npcink_ad_test_meta'] ?? array();
+			$automatic_posts = array_values(
+				array_filter(
+					$posts,
+					static function ( object $post ) use ( $meta ): bool {
+						$location = (string) ( $meta[ $post->ID ]['_npcink_ad_location'] ?? '' );
+
+						return 'npcink_promotion' === ( $post->post_type ?? '' )
+							&& 'publish' === ( $post->post_status ?? '' )
+							&& in_array( $location, array( '', 'content_before', 'content_after' ), true );
+					}
+				)
+			);
+			usort(
+				$automatic_posts,
+				static fn ( object $first, object $second ): int => (int) $first->ID <=> (int) $second->ID
+			);
+
+			return $automatic_posts;
+		}
+
 		$public_ids = $GLOBALS['npcink_ad_test_public_ids'] ?? null;
 		if ( is_array( $public_ids ) ) {
 			$lookup = array_fill_keys( array_map( 'intval', $public_ids ), true );

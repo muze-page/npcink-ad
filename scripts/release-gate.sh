@@ -66,6 +66,7 @@ composer check
 
 echo "[release-gate] 4/9 Frontend type and lint checks"
 pnpm run typecheck
+pnpm run test:js
 pnpm run lint:js
 pnpm run lint:style
 
@@ -182,6 +183,7 @@ REQUIRED_ZIP_ENTRIES=(
   "${PLUGIN_DIR_NAME}/src/Data/Repository.php"
   "${PLUGIN_DIR_NAME}/src/Data/Roles.php"
   "${PLUGIN_DIR_NAME}/src/Domain/Eligibility_Evaluator.php"
+  "${PLUGIN_DIR_NAME}/src/Domain/Overlap_Detector.php"
   "${PLUGIN_DIR_NAME}/src/Frontend/Delivery.php"
   "${PLUGIN_DIR_NAME}/src/Frontend/Preview_Request.php"
   "${PLUGIN_DIR_NAME}/src/Frontend/Renderer.php"

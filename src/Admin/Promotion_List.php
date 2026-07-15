@@ -10,6 +10,7 @@ namespace Npcink\Ad\Admin;
 use Npcink\Ad\Data\Post_Types;
 use Npcink\Ad\Data\Repository;
 use Npcink\Ad\Domain\Eligibility_Evaluator;
+use Npcink\Ad\Domain\Overlap_Detector;
 use Npcink\Ad\Presentation\Eligibility_Messages;
 use WP_Post;
 use WP_Post_Type;
@@ -37,6 +38,20 @@ final class Promotion_List {
 	private array $promotions = array();
 
 	/**
+	 * Published automatic Promotions used by every current list row.
+	 *
+	 * @var list<array<string, mixed>>
+	 */
+	private array $published_automatic_promotions = array();
+
+	/**
+	 * Potential overlap IDs keyed by current Promotion ID.
+	 *
+	 * @var array<int, list<int>>
+	 */
+	private array $overlapping_ids = array();
+
+	/**
 	 * Whether the current list page has been primed as one batch.
 	 *
 	 * @var bool
@@ -61,11 +76,13 @@ final class Promotion_List {
 	 * Create the list presenter.
 	 *
 	 * @param Repository            $repository Promotion repository.
-	 * @param Eligibility_Evaluator $evaluator  Shared delivery policy.
+	 * @param Eligibility_Evaluator $evaluator       Shared delivery policy.
+	 * @param Overlap_Detector      $overlap_detector Pure advisory overlap policy.
 	 */
 	public function __construct(
 		private readonly Repository $repository,
-		private readonly Eligibility_Evaluator $evaluator
+		private readonly Eligibility_Evaluator $evaluator,
+		private readonly Overlap_Detector $overlap_detector
 	) {
 	}
 
@@ -183,6 +200,7 @@ final class Promotion_List {
 				break;
 			case self::LOCATION_COLUMN:
 				echo esc_html( $this->location_label( (string) ( $promotion['location'] ?? '' ) ) );
+				$this->render_overlap_hint( $promotion );
 				break;
 			case self::SCOPE_COLUMN:
 				$this->render_scope( $promotion );
@@ -395,6 +413,34 @@ final class Promotion_List {
 	}
 
 	/**
+	 * Render a non-blocking overlap advisory below an automatic placement.
+	 *
+	 * @param array<string, mixed> $promotion Promotion domain data.
+	 */
+	private function render_overlap_hint( array $promotion ): void {
+		$promotion_id = isset( $promotion['id'] ) ? (int) $promotion['id'] : 0;
+		$overlap_count = isset( $this->overlapping_ids[ $promotion_id ] )
+			? count( $this->overlapping_ids[ $promotion_id ] )
+			: 0;
+		if ( 1 > $overlap_count ) {
+			return;
+		}
+
+		$message = sprintf(
+			/* translators: %d: number of published Promotions with intersecting automatic delivery rules. */
+			_n(
+				'May appear together with %d published promotion.',
+				'May appear together with %d published promotions.',
+				$overlap_count,
+				'npcink-ad'
+			),
+			$overlap_count
+		);
+
+		echo '<br /><small class="npcink-ad-overlap-hint">' . esc_html( $message ) . '</small>';
+	}
+
+	/**
 	 * Format the stop time in the site's timezone.
 	 *
 	 * @param int $end_at Stop timestamp.
@@ -445,6 +491,7 @@ final class Promotion_List {
 		}
 
 		$selected_ids = array();
+		$has_automatic_promotion = false;
 		foreach ( $query->posts as $post ) {
 			if ( ! $post instanceof WP_Post || Post_Types::PROMOTION_POST_TYPE !== $post->post_type ) {
 				continue;
@@ -452,11 +499,27 @@ final class Promotion_List {
 
 			$promotion                  = $this->repository->find_promotion( $post->ID );
 			$this->promotions[ $post->ID ] = $promotion;
-			if ( null === $promotion || 'selected' !== ( $promotion['page_scope'] ?? 'all' ) ) {
+			if ( null === $promotion ) {
 				continue;
 			}
+			$has_automatic_promotion = $has_automatic_promotion || in_array(
+				$promotion['location'] ?? '',
+				array( 'content_before', 'content_after' ),
+				true
+			);
 
-			$selected_ids = array_merge( $selected_ids, $this->post_ids( $promotion['include_ids'] ?? array() ) );
+			if ( 'selected' === ( $promotion['page_scope'] ?? 'all' ) ) {
+				$selected_ids = array_merge( $selected_ids, $this->post_ids( $promotion['include_ids'] ?? array() ) );
+			}
+		}
+
+		if ( $has_automatic_promotion ) {
+			$this->published_automatic_promotions = $this->repository->find_published_automatic_promotions();
+			foreach ( $this->published_automatic_promotions as $promotion ) {
+				if ( 'selected' === ( $promotion['page_scope'] ?? 'all' ) ) {
+					$selected_ids = array_merge( $selected_ids, $this->post_ids( $promotion['include_ids'] ?? array() ) );
+				}
+			}
 		}
 
 		$public_lookup = $this->public_content_lookup( $selected_ids );
@@ -465,6 +528,20 @@ final class Promotion_List {
 				continue;
 			}
 			$this->promotions[ $post_id ] = $this->apply_public_lookup( $promotion, $public_lookup );
+		}
+		foreach ( $this->published_automatic_promotions as $index => $promotion ) {
+			if ( 'selected' === ( $promotion['page_scope'] ?? 'all' ) ) {
+				$this->published_automatic_promotions[ $index ] = $this->apply_public_lookup( $promotion, $public_lookup );
+			}
+		}
+
+		foreach ( $this->promotions as $post_id => $promotion ) {
+			if ( null !== $promotion ) {
+				$this->overlapping_ids[ $post_id ] = $this->overlap_detector->find_overlapping_ids(
+					$promotion,
+					$this->published_automatic_promotions
+				);
+			}
 		}
 	}
 

@@ -90,91 +90,99 @@ msgstr ""
 msgid "Npcink Ad real-page preview"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:146
+#: src/Admin/Promotion_List.php:163
 msgid "Rule status"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:147
+#: src/Admin/Promotion_List.php:164
 #: build/index.js:4
 msgid "Placement"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:148
+#: src/Admin/Promotion_List.php:165
 #: build/index.js:4
 msgid "Pages"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:149
+#: src/Admin/Promotion_List.php:166
 msgid "Stops"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:150
+#: src/Admin/Promotion_List.php:167
 msgid "Why not"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:235
+#: src/Admin/Promotion_List.php:253
 msgid "Needs completion"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:238
+#: src/Admin/Promotion_List.php:256
 msgid "Paused"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:241
-#: src/Admin/Promotion_List.php:247
+#: src/Admin/Promotion_List.php:259
+#: src/Admin/Promotion_List.php:265
 msgid "Not started"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:244
+#: src/Admin/Promotion_List.php:262
 msgid "Not published"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:250
+#: src/Admin/Promotion_List.php:268
 msgid "Ended"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:253
+#: src/Admin/Promotion_List.php:271
 msgid "Rule ready"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:274
+#: src/Admin/Promotion_List.php:292
 msgid "Pause"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:275
+#: src/Admin/Promotion_List.php:293
 msgid "Resume"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:346
+#: src/Admin/Promotion_List.php:364
 #: build/index.js:4
 msgid "All posts and pages"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:349
+#: src/Admin/Promotion_List.php:367
 msgid "Configured exclusions:"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:358
+#: src/Admin/Promotion_List.php:376
 msgid "Selected public posts/pages:"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:389
+#: src/Admin/Promotion_List.php:407
 msgid "Block"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:390
+#: src/Admin/Promotion_List.php:408
 msgid "Before content"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:391
+#: src/Admin/Promotion_List.php:409
 msgid "After content"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:394
+#: src/Admin/Promotion_List.php:412
 msgid "Unknown"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:404
+#. translators: %d: number of published Promotions with intersecting automatic delivery rules.
+#: src/Admin/Promotion_List.php:431
+#, php-format
+msgid "May appear together with %d published promotion."
+msgid_plural "May appear together with %d published promotions."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Admin/Promotion_List.php:450
 msgid "No end time"
 msgstr ""
 
@@ -330,11 +338,11 @@ msgstr ""
 msgid "This promotion preview is not available."
 msgstr ""
 
-#: src/Frontend/Preview_Request.php:85
+#: src/Frontend/Preview_Request.php:86
 msgid "Promotion previews require a public post or page."
 msgstr ""
 
-#: src/Frontend/Preview_Request.php:139
+#: src/Frontend/Preview_Request.php:161
 msgid "Manual block preview is shown after the page content. The live position is controlled by where the block is inserted."
 msgstr ""
 
@@ -639,12 +647,24 @@ msgstr ""
 msgid "No errors were found in the current editor fields. Public selected targets are confirmed by the server when publishing or scheduling."
 msgstr ""
 
-#. translators: %s: site timezone name or UTC offset.
+#. translators: %d: number of other published promotions that may share a delivery context.
 #: build/index.js:7
+#, js-format
+msgid "This promotion may appear together with %d other published promotion in some post or page contexts."
+msgid_plural "This promotion may appear together with %d other published promotions in some post or page contexts."
+msgstr[0] ""
+msgstr[1] ""
+
+#: build/index.js:7
+msgid "This advisory does not block publishing."
+msgstr ""
+
+#. translators: %s: site timezone name or UTC offset.
+#: build/index.js:8
 #, js-format
 msgid "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use."
 msgstr ""
 
-#: build/index.js:7
+#: build/index.js:8
 msgid "These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative."
 msgstr ""

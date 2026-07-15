@@ -30,23 +30,29 @@ final class PromotionStatusActionTest extends TestCase {
 		$GLOBALS['npcink_ad_test_get_posts_queries'] = array();
 		unset( $GLOBALS['npcink_ad_test_public_ids'] );
 		$GLOBALS['npcink_ad_test_posts'] = array(
-			1  => (object) array(
-				'ID'           => 1,
-				'post_type'    => Post_Types::PROMOTION_POST_TYPE,
-				'post_status'  => 'draft',
-				'post_content' => '<p>Creative</p>',
+			1  => new WP_Post(
+				array(
+					'ID'           => 1,
+					'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+					'post_status'  => 'draft',
+					'post_content' => '<p>Creative</p>',
+				)
 			),
-			10 => (object) array(
-				'ID'           => 10,
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_content' => 'Target',
+			10 => new WP_Post(
+				array(
+					'ID'           => 10,
+					'post_type'    => 'page',
+					'post_status'  => 'publish',
+					'post_content' => 'Target',
+				)
 			),
-			11 => (object) array(
-				'ID'           => 11,
-				'post_type'    => 'post',
-				'post_status'  => 'draft',
-				'post_content' => 'Private target',
+			11 => new WP_Post(
+				array(
+					'ID'           => 11,
+					'post_type'    => 'post',
+					'post_status'  => 'draft',
+					'post_content' => 'Private target',
+				)
 			),
 		);
 		$GLOBALS['npcink_ad_test_meta']  = array(

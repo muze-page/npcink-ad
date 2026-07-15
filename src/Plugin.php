@@ -17,6 +17,7 @@ use Npcink\Ad\Blocks\Patterns;
 use Npcink\Ad\Data\Post_Types;
 use Npcink\Ad\Data\Repository;
 use Npcink\Ad\Domain\Eligibility_Evaluator;
+use Npcink\Ad\Domain\Overlap_Detector;
 use Npcink\Ad\Frontend\Delivery;
 use Npcink\Ad\Frontend\Preview_Request;
 use Npcink\Ad\Frontend\Renderer;
@@ -57,7 +58,7 @@ final class Plugin {
 		Lifecycle::register_new_site_hook();
 
 		if ( is_admin() ) {
-			$promotion_list   = new Promotion_List( $repository, $evaluator );
+			$promotion_list   = new Promotion_List( $repository, $evaluator, new Overlap_Detector() );
 			$promotion_action = new Promotion_Status_Action( $repository, $evaluator );
 
 			add_action( 'admin_menu', array( Menu::class, 'register' ) );
