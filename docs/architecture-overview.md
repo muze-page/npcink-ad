@@ -3,10 +3,10 @@
 ## 1. 核心链路
 
 1. 编辑者在 `npcink_promotion` 的原生区块编辑器中完成创意和展示规则。
-2. 编辑器侧栏通过 Core REST 保存 typed meta，不维护第二份设置对象。
-3. 真实页面预览与正式前台都把 Promotion 和页面上下文交给同一个 `Eligibility_Evaluator`。
+2. 编辑器侧栏通过 Core REST 保存 typed meta；发布或排程请求先用同一 evaluator 做配置预检，不维护第二份设置对象。
+3. 推广列表、真实页面预览与正式前台都复用 `Eligibility_Evaluator`，列表只报告规则状态，不声称某次访问一定正在展示。
 4. 判断通过后由服务端 Renderer 输出区块内容；匿名访问不会看到诊断信息或未发布创意。
-5. Promotion 改为草稿即暂停，开始/结束时间由站点时区解释。
+5. Promotion 改为草稿即暂停，开始/结束时间由站点时区解释；列表可通过受 nonce 保护的 POST 操作快速暂停/恢复。
 
 没有浏览器端规则解析、访客追踪、异步事件管线或自定义数据表。
 
@@ -28,11 +28,14 @@
 
 - `Post_Types`：唯一 CPT、typed meta 与输入规范化；
 - `Repository`：把 WordPress Post/meta 映射为领域数组；
-- `Eligibility_Evaluator`：无 WordPress 调用的纯策略，输出 `allowed + reasons`；
+- `Eligibility_Evaluator`：无 WordPress 调用的纯策略，依次提供配置、就绪度和完整请求判定；
 - `Delivery`：构造页面、位置、时间和预览设备上下文；
 - `Renderer`：安全渲染创意、管理占位和预览结论；
+- `Eligibility_Messages`：把稳定 reason codes 映射为所有管理/预览界面共用的文案；
 - `Preview_Request`：校验 capability + nonce，关闭缓存并在真实页面强制显示预览；
-- `Editor` / `Preview_Page`：侧栏设置与桌面/移动 iframe 画布；
+- `Promotion_Preflight`：在 Core REST 发布/排程前合并完整候选记录并拒绝无效配置；
+- `Promotion_List` / `Promotion_Status_Action`：规则摘要与严格的 publish ↔ draft 状态操作；
+- `Editor` / `Preview_Page`：侧栏设置、即时预检与桌面/移动 iframe 画布；
 - `Blocks` / `Patterns`：一个动态引用区块和三个 Core block 起步样式。
 
 ## 4. 稳定 reason codes
@@ -41,6 +44,8 @@
 - `promotion_not_started`
 - `promotion_expired`
 - `promotion_content_empty`
+- `promotion_targets_empty`
+- `promotion_schedule_invalid`
 - `page_not_included`
 - `page_excluded`
 - `location_mismatch`
@@ -58,10 +63,10 @@
 
 ## 6. 质量和发布
 
-- PHPUnit：页面、时间、位置和预览设备规则；
+- PHPUnit：配置、页面、时间边界、位置、列表状态和恢复状态机；
 - PHPCS / PHPStan：WordPress 编码、安全与类型边界；
 - TypeScript / JS / CSS lint：编辑器与动态区块；
-- Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、REST、无表/Options、卸载；
+- Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、REST 发布预检、时区/排期边界、无表/Options、卸载；
 - Local 浏览器：同一编辑页创建规则、真实主题预览、发布/暂停和匿名前台。
 
 发布包固定为 `npcink-ad/`，包含构建产物、运行 PHP、前端/预览 CSS、`readme.txt` 和许可证，不包含源码 JS、测试、文档或旧品牌运行标识。

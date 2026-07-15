@@ -14,10 +14,17 @@ import { store as coreDataStore } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import {
 	PluginDocumentSettingPanel,
+	PluginPrePublishPanel,
 	store as editorStore,
 } from '@wordpress/editor';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { registerPlugin } from '@wordpress/plugins';
+
+import {
+	contentContainsPromotionBlock,
+	getPromotionPreflightIssues,
+	type PromotionPreflightIssueCode,
+} from './preflight';
 
 interface PromotionMeta {
 	_npcink_ad_location?: 'block' | 'content_before' | 'content_after';
@@ -31,6 +38,10 @@ interface PromotionMeta {
 
 interface ContentRecord {
 	id: number;
+	content?: {
+		raw?: string;
+	};
+	status?: string;
 	type?: string;
 	title?:
 		| string
@@ -44,6 +55,28 @@ interface ContentOption {
 	label: string;
 	value: string;
 }
+
+interface SiteBaseRecord {
+	gmt_offset?: number | string;
+	timezone_string?: string;
+}
+
+interface ResolutionSelectors {
+	hasFinishedResolution: (
+		selectorName: string,
+		args?: readonly unknown[]
+	) => boolean;
+}
+
+type ManualBlockInspectionState =
+	| 'not_applicable'
+	| 'no_target'
+	| 'loading'
+	| 'found'
+	| 'missing'
+	| 'unavailable';
+
+const editContextQuery = { context: 'edit' } as const;
 
 function recordTitle( record: ContentRecord ): string {
 	if ( typeof record.title === 'string' ) {
@@ -78,6 +111,104 @@ function fromInputDate( value: string ): string {
 
 	const normalized = value.replace( 'T', ' ' );
 	return normalized.length === 16 ? `${ normalized }:00` : normalized;
+}
+
+function siteTimezoneLabel( site: SiteBaseRecord | null ): string {
+	if ( site?.timezone_string?.trim() ) {
+		return site.timezone_string.trim();
+	}
+
+	const offset = Number( site?.gmt_offset );
+	if ( Number.isFinite( offset ) ) {
+		const absoluteMinutes = Math.round( Math.abs( offset ) * 60 );
+		const hours = String( Math.floor( absoluteMinutes / 60 ) ).padStart(
+			2,
+			'0'
+		);
+		const minutes = String( absoluteMinutes % 60 ).padStart( 2, '0' );
+		const sign = offset >= 0 ? '+' : '-';
+
+		return `UTC${ sign }${ hours }:${ minutes }`;
+	}
+
+	return __( 'configured in WordPress', 'npcink-ad' );
+}
+
+function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
+	switch ( issue ) {
+		case 'empty_content':
+			return __(
+				'Add promotion content before publishing.',
+				'npcink-ad'
+			);
+		case 'selected_scope_without_targets':
+			return __(
+				'Add at least one valid included post or page that is not also excluded when Pages is set to Only selected content.',
+				'npcink-ad'
+			);
+		case 'invalid_schedule_order':
+			return __(
+				'Stop showing must be later than Start showing.',
+				'npcink-ad'
+			);
+	}
+}
+
+function ManualBlockInspectionNotice( {
+	state,
+}: {
+	state: ManualBlockInspectionState;
+} ) {
+	switch ( state ) {
+		case 'not_applicable':
+			return null;
+		case 'no_target':
+			return (
+				<Notice status="info" isDismissible={ false }>
+					{ __(
+						'Choose a published page or post in Real-page preview before checking manual block placement.',
+						'npcink-ad'
+					) }
+				</Notice>
+			);
+		case 'loading':
+			return (
+				<Notice status="info" isDismissible={ false }>
+					<Spinner />
+					{ __(
+						'Checking the selected page body for a matching promotion block…',
+						'npcink-ad'
+					) }
+				</Notice>
+			);
+		case 'found':
+			return (
+				<Notice status="success" isDismissible={ false }>
+					{ __(
+						'A matching promotion block was found in the selected page body.',
+						'npcink-ad'
+					) }
+				</Notice>
+			);
+		case 'missing':
+			return (
+				<Notice status="warning" isDismissible={ false }>
+					{ __(
+						'This promotion block was not found in the selected page body. A template or synced pattern may still insert it, so verify the result with the real-page preview.',
+						'npcink-ad'
+					) }
+				</Notice>
+			);
+		case 'unavailable':
+			return (
+				<Notice status="info" isDismissible={ false }>
+					{ __(
+						'The selected page body could not be inspected from the editor data. This does not mean the block is missing; verify with the real-page preview.',
+						'npcink-ad'
+					) }
+				</Notice>
+			);
+	}
 }
 
 function ContentPicker( {
@@ -216,10 +347,27 @@ function PromotionSettingsPanel() {
 				{} ) as PromotionMeta,
 		[]
 	);
+	const content = useSelect(
+		( select ) =>
+			String( select( editorStore ).getEditedPostContent() ?? '' ),
+		[]
+	);
+	const site = useSelect(
+		( select ) =>
+			( select( coreDataStore ).getEntityRecord(
+				'root',
+				'__unstableBase'
+			) ?? null ) as SiteBaseRecord | null,
+		[]
+	);
 	const isSaving = useSelect(
 		( select ) =>
 			select( editorStore ).isSavingPost() ||
 			select( editorStore ).isAutosavingPost(),
+		[]
+	);
+	const isDirty = useSelect(
+		( select ) => select( editorStore ).isEditedPostDirty(),
 		[]
 	);
 	const { editPost, savePost } = useDispatch( editorStore );
@@ -240,9 +388,94 @@ function PromotionSettingsPanel() {
 
 	const includeIds = normalizeIds( meta._npcink_ad_include_ids );
 	const excludeIds = normalizeIds( meta._npcink_ad_exclude_ids );
+	const pageScope = meta._npcink_ad_page_scope || 'all';
+	const preflightIssues = getPromotionPreflightIssues( {
+		content,
+		pageScope,
+		includeIds,
+		excludeIds,
+		startAt: meta._npcink_ad_start_at,
+		endAt: meta._npcink_ad_end_at,
+	} );
+	const hasSchedule = Boolean(
+		meta._npcink_ad_start_at || meta._npcink_ad_end_at
+	);
+	const timezone = siteTimezoneLabel( site );
 	const settings = window.NpcinkAdEditorSettings;
 	const effectivePreviewTarget =
 		previewTarget || includeIds[ 0 ] || settings?.defaultTargetId || 0;
+	const isManualBlock =
+		( meta._npcink_ad_location || 'content_after' ) === 'block';
+	const manualBlockInspection = useSelect(
+		( select ): ManualBlockInspectionState => {
+			if ( ! isManualBlock ) {
+				return 'not_applicable';
+			}
+
+			if ( ! effectivePreviewTarget ) {
+				return 'no_target';
+			}
+
+			if ( ! postId ) {
+				return 'unavailable';
+			}
+
+			const coreData = select( coreDataStore );
+			const resolution = coreData as typeof coreData &
+				ResolutionSelectors;
+			const postArgs = [
+				'postType',
+				'post',
+				effectivePreviewTarget,
+				editContextQuery,
+			] as const;
+			const pageArgs = [
+				'postType',
+				'page',
+				effectivePreviewTarget,
+				editContextQuery,
+			] as const;
+			const post = coreData.getEntityRecord( ...postArgs ) as
+				| ContentRecord
+				| null
+				| undefined;
+			const page = coreData.getEntityRecord( ...pageArgs ) as
+				| ContentRecord
+				| null
+				| undefined;
+			const target = post ?? page;
+
+			if ( target ) {
+				const rawContent = target.content?.raw;
+				if (
+					target.status !== 'publish' ||
+					typeof rawContent !== 'string'
+				) {
+					return 'unavailable';
+				}
+
+				try {
+					return contentContainsPromotionBlock( rawContent, postId )
+						? 'found'
+						: 'missing';
+				} catch {
+					return 'unavailable';
+				}
+			}
+
+			const postResolved = resolution.hasFinishedResolution(
+				'getEntityRecord',
+				postArgs
+			);
+			const pageResolved = resolution.hasFinishedResolution(
+				'getEntityRecord',
+				pageArgs
+			);
+
+			return postResolved && pageResolved ? 'unavailable' : 'loading';
+		},
+		[ isManualBlock, effectivePreviewTarget, postId ]
+	);
 
 	const openPreview = async () => {
 		setPreviewError( '' );
@@ -279,7 +512,9 @@ function PromotionSettingsPanel() {
 
 		previewWindow.document.title = __( 'Preparing preview…', 'npcink-ad' );
 		try {
-			await savePost();
+			if ( isDirty ) {
+				await savePost();
+			}
 		} catch {
 			previewWindow.close();
 			setPreviewError(
@@ -305,6 +540,20 @@ function PromotionSettingsPanel() {
 				title={ __( 'Npcink Ad delivery', 'npcink-ad' ) }
 				className="npcink-ad-editor-panel"
 			>
+				{ preflightIssues.length > 0 && (
+					<Notice status="error" isDismissible={ false }>
+						{ sprintf(
+							/* translators: %d: number of delivery configuration errors. */
+							_n(
+								'%d delivery configuration error needs review before publishing.',
+								'%d delivery configuration errors need review before publishing.',
+								preflightIssues.length,
+								'npcink-ad'
+							),
+							preflightIssues.length
+						) }
+					</Notice>
+				) }
 				<SelectControl
 					__next40pxDefaultSize
 					label={ __( 'Placement', 'npcink-ad' ) }
@@ -333,7 +582,7 @@ function PromotionSettingsPanel() {
 				<SelectControl
 					__next40pxDefaultSize
 					label={ __( 'Pages', 'npcink-ad' ) }
-					value={ meta._npcink_ad_page_scope || 'all' }
+					value={ pageScope }
 					options={ [
 						{
 							label: __( 'All posts and pages', 'npcink-ad' ),
@@ -351,7 +600,7 @@ function PromotionSettingsPanel() {
 						)
 					}
 				/>
-				{ ( meta._npcink_ad_page_scope || 'all' ) === 'selected' && (
+				{ pageScope === 'selected' && (
 					<ContentPicker
 						label={ __( 'Included content', 'npcink-ad' ) }
 						help={ __(
@@ -406,9 +655,13 @@ function PromotionSettingsPanel() {
 							fromInputDate( value )
 						)
 					}
-					help={ __(
-						'Optional. Uses the site timezone.',
-						'npcink-ad'
+					help={ sprintf(
+						/* translators: %s: site timezone name or UTC offset. */
+						__(
+							'Optional. Uses the site timezone: %s.',
+							'npcink-ad'
+						),
+						timezone
 					) }
 				/>
 				<TextControl
@@ -422,9 +675,13 @@ function PromotionSettingsPanel() {
 							fromInputDate( value )
 						)
 					}
-					help={ __(
-						'Optional. Uses the site timezone.',
-						'npcink-ad'
+					help={ sprintf(
+						/* translators: %s: site timezone name or UTC offset. */
+						__(
+							'Optional. Uses the site timezone: %s.',
+							'npcink-ad'
+						),
+						timezone
 					) }
 				/>
 				<PanelBody
@@ -482,9 +739,56 @@ function PromotionSettingsPanel() {
 					isBusy={ isSaving }
 					onClick={ openPreview }
 				>
-					{ __( 'Save and open preview', 'npcink-ad' ) }
+					{ isDirty
+						? __( 'Save and open preview', 'npcink-ad' )
+						: __( 'Open preview', 'npcink-ad' ) }
 				</Button>
 			</PluginDocumentSettingPanel>
+
+			<PluginPrePublishPanel
+				title={ __( 'Npcink Ad delivery preflight', 'npcink-ad' ) }
+				initialOpen={
+					preflightIssues.length > 0 || hasSchedule || isManualBlock
+				}
+			>
+				{ preflightIssues.length > 0 ? (
+					preflightIssues.map( ( issue ) => (
+						<Notice
+							key={ issue }
+							status="error"
+							isDismissible={ false }
+						>
+							{ preflightIssueMessage( issue ) }
+						</Notice>
+					) )
+				) : (
+					<Notice status="info" isDismissible={ false }>
+						{ __(
+							'No errors were found in the current editor fields. Public selected targets are confirmed by the server when publishing or scheduling.',
+							'npcink-ad'
+						) }
+					</Notice>
+				) }
+				{ hasSchedule && (
+					<Notice status="info" isDismissible={ false }>
+						{ sprintf(
+							/* translators: %s: site timezone name or UTC offset. */
+							__(
+								'Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use.',
+								'npcink-ad'
+							),
+							timezone
+						) }
+					</Notice>
+				) }
+				<ManualBlockInspectionNotice state={ manualBlockInspection } />
+				<p>
+					{ __(
+						'These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative.',
+						'npcink-ad'
+					) }
+				</p>
+			</PluginPrePublishPanel>
 		</>
 	);
 }

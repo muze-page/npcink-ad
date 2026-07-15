@@ -31,7 +31,9 @@ final class EligibilityEvaluatorTest extends TestCase {
 			'exclude_ids' => array(),
 			'device'      => 'all',
 			'start_at'    => self::NOW - 3600,
+			'start_at_valid' => true,
 			'end_at'      => self::NOW + 3600,
+			'end_at_valid' => true,
 		);
 	}
 
@@ -47,6 +49,236 @@ final class EligibilityEvaluatorTest extends TestCase {
 			'expected_location' => 'block',
 			'simulated_device'  => null,
 		);
+	}
+
+	/**
+	 * Provide configuration validation boundaries.
+	 *
+	 * @return array<string, array{array<string, mixed>, list<string>}>
+	 */
+	public static function configuration_cases(): array {
+		return array(
+			'valid defaults'               => array( array(), array() ),
+			'empty content'                => array(
+				array( 'content' => " \n\t " ),
+				array( 'promotion_content_empty' ),
+			),
+			'selected scope without IDs'   => array(
+				array(
+					'page_scope'  => 'selected',
+					'include_ids' => array(),
+				),
+				array( 'promotion_targets_empty' ),
+			),
+			'all selected IDs excluded'    => array(
+				array(
+					'page_scope'  => 'selected',
+					'include_ids' => array( 42, 43 ),
+					'exclude_ids' => array( 42, 43 ),
+				),
+				array( 'promotion_targets_empty' ),
+			),
+			'selected effective ID remains' => array(
+				array(
+					'page_scope'  => 'selected',
+					'include_ids' => array( 42, 43 ),
+					'exclude_ids' => array( 42 ),
+				),
+				array(),
+			),
+			'equal schedule boundaries'    => array(
+				array(
+					'start_at' => self::NOW,
+					'end_at'   => self::NOW,
+				),
+				array( 'promotion_schedule_invalid' ),
+			),
+			'end precedes start'            => array(
+				array(
+					'start_at' => self::NOW + 60,
+					'end_at'   => self::NOW + 59,
+				),
+				array( 'promotion_schedule_invalid' ),
+			),
+			'open start boundary'           => array(
+				array(
+					'start_at' => 0,
+					'end_at'   => self::NOW + 60,
+				),
+				array(),
+			),
+			'open end boundary'             => array(
+				array(
+					'start_at' => self::NOW - 60,
+					'end_at'   => 0,
+				),
+				array(),
+			),
+			'invalid start calendar value'   => array(
+				array( 'start_at_valid' => false ),
+				array( 'promotion_schedule_invalid' ),
+			),
+			'invalid end calendar value'     => array(
+				array( 'end_at_valid' => false ),
+				array( 'promotion_schedule_invalid' ),
+			),
+		);
+	}
+
+	/**
+	 * Configuration validation has stable structural reasons.
+	 *
+	 * @param array $overrides        Promotion fixture overrides.
+	 * @param array $expected_reasons Expected reason codes.
+	 * @phpstan-param array<string, mixed> $overrides
+	 * @phpstan-param list<string> $expected_reasons
+	 */
+	#[DataProvider( 'configuration_cases' )]
+	public function test_validates_configuration( array $overrides, array $expected_reasons ): void {
+		$promotion = array_replace( $this->valid_promotion(), $overrides );
+		$result    = ( new Eligibility_Evaluator() )->validate_configuration( $promotion );
+
+		self::assertSame( array() === $expected_reasons, $result['valid'] );
+		self::assertSame( $expected_reasons, $result['reasons'] );
+	}
+
+	/**
+	 * Provide empty serialized block-content examples.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function semantically_empty_content(): array {
+		return array(
+			'blank'                    => array( " \n\t " ),
+			'empty paragraph'          => array( '<p></p>' ),
+			'invisible entity'         => array( '<p>&nbsp;&#160;&#x200b;</p>' ),
+			'html comment only'        => array( '<!-- note -->' ),
+			'media inside comment'     => array( '<!-- <img src="creative.jpg" alt="" /> -->' ),
+			'empty core paragraph'     => array( '<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->' ),
+			'empty nested group'       => array( '<!-- wp:group --><div class="wp-block-group"><!-- wp:columns --><div class="wp-block-columns"></div><!-- /wp:columns --></div><!-- /wp:group -->' ),
+			'empty shortcode block'     => array( '<!-- wp:shortcode --><!-- /wp:shortcode -->' ),
+			'script only'              => array( '<script>document.write("Creative")</script>' ),
+			'style background only'    => array( '<style>.creative{background-image:url(ad.jpg)}</style>' ),
+			'template media only'      => array( '<template><img src="creative.jpg" /></template>' ),
+			'empty background URL'     => array( '<div style="background-image:url(\'\')"></div>' ),
+		);
+	}
+
+	/**
+	 * Structural wrappers and non-rendered source do not satisfy content validation.
+	 *
+	 * @param string $content Serialized Promotion content.
+	 */
+	#[DataProvider( 'semantically_empty_content' )]
+	public function test_rejects_semantically_empty_content( string $content ): void {
+		$promotion            = $this->valid_promotion();
+		$promotion['content'] = $content;
+		$result               = ( new Eligibility_Evaluator() )->validate_configuration( $promotion );
+
+		self::assertContains( 'promotion_content_empty', $result['reasons'] );
+	}
+
+	/**
+	 * Provide serialized content that has a visible or dynamic result.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function semantically_meaningful_content(): array {
+		return array(
+			'plain text'              => array( '<p>Current creative</p>' ),
+			'image'                   => array( '<figure><img src="creative.jpg" alt="" /></figure>' ),
+			'video'                   => array( '<video src="creative.mp4"></video>' ),
+			'background URL'          => array( '<div style="background-image:url(creative.jpg)"></div>' ),
+			'background gradient'     => array( '<div style="background-image:repeating-linear-gradient(red, blue)"></div>' ),
+			'background variable'     => array( '<div style="background-image:var(--creative)"></div>' ),
+			'vendor dynamic block'    => array( '<!-- wp:npcink-ad/creative {"id":7} /-->' ),
+			'core dynamic block'      => array( '<!-- wp:latest-posts /-->' ),
+			'core featured image'     => array( '<!-- wp:post-featured-image /-->' ),
+			'shortcode text'          => array( '<!-- wp:shortcode -->[promotion]<!-- /wp:shortcode -->' ),
+		);
+	}
+
+	/**
+	 * Media, CSS images, text and explicit dynamic blocks remain meaningful.
+	 *
+	 * @param string $content Serialized Promotion content.
+	 */
+	#[DataProvider( 'semantically_meaningful_content' )]
+	public function test_accepts_semantically_meaningful_content( string $content ): void {
+		$promotion            = $this->valid_promotion();
+		$promotion['content'] = $content;
+		$result               = ( new Eligibility_Evaluator() )->validate_configuration( $promotion );
+
+		self::assertNotContains( 'promotion_content_empty', $result['reasons'] );
+	}
+
+	/**
+	 * Provide readiness lifecycle boundaries.
+	 *
+	 * @return array<string, array{array<string, mixed>, list<string>}>
+	 */
+	public static function readiness_cases(): array {
+		return array(
+			'ready now'                  => array( array(), array() ),
+			'draft'                      => array(
+				array( 'status' => 'draft' ),
+				array( 'promotion_not_published' ),
+			),
+			'starts now'                 => array(
+				array( 'start_at' => self::NOW ),
+				array(),
+			),
+			'starts one second later'    => array(
+				array( 'start_at' => self::NOW + 1 ),
+				array( 'promotion_not_started' ),
+			),
+			'ends now'                   => array(
+				array( 'end_at' => self::NOW ),
+				array( 'promotion_expired' ),
+			),
+			'ends one second later'      => array(
+				array( 'end_at' => self::NOW + 1 ),
+				array(),
+			),
+			'invalid future schedule'    => array(
+				array(
+					'start_at' => self::NOW + 2,
+					'end_at'   => self::NOW + 1,
+				),
+				array( 'promotion_schedule_invalid' ),
+			),
+			'invalid expired schedule'   => array(
+				array(
+					'start_at' => self::NOW - 1,
+					'end_at'   => self::NOW - 2,
+				),
+				array( 'promotion_schedule_invalid' ),
+			),
+			'configuration before status' => array(
+				array(
+					'content' => '',
+					'status'  => 'draft',
+				),
+				array( 'promotion_content_empty', 'promotion_not_published' ),
+			),
+		);
+	}
+
+	/**
+	 * Readiness reuses configuration reasons before lifecycle reasons.
+	 *
+	 * @param array $overrides        Promotion fixture overrides.
+	 * @param array $expected_reasons Expected reason codes.
+	 * @phpstan-param array<string, mixed> $overrides
+	 * @phpstan-param list<string> $expected_reasons
+	 */
+	#[DataProvider( 'readiness_cases' )]
+	public function test_assesses_readiness( array $overrides, array $expected_reasons ): void {
+		$promotion = array_replace( $this->valid_promotion(), $overrides );
+		$result    = ( new Eligibility_Evaluator() )->assess_readiness( $promotion, self::NOW );
+
+		self::assertSame( array() === $expected_reasons, $result['ready'] );
+		self::assertSame( $expected_reasons, $result['reasons'] );
 	}
 
 	/**
@@ -140,10 +372,12 @@ final class EligibilityEvaluatorTest extends TestCase {
 	/**
 	 * Exclusion takes precedence over all-page and selected-page scope.
 	 *
-	 * @param string $scope Page scope.
+	 * @param string $scope            Page scope.
+	 * @param array  $expected_reasons Expected reason codes.
+	 * @phpstan-param list<string> $expected_reasons
 	 */
 	#[DataProvider( 'page_scopes' )]
-	public function test_excluded_page_is_always_rejected( string $scope ): void {
+	public function test_excluded_page_is_always_rejected( string $scope, array $expected_reasons ): void {
 		$promotion                = $this->valid_promotion();
 		$promotion['page_scope']  = $scope;
 		$promotion['include_ids'] = array( self::POST_ID );
@@ -151,18 +385,51 @@ final class EligibilityEvaluatorTest extends TestCase {
 
 		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $this->matching_context() );
 
-		self::assertSame( array( 'page_excluded' ), $result['reasons'] );
+		self::assertSame( $expected_reasons, $result['reasons'] );
 	}
 
 	/**
 	 * Provide supported page scopes.
 	 *
-	 * @return array<string, array{string}>
+	 * @return array<string, array{string, list<string>}>
 	 */
 	public static function page_scopes(): array {
 		return array(
-			'all'      => array( 'all' ),
-			'selected' => array( 'selected' ),
+			'all'      => array( 'all', array( 'page_excluded' ) ),
+			'selected' => array( 'selected', array( 'promotion_targets_empty', 'page_excluded' ) ),
+		);
+	}
+
+	/**
+	 * Full evaluation appends context reasons after reused readiness reasons.
+	 */
+	public function test_evaluation_reuses_readiness_before_context_reasons(): void {
+		$promotion = array_replace(
+			$this->valid_promotion(),
+			array(
+				'content'     => '',
+				'status'      => 'draft',
+				'page_scope'  => 'selected',
+				'include_ids' => array(),
+				'device'      => 'mobile',
+			)
+		);
+		$context                      = $this->matching_context();
+		$context['expected_location'] = 'content_after';
+		$context['simulated_device']  = 'desktop';
+
+		$result = ( new Eligibility_Evaluator() )->evaluate( $promotion, $context );
+
+		self::assertSame(
+			array(
+				'promotion_content_empty',
+				'promotion_targets_empty',
+				'promotion_not_published',
+				'page_not_included',
+				'location_mismatch',
+				'device_mismatch',
+			),
+			$result['reasons']
 		);
 	}
 

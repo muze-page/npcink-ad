@@ -10,6 +10,8 @@ Npcink Ad 0.1 is a WordPress-native, privacy-first workflow for site-owned promo
 - Typed metadata stores location, page scope, included/excluded content, device, start time, and end time.
 - Locations are limited to a manual block, before content, and after content. The block and shortcode reference a Promotion ID directly.
 - Real-page preview uses the site's theme and the same PHP evaluator as live delivery. Managers may inspect blocked creative, but the verdict remains truthful.
+- The Promotion list summarizes rule status, placement, page scope, stop time, and reasons for inactivity, with inline pause/resume actions instead of another screen.
+- Server preflight rejects empty creative, missing public targets, and invalid schedules before publication or scheduling. The editor mirrors those checks and advisory-checks a manual block on the selected preview page.
 - Live delivery evaluates status, page, and schedule on the server. CSS breakpoints handle device visibility so cached HTML is not split by User-Agent.
 - Management REST requires `manage_npcink_ads`; activation grants it to WordPress administrators and editors.
 - Default delivery adds no tracking request, visitor cookie, custom table, statistics queue, or required frontend JavaScript.
@@ -49,7 +51,7 @@ WP_VERSION=6.5 PHP_VERSION=8.1 tests/playground/run.sh
 WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 ```
 
-The fixture verifies the single Promotion model, typed meta, page/time/device rules, block/shortcode/automatic delivery, manager/subscriber/anonymous REST boundaries, promotion-bound preview nonces, preview capabilities, absence of Placement/options/custom tables, and explicit uninstall cleanup. Browser interaction in the real editor and theme remains a Local release check.
+The fixture verifies the single Promotion model, typed meta, publish preflight, page/time/device rules, block/shortcode/automatic delivery, manager/subscriber/anonymous REST boundaries, promotion-bound preview nonces, timezone and schedule boundaries, absence of Placement/options/custom tables, and explicit uninstall cleanup. Browser interaction in the editor, list status actions, and theme remains a Local release check.
 
 ## Release package
 
