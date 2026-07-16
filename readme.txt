@@ -4,7 +4,7 @@ Tags: promotion, advertising, marketing, block
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,14 +22,16 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 * Preview the promotion inside a real page and switch between desktop and mobile context. Desktop uses the fixed rule at `782px` and above, and mobile uses the fixed rule at `781px` and below; the `390px` mobile canvas is only a representative width.
 * Read a truthful verdict explaining why the promotion will or will not display.
 * Review rule status, placement, content scope, stop time, and inactivity reasons directly in the Promotion list.
+* Follow a native three-step first-Promotion guide without opening another settings or wizard page.
 * Catch empty creative, missing public targets, invalid paragraph settings, invalid schedules, and unverified placement before publication.
+* Receive an explicit TTL-or-purge warning when WordPress has an enabled advanced page-cache drop-in.
 * Publish, pause, or expire one Promotion record without a separate placement object.
 * Deliver from the server without visitor tracking, custom tables, or required frontend JavaScript.
 * Use the bundled Simplified Chinese translation in both PHP screens and the block editor.
 
-Version 0.2.1 intentionally has no analytics, tracking cookies, external requests, A/B testing, ad-network integration, popup builder, arbitrary code execution, or custom database tables.
+Version 0.2.2 intentionally has no analytics, tracking cookies, external requests, A/B testing, ad-network integration, popup builder, arbitrary code execution, or custom database tables.
 
-Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-paragraph delivery, mutually exclusive editorial content scopes, explicit manual block-or-shortcode guidance, and the fixed desktop/mobile boundary. Version 0.2.1 keeps that schema and frontend behavior unchanged while making the manual block selector reliable beyond its former bounded result set.
+Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-paragraph delivery, mutually exclusive editorial content scopes, explicit manual block-or-shortcode guidance, and the fixed desktop/mobile boundary. Version 0.2.1 made the manual block selector reliable beyond its former bounded result set. Version 0.2.2 keeps the schema and frontend behavior unchanged while tightening editor asset ownership, first-Promotion guidance, complete browser validation, and cache-boundary disclosure.
 
 == Installation ==
 
@@ -44,7 +46,7 @@ Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-parag
 
 = Does Npcink Ad track visitors? =
 
-No. Version 0.2.1 does not collect impression or click analytics, set visitor tracking cookies, or contact an external service.
+No. Version 0.2.2 does not collect impression or click analytics, set visitor tracking cookies, or contact an external service.
 
 = Why is there no separate placement or ad group? =
 
@@ -52,7 +54,7 @@ The first release optimizes for one short publishing workflow. Location and deli
 
 = How do full-page caches affect schedules? =
 
-The page must be regenerated after a start or end boundary. Configure the cache TTL or purge affected pages when a Promotion changes, starts, or stops. Version 0.2.1 does not claim minute-accurate schedules through every third-party cache.
+The page must be regenerated after publish, pause, resume, start, and end transitions. Configure the cache TTL or purge affected pages at those boundaries. Version 0.2.2 warns when WordPress exposes an enabled advanced-cache drop-in, but it does not claim automatic purging or minute-accurate schedules through every cache provider.
 
 = Does choosing Manual block insert the Promotion automatically? =
 
@@ -62,11 +64,19 @@ No. Save the Promotion, insert the Npcink Ad Promotion block at the intended loc
 
 Desktop is visible at `782px` and above, Mobile at `781px` and below, and All devices at every width. The boundary is fixed and there is no separate tablet target. Device visibility uses CSS so normal cached HTML does not branch by User-Agent. The preview's mobile canvas is capped at `390px` as a representative width, not as the production breakpoint.
 
-= Does 0.2.1 migrate data from earlier development snapshots? =
+= Does 0.2.2 migrate data from earlier development snapshots? =
 
-No. Version 0.2.1 remains pre-GA and has no compatibility adapters or migrations for earlier development snapshots or unpublished identifiers.
+No. Version 0.2.2 remains pre-GA and has no compatibility adapters or migrations for earlier development snapshots or unpublished identifiers.
 
 == Changelog ==
+
+= 0.2.2 =
+
+* Split the manual block and Promotion document editor into separate assets so ordinary post editors no longer load Promotion-only behavior.
+* Add native empty-list guidance and a compact three-step Promotion-editor checklist derived from the existing publication preflight.
+* Warn in Promotion management surfaces when WordPress exposes an enabled advanced-cache drop-in; keep TTL or affected-page purge as an operator responsibility.
+* Validate scheduled start, scheduled end, pause, and resume against a real WP Super Cache Simple-mode page cache and record the deployment evidence in ADR 004.
+* Add packaged-plugin E2E from Add New through selected-page configuration, authenticated real-page preview, publish, live delivery, pause, resume, and cleanup on the minimum and current WordPress matrices.
 
 = 0.2.1 =
 

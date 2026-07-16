@@ -2,7 +2,7 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Npcink Ad 0.2.1\n"
+"Project-Id-Version: Npcink Ad 0.2.2\n"
 "Report-Msgid-Bugs-To: https://github.com/muze-page/npcink-ad/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -94,131 +94,155 @@ msgstr ""
 msgid "Npcink Ad real-page preview"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:163
+#: src/Admin/Promotion_List.php:125
+msgid "Npcink Ad detected the WordPress advanced page-cache drop-in. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires."
+msgstr ""
+
+#: src/Admin/Promotion_List.php:152
+msgid "Publish your first Promotion in three steps"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:154
+msgid "Add the content you want to show."
+msgstr ""
+
+#: src/Admin/Promotion_List.php:155
+msgid "Choose its placement and content scope."
+msgstr ""
+
+#: src/Admin/Promotion_List.php:156
+msgid "Preview it on a real page, then publish."
+msgstr ""
+
+#: src/Admin/Promotion_List.php:158
+msgid "Add first Promotion"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:260
 msgid "Rule status"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:164
+#: src/Admin/Promotion_List.php:261
 #: build/promotion-editor.js:9
 msgid "Placement"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:165
+#: src/Admin/Promotion_List.php:262
 #: build/promotion-editor.js:9
 msgid "Content scope"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:166
+#: src/Admin/Promotion_List.php:263
 msgid "Stops"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:167
+#: src/Admin/Promotion_List.php:264
 msgid "Why not"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:259
+#: src/Admin/Promotion_List.php:356
 msgid "Needs completion"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:262
+#: src/Admin/Promotion_List.php:359
 msgid "Paused"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:265
-#: src/Admin/Promotion_List.php:271
+#: src/Admin/Promotion_List.php:362
+#: src/Admin/Promotion_List.php:368
 msgid "Not started"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:268
+#: src/Admin/Promotion_List.php:365
 msgid "Not published"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:274
+#: src/Admin/Promotion_List.php:371
 msgid "Ended"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:277
+#: src/Admin/Promotion_List.php:374
 msgid "Rule ready"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:298
+#: src/Admin/Promotion_List.php:395
 msgid "Pause"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:299
+#: src/Admin/Promotion_List.php:396
 msgid "Resume"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:373
+#: src/Admin/Promotion_List.php:470
 #: build/promotion-editor.js:13
 msgid "All posts"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:376
+#: src/Admin/Promotion_List.php:473
 #: build/promotion-editor.js:13
 msgid "All pages"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:381
+#: src/Admin/Promotion_List.php:478
 msgid "Posts matching categories/tags"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:382
+#: src/Admin/Promotion_List.php:479
 msgid "Configured terms:"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:384
+#: src/Admin/Promotion_List.php:481
 msgid "Invalid category/tag selection"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:394
+#: src/Admin/Promotion_List.php:491
 msgid "Selected public posts/pages:"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:397
+#: src/Admin/Promotion_List.php:494
 #: build/promotion-editor.js:13
 msgid "All posts and pages"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:403
+#: src/Admin/Promotion_List.php:500
 msgid "Configured exclusions:"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:442
+#: src/Admin/Promotion_List.php:539
 msgid "After paragraph (invalid)"
 msgstr ""
 
 #. translators: %d: paragraph number after which the Promotion appears.
-#: src/Admin/Promotion_List.php:447
+#: src/Admin/Promotion_List.php:544
 #, php-format
 msgid "After paragraph %d"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:453
+#: src/Admin/Promotion_List.php:550
 msgid "Block"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:454
+#: src/Admin/Promotion_List.php:551
 msgid "Before content"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:455
+#: src/Admin/Promotion_List.php:552
 msgid "After content"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:458
+#: src/Admin/Promotion_List.php:555
 msgid "Unknown"
 msgstr ""
 
 #. translators: %d: number of published Promotions with intersecting automatic delivery rules.
-#: src/Admin/Promotion_List.php:477
+#: src/Admin/Promotion_List.php:574
 #, php-format
 msgid "May appear together with %d published promotion."
 msgid_plural "May appear together with %d published promotions."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Promotion_List.php:496
+#: src/Admin/Promotion_List.php:593
 msgid "No end time"
 msgstr ""
 
@@ -616,6 +640,50 @@ msgid "The editor could not load the preview. Try again."
 msgstr ""
 
 #: build/promotion-editor.js:1
+msgid "Next"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Ready"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Choose a page"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Publish in three steps"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "This checklist follows the current content and delivery preflight."
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Add promotion content"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Done"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Needs content"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Confirm delivery rules"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Needs attention"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Preview a real page and publish"
+msgstr ""
+
+#: build/promotion-editor.js:1
 msgid "Choose a published page or post in Real-page preview before checking manual block placement."
 msgstr ""
 
@@ -949,12 +1017,22 @@ msgstr[1] ""
 msgid "This advisory does not block publishing."
 msgstr ""
 
+#: build/promotion-editor.js:20
+msgid "WordPress has an advanced page-cache drop-in enabled. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires."
+msgstr ""
+
 #. translators: %s: site timezone name or UTC offset.
 #: build/promotion-editor.js:21
 #, js-format
-msgid "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use."
+msgid "Schedule times use the site timezone (%s)."
 msgstr ""
 
-#: build/promotion-editor.js:21
+#. translators: %s: site timezone name or UTC offset.
+#: build/promotion-editor.js:22
+#, js-format
+msgid "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while cached HTML remains in use."
+msgstr ""
+
+#: build/promotion-editor.js:22
 msgid "These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative."
 msgstr ""

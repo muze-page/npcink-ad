@@ -10,6 +10,41 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 PLUGIN_VERSION=$(sed -n '/^[[:space:]]*\*[[:space:]]*Version:/ { s/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*//; p; q; }' "$PROJECT_DIR/npcink-ad.php")
 
+if [ "$#" -eq 0 ] && [ -z "${NPCINK_AD_E2E_FIXTURE_MODE:-}" ]; then
+	NPCINK_AD_E2E_FIXTURE_MODE='standard' "$0"
+	NPCINK_AD_E2E_FIXTURE_MODE='first-run' "$0" tests/e2e/first-promotion.spec.ts
+	exit 0
+fi
+
+FIXTURE_MODE=${NPCINK_AD_E2E_FIXTURE_MODE:-}
+if [ -z "$FIXTURE_MODE" ]; then
+	FIXTURE_MODE='standard'
+	first_run_requested='false'
+	regular_spec_requested='false'
+	for argument in "$@"; do
+		case "$argument" in
+			*first-promotion.spec.ts*) first_run_requested='true' ;;
+			*.spec.ts*) regular_spec_requested='true' ;;
+		esac
+	done
+	if [ "$first_run_requested" = 'true' ] && [ "$regular_spec_requested" = 'true' ]; then
+		echo 'Run first-promotion.spec.ts separately because it requires a clean first-run fixture.' >&2
+		exit 1
+	fi
+	if [ "$first_run_requested" = 'true' ]; then
+		FIXTURE_MODE='first-run'
+	fi
+fi
+
+case "$FIXTURE_MODE" in
+	standard) FIXTURE_SOURCE="$SCRIPT_DIR/fixture.php" ;;
+	first-run) FIXTURE_SOURCE="$SCRIPT_DIR/first-run-fixture.php" ;;
+	*)
+		echo "Unknown NPCINK_AD_E2E_FIXTURE_MODE: $FIXTURE_MODE" >&2
+		exit 1
+		;;
+esac
+
 if [ -z "$PLUGIN_VERSION" ]; then
 	echo 'Could not read the plugin Version header from npcink-ad.php.' >&2
 	exit 1
@@ -42,7 +77,7 @@ trap cleanup EXIT HUP INT TERM
 
 cp "$PLUGIN_ZIP" "$TEMP_DIR/npcink-ad.zip"
 mkdir -p "$TEMP_DIR/mu-plugins"
-cp "$SCRIPT_DIR/fixture.php" "$TEMP_DIR/mu-plugins/npcink-ad-editor-e2e-fixture.php"
+cp "$FIXTURE_SOURCE" "$TEMP_DIR/mu-plugins/npcink-ad-editor-e2e-fixture.php"
 cp "$SCRIPT_DIR/health.txt" "$TEMP_DIR/mu-plugins/health.txt"
 jq \
 	--arg wordpress "$WP_VERSION" \
@@ -106,9 +141,10 @@ if ! curl --fail --silent --output /dev/null "$BASE_URL/wp-login.php"; then
 	exit 1
 fi
 
-echo "Running editor E2E against WordPress $WP_VERSION / PHP $PHP_VERSION at $BASE_URL"
+echo "Running $FIXTURE_MODE editor E2E against WordPress $WP_VERSION / PHP $PHP_VERSION at $BASE_URL"
 if ! NPCINK_AD_E2E_BASE_URL="$BASE_URL" \
-	pnpm exec playwright test --config=playwright.config.ts; then
+	NPCINK_AD_E2E_FIXTURE_MODE="$FIXTURE_MODE" \
+	pnpm exec playwright test --config=playwright.config.ts "$@"; then
 	echo 'Playground server log:' >&2
 	tail -n 200 "$SERVER_LOG" >&2
 	exit 1

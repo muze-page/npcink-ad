@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Npcink Ad 0.2.1\n"
+"Project-Id-Version: Npcink Ad 0.2.2\n"
 "Report-Msgid-Bugs-To: https://github.com/muze-page/npcink-ad/issues\n"
 "Last-Translator: Npcink\n"
 "Language-Team: Chinese (Simplified)\n"
@@ -298,7 +298,7 @@ msgstr "移除"
 msgid "Npcink Ad delivery"
 msgstr "Npcink Ad 投放"
 
-#: src/Admin/Promotion_List.php:164
+#: src/Admin/Promotion_List.php:261
 #: build/promotion-editor.js:9
 msgid "Placement"
 msgstr "展示位置"
@@ -315,7 +315,7 @@ msgstr "正文之前"
 msgid "Manual block"
 msgstr "手动区块"
 
-#: src/Admin/Promotion_List.php:397
+#: src/Admin/Promotion_List.php:494
 #: build/promotion-editor.js:13
 msgid "All posts and pages"
 msgstr "所有文章和页面"
@@ -393,76 +393,76 @@ msgctxt "block title"
 msgid "Npcink Ad Promotion"
 msgstr "Npcink Ad 推广"
 
-#: src/Admin/Promotion_List.php:163
+#: src/Admin/Promotion_List.php:260
 msgid "Rule status"
 msgstr "规则状态"
 
-#: src/Admin/Promotion_List.php:166
+#: src/Admin/Promotion_List.php:263
 msgid "Stops"
 msgstr "停止时间"
 
-#: src/Admin/Promotion_List.php:167
+#: src/Admin/Promotion_List.php:264
 msgid "Why not"
 msgstr "不展示原因"
 
-#: src/Admin/Promotion_List.php:259
+#: src/Admin/Promotion_List.php:356
 msgid "Needs completion"
 msgstr "需要完善"
 
-#: src/Admin/Promotion_List.php:262
+#: src/Admin/Promotion_List.php:359
 msgid "Paused"
 msgstr "已暂停"
 
-#: src/Admin/Promotion_List.php:265
-#: src/Admin/Promotion_List.php:271
+#: src/Admin/Promotion_List.php:362
+#: src/Admin/Promotion_List.php:368
 msgid "Not started"
 msgstr "未开始"
 
-#: src/Admin/Promotion_List.php:268
+#: src/Admin/Promotion_List.php:365
 msgid "Not published"
 msgstr "未发布"
 
-#: src/Admin/Promotion_List.php:274
+#: src/Admin/Promotion_List.php:371
 msgid "Ended"
 msgstr "已结束"
 
-#: src/Admin/Promotion_List.php:277
+#: src/Admin/Promotion_List.php:374
 msgid "Rule ready"
 msgstr "规则就绪"
 
-#: src/Admin/Promotion_List.php:298
+#: src/Admin/Promotion_List.php:395
 msgid "Pause"
 msgstr "暂停"
 
-#: src/Admin/Promotion_List.php:299
+#: src/Admin/Promotion_List.php:396
 msgid "Resume"
 msgstr "恢复"
 
-#: src/Admin/Promotion_List.php:403
+#: src/Admin/Promotion_List.php:500
 msgid "Configured exclusions:"
 msgstr "已配置排除："
 
-#: src/Admin/Promotion_List.php:394
+#: src/Admin/Promotion_List.php:491
 msgid "Selected public posts/pages:"
 msgstr "已选公开文章/页面："
 
-#: src/Admin/Promotion_List.php:453
+#: src/Admin/Promotion_List.php:550
 msgid "Block"
 msgstr "手动区块"
 
-#: src/Admin/Promotion_List.php:454
+#: src/Admin/Promotion_List.php:551
 msgid "Before content"
 msgstr "正文之前"
 
-#: src/Admin/Promotion_List.php:455
+#: src/Admin/Promotion_List.php:552
 msgid "After content"
 msgstr "正文之后"
 
-#: src/Admin/Promotion_List.php:458
+#: src/Admin/Promotion_List.php:555
 msgid "Unknown"
 msgstr "未知"
 
-#: src/Admin/Promotion_List.php:496
+#: src/Admin/Promotion_List.php:593
 msgid "No end time"
 msgstr "无停止时间"
 
@@ -564,13 +564,7 @@ msgstr "发布前请添加推广内容。"
 msgid "Stop showing must be later than Start showing."
 msgstr "停止展示时间必须晚于开始展示时间。"
 
-#. translators: %s: site timezone name or UTC offset.
-#: build/promotion-editor.js:21
-#, js-format
-msgid "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use."
-msgstr "排期时间使用站点时区（%s）。整页缓存和 CDN 需要合适的 TTL 或清理策略；缓存页面仍在使用时，无法保证分钟级切换。"
-
-#: build/promotion-editor.js:21
+#: build/promotion-editor.js:22
 msgid "These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative."
 msgstr "这些编辑器检查不会阻止保存。PHP 投放判定和 Core REST 响应仍是最终依据。"
 
@@ -579,7 +573,7 @@ msgid "Open preview"
 msgstr "打开预览"
 
 #. translators: %d: number of published Promotions with intersecting automatic delivery rules.
-#: src/Admin/Promotion_List.php:477
+#: src/Admin/Promotion_List.php:574
 #, php-format
 msgid "May appear together with %d published promotion."
 msgid_plural "May appear together with %d published promotions."
@@ -596,12 +590,12 @@ msgstr[0] "此推广在某些文章或页面情境中，可能与另外 %d 个�
 msgid "This advisory does not block publishing."
 msgstr "此提示不会阻止发布。"
 
-#: src/Admin/Promotion_List.php:442
+#: src/Admin/Promotion_List.php:539
 msgid "After paragraph (invalid)"
 msgstr "段落后（设置无效）"
 
 #. translators: %d: paragraph number after which the Promotion appears.
-#: src/Admin/Promotion_List.php:447
+#: src/Admin/Promotion_List.php:544
 #, php-format
 msgid "After paragraph %d"
 msgstr "第 %d 段后"
@@ -687,30 +681,30 @@ msgstr "请先输入 %1$d 到 %2$d 之间的整数段落号，再打开真实页
 msgid "Paragraph number must be a whole number from %1$d to %2$d."
 msgstr "段落号必须是 %1$d 到 %2$d 之间的整数。"
 
-#: src/Admin/Promotion_List.php:165
+#: src/Admin/Promotion_List.php:262
 #: build/promotion-editor.js:9
 msgid "Content scope"
 msgstr "内容范围"
 
-#: src/Admin/Promotion_List.php:373
+#: src/Admin/Promotion_List.php:470
 #: build/promotion-editor.js:13
 msgid "All posts"
 msgstr "所有文章"
 
-#: src/Admin/Promotion_List.php:376
+#: src/Admin/Promotion_List.php:473
 #: build/promotion-editor.js:13
 msgid "All pages"
 msgstr "所有页面"
 
-#: src/Admin/Promotion_List.php:381
+#: src/Admin/Promotion_List.php:478
 msgid "Posts matching categories/tags"
 msgstr "匹配分类目录/标签的文章"
 
-#: src/Admin/Promotion_List.php:382
+#: src/Admin/Promotion_List.php:479
 msgid "Configured terms:"
 msgstr "已配置分类/标签："
 
-#: src/Admin/Promotion_List.php:384
+#: src/Admin/Promotion_List.php:481
 msgid "Invalid category/tag selection"
 msgstr "分类/标签选择无效"
 
@@ -955,3 +949,87 @@ msgstr "正在显示“%s”的搜索结果。"
 #: build/block-editor.js:6
 msgid "Clear promotion search"
 msgstr "清除推广搜索"
+
+#: src/Admin/Promotion_List.php:125
+msgid "Npcink Ad detected the WordPress advanced page-cache drop-in. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires."
+msgstr "Npcink Ad 检测到 WordPress advanced page-cache drop-in。发布、暂停、恢复以及定时开始或停止后的旧页面可能继续由缓存提供，直至受影响页面被清理或缓存 TTL 到期。"
+
+#: src/Admin/Promotion_List.php:152
+msgid "Publish your first Promotion in three steps"
+msgstr "分三步发布你的第一条推广"
+
+#: src/Admin/Promotion_List.php:154
+msgid "Add the content you want to show."
+msgstr "添加要展示的内容。"
+
+#: src/Admin/Promotion_List.php:155
+msgid "Choose its placement and content scope."
+msgstr "选择展示位置和内容范围。"
+
+#: src/Admin/Promotion_List.php:156
+msgid "Preview it on a real page, then publish."
+msgstr "在真实页面中预览，然后发布。"
+
+#: src/Admin/Promotion_List.php:158
+msgid "Add first Promotion"
+msgstr "添加第一条推广"
+
+#: build/promotion-editor.js:1
+msgid "Next"
+msgstr "下一步"
+
+#: build/promotion-editor.js:1
+msgid "Ready"
+msgstr "就绪"
+
+#: build/promotion-editor.js:1
+msgid "Choose a page"
+msgstr "选择页面"
+
+#: build/promotion-editor.js:1
+msgid "Publish in three steps"
+msgstr "分三步发布"
+
+#: build/promotion-editor.js:1
+msgid "This checklist follows the current content and delivery preflight."
+msgstr "此清单根据当前内容和投放预检结果更新。"
+
+#: build/promotion-editor.js:1
+msgid "Add promotion content"
+msgstr "添加推广内容"
+
+#: build/promotion-editor.js:1
+msgid "Done"
+msgstr "已完成"
+
+#: build/promotion-editor.js:1
+msgid "Needs content"
+msgstr "需要内容"
+
+#: build/promotion-editor.js:1
+msgid "Confirm delivery rules"
+msgstr "确认投放规则"
+
+#: build/promotion-editor.js:1
+msgid "Needs attention"
+msgstr "需要处理"
+
+#: build/promotion-editor.js:1
+msgid "Preview a real page and publish"
+msgstr "在真实页面中预览并发布"
+
+#: build/promotion-editor.js:20
+msgid "WordPress has an advanced page-cache drop-in enabled. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires."
+msgstr "WordPress 已启用 advanced page-cache drop-in。发布、暂停、恢复以及定时开始或停止后的旧页面可能继续由缓存提供，直至受影响页面被清理或缓存 TTL 到期。"
+
+#. translators: %s: site timezone name or UTC offset.
+#: build/promotion-editor.js:21
+#, js-format
+msgid "Schedule times use the site timezone (%s)."
+msgstr "排期时间使用站点时区（%s）。"
+
+#. translators: %s: site timezone name or UTC offset.
+#: build/promotion-editor.js:22
+#, js-format
+msgid "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while cached HTML remains in use."
+msgstr "排期时间使用站点时区（%s）。整页缓存和 CDN 需要合适的 TTL 或清理机制；只要缓存 HTML 仍在使用，就无法保证分钟级切换。"

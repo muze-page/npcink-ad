@@ -11,6 +11,7 @@ use Npcink\Ad\Data\Post_Types;
 use Npcink\Ad\Data\Repository;
 use Npcink\Ad\Domain\Eligibility_Evaluator;
 use Npcink\Ad\Domain\Overlap_Detector;
+use Npcink\Ad\Environment\Page_Cache;
 use Npcink\Ad\Presentation\Eligibility_Messages;
 use WP_Post;
 use WP_Post_Type;
@@ -90,6 +91,8 @@ final class Promotion_List {
 	 * Register Promotion-list hooks.
 	 */
 	public function register(): void {
+		add_action( 'admin_notices', array( $this, 'render_page_cache_warning' ) );
+		add_action( 'admin_notices', array( $this, 'render_first_promotion_guide' ) );
 		add_filter(
 			'manage_' . Post_Types::PROMOTION_POST_TYPE . '_posts_columns',
 			array( $this, 'columns' )
@@ -108,6 +111,100 @@ final class Promotion_List {
 		);
 		add_filter( 'use_block_editor_for_post_type', array( $this, 'force_block_editor' ), PHP_INT_MAX, 2 );
 		add_filter( 'use_block_editor_for_post', array( $this, 'force_block_editor_for_post' ), PHP_INT_MAX, 2 );
+	}
+
+	/**
+	 * Warn once when WordPress declares an advanced page-cache drop-in.
+	 */
+	public function render_page_cache_warning(): void {
+		if ( ! $this->is_promotion_list_screen() || ! Page_Cache::has_advanced_cache_drop_in() ) {
+			return;
+		}
+		?>
+		<div class="notice notice-warning npcink-ad-page-cache-warning">
+			<p><?php echo esc_html( __( 'Npcink Ad detected the WordPress advanced page-cache drop-in. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires.', 'npcink-ad' ) ); ?></p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render a small first-use guide above a genuinely empty Promotion list.
+	 */
+	public function render_first_promotion_guide(): void {
+		if (
+			! $this->is_promotion_list_screen() ||
+			! $this->is_unfiltered_list_request()
+		) {
+			return;
+		}
+
+		$post_type = get_post_type_object( Post_Types::PROMOTION_POST_TYPE );
+		$capability = $post_type instanceof WP_Post_Type && isset( $post_type->cap->create_posts )
+			? (string) $post_type->cap->create_posts
+			: '';
+		if ( '' === $capability || ! current_user_can( $capability ) || $this->has_promotions() ) {
+			return;
+		}
+
+		$add_url = admin_url( 'post-new.php?post_type=' . Post_Types::PROMOTION_POST_TYPE );
+		?>
+		<div class="notice notice-info npcink-ad-first-promotion-guide">
+			<p><strong><?php echo esc_html( __( 'Publish your first Promotion in three steps', 'npcink-ad' ) ); ?></strong></p>
+			<ol>
+				<li><?php echo esc_html( __( 'Add the content you want to show.', 'npcink-ad' ) ); ?></li>
+				<li><?php echo esc_html( __( 'Choose its placement and content scope.', 'npcink-ad' ) ); ?></li>
+				<li><?php echo esc_html( __( 'Preview it on a real page, then publish.', 'npcink-ad' ) ); ?></li>
+			</ol>
+			<p><a class="button button-primary" href="<?php echo esc_url( $add_url ); ?>"><?php echo esc_html( __( 'Add first Promotion', 'npcink-ad' ) ); ?></a></p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Check the native Promotion management-list screen shared by its notices.
+	 */
+	private function is_promotion_list_screen(): bool {
+		$screen = get_current_screen();
+
+		return $screen
+			&& 'edit' === $screen->base
+			&& Post_Types::PROMOTION_POST_TYPE === $screen->post_type;
+	}
+
+	/**
+	 * Check whether this is the default, unfiltered list request.
+	 */
+	private function is_unfiltered_list_request(): bool {
+		foreach ( array( 's', 'post_status', 'm', 'author', 'cat', 'taxonomy', 'term' ) as $key ) {
+			if ( ! isset( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only list-view context.
+				continue;
+			}
+
+			if ( ! is_scalar( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only type validation.
+				return false;
+			}
+
+			$value = sanitize_text_field( wp_unslash( (string) $_GET[ $key ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only list-view context.
+			if ( '' !== trim( $value ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Check every stored status so filtered empty views are never onboarding.
+	 */
+	private function has_promotions(): bool {
+		$counts = wp_count_posts( Post_Types::PROMOTION_POST_TYPE, 'readable' );
+		foreach ( get_object_vars( $counts ) as $count ) {
+			if ( 0 < (int) $count ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

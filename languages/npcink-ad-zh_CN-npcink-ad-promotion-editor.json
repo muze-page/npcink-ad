@@ -133,9 +133,6 @@
             "Stop showing must be later than Start showing.": [
                 "\u505c\u6b62\u5c55\u793a\u65f6\u95f4\u5fc5\u987b\u665a\u4e8e\u5f00\u59cb\u5c55\u793a\u65f6\u95f4\u3002"
             ],
-            "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use.": [
-                "\u6392\u671f\u65f6\u95f4\u4f7f\u7528\u7ad9\u70b9\u65f6\u533a\uff08%s\uff09\u3002\u6574\u9875\u7f13\u5b58\u548c CDN \u9700\u8981\u5408\u9002\u7684 TTL \u6216\u6e05\u7406\u7b56\u7565\uff1b\u7f13\u5b58\u9875\u9762\u4ecd\u5728\u4f7f\u7528\u65f6\uff0c\u65e0\u6cd5\u4fdd\u8bc1\u5206\u949f\u7ea7\u5207\u6362\u3002"
-            ],
             "These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative.": [
                 "\u8fd9\u4e9b\u7f16\u8f91\u5668\u68c0\u67e5\u4e0d\u4f1a\u963b\u6b62\u4fdd\u5b58\u3002PHP \u6295\u653e\u5224\u5b9a\u548c Core REST \u54cd\u5e94\u4ecd\u662f\u6700\u7ec8\u4f9d\u636e\u3002"
             ],
@@ -258,6 +255,48 @@
             ],
             "The All devices option shows the Promotion at every width. Desktop shows it at viewport widths of 782px and above; Mobile shows it at 781px and below. CSS applies this fixed breakpoint, with no separate tablet target.": [
                 "\u201c\u6240\u6709\u8bbe\u5907\u201d\u9009\u9879\u4f1a\u5728\u4efb\u610f\u5bbd\u5ea6\u663e\u793a\u63a8\u5e7f\uff1b\u201c\u684c\u9762\u7aef\u201d\u4f1a\u5728\u89c6\u53e3\u5bbd\u5ea6\u4e3a 782px \u53ca\u4ee5\u4e0a\u65f6\u663e\u793a\uff0c\u201c\u79fb\u52a8\u7aef\u201d\u4f1a\u5728 781px \u53ca\u4ee5\u4e0b\u65f6\u663e\u793a\u3002CSS \u4f7f\u7528\u8fd9\u4e00\u56fa\u5b9a\u65ad\u70b9\uff0c\u4e0d\u63d0\u4f9b\u5355\u72ec\u7684\u5e73\u677f\u8bbe\u5907\u76ee\u6807\u3002"
+            ],
+            "Next": [
+                "\u4e0b\u4e00\u6b65"
+            ],
+            "Ready": [
+                "\u5c31\u7eea"
+            ],
+            "Choose a page": [
+                "\u9009\u62e9\u9875\u9762"
+            ],
+            "Publish in three steps": [
+                "\u5206\u4e09\u6b65\u53d1\u5e03"
+            ],
+            "This checklist follows the current content and delivery preflight.": [
+                "\u6b64\u6e05\u5355\u6839\u636e\u5f53\u524d\u5185\u5bb9\u548c\u6295\u653e\u9884\u68c0\u7ed3\u679c\u66f4\u65b0\u3002"
+            ],
+            "Add promotion content": [
+                "\u6dfb\u52a0\u63a8\u5e7f\u5185\u5bb9"
+            ],
+            "Done": [
+                "\u5df2\u5b8c\u6210"
+            ],
+            "Needs content": [
+                "\u9700\u8981\u5185\u5bb9"
+            ],
+            "Confirm delivery rules": [
+                "\u786e\u8ba4\u6295\u653e\u89c4\u5219"
+            ],
+            "Needs attention": [
+                "\u9700\u8981\u5904\u7406"
+            ],
+            "Preview a real page and publish": [
+                "\u5728\u771f\u5b9e\u9875\u9762\u4e2d\u9884\u89c8\u5e76\u53d1\u5e03"
+            ],
+            "WordPress has an advanced page-cache drop-in enabled. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires.": [
+                "WordPress \u5df2\u542f\u7528 advanced page-cache drop-in\u3002\u53d1\u5e03\u3001\u6682\u505c\u3001\u6062\u590d\u4ee5\u53ca\u5b9a\u65f6\u5f00\u59cb\u6216\u505c\u6b62\u540e\u7684\u65e7\u9875\u9762\u53ef\u80fd\u7ee7\u7eed\u7531\u7f13\u5b58\u63d0\u4f9b\uff0c\u76f4\u81f3\u53d7\u5f71\u54cd\u9875\u9762\u88ab\u6e05\u7406\u6216\u7f13\u5b58 TTL \u5230\u671f\u3002"
+            ],
+            "Schedule times use the site timezone (%s).": [
+                "\u6392\u671f\u65f6\u95f4\u4f7f\u7528\u7ad9\u70b9\u65f6\u533a\uff08%s\uff09\u3002"
+            ],
+            "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while cached HTML remains in use.": [
+                "\u6392\u671f\u65f6\u95f4\u4f7f\u7528\u7ad9\u70b9\u65f6\u533a\uff08%s\uff09\u3002\u6574\u9875\u7f13\u5b58\u548c CDN \u9700\u8981\u5408\u9002\u7684 TTL \u6216\u6e05\u7406\u673a\u5236\uff1b\u53ea\u8981\u7f13\u5b58 HTML \u4ecd\u5728\u4f7f\u7528\uff0c\u5c31\u65e0\u6cd5\u4fdd\u8bc1\u5206\u949f\u7ea7\u5207\u6362\u3002"
             ]
         }
     }

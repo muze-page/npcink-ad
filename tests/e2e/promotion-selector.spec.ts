@@ -175,8 +175,12 @@ test("searches, paginates, saves, and restores a Promotion selection", async ({
   });
 
   await page.goto("/wp-login.php");
-  await page.getByLabel("Username or Email Address").fill(USERNAME);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  const username = page.locator("#user_login");
+  const password = page.locator("#user_pass");
+  await username.fill(USERNAME);
+  await password.fill(PASSWORD);
+  await expect(username).toHaveValue(USERNAME);
+  await expect(password).toHaveValue(PASSWORD);
   await Promise.all([
     page.waitForURL(/\/wp-admin\//),
     page.getByRole("button", { name: "Log In" }).click(),

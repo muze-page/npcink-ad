@@ -129,6 +129,22 @@ type ParagraphAnchorNoticeState =
 			paragraphNumber: number;
 	  };
 
+type FirstRunGuideStepState = 'complete' | 'incomplete' | 'ready' | 'blocked';
+
+export interface FirstRunGuideState {
+	isVisible: boolean;
+	content: FirstRunGuideStepState;
+	delivery: FirstRunGuideStepState;
+	previewAndPublish: FirstRunGuideStepState;
+	hasPreviewTarget: boolean;
+}
+
+interface FirstRunGuideInput {
+	postStatus: string;
+	preflightIssues: readonly PromotionPreflightIssueCode[];
+	previewTargetId: number;
+}
+
 const editContextQuery = { context: 'edit' } as const;
 
 function recordTitle( record: ContentRecord ): string {
@@ -220,6 +236,133 @@ function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
 				MAX_PARAGRAPH_NUMBER
 			);
 	}
+}
+
+/**
+ * Derive the first-run checklist from the same preflight result used by the
+ * delivery panel and server-side publish validation. Scheduled Promotions have
+ * already completed the publish flow, so they leave the checklist with
+ * published Promotions.
+ *
+ * @param input                 Current checklist inputs.
+ * @param input.postStatus      Persisted WordPress post status.
+ * @param input.preflightIssues Issues from the canonical editor preflight.
+ * @param input.previewTargetId Effective real-page preview target ID.
+ */
+export function getFirstRunGuideState( {
+	postStatus,
+	preflightIssues,
+	previewTargetId,
+}: FirstRunGuideInput ): FirstRunGuideState {
+	const isVisible = ! [ 'publish', 'future' ].includes( postStatus );
+	const contentComplete = ! preflightIssues.includes( 'empty_content' );
+	const deliveryComplete = preflightIssues.every(
+		( issue ) => issue === 'empty_content'
+	);
+	const hasPreviewTarget = previewTargetId > 0;
+
+	return {
+		isVisible,
+		content: contentComplete ? 'complete' : 'incomplete',
+		delivery: deliveryComplete ? 'complete' : 'incomplete',
+		previewAndPublish:
+			contentComplete && deliveryComplete && hasPreviewTarget
+				? 'ready'
+				: 'blocked',
+		hasPreviewTarget,
+	};
+}
+
+function FirstRunGuide( { state }: { state: FirstRunGuideState } ) {
+	if ( ! state.isVisible ) {
+		return null;
+	}
+
+	let previewStatus: string = __( 'Next', 'npcink-ad' );
+	if ( state.previewAndPublish === 'ready' ) {
+		previewStatus = __( 'Ready', 'npcink-ad' );
+	} else if (
+		state.content === 'complete' &&
+		state.delivery === 'complete' &&
+		! state.hasPreviewTarget
+	) {
+		previewStatus = __( 'Choose a page', 'npcink-ad' );
+	}
+
+	return (
+		<PluginDocumentSettingPanel
+			name="npcink-ad-first-run"
+			title={ __( 'Publish in three steps', 'npcink-ad' ) }
+			className="npcink-ad-editor-panel npcink-ad-first-run-guide"
+		>
+			<p className="npcink-ad-first-run-guide__intro">
+				{ __(
+					'This checklist follows the current content and delivery preflight.',
+					'npcink-ad'
+				) }
+			</p>
+			<ol
+				className="npcink-ad-first-run-guide__steps"
+				data-testid="npcink-ad-first-run-guide"
+			>
+				<li
+					data-testid="npcink-ad-first-run-step-content"
+					data-state={ state.content }
+				>
+					<span
+						className="npcink-ad-first-run-guide__number"
+						aria-hidden="true"
+					>
+						1
+					</span>
+					<span className="npcink-ad-first-run-guide__label">
+						{ __( 'Add promotion content', 'npcink-ad' ) }
+					</span>
+					<span className="npcink-ad-first-run-guide__status">
+						{ state.content === 'complete'
+							? __( 'Done', 'npcink-ad' )
+							: __( 'Needs content', 'npcink-ad' ) }
+					</span>
+				</li>
+				<li
+					data-testid="npcink-ad-first-run-step-delivery"
+					data-state={ state.delivery }
+				>
+					<span
+						className="npcink-ad-first-run-guide__number"
+						aria-hidden="true"
+					>
+						2
+					</span>
+					<span className="npcink-ad-first-run-guide__label">
+						{ __( 'Confirm delivery rules', 'npcink-ad' ) }
+					</span>
+					<span className="npcink-ad-first-run-guide__status">
+						{ state.delivery === 'complete'
+							? __( 'Ready', 'npcink-ad' )
+							: __( 'Needs attention', 'npcink-ad' ) }
+					</span>
+				</li>
+				<li
+					data-testid="npcink-ad-first-run-step-preview-publish"
+					data-state={ state.previewAndPublish }
+				>
+					<span
+						className="npcink-ad-first-run-guide__number"
+						aria-hidden="true"
+					>
+						3
+					</span>
+					<span className="npcink-ad-first-run-guide__label">
+						{ __( 'Preview a real page and publish', 'npcink-ad' ) }
+					</span>
+					<span className="npcink-ad-first-run-guide__status">
+						{ previewStatus }
+					</span>
+				</li>
+			</ol>
+		</PluginDocumentSettingPanel>
+	);
 }
 
 function ManualBlockInspectionNotice( {
@@ -765,6 +908,7 @@ function PromotionSettingsPanel() {
 	);
 	const paragraphNumberValid = isValidParagraphNumber( paragraphNumber );
 	const settings = window.NpcinkAdEditorSettings;
+	const hasAdvancedPageCache = settings?.hasAdvancedPageCache === true;
 	const { includeIds: effectiveIncludeIds, excludeIds: effectiveExcludeIds } =
 		getEffectivePromotionTargetIds( includeIds, excludeIds, [
 			...( settings?.publicContentIds ?? [] ),
@@ -837,6 +981,11 @@ function PromotionSettingsPanel() {
 		effectiveIncludeIds[ 0 ] ||
 		settings?.defaultTargetId ||
 		0;
+	const firstRunGuideState = getFirstRunGuideState( {
+		postStatus: persistedStatus,
+		preflightIssues,
+		previewTargetId: effectivePreviewTarget,
+	} );
 	const isParagraphLocation = location === 'content_after_paragraph';
 	const manualBlockInspection = useSelect(
 		( select ): ManualBlockInspectionState => {
@@ -1056,6 +1205,8 @@ function PromotionSettingsPanel() {
 
 	return (
 		<>
+			<FirstRunGuide state={ firstRunGuideState } />
+
 			<PluginDocumentSettingPanel
 				name="npcink-ad-delivery"
 				title={ __( 'Npcink Ad delivery', 'npcink-ad' ) }
@@ -1471,6 +1622,7 @@ function PromotionSettingsPanel() {
 				initialOpen={
 					preflightIssues.length > 0 ||
 					potentiallyOverlappingIds.length > 0 ||
+					hasAdvancedPageCache ||
 					hasSchedule ||
 					isManualBlock ||
 					isParagraphLocation
@@ -1512,16 +1664,33 @@ function PromotionSettingsPanel() {
 						) }
 					</Notice>
 				) }
+				{ hasAdvancedPageCache && (
+					<Notice status="warning" isDismissible={ false }>
+						{ __(
+							'WordPress has an advanced page-cache drop-in enabled. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires.',
+							'npcink-ad'
+						) }
+					</Notice>
+				) }
 				{ hasSchedule && (
 					<Notice status="info" isDismissible={ false }>
-						{ sprintf(
-							/* translators: %s: site timezone name or UTC offset. */
-							__(
-								'Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use.',
-								'npcink-ad'
-							),
-							timezone
-						) }
+						{ hasAdvancedPageCache
+							? sprintf(
+									/* translators: %s: site timezone name or UTC offset. */
+									__(
+										'Schedule times use the site timezone (%s).',
+										'npcink-ad'
+									),
+									timezone
+							  )
+							: sprintf(
+									/* translators: %s: site timezone name or UTC offset. */
+									__(
+										'Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while cached HTML remains in use.',
+										'npcink-ad'
+									),
+									timezone
+							  ) }
 					</Notice>
 				) }
 				<ManualBlockInspectionNotice state={ manualBlockInspection } />

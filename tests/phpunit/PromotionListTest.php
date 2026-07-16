@@ -10,6 +10,8 @@ use Npcink\Ad\Data\Post_Types;
 use Npcink\Ad\Data\Repository;
 use Npcink\Ad\Domain\Eligibility_Evaluator;
 use Npcink\Ad\Domain\Overlap_Detector;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -21,6 +23,7 @@ require_once __DIR__ . '/PromotionPreflightWordPressClasses.php';
 require_once __DIR__ . '/EditorialScopeWordPressStubs.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Post_Types.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Repository.php';
+require_once dirname( __DIR__, 2 ) . '/src/Environment/Page_Cache.php';
 require_once dirname( __DIR__, 2 ) . '/src/Presentation/Eligibility_Messages.php';
 require_once dirname( __DIR__, 2 ) . '/src/Admin/Promotion_Status_Action.php';
 require_once dirname( __DIR__, 2 ) . '/src/Admin/Promotion_List.php';
@@ -41,7 +44,140 @@ final class PromotionListTest extends TestCase {
 		$GLOBALS['npcink_ad_test_get_terms_errors']  = array();
 		$GLOBALS['npcink_ad_test_get_terms_results'] = array();
 		$GLOBALS['npcink_ad_test_term_taxonomies']   = array();
+		$GLOBALS['npcink_ad_test_actions']           = array();
+		$GLOBALS['npcink_ad_test_filters']           = array();
+		$GLOBALS['npcink_ad_test_capabilities']      = array();
+		$GLOBALS['npcink_ad_test_post_counts']       = (object) array();
+		$GLOBALS['npcink_ad_test_count_posts_calls'] = array();
+		$GLOBALS['npcink_ad_test_current_screen']    = (object) array(
+			'base'      => 'edit',
+			'post_type' => Post_Types::PROMOTION_POST_TYPE,
+		);
+		$_GET = array();
 		unset( $GLOBALS['npcink_ad_test_public_ids'], $GLOBALS['wp_query'] );
+	}
+
+	/**
+	 * Cache and first-use notices each register once on the native notice seam.
+	 */
+	public function test_registers_each_promotion_list_notice_once(): void {
+		$list = $this->promotion_list();
+		$list->register();
+
+		$registrations = array_values(
+			array_filter(
+				$GLOBALS['npcink_ad_test_actions'],
+				static fn ( array $registration ): bool => 'admin_notices' === $registration['hook_name']
+			)
+		);
+
+		self::assertCount( 2, $registrations );
+		self::assertSame( array( $list, 'render_page_cache_warning' ), $registrations[0]['callback'] );
+		self::assertSame( array( $list, 'render_first_promotion_guide' ), $registrations[1]['callback'] );
+	}
+
+	/**
+	 * The default no-cache environment emits no page-cache warning.
+	 */
+	public function test_no_cache_boundary_hides_page_cache_warning(): void {
+		ob_start();
+		$this->promotion_list()->render_page_cache_warning();
+
+		self::assertSame( '', (string) ob_get_clean() );
+	}
+
+	/**
+	 * An enabled advanced-cache drop-in emits one native warning on the list.
+	 */
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_enabled_cache_boundary_renders_native_page_cache_warning(): void {
+		$placeholder = tempnam( sys_get_temp_dir(), 'npcink-ad-list-cache-' );
+		self::assertNotFalse( $placeholder );
+		self::assertTrue( unlink( $placeholder ) );
+		self::assertTrue( mkdir( $placeholder ) );
+		$drop_in = $placeholder . '/advanced-cache.php';
+
+		try {
+			define( 'WP_CACHE', true );
+			define( 'WP_CONTENT_DIR', $placeholder );
+			self::assertTrue( touch( $drop_in ) );
+
+			ob_start();
+			$this->promotion_list()->render_page_cache_warning();
+			$output = (string) ob_get_clean();
+
+			self::assertSame( 1, substr_count( $output, 'notice notice-warning npcink-ad-page-cache-warning' ) );
+			self::assertStringContainsString( 'Publishing, pausing, resuming, and scheduled starts or stops', $output );
+			self::assertStringContainsString( 'purged or the cache TTL expires', $output );
+		} finally {
+			if ( is_file( $drop_in ) ) {
+				unlink( $drop_in );
+			}
+			if ( is_dir( $placeholder ) ) {
+				rmdir( $placeholder );
+			}
+		}
+	}
+
+	/**
+	 * A genuinely empty default list explains the three-step first workflow.
+	 */
+	public function test_empty_default_list_renders_first_promotion_guide(): void {
+		$output = $this->render_first_promotion_guide();
+
+		self::assertStringContainsString( 'notice notice-info npcink-ad-first-promotion-guide', $output );
+		self::assertStringContainsString( 'Add the content you want to show.', $output );
+		self::assertStringContainsString( 'Choose its placement and content scope.', $output );
+		self::assertStringContainsString( 'Preview it on a real page, then publish.', $output );
+		self::assertStringContainsString( '>Add first Promotion</a>', $output );
+		self::assertStringContainsString(
+			'href="https://example.test/wp-admin/post-new.php?post_type=npcink_promotion"',
+			$output
+		);
+		self::assertSame(
+			array(
+				array(
+					'post_type' => Post_Types::PROMOTION_POST_TYPE,
+					'perm'      => 'readable',
+				),
+			),
+			$GLOBALS['npcink_ad_test_count_posts_calls']
+		);
+	}
+
+	/**
+	 * Existing Promotions in any status suppress onboarding on the default list.
+	 */
+	public function test_existing_promotion_in_any_status_hides_first_promotion_guide(): void {
+		$GLOBALS['npcink_ad_test_post_counts'] = (object) array(
+			'publish' => 0,
+			'trash'   => 1,
+		);
+
+		self::assertSame( '', $this->render_first_promotion_guide() );
+	}
+
+	/**
+	 * Empty search and status views are not mistaken for first use.
+	 */
+	public function test_search_and_trash_views_hide_first_promotion_guide(): void {
+		$_GET['s'] = 'missing';
+		self::assertSame( '', $this->render_first_promotion_guide() );
+		self::assertSame( array(), $GLOBALS['npcink_ad_test_count_posts_calls'] );
+
+		$_GET = array( 'post_status' => 'trash' );
+		self::assertSame( '', $this->render_first_promotion_guide() );
+		self::assertSame( array(), $GLOBALS['npcink_ad_test_count_posts_calls'] );
+	}
+
+	/**
+	 * Users without the post type's create capability never get a dead link.
+	 */
+	public function test_user_without_create_capability_does_not_see_first_promotion_guide(): void {
+		$GLOBALS['npcink_ad_test_capabilities']['manage_npcink_ads'] = false;
+
+		self::assertSame( '', $this->render_first_promotion_guide() );
 	}
 
 	/**
@@ -515,6 +651,16 @@ final class PromotionListTest extends TestCase {
 	 */
 	private function promotion_list(): Promotion_List {
 		return new Promotion_List( new Repository(), new Eligibility_Evaluator(), new Overlap_Detector() );
+	}
+
+	/**
+	 * Render the public first-use seam for deterministic request fixtures.
+	 */
+	private function render_first_promotion_guide(): string {
+		ob_start();
+		$this->promotion_list()->render_first_promotion_guide();
+
+		return (string) ob_get_clean();
 	}
 
 	/**

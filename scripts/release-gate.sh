@@ -18,6 +18,7 @@ PLUGIN_VERSION="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[
 CONSTANT_VERSION="$(sed -nE "s/^[[:space:]]*define\([[:space:]]*'NPCINK_AD_VERSION',[[:space:]]*'([^']+)'[[:space:]]*\);.*/\1/p" npcink-ad.php | head -n 1)"
 PACKAGE_VERSION="$(php -r '$package = json_decode((string) file_get_contents("package.json"), true, 512, JSON_THROW_ON_ERROR); echo isset($package["version"]) ? $package["version"] : "";')"
 STABLE_TAG="$(sed -nE 's/^Stable tag:[[:space:]]*([^[:space:]]+).*/\1/p' readme.txt | head -n 1)"
+PHPSTAN_BOOTSTRAP_VERSION="$(sed -nE "s/^[[:space:]]*define\([[:space:]]*'NPCINK_AD_VERSION',[[:space:]]*'([^']+)'[[:space:]]*\);.*/\1/p" tests/phpstan/bootstrap.php | head -n 1)"
 
 if [[ -z "$PLUGIN_VERSION" ]]; then
   echo "[release-gate] Version is missing from npcink-ad.php" >&2
@@ -41,6 +42,7 @@ check_version_match() {
 check_version_match "NPCINK_AD_VERSION" "$CONSTANT_VERSION"
 check_version_match "package.json" "$PACKAGE_VERSION"
 check_version_match "readme.txt Stable tag" "$STABLE_TAG"
+check_version_match "tests/phpstan/bootstrap.php" "$PHPSTAN_BOOTSTRAP_VERSION"
 
 if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
   EXPECTED_TAG="v${PLUGIN_VERSION}"
@@ -236,6 +238,7 @@ REQUIRED_ZIP_ENTRIES=(
   "${PLUGIN_DIR_NAME}/src/Data/Roles.php"
   "${PLUGIN_DIR_NAME}/src/Domain/Eligibility_Evaluator.php"
   "${PLUGIN_DIR_NAME}/src/Domain/Overlap_Detector.php"
+  "${PLUGIN_DIR_NAME}/src/Environment/Page_Cache.php"
   "${PLUGIN_DIR_NAME}/src/Frontend/Classic_Paragraph_Tag_Processor.php"
   "${PLUGIN_DIR_NAME}/src/Frontend/Delivery.php"
   "${PLUGIN_DIR_NAME}/src/Frontend/Paragraph_Inserter.php"
