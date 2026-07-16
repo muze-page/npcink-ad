@@ -55,7 +55,7 @@ WP_VERSION=6.5 PHP_VERSION=8.1 tests/playground/run.sh
 WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 ```
 
-Playground 会验证单 Promotion 数据模型、typed meta、发布预检、五种 canonical content scope、真实 Core 分类/标签直接关系与动态变更、term fail-closed、时间/设备规则、区块/短代码/自动位置、固定 `781px`/`782px` CSS 边界、区块三属性契约、预览断点说明、顶层区块与 Classic 段落锚点、管理员/订阅者/匿名 REST 边界、绑定 Promotion 的预览 nonce、时区与排期边界、无 Placement/Options/自定义表以及显式卸载清理。打包插件的真实 Gutenberg 编辑器 E2E 另行覆盖选择器键盘操作、服务器搜索、第二页加载、保存后重载和浏览器错误；列表快捷操作与主题页面交互仍需在 Local 中补充验收。
+Playground 会验证单 Promotion 数据模型、typed meta、发布预检、五种 canonical content scope、真实 Core 分类/标签直接关系与动态变更、term fail-closed、时间/设备规则、区块/短代码/自动位置、固定 `781px`/`782px` CSS 边界、区块三属性契约、预览断点说明、顶层区块与 Classic 段落锚点、管理员/订阅者/匿名 REST 边界、绑定 Promotion 的预览 nonce、时区与排期边界、无 Placement/Options/自定义表以及显式卸载清理。打包插件的真实 Gutenberg 编辑器 E2E 另行覆盖选择器键盘操作、服务器搜索、第二页加载、保存后重载、编辑器资产边界、列表暂停/恢复以及真实主题页面的展示与下线。全站/指定内容的完整后台录入和具体部署的第三方整页缓存边界仍需在 Local 或目标环境中验收。
 
 ## 发布包
 

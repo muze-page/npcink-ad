@@ -1,4 +1,4 @@
-# Promotion selector editor E2E
+# Packaged-plugin E2E
 
 This suite exercises the packaged plugin in a real Gutenberg editor without
 Docker or `wp-env`. The runner starts the fixed WordPress Playground CLI
@@ -13,13 +13,26 @@ JSON file between workers.
 
 The fixture contains 105 filler Promotions, a selected Promotion that sorts
 outside the initial 20-result page, and a published page containing that
-selected dynamic block. Twenty-five fillers match one search term; the target
-sorts onto search page 2. The test first highlights an old suggestion and proves
-that Enter during the 300 ms pending-search window cannot change the saved ID.
-It then loads search page 2, reaches its target using real ArrowDown/Enter input,
-saves, hard-refreshes, and verifies restoration. It also checks the REST query
-shape and requires zero `console.error` or page errors. Console warnings are
-retained as browser diagnostics but do not fail the test.
+selected dynamic block. It also creates one valid automatic Promotion whose
+selected-content rule targets only that page. Twenty-five fillers match one
+search term; the selector target sorts onto search page 2. The selector test
+first highlights an old suggestion and proves that Enter during the 300 ms
+pending-search window cannot change the saved ID. It then loads search page 2,
+reaches its target using real ArrowDown/Enter input, saves, hard-refreshes, and
+verifies restoration. It also checks the REST query shape and requires zero
+`console.error` or page errors. Console warnings are retained as browser
+diagnostics but do not fail the test.
+
+The editor-asset test protects the split loading boundary: ordinary page
+editors load the manual block entrypoint without registering Promotion document
+behavior, while `npcink_promotion` editors load and register the dedicated
+Promotion entrypoint. It observes top-level WordPress APIs and asset requests
+instead of depending on the Gutenberg iframe DOM.
+
+The status-action test confirms the automatic Promotion on the real fixture
+page, pauses it from the Promotion list, verifies the success notice, paused row
+state, and missing frontend output, then resumes it and verifies the rule-ready
+row state and restored frontend output.
 
 Build a release ZIP and install Chromium once:
 
