@@ -29,12 +29,12 @@ The default interface exposes three concepts:
 
 Implementation details such as slots, variants, resolvers, targeting engines, templates, events, queues, and consent adapters must not become primary navigation or required vocabulary.
 
-## Required 0.1 workflow
+## Required 0.2 workflow
 
 One complete vertical workflow is more important than broad feature coverage:
 
 1. Create a promotion using WordPress blocks.
-2. Choose a placement: block, before content, or after content.
+2. Choose a placement: manual block or shortcode, before content, after content, or after paragraph 1–20.
 3. Choose all posts/pages, all posts, all pages, posts matching selected Core categories/tags, or specific published posts/pages; optionally exclude explicit content IDs.
 4. Optionally set a start and end time.
 5. Choose all devices, desktop, or mobile.
@@ -46,7 +46,7 @@ The default path must not require custom HTML or JavaScript. Expert code inserti
 
 ## Usability budgets
 
-The 0.1 product is accepted only when:
+The 0.2 product is accepted only when:
 
 - a new user can publish a valid promotion in no more than three minutes without reading documentation;
 - no more than seven primary controls are visible before opening advanced settings;
@@ -56,7 +56,7 @@ The 0.1 product is accepted only when:
 
 ## Privacy and data boundaries
 
-Npcink Ad 0.1:
+Npcink Ad 0.2:
 
 - stores its source of truth in WordPress posts and registered typed metadata;
 - performs eligibility and rendering on the server;
@@ -69,7 +69,7 @@ Analytics, A/B testing, frequency controls, consent integrations, and visitor ta
 
 ## Explicit non-goals
 
-Npcink Ad 0.1 is not:
+Npcink Ad 0.2 is not:
 
 - an AdSense or Google Ad Manager integration;
 - a generic arbitrary-code inserter;
@@ -84,7 +84,7 @@ Npcink Ad 0.1 is not:
 
 The Magick AD `master` branch is a product-research corpus, not an implementation target. A feature may be brought forward only when all of the following are true:
 
-1. it directly improves the required 0.1 workflow;
+1. it directly improves the required 0.2 workflow;
 2. it can be expressed with the current product language;
 3. it does not restore deleted tracking, table, queue, migration, or broad targeting dependencies;
 4. its permission, privacy, storage, uninstall, and test contracts are explicit;
@@ -101,7 +101,7 @@ Every proposed feature must answer both questions:
 
 If either answer is missing, the feature stays outside the core product.
 
-## Accepted 0.2 direction (implemented in the development line)
+## 0.2 delivery contract
 
 The runtime remains one bounded Promotion workflow. [ADR 005](decisions/005-controlled-delivery-expansion.md) accepts its controlled 0.2 delivery direction. Automatic delivery is limited to standard posts/pages, management surfaces provide a non-blocking advisory when automatic Promotions may appear together, and a Promotion can be placed after paragraph 1–20 using [ADR 006](decisions/006-paragraph-anchor-delivery.md). [ADR 007](decisions/007-canonical-editorial-scope.md) defines one mutually exclusive automatic content population:
 
@@ -117,6 +117,6 @@ For manual placement, [ADR 008](decisions/008-manual-placement-and-device-guidan
 
 Device visibility uses one fixed CSS boundary: mobile at `781px` and below, desktop at `782px` and above, and `all` at every width. There is no tablet target or configurable breakpoint. The mobile preview canvas is capped at `390px` as a representative width, not as the production breakpoint; normal HTML remains cache-stable and does not branch by User-Agent.
 
-This completes the controlled 0.2 product scope in the development line. The package remains at its current version until the 0.2 version bump, changelog, final packaging, and release signoff are handled together in release closeout.
+This is the controlled 0.2 product scope packaged as version 0.2.0. A Git tag, GitHub Release, and public distribution remain explicit repository release actions rather than claims made by this contract.
 
 Multiple eligible Promotions at one automatic location continue rendering in deterministic order, while management UI only advises that they **may** appear together. This direction does not add priority, weights, rotation, tablet targeting, arbitrary selectors or hooks, visitor state, tracking, or separate Slot/Placement records.

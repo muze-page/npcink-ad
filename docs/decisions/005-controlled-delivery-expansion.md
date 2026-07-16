@@ -47,7 +47,7 @@ Implementation proceeds in this order:
 2. **Collapsed advanced editorial scope (implemented)** — use one mutually exclusive `all | posts | pages | terms | selected` content scope for automatic standard-post/page delivery. `terms` directly matches any configured Core category/tag on standard posts; selected content and terms do not form a composite `OR` rule. Existing explicit selection and exclusion remains the simple path. [ADR 007](007-canonical-editorial-scope.md) defines the exact semantics and the intentional boundary against a generic boolean targeting engine or arbitrary taxonomy/CPT support.
 3. **Manual-block and device guidance (implemented)** — make the explicit block-or-shortcode workflow clearer and document the fixed device boundary: mobile at `781px` and below, desktop at `782px` and above. No third device class is introduced. [ADR 008](008-manual-placement-and-device-guidance.md) defines the exact entrypoint, advisory, cache, preview-canvas, and interface boundaries.
 
-The three ordered steps are complete in the development line. Any future eligibility rule remains authoritative in PHP and must be reflected consistently in publication preflight, list explanations, real-page preview, translations, and tests. Completing this source-level scope does not change the packaged version or substitute for release closeout.
+The three ordered steps were completed before release closeout. Any future eligibility rule remains authoritative in PHP and must be reflected consistently in publication preflight, list explanations, real-page preview, translations, and tests. At decision time, completing the source-level scope did not itself change the packaged version; the later release closeout packages it as version 0.2.0.
 
 ## Explicit non-goals
 
@@ -80,7 +80,7 @@ Rejected. ADR 003 remains authoritative: there is no observed need that justifie
 
 ## Consequences
 
-- The automatic post/page guard, advisory overlap, paragraph anchor, canonical editorial scope, and manual-placement/device guidance are current development-line behavior. The controlled 0.2 scope is implemented, while the 0.2 version bump, changelog, final packaging, and release signoff remain separate closeout work.
+- The automatic post/page guard, advisory overlap, paragraph anchor, canonical editorial scope, and manual-placement/device guidance are version 0.2.0 behavior. The version bump, changelog, and final package closeout are complete in 0.2.0; a Git tag, GitHub Release, and public distribution remain separate repository release actions.
 - Overlap detection is advisory evidence only. Its wording and tests must preserve uncertainty instead of presenting a false conflict guarantee, and the advisory must stay outside eligibility reason codes and publication preflight failures.
 - Rendering all eligible Promotions preserves existing behavior and avoids introducing hidden selection state.
 - The advanced scope must remain collapsed and bounded so the default publishing workflow keeps its current usability budget.

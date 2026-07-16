@@ -1,8 +1,8 @@
 # Npcink Ad
 
-Npcink Ad 0.1 is a WordPress-native, privacy-first workflow for site-owned promotions. It has one primary path: **create creative → set delivery rules → verify a real-page verdict → publish or pause**.
+Npcink Ad 0.2.0 is a WordPress-native, privacy-first workflow for site-owned promotions. It has one primary path: **create creative → set delivery rules → verify a real-page verdict → publish or pause**.
 
-> Version 0.1 defines a new pre-GA contract. It provides no compatibility layer for previous development data, APIs, blocks, or storage identifiers.
+> Version 0.2.0 continues the new pre-GA contract. It provides no compatibility layer for previous development data, APIs, blocks, or storage identifiers.
 
 ## Product boundary
 
@@ -19,11 +19,11 @@ Npcink Ad 0.1 is a WordPress-native, privacy-first workflow for site-owned promo
 
 See [the product contract](docs/product-contract.md), [ADR 003](docs/decisions/003-single-promotion-record.md), [ADR 008](docs/decisions/008-manual-placement-and-device-guidance.md), and [the architecture overview](docs/architecture-overview.md).
 
-The current development line completes the controlled 0.2 scope in [ADR 005](docs/decisions/005-controlled-delivery-expansion.md): [ADR 006](docs/decisions/006-paragraph-anchor-delivery.md) defines after-paragraph placement, [ADR 007](docs/decisions/007-canonical-editorial-scope.md) defines the mutually exclusive editorial scope, and [ADR 008](docs/decisions/008-manual-placement-and-device-guidance.md) defines explicit manual entrypoints and fixed device guidance. Manual scope exposes only `all | selected`, still requires an inserted block or shortcode, keeps explicit ID exclusions authoritative, and treats missing-block inspection as non-blocking evidence. The 0.2 version bump, changelog, final packaging, and release signoff remain one separate release closeout; this document does not claim that version 0.2 has shipped.
+Version 0.2.0 includes the controlled scope in [ADR 005](docs/decisions/005-controlled-delivery-expansion.md): [ADR 006](docs/decisions/006-paragraph-anchor-delivery.md) defines after-paragraph placement, [ADR 007](docs/decisions/007-canonical-editorial-scope.md) defines the mutually exclusive editorial scope, and [ADR 008](docs/decisions/008-manual-placement-and-device-guidance.md) defines explicit manual entrypoints and fixed device guidance. Manual scope exposes only `all | selected`, still requires an inserted block or shortcode, keeps explicit ID exclusions authoritative, and treats missing-block inspection as non-blocking evidence.
 
 ## Non-goals
 
-Version 0.1 has no AdSense management, analytics, tracking, reports, A/B tests, CMP, popup builder, frequency or geographic targeting, arbitrary PHP/JavaScript, template marketplace, custom database table, or legacy administration SPA.
+Version 0.2.0 has no AdSense management, analytics, tracking, reports, A/B tests, CMP, popup builder, frequency or geographic targeting, arbitrary PHP/JavaScript, template marketplace, custom database table, or legacy administration SPA.
 
 ## Development and verification
 
@@ -64,4 +64,4 @@ bash scripts/release-gate.sh
 
 The artifact is `dist/npcink-ad-<Version>.zip` with the fixed top-level directory `npcink-ad/`. The gate requires the plugin header, `NPCINK_AD_VERSION`, `package.json`, and the readme Stable tag to share that version. In a tag-triggered build, `GITHUB_REF_NAME` must be `v<Version>`. It also verifies bundle budgets, required files, forbidden content, and the absence of legacy brand identifiers from the package.
 
-Schedules depend on the page being regenerated at the relevant boundary. Sites with third-party full-page caches must configure an appropriate TTL or purge the affected pages when a Promotion changes; version 0.1 does not claim minute-accurate scheduling through arbitrary caches.
+Schedules depend on the page being regenerated at the relevant boundary. Sites with third-party full-page caches must configure an appropriate TTL or purge the affected pages when a Promotion changes, starts, or stops; version 0.2.0 does not claim minute-accurate scheduling through arbitrary third-party caches.

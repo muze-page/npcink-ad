@@ -4,7 +4,7 @@ Tags: promotion, advertising, marketing, block
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,9 +26,9 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 * Deliver from the server without visitor tracking, custom tables, or required frontend JavaScript.
 * Use the bundled Simplified Chinese translation in both PHP screens and the block editor.
 
-Version 0.1 intentionally has no analytics, tracking cookies, external requests, A/B testing, ad-network integration, popup builder, arbitrary code execution, or custom database tables.
+Version 0.2.0 intentionally has no analytics, tracking cookies, external requests, A/B testing, ad-network integration, popup builder, arbitrary code execution, or custom database tables.
 
-The current development line implements the controlled 0.2 scope: bounded after-paragraph delivery, mutually exclusive editorial content scopes, explicit manual block-or-shortcode guidance, and the fixed desktop/mobile boundary. Manual scope exposes only `all | selected`, still requires an inserted block or shortcode, keeps explicit ID exclusions authoritative, and treats missing-block inspection as a non-blocking advisory. The 0.2 version bump, changelog, final packaging, and release signoff remain pending as one release closeout; this readme does not claim that version 0.2 has shipped.
+Version 0.2.0 implements the controlled 0.2 scope: bounded after-paragraph delivery, mutually exclusive editorial content scopes, explicit manual block-or-shortcode guidance, and the fixed desktop/mobile boundary. Manual scope exposes only `all | selected`, still requires an inserted block or shortcode, keeps explicit ID exclusions authoritative, and treats missing-block inspection as a non-blocking advisory.
 
 == Installation ==
 
@@ -43,7 +43,7 @@ The current development line implements the controlled 0.2 scope: bounded after-
 
 = Does Npcink Ad track visitors? =
 
-No. Version 0.1 does not collect impression or click analytics, set visitor tracking cookies, or contact an external service.
+No. Version 0.2.0 does not collect impression or click analytics, set visitor tracking cookies, or contact an external service.
 
 = Why is there no separate placement or ad group? =
 
@@ -51,7 +51,7 @@ The first release optimizes for one short publishing workflow. Location and deli
 
 = How do full-page caches affect schedules? =
 
-The page must be regenerated after a start or end boundary. Configure the cache TTL or purge affected pages when a Promotion changes. Version 0.1 does not claim minute-accurate schedules through every third-party cache.
+The page must be regenerated after a start or end boundary. Configure the cache TTL or purge affected pages when a Promotion changes, starts, or stops. Version 0.2.0 does not claim minute-accurate schedules through every third-party cache.
 
 = Does choosing Manual block insert the Promotion automatically? =
 
@@ -61,18 +61,27 @@ No. Save the Promotion, insert the Npcink Ad Promotion block at the intended loc
 
 Desktop is visible at `782px` and above, Mobile at `781px` and below, and All devices at every width. The boundary is fixed and there is no separate tablet target. Device visibility uses CSS so normal cached HTML does not branch by User-Agent. The preview's mobile canvas is capped at `390px` as a representative width, not as the production breakpoint.
 
-= Does 0.1 migrate data from earlier development builds? =
+= Does 0.2.0 migrate data from earlier development snapshots? =
 
-No. Version 0.1 defines a new pre-GA contract and has no compatibility adapters or migrations for earlier unpublished identifiers.
+No. Version 0.2.0 remains pre-GA and has no compatibility adapters or migrations for earlier development snapshots or unpublished identifiers.
 
 == Changelog ==
 
+= 0.2.0 =
+
+* Unify publication preflight, Promotion-list status, preview verdicts, and live delivery on the shared eligibility policy; add inline pause and resume actions.
+* Document the full-page-cache boundary for publication and schedules, including explicit TTL or purge guidance for start and stop times.
+* Bound automatic delivery to standard posts and pages and add non-blocking overlap guidance for Promotions that may render together.
+* Add server-rendered placement after paragraph 1 through 20, with explicit missing-anchor evidence and no silent fallback.
+* Add mutually exclusive all, posts, pages, Core category/tag, and selected-content scopes with explicit exclusions taking precedence.
+* Clarify manual block and shortcode entrypoints, the fixed `781px`/`782px` mobile/desktop boundary, and the representative `390px` preview canvas.
+* Keep the Promotion editor compatible with WordPress 6.5 through the supported legacy SlotFill dependency fallback.
+
 = 0.1.0 =
 
+* Internal pre-GA development baseline; not publicly released.
 * Introduce the Npcink Ad brand and single Promotion publishing model.
-* Add same-editor location, page, schedule, and device rules.
+* Add same-editor basic location, content, schedule, and device rules.
 * Add truthful real-page desktop/mobile preview and server-rendered delivery.
-* Add shared-rule publication preflight, list diagnostics, and inline pause/resume controls.
-* Add bounded after-paragraph placement with truthful missing-anchor preview evidence.
 * Keep the default runtime free of visitor tracking, custom tables, and external requests.
 * Add complete bundled Simplified Chinese PHP and JavaScript translations.
