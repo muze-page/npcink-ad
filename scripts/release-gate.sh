@@ -67,6 +67,10 @@ echo "[release-gate] 3/9 Composer checks"
 composer check
 
 echo "[release-gate] 4/9 Frontend type and lint checks"
+if grep -RInE '@wordpress/(ui|private-apis)|core/edit-post|(^|[^[:alnum:]_])unlock[[:space:]]*\(' assets/js package.json; then
+  echo "[release-gate] Private WordPress UI APIs or stores are not allowed in plugin source" >&2
+  exit 1
+fi
 pnpm run typecheck
 pnpm run test:js
 pnpm run lint:js

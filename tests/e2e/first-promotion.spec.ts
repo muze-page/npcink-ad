@@ -100,6 +100,58 @@ async function openSettingsPanel(page: Page, title: string): Promise<void> {
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
 }
 
+async function openDeliverySettings(page: Page): Promise<{
+  deliveryPanel: Locator;
+  dialog: Locator;
+}> {
+  await openSettingsPanel(page, "Npcink Ad delivery");
+  const deliveryPanel = page.locator(".components-panel__body").filter({
+    has: page.getByRole("button", {
+      name: "Npcink Ad delivery",
+      exact: true,
+    }),
+  });
+  await expect(deliveryPanel).toBeVisible();
+  await expect(
+    deliveryPanel.getByLabel("Placement", { exact: true }),
+  ).toHaveCount(0);
+
+  const editDeliverySettings = deliveryPanel.getByRole("button", {
+    name: "Edit delivery settings",
+    exact: true,
+  });
+  await expect(editDeliverySettings).toHaveCount(1);
+  await expect(editDeliverySettings).toBeVisible();
+  await editDeliverySettings.click();
+
+  const dialog = page.getByRole("dialog", {
+    name: "Npcink Ad delivery settings",
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  for (const tabName of [
+    "Placement",
+    "Content scope",
+    "Device and schedule",
+    "Preview",
+  ]) {
+    await expect(
+      dialog.getByRole("tab", { name: tabName, exact: true }),
+    ).toBeVisible();
+  }
+
+  return { deliveryPanel, dialog };
+}
+
+async function selectDeliveryTab(
+  dialog: Locator,
+  tabName: string,
+): Promise<void> {
+  const tab = dialog.getByRole("tab", { name: tabName, exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+}
+
 async function setPromotionCreative(page: Page): Promise<void> {
   await page.evaluate(
     ({ title, content }) => {
@@ -261,26 +313,43 @@ test("completes a first selected-page Promotion from creation to live pause and 
   await expect(deliveryStep).toHaveAttribute("data-state", "complete");
   await expect(previewPublishStep).toHaveAttribute("data-state", "blocked");
 
-  await openSettingsPanel(page, "Npcink Ad delivery");
-  const deliveryPanel = page.locator(".components-panel__body").filter({
-    has: page.getByRole("button", {
-      name: "Npcink Ad delivery",
-      exact: true,
-    }),
-  });
-  await expect(
-    deliveryPanel.locator(".components-notice.is-error"),
-  ).toHaveCount(0);
-
   await setPromotionCreative(page);
 
-  await page
-    .getByLabel("Placement", { exact: true })
+  const { deliveryPanel, dialog: deliveryDialog } =
+    await openDeliverySettings(page);
+  await selectDeliveryTab(deliveryDialog, "Placement");
+  await deliveryDialog
+    .getByRole("combobox", { name: "Placement", exact: true })
     .selectOption("content_before");
-  await page
-    .getByLabel("Content scope", { exact: true })
+
+  await selectDeliveryTab(deliveryDialog, "Content scope");
+  await deliveryDialog
+    .getByRole("combobox", { name: "Content scope", exact: true })
     .selectOption("selected");
-  const includedContent = page.getByRole("combobox", {
+  await expect(
+    deliveryDialog.getByRole("tab", {
+      name: "Content scope — needs attention",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await deliveryDialog
+    .getByRole("button", { name: "Close settings", exact: true })
+    .click();
+  await expect(deliveryDialog).toHaveCount(0);
+  await expect(deliveryPanel).toContainText(
+    "Delivery settings need attention.",
+  );
+  await deliveryPanel
+    .getByRole("button", { name: "Edit delivery settings", exact: true })
+    .click();
+  await expect(deliveryDialog).toBeVisible();
+  await expect(
+    deliveryDialog.getByRole("tab", {
+      name: "Content scope — needs attention",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-selected", "true");
+  const includedContent = deliveryDialog.getByRole("combobox", {
     name: "Included content",
   });
   await expect(includedContent).toBeVisible();
@@ -291,17 +360,28 @@ test("completes a first selected-page Promotion from creation to live pause and 
   await expect(pageOption).toBeVisible();
   await pageOption.click();
   await expect(
-    page.locator(".npcink-ad-content-picker__selected").filter({
+    deliveryDialog.locator(".npcink-ad-content-picker__selected").filter({
       hasText: PAGE_TITLE,
     }),
   ).toBeVisible();
   await expect(contentStep).toHaveAttribute("data-state", "complete");
   await expect(deliveryStep).toHaveAttribute("data-state", "complete");
   await expect(previewPublishStep).toHaveAttribute("data-state", "ready");
+  await expect(
+    deliveryDialog.getByRole("tab", {
+      name: "Content scope",
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await selectDeliveryTab(deliveryDialog, "Device and schedule");
+  await expect(
+    deliveryDialog.getByRole("combobox", { name: "Device", exact: true }),
+  ).toBeVisible();
 
   const createdPromotionId = await savePromotion(page, "draft");
-  await openSettingsPanel(page, "Real-page preview");
-  const openPreviewButton = page.getByRole("button", {
+  await selectDeliveryTab(deliveryDialog, "Preview");
+  const openPreviewButton = deliveryDialog.getByRole("button", {
     name: /^(Save and open preview|Open preview)$/,
   });
   await expect(openPreviewButton).toBeEnabled();
@@ -340,6 +420,31 @@ test("completes a first selected-page Promotion from creation to live pause and 
   );
   expect(previewHtml).toContain(PROMOTION_CONTENT);
   await previewPage.close();
+
+  await deliveryDialog
+    .getByRole("button", { name: "Close settings", exact: true })
+    .click();
+  await expect(deliveryDialog).toHaveCount(0);
+  const editDeliverySettingsButton = deliveryPanel.getByRole("button", {
+    name: "Edit delivery settings",
+    exact: true,
+  });
+  await expect(editDeliverySettingsButton).toBeVisible();
+  await expect(deliveryPanel).toContainText("Delivery settings checked.");
+  await expect(deliveryPanel).toContainText("Before post content");
+  await expect(deliveryPanel).toContainText("Only selected content");
+  await expect(deliveryPanel).toContainText("All devices · No schedule");
+  await expect(deliveryPanel).toContainText("Page selected");
+
+  await editDeliverySettingsButton.click();
+  const reopenedDeliveryDialog = page.getByRole("dialog", {
+    name: "Npcink Ad delivery settings",
+    exact: true,
+  });
+  await expect(reopenedDeliveryDialog).toBeVisible();
+  await reopenedDeliveryDialog.press("Escape");
+  await expect(reopenedDeliveryDialog).toHaveCount(0);
+  await expect(editDeliverySettingsButton).toBeFocused();
 
   await savePromotion(page, "publish");
   await expect

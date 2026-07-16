@@ -1,10 +1,11 @@
 jest.mock( '@wordpress/components', () => ( {
 	Button: () => null,
 	ComboboxControl: () => null,
+	Modal: () => null,
 	Notice: () => null,
-	PanelBody: () => null,
 	SelectControl: () => null,
 	Spinner: () => null,
+	TabPanel: () => null,
 	TextControl: () => null,
 } ) );
 jest.mock( '@wordpress/core-data', () => ( { store: {} } ) );
@@ -95,6 +96,20 @@ describe( 'getFirstRunGuideState', () => {
 			delivery: 'complete',
 			previewAndPublish: 'blocked',
 			hasPreviewTarget: true,
+		} );
+	} );
+
+	test( 'keeps delivery incomplete when selected terms are unavailable', () => {
+		expect(
+			getFirstRunGuideState( {
+				postStatus: 'draft',
+				preflightIssues: [],
+				previewTargetId: 12,
+				deliveryNeedsAttention: true,
+			} )
+		).toMatchObject( {
+			delivery: 'incomplete',
+			previewAndPublish: 'blocked',
 		} );
 	} );
 

@@ -4,10 +4,11 @@ import * as React from 'react';
 import {
 	Button,
 	ComboboxControl,
+	Modal,
 	Notice,
-	PanelBody,
 	SelectControl,
 	Spinner,
+	TabPanel,
 	TextControl,
 } from '@wordpress/components';
 import { store as coreDataStore } from '@wordpress/core-data';
@@ -138,6 +139,12 @@ type ParagraphAnchorNoticeState =
 
 type FirstRunGuideStepState = 'complete' | 'incomplete' | 'ready' | 'blocked';
 
+type DeliverySettingsTab =
+	| 'placement'
+	| 'content_scope'
+	| 'device_schedule'
+	| 'preview';
+
 export interface FirstRunGuideState {
 	isVisible: boolean;
 	content: FirstRunGuideStepState;
@@ -147,6 +154,7 @@ export interface FirstRunGuideState {
 }
 
 interface FirstRunGuideInput {
+	deliveryNeedsAttention?: boolean;
 	postStatus: string;
 	preflightIssues: readonly PromotionPreflightIssueCode[];
 	previewTargetId: number;
@@ -271,21 +279,23 @@ function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
  * already completed the publish flow, so they leave the checklist with
  * published Promotions.
  *
- * @param input                 Current checklist inputs.
- * @param input.postStatus      Persisted WordPress post status.
- * @param input.preflightIssues Issues from the canonical editor preflight.
- * @param input.previewTargetId Effective real-page preview target ID.
+ * @param input                        Current checklist inputs.
+ * @param input.deliveryNeedsAttention Whether server-backed delivery data is invalid.
+ * @param input.postStatus             Persisted WordPress post status.
+ * @param input.preflightIssues        Issues from the canonical editor preflight.
+ * @param input.previewTargetId        Effective real-page preview target ID.
  */
 export function getFirstRunGuideState( {
+	deliveryNeedsAttention = false,
 	postStatus,
 	preflightIssues,
 	previewTargetId,
 }: FirstRunGuideInput ): FirstRunGuideState {
 	const isVisible = ! [ 'publish', 'future' ].includes( postStatus );
 	const contentComplete = ! preflightIssues.includes( 'empty_content' );
-	const deliveryComplete = preflightIssues.every(
-		( issue ) => issue === 'empty_content'
-	);
+	const deliveryComplete =
+		! deliveryNeedsAttention &&
+		preflightIssues.every( ( issue ) => issue === 'empty_content' );
 	const hasPreviewTarget = previewTargetId > 0;
 
 	return {
@@ -1024,6 +1034,10 @@ function PromotionSettingsPanel() {
 	const [ previewTarget, setPreviewTarget ] = React.useState( 0 );
 	const [ previewFeedback, setPreviewFeedback ] =
 		React.useState< PreviewFeedback | null >( null );
+	const [ isDeliverySettingsOpen, setDeliverySettingsOpen ] =
+		React.useState( false );
+	const [ deliverySettingsTab, setDeliverySettingsTab ] =
+		React.useState< DeliverySettingsTab >( 'placement' );
 	const [ confirmedPublicIds, setConfirmedPublicIds ] = React.useState<
 		number[]
 	>( [] );
@@ -1111,10 +1125,7 @@ function PromotionSettingsPanel() {
 			current.includes( id ) ? current : [ ...current, id ]
 		);
 	};
-	const termsNeedAttention =
-		contentScope === 'terms' &&
-		( ! termsValid ||
-			effectiveCategoryIds.length + effectiveTagIds.length === 0 );
+	const hasUnavailableTerms = contentScope === 'terms' && ! termsValid;
 	const preflightIssues = getPromotionPreflightIssues( {
 		content,
 		location,
@@ -1127,11 +1138,46 @@ function PromotionSettingsPanel() {
 		startAt: meta._npcink_ad_start_at,
 		endAt: meta._npcink_ad_end_at,
 	} );
-	const preflightMessages = preflightIssues.map( preflightIssueMessage );
+	const placementHasIssue = preflightIssues.includes(
+		'invalid_paragraph_number'
+	);
+	const selectedScopeHasIssue = preflightIssues.includes(
+		'selected_scope_without_targets'
+	);
+	const termsScopeHasIssue =
+		hasUnavailableTerms ||
+		preflightIssues.includes( 'terms_scope_without_terms' );
+	const contentScopeHasIssue = selectedScopeHasIssue || termsScopeHasIssue;
+	const scheduleHasIssue = preflightIssues.includes(
+		'invalid_schedule_order'
+	);
+	const deliveryHasIssues =
+		placementHasIssue || contentScopeHasIssue || scheduleHasIssue;
+	const unavailableTermsMessage = hasUnavailableTerms
+		? __(
+				'Some selected categories or tags are no longer available. Remove them before publishing.',
+				'npcink-ad'
+		  )
+		: '';
+	const preflightMessages = [
+		...preflightIssues
+			.filter(
+				( issue ) =>
+					! hasUnavailableTerms ||
+					issue !== 'terms_scope_without_terms'
+			)
+			.map( preflightIssueMessage ),
+		...( unavailableTermsMessage ? [ unavailableTermsMessage ] : [] ),
+	];
 	const hasSchedule = Boolean(
 		meta._npcink_ad_start_at || meta._npcink_ad_end_at
 	);
 	const timezone = siteTimezoneLabel( site );
+	const timezoneHelp = sprintf(
+		/* translators: %s: site timezone name or UTC offset. */
+		__( 'Optional. Uses the site timezone: %s.', 'npcink-ad' ),
+		timezone
+	);
 	const potentiallyOverlappingIds = getPotentiallyOverlappingPromotionIds(
 		{
 			id: postId,
@@ -1155,11 +1201,118 @@ function PromotionSettingsPanel() {
 		settings?.defaultTargetId ||
 		0;
 	const firstRunGuideState = getFirstRunGuideState( {
+		deliveryNeedsAttention: hasUnavailableTerms,
 		postStatus: persistedStatus,
 		preflightIssues,
 		previewTargetId: effectivePreviewTarget,
 	} );
 	const isParagraphLocation = location === 'content_after_paragraph';
+	const placementLabel = __( 'Placement', 'npcink-ad' );
+	const contentScopeLabel = __( 'Content scope', 'npcink-ad' );
+	const deviceScheduleLabel = __( 'Device and schedule', 'npcink-ad' );
+	const previewLabel = __( 'Preview', 'npcink-ad' );
+	const placementOptions: ContentOption[] = [
+		{
+			label: __( 'After post content', 'npcink-ad' ),
+			value: 'content_after',
+		},
+		{
+			label: __( 'Before post content', 'npcink-ad' ),
+			value: 'content_before',
+		},
+		{
+			label: __( 'After paragraph N', 'npcink-ad' ),
+			value: 'content_after_paragraph',
+		},
+		{ label: __( 'Manual block', 'npcink-ad' ), value: 'block' },
+	];
+	const contentScopeOptions: ContentOption[] = isManualBlock
+		? [
+				{
+					/* translators: Content scope option for a Promotion inserted by a block or shortcode. */
+					label: __( 'Wherever manually inserted', 'npcink-ad' ),
+					value: 'all',
+				},
+				{
+					/* translators: Content scope option that limits manual delivery to an explicit post/page allow-list. */
+					label: __( 'Only selected posts and pages', 'npcink-ad' ),
+					value: 'selected',
+				},
+		  ]
+		: [
+				{
+					label: __( 'All posts and pages', 'npcink-ad' ),
+					value: 'all',
+				},
+				{ label: __( 'All posts', 'npcink-ad' ), value: 'posts' },
+				{ label: __( 'All pages', 'npcink-ad' ), value: 'pages' },
+				{
+					label: __(
+						'Posts in selected categories or tags',
+						'npcink-ad'
+					),
+					value: 'terms',
+				},
+				{
+					label: __( 'Only selected content', 'npcink-ad' ),
+					value: 'selected',
+				},
+		  ];
+	const deviceOptions: ContentOption[] = [
+		{ label: __( 'All devices', 'npcink-ad' ), value: 'all' },
+		{ label: __( 'Desktop', 'npcink-ad' ), value: 'desktop' },
+		{ label: __( 'Mobile', 'npcink-ad' ), value: 'mobile' },
+	];
+	const placementSummary = isParagraphLocation
+		? sprintf(
+				/* translators: %d: paragraph number. */
+				__( 'After paragraph %d', 'npcink-ad' ),
+				paragraphNumber
+		  )
+		: placementOptions.find( ( option ) => option.value === location )
+				?.label ?? `#${ location }`;
+	const contentScopeSummary =
+		contentScopeOptions.find( ( option ) => option.value === contentScope )
+			?.label ?? `#${ contentScope }`;
+	const device = meta._npcink_ad_device || 'all';
+	const deviceSummary =
+		deviceOptions.find( ( option ) => option.value === device )?.label ??
+		`#${ device }`;
+	const scheduleSummary = hasSchedule
+		? __( 'Custom schedule', 'npcink-ad' )
+		: __( 'No schedule', 'npcink-ad' );
+	const deliveryTabs = [
+		{
+			name: 'placement',
+			title: placementHasIssue
+				? __( 'Placement — needs attention', 'npcink-ad' )
+				: placementLabel,
+		},
+		{
+			name: 'content_scope',
+			title: contentScopeHasIssue
+				? __( 'Content scope — needs attention', 'npcink-ad' )
+				: contentScopeLabel,
+		},
+		{
+			name: 'device_schedule',
+			title: scheduleHasIssue
+				? __( 'Device and schedule — needs attention', 'npcink-ad' )
+				: deviceScheduleLabel,
+		},
+		{
+			name: 'preview',
+			title: previewLabel,
+		},
+	];
+	let firstDeliveryIssueTab: DeliverySettingsTab | null = null;
+	if ( placementHasIssue ) {
+		firstDeliveryIssueTab = 'placement';
+	} else if ( contentScopeHasIssue ) {
+		firstDeliveryIssueTab = 'content_scope';
+	} else if ( scheduleHasIssue ) {
+		firstDeliveryIssueTab = 'device_schedule';
+	}
 	React.useEffect( () => {
 		setPreviewFeedback( ( current ) => {
 			if ( current?.kind === 'no_target' && effectivePreviewTarget ) {
@@ -1347,15 +1500,7 @@ function PromotionSettingsPanel() {
 		if ( isParagraphLocation && ! paragraphNumberValid ) {
 			setPreviewFeedback( {
 				kind: 'invalid_paragraph',
-				message: sprintf(
-					/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
-					__(
-						'Enter a whole paragraph number from %1$d to %2$d before opening the real-page preview.',
-						'npcink-ad'
-					),
-					MIN_PARAGRAPH_NUMBER,
-					MAX_PARAGRAPH_NUMBER
-				),
+				message: preflightIssueMessage( 'invalid_paragraph_number' ),
 				status: 'warning',
 			} );
 			return;
@@ -1410,6 +1555,413 @@ function PromotionSettingsPanel() {
 		url.searchParams.set( '_wpnonce', settings.nonce );
 		previewWindow.location.replace( url.toString() );
 	};
+	const openDeliverySettings = () => {
+		if ( firstDeliveryIssueTab ) {
+			setDeliverySettingsTab( firstDeliveryIssueTab );
+		}
+		setDeliverySettingsOpen( true );
+	};
+	const closeDeliverySettings = () => setDeliverySettingsOpen( false );
+	const renderDeliverySettingsTab = ( tab: DeliverySettingsTab ) => {
+		switch ( tab ) {
+			case 'placement':
+				return (
+					<div className="npcink-ad-delivery-settings__panel">
+						<SelectControl
+							__next40pxDefaultSize
+							label={ placementLabel }
+							value={ location }
+							help={
+								isManualBlock
+									? /* translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated. */ __(
+											'Manual delivery requires the Promotion block or [npcink_ad promotion="ID"]. The insertion point is the live position.',
+											'npcink-ad'
+									  )
+									: undefined
+							}
+							options={ placementOptions }
+							onChange={ ( value ) => {
+								const nextLocation = value as PromotionLocation;
+								const nextContentScope =
+									contentScopeForPlacement(
+										rawContentScope,
+										nextLocation
+									);
+
+								editPost( {
+									meta: {
+										...meta,
+										_npcink_ad_location: nextLocation,
+										_npcink_ad_content_scope:
+											nextContentScope,
+									},
+								} );
+							} }
+						/>
+						{ isParagraphLocation && (
+							<TextControl
+								__next40pxDefaultSize
+								type="number"
+								className={
+									paragraphNumberValid
+										? undefined
+										: 'npcink-ad-control-error'
+								}
+								aria-invalid={ ! paragraphNumberValid }
+								label={ __( 'Paragraph number', 'npcink-ad' ) }
+								value={ String( paragraphNumber ) }
+								min={ MIN_PARAGRAPH_NUMBER }
+								max={ MAX_PARAGRAPH_NUMBER }
+								step={ 1 }
+								onChange={ ( value ) => {
+									const parsed =
+										value.trim() === ''
+											? 0
+											: Number( value );
+									updateMeta(
+										'_npcink_ad_paragraph_number',
+										Number.isFinite( parsed ) ? parsed : 0
+									);
+								} }
+								help={
+									paragraphNumberValid
+										? sprintf(
+												/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
+												__(
+													'Required. Enter a whole number from %1$d to %2$d. The default is 3.',
+													'npcink-ad'
+												),
+												MIN_PARAGRAPH_NUMBER,
+												MAX_PARAGRAPH_NUMBER
+										  )
+										: preflightIssueMessage(
+												'invalid_paragraph_number'
+										  )
+								}
+							/>
+						) }
+					</div>
+				);
+			case 'content_scope':
+				return (
+					<div className="npcink-ad-delivery-settings__panel">
+						<SelectControl
+							__next40pxDefaultSize
+							label={ contentScopeLabel }
+							value={ contentScope }
+							help={
+								isManualBlock
+									? __(
+											'For manual delivery, selected content adds an allow-list; exclusions always take priority.',
+											'npcink-ad'
+									  )
+									: undefined
+							}
+							options={ contentScopeOptions }
+							onChange={ ( value ) =>
+								updateMeta(
+									'_npcink_ad_content_scope',
+									value as PromotionMeta[ '_npcink_ad_content_scope' ]
+								)
+							}
+						/>
+						{ contentScope === 'selected' && (
+							<div
+								role="group"
+								aria-label={ contentScopeLabel }
+								aria-describedby={
+									selectedScopeHasIssue
+										? 'npcink-ad-selected-scope-error'
+										: undefined
+								}
+							>
+								<ContentPicker
+									label={ __(
+										'Included content',
+										'npcink-ad'
+									) }
+									help={ __(
+										'The promotion can appear only on these published posts and pages.',
+										'npcink-ad'
+									) }
+									selectedIds={ includeIds }
+									onAdd={ ( id ) => {
+										confirmPublicId( id );
+										updateMeta( '_npcink_ad_include_ids', [
+											...includeIds,
+											id,
+										] );
+									} }
+									onRemove={ ( id ) =>
+										updateMeta(
+											'_npcink_ad_include_ids',
+											includeIds.filter(
+												( item ) => item !== id
+											)
+										)
+									}
+								/>
+								{ selectedScopeHasIssue && (
+									<p
+										id="npcink-ad-selected-scope-error"
+										className="npcink-ad-settings-error"
+										role="alert"
+									>
+										{ preflightIssueMessage(
+											'selected_scope_without_targets'
+										) }
+									</p>
+								) }
+							</div>
+						) }
+						{ contentScope === 'terms' && (
+							<div
+								role="group"
+								aria-label={ contentScopeLabel }
+								aria-describedby={
+									termsScopeHasIssue
+										? 'npcink-ad-terms-scope-error'
+										: undefined
+								}
+							>
+								<p>
+									{ __(
+										'Matches any selected category or tag on standard posts. Exclusions take priority.',
+										'npcink-ad'
+									) }
+								</p>
+								{ termsScopeHasIssue && (
+									<p
+										id="npcink-ad-terms-scope-error"
+										className="npcink-ad-settings-error"
+										role="alert"
+									>
+										{ unavailableTermsMessage ||
+											preflightIssueMessage(
+												'terms_scope_without_terms'
+											) }
+									</p>
+								) }
+								<TermPicker
+									taxonomy="category"
+									label={ __( 'Categories', 'npcink-ad' ) }
+									help={ __(
+										'Choose one or more categories.',
+										'npcink-ad'
+									) }
+									selectedIds={ categoryIds }
+									onAdd={ ( id ) => {
+										confirmCategoryId( id );
+										updateMeta( '_npcink_ad_category_ids', [
+											...categoryIds,
+											id,
+										] );
+									} }
+									onRemove={ ( id ) =>
+										updateMeta(
+											'_npcink_ad_category_ids',
+											categoryIds.filter(
+												( item ) => item !== id
+											)
+										)
+									}
+								/>
+								<TermPicker
+									taxonomy="post_tag"
+									label={ __( 'Tags', 'npcink-ad' ) }
+									help={ __(
+										'Choose one or more tags.',
+										'npcink-ad'
+									) }
+									selectedIds={ tagIds }
+									onAdd={ ( id ) => {
+										confirmTagId( id );
+										updateMeta( '_npcink_ad_tag_ids', [
+											...tagIds,
+											id,
+										] );
+									} }
+									onRemove={ ( id ) =>
+										updateMeta(
+											'_npcink_ad_tag_ids',
+											tagIds.filter(
+												( item ) => item !== id
+											)
+										)
+									}
+								/>
+							</div>
+						) }
+						<div className="npcink-ad-settings-group">
+							<h3>{ __( 'Exclusions', 'npcink-ad' ) }</h3>
+							<ContentPicker
+								label={ __( 'Excluded content', 'npcink-ad' ) }
+								help={ __(
+									'The promotion never appears on these posts and pages.',
+									'npcink-ad'
+								) }
+								selectedIds={ excludeIds }
+								onAdd={ ( id ) => {
+									confirmPublicId( id );
+									updateMeta( '_npcink_ad_exclude_ids', [
+										...excludeIds,
+										id,
+									] );
+								} }
+								onRemove={ ( id ) =>
+									updateMeta(
+										'_npcink_ad_exclude_ids',
+										excludeIds.filter(
+											( item ) => item !== id
+										)
+									)
+								}
+							/>
+						</div>
+					</div>
+				);
+			case 'device_schedule':
+				return (
+					<div className="npcink-ad-delivery-settings__panel">
+						<SelectControl
+							__next40pxDefaultSize
+							label={ __( 'Device', 'npcink-ad' ) }
+							value={ device }
+							help={
+								/* translators: 782px is the fixed desktop minimum; 781px is the fixed mobile maximum. */ __(
+									'Desktop starts at 782px; Mobile ends at 781px. There is no separate tablet target.',
+									'npcink-ad'
+								)
+							}
+							options={ deviceOptions }
+							onChange={ ( value ) =>
+								updateMeta(
+									'_npcink_ad_device',
+									value as PromotionMeta[ '_npcink_ad_device' ]
+								)
+							}
+						/>
+						<div
+							className="npcink-ad-settings-grid"
+							role="group"
+							aria-label={ deviceScheduleLabel }
+						>
+							<TextControl
+								__next40pxDefaultSize
+								type="datetime-local"
+								className={
+									scheduleHasIssue
+										? 'npcink-ad-control-error'
+										: undefined
+								}
+								aria-invalid={ scheduleHasIssue }
+								label={ __( 'Start showing', 'npcink-ad' ) }
+								value={ toInputDate(
+									meta._npcink_ad_start_at
+								) }
+								onChange={ ( value ) =>
+									updateMeta(
+										'_npcink_ad_start_at',
+										fromInputDate( value )
+									)
+								}
+								help={
+									scheduleHasIssue
+										? preflightIssueMessage(
+												'invalid_schedule_order'
+										  )
+										: timezoneHelp
+								}
+							/>
+							<TextControl
+								__next40pxDefaultSize
+								type="datetime-local"
+								className={
+									scheduleHasIssue
+										? 'npcink-ad-control-error'
+										: undefined
+								}
+								aria-invalid={ scheduleHasIssue }
+								label={ __( 'Stop showing', 'npcink-ad' ) }
+								value={ toInputDate( meta._npcink_ad_end_at ) }
+								onChange={ ( value ) =>
+									updateMeta(
+										'_npcink_ad_end_at',
+										fromInputDate( value )
+									)
+								}
+								help={
+									scheduleHasIssue
+										? preflightIssueMessage(
+												'invalid_schedule_order'
+										  )
+										: timezoneHelp
+								}
+							/>
+						</div>
+					</div>
+				);
+			case 'preview':
+				return (
+					<div className="npcink-ad-delivery-settings__panel">
+						<ContentPicker
+							label={ __( 'Preview page', 'npcink-ad' ) }
+							help={ __(
+								'Choose the real post or page whose theme and layout should be used.',
+								'npcink-ad'
+							) }
+							selectedIds={
+								effectivePreviewTarget
+									? [ effectivePreviewTarget ]
+									: []
+							}
+							onAdd={ ( id ) => {
+								setPreviewTarget( id );
+								setPreviewFeedback( null );
+							} }
+							onRemove={ () => {
+								setPreviewTarget( 0 );
+								setPreviewFeedback( null );
+							} }
+						/>
+						<ManualBlockInspectionNotice
+							state={ manualBlockInspection }
+						/>
+						{ previewFeedback && (
+							<Notice
+								status={ previewFeedback.status }
+								isDismissible={ false }
+							>
+								{ previewFeedback.message }
+							</Notice>
+						) }
+						{ isParagraphLocation && ! paragraphNumberValid && (
+							<Notice status="warning" isDismissible={ false }>
+								{ preflightIssueMessage(
+									'invalid_paragraph_number'
+								) }
+							</Notice>
+						) }
+						<Button
+							__next40pxDefaultSize
+							variant="secondary"
+							disabled={
+								isSaving ||
+								! settings ||
+								( isParagraphLocation &&
+									! paragraphNumberValid )
+							}
+							isBusy={ isSaving }
+							onClick={ openPreview }
+						>
+							{ isDirty
+								? __( 'Save and open preview', 'npcink-ad' )
+								: __( 'Open preview', 'npcink-ad' ) }
+						</Button>
+					</div>
+				);
+		}
+	};
 
 	return (
 		<>
@@ -1418,412 +1970,93 @@ function PromotionSettingsPanel() {
 			<PluginDocumentSettingPanel
 				name="npcink-ad-delivery"
 				title={ __( 'Npcink Ad delivery', 'npcink-ad' ) }
-				className="npcink-ad-editor-panel"
+				className="npcink-ad-editor-panel npcink-ad-delivery-summary"
 			>
-				<SelectControl
-					__next40pxDefaultSize
-					label={ __( 'Placement', 'npcink-ad' ) }
-					value={ location }
-					help={
-						isManualBlock
-							? /* translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated. */ __(
-									'Manual delivery is not inserted automatically. Save this Promotion first, then insert the Npcink Ad Promotion block where it should appear and select this Promotion. The block position is the live position; verify it with Real-page preview. The existing [npcink_ad promotion="ID"] shortcode remains an expert manual-insertion path.',
-									'npcink-ad'
-							  )
-							: undefined
-					}
-					options={ [
-						{
-							label: __( 'After post content', 'npcink-ad' ),
-							value: 'content_after',
-						},
-						{
-							label: __( 'Before post content', 'npcink-ad' ),
-							value: 'content_before',
-						},
-						{
-							label: __( 'After paragraph N', 'npcink-ad' ),
-							value: 'content_after_paragraph',
-						},
-						{
-							label: __( 'Manual block', 'npcink-ad' ),
-							value: 'block',
-						},
-					] }
-					onChange={ ( value ) => {
-						const nextLocation = value as PromotionLocation;
-						const nextContentScope = contentScopeForPlacement(
-							rawContentScope,
-							nextLocation
-						);
-
-						editPost( {
-							meta: {
-								...meta,
-								_npcink_ad_location: nextLocation,
-								_npcink_ad_content_scope: nextContentScope,
-							},
-						} );
-					} }
-				/>
-				<SelectControl
-					__next40pxDefaultSize
-					label={ __( 'Content scope', 'npcink-ad' ) }
-					value={ contentScope }
-					help={
-						isManualBlock
-							? /* translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated. */ __(
-									'Manual delivery still requires the Npcink Ad Promotion block or [npcink_ad promotion="ID"] shortcode. "Only selected posts and pages" adds an allow-list; explicit exclusions always take priority.',
-									'npcink-ad'
-							  )
-							: undefined
-					}
-					options={
-						isManualBlock
-							? [
-									{
-										/* translators: Content scope option for a Promotion inserted by a block or shortcode. */
-										label: __(
-											'Wherever manually inserted',
-											'npcink-ad'
-										),
-										value: 'all',
-									},
-									{
-										/* translators: Content scope option that limits manual delivery to an explicit post/page allow-list. */
-										label: __(
-											'Only selected posts and pages',
-											'npcink-ad'
-										),
-										value: 'selected',
-									},
-							  ]
-							: [
-									{
-										label: __(
-											'All posts and pages',
-											'npcink-ad'
-										),
-										value: 'all',
-									},
-									{
-										label: __( 'All posts', 'npcink-ad' ),
-										value: 'posts',
-									},
-									{
-										label: __( 'All pages', 'npcink-ad' ),
-										value: 'pages',
-									},
-									{
-										label: __(
-											'Posts in selected categories or tags',
-											'npcink-ad'
-										),
-										value: 'terms',
-									},
-									{
-										label: __(
-											'Only selected content',
-											'npcink-ad'
-										),
-										value: 'selected',
-									},
-							  ]
-					}
-					onChange={ ( value ) =>
-						updateMeta(
-							'_npcink_ad_content_scope',
-							value as PromotionMeta[ '_npcink_ad_content_scope' ]
-						)
-					}
-				/>
-				{ isParagraphLocation && (
-					<TextControl
-						__next40pxDefaultSize
-						type="number"
-						label={ __( 'Paragraph number', 'npcink-ad' ) }
-						value={ String( paragraphNumber ) }
-						min={ MIN_PARAGRAPH_NUMBER }
-						max={ MAX_PARAGRAPH_NUMBER }
-						step={ 1 }
-						onChange={ ( value ) => {
-							const parsed =
-								value.trim() === '' ? 0 : Number( value );
-							updateMeta(
-								'_npcink_ad_paragraph_number',
-								Number.isFinite( parsed ) ? parsed : 0
-							);
-						} }
-						help={ sprintf(
-							/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
-							__(
-								'Required. Enter a whole number from %1$d to %2$d. The default is 3.',
-								'npcink-ad'
-							),
-							MIN_PARAGRAPH_NUMBER,
-							MAX_PARAGRAPH_NUMBER
-						) }
-					/>
-				) }
-				{ contentScope === 'selected' && (
-					<ContentPicker
-						label={ __( 'Included content', 'npcink-ad' ) }
-						help={ __(
-							'The promotion can appear only on these published posts and pages.',
-							'npcink-ad'
-						) }
-						selectedIds={ includeIds }
-						onAdd={ ( id ) => {
-							confirmPublicId( id );
-							updateMeta( '_npcink_ad_include_ids', [
-								...includeIds,
-								id,
-							] );
-						} }
-						onRemove={ ( id ) =>
-							updateMeta(
-								'_npcink_ad_include_ids',
-								includeIds.filter( ( item ) => item !== id )
-							)
-						}
-					/>
-				) }
-				<SelectControl
-					__next40pxDefaultSize
-					label={ __( 'Device', 'npcink-ad' ) }
-					value={ meta._npcink_ad_device || 'all' }
-					help={
-						/* translators: 782px is the fixed desktop minimum; 781px is the fixed mobile maximum. */ __(
-							'The All devices option shows the Promotion at every width. Desktop shows it at viewport widths of 782px and above; Mobile shows it at 781px and below. CSS applies this fixed breakpoint, with no separate tablet target.',
-							'npcink-ad'
-						)
-					}
-					options={ [
-						{
-							label: __( 'All devices', 'npcink-ad' ),
-							value: 'all',
-						},
-						{
-							label: __( 'Desktop', 'npcink-ad' ),
-							value: 'desktop',
-						},
-						{ label: __( 'Mobile', 'npcink-ad' ), value: 'mobile' },
-					] }
-					onChange={ ( value ) =>
-						updateMeta(
-							'_npcink_ad_device',
-							value as PromotionMeta[ '_npcink_ad_device' ]
-						)
-					}
-				/>
-				<TextControl
-					__next40pxDefaultSize
-					type="datetime-local"
-					label={ __( 'Start showing', 'npcink-ad' ) }
-					value={ toInputDate( meta._npcink_ad_start_at ) }
-					onChange={ ( value ) =>
-						updateMeta(
-							'_npcink_ad_start_at',
-							fromInputDate( value )
-						)
-					}
-					help={ sprintf(
-						/* translators: %s: site timezone name or UTC offset. */
-						__(
-							'Optional. Uses the site timezone: %s.',
-							'npcink-ad'
-						),
-						timezone
-					) }
-				/>
-				<TextControl
-					__next40pxDefaultSize
-					type="datetime-local"
-					label={ __( 'Stop showing', 'npcink-ad' ) }
-					value={ toInputDate( meta._npcink_ad_end_at ) }
-					onChange={ ( value ) =>
-						updateMeta(
-							'_npcink_ad_end_at',
-							fromInputDate( value )
-						)
-					}
-					help={ sprintf(
-						/* translators: %s: site timezone name or UTC offset. */
-						__(
-							'Optional. Uses the site timezone: %s.',
-							'npcink-ad'
-						),
-						timezone
-					) }
-				/>
-				<PanelBody
-					title={
-						termsNeedAttention
-							? __(
-									'Advanced editorial scope — needs attention',
-									'npcink-ad'
-							  )
-							: __( 'Advanced editorial scope', 'npcink-ad' )
-					}
-					initialOpen={ false }
+				<dl className="npcink-ad-delivery-summary__list">
+					<div>
+						<dt>{ placementLabel }</dt>
+						<dd>{ placementSummary }</dd>
+					</div>
+					<div>
+						<dt>{ contentScopeLabel }</dt>
+						<dd>{ contentScopeSummary }</dd>
+					</div>
+					<div>
+						<dt>{ deviceScheduleLabel }</dt>
+						<dd>
+							{ deviceSummary } · { scheduleSummary }
+						</dd>
+					</div>
+					<div>
+						<dt>{ previewLabel }</dt>
+						<dd>
+							{ effectivePreviewTarget
+								? __( 'Page selected', 'npcink-ad' )
+								: __( 'Choose a page', 'npcink-ad' ) }
+						</dd>
+					</div>
+				</dl>
+				<p
+					className="npcink-ad-delivery-summary__status"
+					data-status={ deliveryHasIssues ? 'attention' : 'ready' }
 				>
-					{ contentScope === 'terms' && (
-						<>
-							<p>
-								{ __(
-									'Categories and tags use ANY matching and apply only to standard posts. Exact excluded content always takes priority.',
-									'npcink-ad'
-								) }
-							</p>
-							{ ! termsValid &&
-								categoryIds.length + tagIds.length > 0 && (
-									<Notice
-										status="warning"
-										isDismissible={ false }
-									>
-										{ __(
-											'Some selected categories or tags are no longer available. Remove them before publishing.',
-											'npcink-ad'
-										) }
-									</Notice>
-								) }
-							<TermPicker
-								taxonomy="category"
-								label={ __( 'Categories', 'npcink-ad' ) }
-								help={ __(
-									'Choose one or more categories.',
-									'npcink-ad'
-								) }
-								selectedIds={ categoryIds }
-								onAdd={ ( id ) => {
-									confirmCategoryId( id );
-									updateMeta( '_npcink_ad_category_ids', [
-										...categoryIds,
-										id,
-									] );
-								} }
-								onRemove={ ( id ) =>
-									updateMeta(
-										'_npcink_ad_category_ids',
-										categoryIds.filter(
-											( item ) => item !== id
-										)
-									)
-								}
-							/>
-							<TermPicker
-								taxonomy="post_tag"
-								label={ __( 'Tags', 'npcink-ad' ) }
-								help={ __(
-									'Choose one or more tags.',
-									'npcink-ad'
-								) }
-								selectedIds={ tagIds }
-								onAdd={ ( id ) => {
-									confirmTagId( id );
-									updateMeta( '_npcink_ad_tag_ids', [
-										...tagIds,
-										id,
-									] );
-								} }
-								onRemove={ ( id ) =>
-									updateMeta(
-										'_npcink_ad_tag_ids',
-										tagIds.filter( ( item ) => item !== id )
-									)
-								}
-							/>
-						</>
-					) }
-					<ContentPicker
-						label={ __( 'Excluded content', 'npcink-ad' ) }
-						help={ __(
-							'The promotion never appears on these posts and pages.',
-							'npcink-ad'
-						) }
-						selectedIds={ excludeIds }
-						onAdd={ ( id ) => {
-							confirmPublicId( id );
-							updateMeta( '_npcink_ad_exclude_ids', [
-								...excludeIds,
-								id,
-							] );
-						} }
-						onRemove={ ( id ) =>
-							updateMeta(
-								'_npcink_ad_exclude_ids',
-								excludeIds.filter( ( item ) => item !== id )
-							)
-						}
-					/>
-				</PanelBody>
-			</PluginDocumentSettingPanel>
-
-			<PluginDocumentSettingPanel
-				name="npcink-ad-preview"
-				title={ __( 'Real-page preview', 'npcink-ad' ) }
-				className="npcink-ad-editor-panel"
-			>
-				<ContentPicker
-					label={ __( 'Preview page', 'npcink-ad' ) }
-					help={ __(
-						'Choose the real post or page whose theme and layout should be used.',
-						'npcink-ad'
-					) }
-					selectedIds={
-						effectivePreviewTarget ? [ effectivePreviewTarget ] : []
-					}
-					onAdd={ ( id ) => {
-						setPreviewTarget( id );
-						setPreviewFeedback( null );
-					} }
-					onRemove={ () => {
-						setPreviewTarget( 0 );
-						setPreviewFeedback( null );
-					} }
-				/>
-				<ManualBlockInspectionNotice state={ manualBlockInspection } />
-				{ previewFeedback && (
-					<Notice
-						status={ previewFeedback.status }
-						isDismissible={ false }
-					>
-						{ previewFeedback.message }
-					</Notice>
-				) }
-				{ isParagraphLocation && ! paragraphNumberValid && (
-					<Notice status="warning" isDismissible={ false }>
-						{ sprintf(
-							/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
-							__(
-								'Enter a whole paragraph number from %1$d to %2$d before opening the real-page preview.',
-								'npcink-ad'
-							),
-							MIN_PARAGRAPH_NUMBER,
-							MAX_PARAGRAPH_NUMBER
-						) }
-					</Notice>
-				) }
+					{ deliveryHasIssues
+						? __( 'Delivery settings need attention.', 'npcink-ad' )
+						: __( 'Delivery settings checked.', 'npcink-ad' ) }
+				</p>
 				<Button
+					__next40pxDefaultSize
 					variant="secondary"
-					disabled={
-						isSaving ||
-						! settings ||
-						( isParagraphLocation && ! paragraphNumberValid )
-					}
-					isBusy={ isSaving }
-					onClick={ openPreview }
+					onClick={ openDeliverySettings }
 				>
-					{ isDirty
-						? __( 'Save and open preview', 'npcink-ad' )
-						: __( 'Open preview', 'npcink-ad' ) }
+					{ __( 'Edit delivery settings', 'npcink-ad' ) }
 				</Button>
 			</PluginDocumentSettingPanel>
+
+			{ isDeliverySettingsOpen && (
+				<Modal
+					title={ __( 'Npcink Ad delivery settings', 'npcink-ad' ) }
+					onRequestClose={ closeDeliverySettings }
+					className="npcink-ad-delivery-settings"
+					style={ {
+						width: 'min(920px, calc(100vw - 48px))',
+					} }
+				>
+					<TabPanel
+						className="npcink-ad-delivery-settings__tabs"
+						tabs={ deliveryTabs }
+						initialTabName={ deliverySettingsTab }
+						onSelect={ ( tabName ) =>
+							setDeliverySettingsTab(
+								tabName as DeliverySettingsTab
+							)
+						}
+					>
+						{ ( tab ) => (
+							<div className="npcink-ad-delivery-settings__content">
+								{ renderDeliverySettingsTab(
+									tab.name as DeliverySettingsTab
+								) }
+							</div>
+						) }
+					</TabPanel>
+					<div className="npcink-ad-delivery-settings__footer">
+						<Button
+							__next40pxDefaultSize
+							variant="secondary"
+							onClick={ closeDeliverySettings }
+						>
+							{ __( 'Close settings', 'npcink-ad' ) }
+						</Button>
+					</div>
+				</Modal>
+			) }
 
 			<PluginPrePublishPanel
 				title={ __( 'Npcink Ad delivery preflight', 'npcink-ad' ) }
 				initialOpen={
 					preflightIssues.length > 0 ||
+					termsScopeHasIssue ||
 					potentiallyOverlappingIds.length > 0 ||
 					hasAdvancedPageCache ||
 					hasSchedule ||
@@ -1839,7 +2072,7 @@ function PromotionSettingsPanel() {
 					>
 						<ul className="npcink-ad-preflight-issues">
 							{ preflightMessages.map( ( message, index ) => (
-								<li key={ preflightIssues[ index ] }>
+								<li key={ `${ index }-${ message }` }>
 									{ message }
 								</li>
 							) ) }

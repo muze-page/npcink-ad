@@ -44,6 +44,7 @@ msgid "Npcink Ad Preview"
 msgstr ""
 
 #: src/Admin/Preview_Page.php:44
+#: build/promotion-editor.js:9
 msgid "Preview"
 msgstr ""
 
@@ -64,7 +65,6 @@ msgid "The preview page does not have a public URL."
 msgstr ""
 
 #: src/Admin/Preview_Page.php:125
-#: build/promotion-editor.js:15
 msgid "Real-page preview"
 msgstr ""
 
@@ -123,12 +123,12 @@ msgid "Rule status"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:261
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 msgid "Placement"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:262
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 msgid "Content scope"
 msgstr ""
 
@@ -174,12 +174,12 @@ msgid "Resume"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:470
-#: build/promotion-editor.js:12
+#: build/promotion-editor.js:13
 msgid "All posts"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:473
-#: build/promotion-editor.js:12
+#: build/promotion-editor.js:13
 msgid "All pages"
 msgstr ""
 
@@ -200,7 +200,7 @@ msgid "Selected public posts/pages:"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:494
-#: build/promotion-editor.js:12
+#: build/promotion-editor.js:13
 msgid "All posts and pages"
 msgstr ""
 
@@ -213,8 +213,10 @@ msgid "After paragraph (invalid)"
 msgstr ""
 
 #. translators: %d: paragraph number after which the Promotion appears.
+#. translators: %d: paragraph number.
 #: src/Admin/Promotion_List.php:544
-#, php-format
+#: build/promotion-editor.js:14
+#, php-format,js-format
 msgid "After paragraph %d"
 msgstr ""
 
@@ -670,6 +672,7 @@ msgid "Ready"
 msgstr ""
 
 #: build/promotion-editor.js:2
+#: build/promotion-editor.js:14
 msgid "Choose a page"
 msgstr ""
 
@@ -819,117 +822,154 @@ msgid "Retry loading terms"
 msgstr ""
 
 #: build/promotion-editor.js:8
+msgid "Some selected categories or tags are no longer available. Remove them before publishing."
+msgstr ""
+
+#: build/promotion-editor.js:8
 msgid "configured in WordPress"
 msgstr ""
 
-#: build/promotion-editor.js:8
-msgid "Npcink Ad delivery"
+#. translators: %s: site timezone name or UTC offset.
+#: build/promotion-editor.js:9
+#, js-format
+msgid "Optional. Uses the site timezone: %s."
 msgstr ""
 
-#. translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated.
-#: build/promotion-editor.js:8
-msgid "Manual delivery is not inserted automatically. Save this Promotion first, then insert the Npcink Ad Promotion block where it should appear and select this Promotion. The block position is the live position; verify it with Real-page preview. The existing [npcink_ad promotion=\"ID\"] shortcode remains an expert manual-insertion path."
+#: build/promotion-editor.js:9
+msgid "Device and schedule"
 msgstr ""
 
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 msgid "After post content"
 msgstr ""
 
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 msgid "Before post content"
 msgstr ""
 
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 msgid "After paragraph N"
 msgstr ""
 
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 msgid "Manual block"
 msgstr ""
 
-#. translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated.
-#: build/promotion-editor.js:8
-msgid "Manual delivery still requires the Npcink Ad Promotion block or [npcink_ad promotion=\"ID\"] shortcode. \"Only selected posts and pages\" adds an allow-list; explicit exclusions always take priority."
-msgstr ""
-
 #. translators: Content scope option for a Promotion inserted by a block or shortcode.
-#: build/promotion-editor.js:10
+#: build/promotion-editor.js:11
 msgid "Wherever manually inserted"
 msgstr ""
 
 #. translators: Content scope option that limits manual delivery to an explicit post/page allow-list.
-#: build/promotion-editor.js:12
+#: build/promotion-editor.js:13
 msgid "Only selected posts and pages"
 msgstr ""
 
-#: build/promotion-editor.js:12
+#: build/promotion-editor.js:13
 msgid "Posts in selected categories or tags"
 msgstr ""
 
-#: build/promotion-editor.js:12
+#: build/promotion-editor.js:13
 msgid "Only selected content"
-msgstr ""
-
-#: build/promotion-editor.js:12
-msgid "Paragraph number"
-msgstr ""
-
-#. translators: 1: minimum paragraph number, 2: maximum paragraph number.
-#: build/promotion-editor.js:13
-#, js-format
-msgid "Required. Enter a whole number from %1$d to %2$d. The default is 3."
-msgstr ""
-
-#: build/promotion-editor.js:13
-msgid "Included content"
-msgstr ""
-
-#: build/promotion-editor.js:13
-msgid "The promotion can appear only on these published posts and pages."
-msgstr ""
-
-#: build/promotion-editor.js:13
-msgid "Device"
-msgstr ""
-
-#. translators: 782px is the fixed desktop minimum; 781px is the fixed mobile maximum.
-#: build/promotion-editor.js:13
-msgid "The All devices option shows the Promotion at every width. Desktop shows it at viewport widths of 782px and above; Mobile shows it at 781px and below. CSS applies this fixed breakpoint, with no separate tablet target."
 msgstr ""
 
 #: build/promotion-editor.js:13
 msgid "All devices"
 msgstr ""
 
-#: build/promotion-editor.js:13
-msgid "Start showing"
+#: build/promotion-editor.js:14
+msgid "Custom schedule"
 msgstr ""
 
-#. translators: %s: site timezone name or UTC offset.
 #: build/promotion-editor.js:14
+msgid "No schedule"
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Placement — needs attention"
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Content scope — needs attention"
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Device and schedule — needs attention"
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Save the promotion before opening a preview."
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Choose a published page or post to use as the preview context."
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Allow pop-ups for this site, then try preview again."
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Preparing preview…"
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "The promotion could not be saved. Resolve the editor error, then try again."
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Npcink Ad delivery"
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Page selected"
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Delivery settings need attention."
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Delivery settings checked."
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Edit delivery settings"
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Npcink Ad delivery settings"
+msgstr ""
+
+#. translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated.
+#: build/promotion-editor.js:14
+msgid "Manual delivery requires the Promotion block or [npcink_ad promotion=\"ID\"]. The insertion point is the live position."
+msgstr ""
+
+#: build/promotion-editor.js:14
+msgid "Paragraph number"
+msgstr ""
+
+#. translators: 1: minimum paragraph number, 2: maximum paragraph number.
 #: build/promotion-editor.js:15
 #, js-format
-msgid "Optional. Uses the site timezone: %s."
-msgstr ""
-
-#: build/promotion-editor.js:14
-msgid "Stop showing"
+msgid "Required. Enter a whole number from %1$d to %2$d. The default is 3."
 msgstr ""
 
 #: build/promotion-editor.js:15
-msgid "Advanced editorial scope — needs attention"
+msgid "For manual delivery, selected content adds an allow-list; exclusions always take priority."
 msgstr ""
 
 #: build/promotion-editor.js:15
-msgid "Advanced editorial scope"
+msgid "Included content"
 msgstr ""
 
 #: build/promotion-editor.js:15
-msgid "Categories and tags use ANY matching and apply only to standard posts. Exact excluded content always takes priority."
+msgid "The promotion can appear only on these published posts and pages."
 msgstr ""
 
 #: build/promotion-editor.js:15
-msgid "Some selected categories or tags are no longer available. Remove them before publishing."
+msgid "Matches any selected category or tag on standard posts. Exclusions take priority."
 msgstr ""
 
 #: build/promotion-editor.js:15
@@ -949,11 +989,32 @@ msgid "Choose one or more tags."
 msgstr ""
 
 #: build/promotion-editor.js:15
+msgid "Exclusions"
+msgstr ""
+
+#: build/promotion-editor.js:15
 msgid "Excluded content"
 msgstr ""
 
 #: build/promotion-editor.js:15
 msgid "The promotion never appears on these posts and pages."
+msgstr ""
+
+#: build/promotion-editor.js:15
+msgid "Device"
+msgstr ""
+
+#. translators: 782px is the fixed desktop minimum; 781px is the fixed mobile maximum.
+#: build/promotion-editor.js:15
+msgid "Desktop starts at 782px; Mobile ends at 781px. There is no separate tablet target."
+msgstr ""
+
+#: build/promotion-editor.js:15
+msgid "Start showing"
+msgstr ""
+
+#: build/promotion-editor.js:15
+msgid "Stop showing"
 msgstr ""
 
 #: build/promotion-editor.js:15
@@ -964,77 +1025,54 @@ msgstr ""
 msgid "Choose the real post or page whose theme and layout should be used."
 msgstr ""
 
-#. translators: 1: minimum paragraph number, 2: maximum paragraph number.
-#: build/promotion-editor.js:16
-#: build/promotion-editor.js:17
-#, js-format
-msgid "Enter a whole paragraph number from %1$d to %2$d before opening the real-page preview."
-msgstr ""
-
-#: build/promotion-editor.js:16
-msgid "Save the promotion before opening a preview."
-msgstr ""
-
-#: build/promotion-editor.js:17
-msgid "Choose a published page or post to use as the preview context."
-msgstr ""
-
-#: build/promotion-editor.js:17
-msgid "Allow pop-ups for this site, then try preview again."
-msgstr ""
-
-#: build/promotion-editor.js:17
-msgid "Preparing preview…"
-msgstr ""
-
-#: build/promotion-editor.js:17
-msgid "The promotion could not be saved. Resolve the editor error, then try again."
-msgstr ""
-
-#: build/promotion-editor.js:17
+#: build/promotion-editor.js:15
 msgid "Save and open preview"
 msgstr ""
 
-#: build/promotion-editor.js:17
+#: build/promotion-editor.js:15
 msgid "Open preview"
 msgstr ""
 
-#: build/promotion-editor.js:17
+#: build/promotion-editor.js:15
+msgid "Close settings"
+msgstr ""
+
+#: build/promotion-editor.js:15
 msgid "Npcink Ad delivery preflight"
 msgstr ""
 
-#: build/promotion-editor.js:17
+#: build/promotion-editor.js:15
 msgid "Current content and delivery checks have passed."
 msgstr ""
 
 #. translators: %d: number of other published promotions that may share a delivery context.
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:16
 #, js-format
 msgid "This promotion may appear together with %d other published promotion in some post or page contexts."
 msgid_plural "This promotion may appear together with %d other published promotions in some post or page contexts."
 msgstr[0] ""
 msgstr[1] ""
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:16
 msgid "This advisory does not block publishing."
 msgstr ""
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:16
 msgid "WordPress has an advanced page-cache drop-in enabled. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires."
 msgstr ""
 
 #. translators: %s: site timezone name or UTC offset.
-#: build/promotion-editor.js:19
+#: build/promotion-editor.js:17
 #, js-format
 msgid "Schedule times use the site timezone (%s)."
 msgstr ""
 
 #. translators: %s: site timezone name or UTC offset.
-#: build/promotion-editor.js:20
+#: build/promotion-editor.js:18
 #, js-format
 msgid "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while cached HTML remains in use."
 msgstr ""
 
-#: build/promotion-editor.js:20
+#: build/promotion-editor.js:18
 msgid "Drafts can still be saved. Publishing or scheduling runs the final validation."
 msgstr ""
