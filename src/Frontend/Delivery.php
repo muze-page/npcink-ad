@@ -146,7 +146,7 @@ final class Delivery {
 	 * Load the tiny device-targeting stylesheet before themes print styles.
 	 *
 	 * Rendering can happen after wp_head(), especially on WordPress 6.5 where
-	 * late-enqueued styles are not hoisted. Enqueuing the 0.1 stylesheet early
+	 * late-enqueued styles are not hoisted. Enqueuing the plugin stylesheet early
 	 * keeps desktop/mobile rules deterministic without adding frontend script.
 	 */
 	public function enqueue_frontend_style(): void {

@@ -91,5 +91,5 @@ Deferred. The block editor still loads a bounded first result set. This step pre
 - Authors receive one explicit block-or-shortcode workflow without a new Placement object.
 - Manual `all | selected`, explicit exclusions, preview authorization, cache behavior, and eligibility remain unchanged.
 - The fixed `781px`/`782px` boundary is visible in the editor and preview and is protected by packaged-plugin contract checks.
-- The controlled ADR 005 0.2 product scope is implemented in the development line. The 0.2 version bump, changelog, final packaging, and release signoff remain a separate release closeout and are not implied by this decision.
+- The controlled ADR 005 product scope is packaged as version 0.2.0. The version bump, changelog, and final package closeout are complete in 0.2.0; a Git tag, GitHub Release, and public distribution remain separate repository release actions.
 - Issue #8 remains open follow-up work for server-side search or pagination and selected-ID resolution; keeping and annotating the bounded result set is not a selector scalability fix.
