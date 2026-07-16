@@ -94,4 +94,4 @@ Rejected. The old `master` branch remains product-research material only. It can
 - Pages have no category/tag edge case in the product contract: they simply never match `terms`.
 - Term deletion and relationship changes fail closed or take effect from current WordPress state; no background migration or target snapshot is introduced.
 - Reason codes, list summaries, preview verdicts, REST preflight, resume, overlap, and Playground tests must change together.
-- Manual-block/device guidance remains the next ordered ADR 005 step; this decision does not claim that work is complete.
+- [ADR 008](008-manual-placement-and-device-guidance.md) subsequently completed the ordered manual-placement/device-guidance step without changing this scope model.

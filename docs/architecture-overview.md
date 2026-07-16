@@ -21,10 +21,19 @@
 - `_npcink_ad_content_scope`：`all | posts | pages | terms | selected`；自动投放使用五种互斥范围，手动区块/短代码只保留 `all | selected`，其他高级值由 PHP 按 `all` 处理；
 - `_npcink_ad_include_ids`、`_npcink_ad_exclude_ids`：去重、最多 50 个正整数 ID；
 - `_npcink_ad_category_ids`、`_npcink_ad_tag_ids`：仅用于自动 `terms` 范围的 Core 分类/标签 ID；两组正向 term 为 OR，不展开分类后代，也没有 term exclusion；
-- `_npcink_ad_device`：`all | desktop | mobile`；
+- `_npcink_ad_device`：`all | desktop | mobile`；正式前台固定以 `781px`/`782px` 为移动/桌面边界；
 - `_npcink_ad_start_at`、`_npcink_ad_end_at`：可选的 WordPress 本地时间。
 
 全部 meta 都有 REST schema、sanitize callback、auth callback 和 revision 支持。管理路由要求 `manage_npcink_ads`，该能力默认授予 administrator 和 editor。
+
+### 手动入口与设备边界
+
+- `_npcink_ad_location=block` 同时服务于动态 `npcink-ad/promotion` 区块和 `[npcink_ad promotion="ID"]` 短代码；两者都直接引用同一 Promotion，并复用 `block` location 的 PHP 投放路径。
+- 手动 `all` 表示在区块或短代码被显式插入的位置应用其余规则，不继承自动位置的标准 post/page 限制；手动 `selected` 只接受显式选择的已发布标准文章/页面；ID 排除始终优先。
+- 编辑器对所选文章正文的区块核验只是非阻断证据。模板、同步样板、短代码和后续内容变更都可能让正文扫描不完整，真实页面预览才是管理者的最终上下文核验。
+- 正常投放始终输出 cache-stable HTML 与设备 class；CSS 在 `max-width: 781px` 隐藏 desktop-only，在 `min-width: 782px` 隐藏 mobile-only。没有 User-Agent 分叉、tablet、可配置断点或必需前端 JavaScript。
+- 真实页面预览的 mobile iframe 最多 `390px`，只代表一种移动画布宽度，不是正式投放断点；预览仍使用同一 evaluator 并显示真实 verdict。
+- 该引导未新增 meta、REST 字段、reason code 或 block attribute；区块 attributes 仍严格为 `promotionId`、`reserveHeight`、`preview`。
 
 ## 3. 模块边界
 
@@ -69,7 +78,7 @@
 - 预览响应发送 no-cache 与 noindex 头，匿名请求返回 403；
 - 预览与正式投放共用 evaluator/renderer，唯一差异是管理者可强制看见被规则阻止的创意；
 - 段落位置在 Gutenberg 中只计算顶层 `core/paragraph`；Classic 内容计算渲染后的 `<p>`；正式投放缺少锚点时不回退，授权预览才会在文末显示创意并明确报告 `content_anchor_missing`；
-- 正式设备规则使用 CSS 断点，HTML 不按 User-Agent 分叉；
+- 正式设备规则使用固定 CSS 断点：mobile 为 `781px` 及以下，desktop 为 `782px` 及以上，`all` 不隐藏；HTML 不按 User-Agent 分叉；
 - 第三方整页缓存可能延迟发布、暂停和时间边界，0.1 要求站点配置 TTL 或主动清理缓存，不宣称穿透任意缓存。
 
 ## 6. 质量和发布
@@ -77,7 +86,10 @@
 - PHPUnit：配置、页面、时间边界、位置、列表状态和恢复状态机；
 - PHPCS / PHPStan：WordPress 编码、安全与类型边界；
 - TypeScript / JS / CSS lint：编辑器与动态区块；
-- Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、五种 canonical content scope、真实 Core category/tag 直接关系与动态变更、term fail-closed、REST 发布/恢复预检、真实 `the_content` 优先级 `8 → 9 → 10` 的 marker 复制后单次渲染与残余清理、时区/排期边界、无表/Options、卸载；
+- Promotion 编辑器 SlotFill 优先使用当前 `@wordpress/editor` 导出及其 `wp-editor` 依赖；WordPress 6.5 保留 `@wordpress/edit-post` / `wp-edit-post` fallback。`Requires at least` 低于 6.6 时，release gate 解析构建资产的 dependency array，要求该 fallback 依赖存在，并拒绝 6.6 之前不可用的 `react-jsx-runtime`；
+- Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、五种 canonical content scope、真实 Core category/tag 直接关系与动态变更、term fail-closed、REST 发布/恢复预检、真实 `the_content` 优先级 `8 → 9 → 10` 的 marker 复制后单次渲染与残余清理、固定 `781px`/`782px` CSS 契约、区块三属性边界、预览说明、时区/排期边界、无表/Options、卸载；
 - Local 浏览器：同一编辑页创建规则、列表范围摘要、真实主题预览、发布/暂停和匿名前台。
 
 发布包固定为 `npcink-ad/`，包含构建产物、运行 PHP、前端/预览 CSS、`readme.txt` 和许可证，不包含源码 JS、测试、文档或旧品牌运行标识。
+
+受控 0.2 产品范围已在开发线实现；0.2 版本号、更新日志、最终打包与发布签核在独立 release closeout 中统一完成，不能由功能文档提前宣称已发布。

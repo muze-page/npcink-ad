@@ -5,7 +5,7 @@
     "title": "Npcink Ad Promotion",
     "category": "widgets",
     "icon": "megaphone",
-    "description": "Insert a server-rendered Npcink Ad promotion.",
+    "description": "Insert a manually placed Npcink Ad promotion.",
     "textdomain": "npcink-ad",
     "editorScript": "npcink-ad-block-editor",
     "editorStyle": "npcink-ad-block-editor",
