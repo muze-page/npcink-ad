@@ -17,6 +17,7 @@
     "@wordpress/components": "wp-7.0",
     "@wordpress/core-data": "wp-7.0",
     "@wordpress/data": "wp-7.0",
+    "@wordpress/edit-post": "wp-7.0",
     "@wordpress/editor": "wp-7.0",
     "@wordpress/i18n": "wp-7.0",
     "@wordpress/plugins": "wp-7.0",
@@ -25,6 +26,7 @@
     "@types/react": "18.3.27",
     "@types/wordpress__block-editor": "15.0.6",
     "@types/wordpress__blocks": "15.10.2",
+    "@types/wordpress__edit-post": "8.4.2",
     "@types/wordpress__server-side-render": "6.15.0",
     "react": "18.3.1",
     "typescript": "5.3.3"

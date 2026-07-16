@@ -93,12 +93,54 @@ $check( ! isset( $promotion_meta['_npcink_ad_page_scope'] ), 'The removed page-s
 $check( 'integer' === $promotion_meta['_npcink_ad_paragraph_number']['type'], 'Paragraph number meta is not typed as an integer.' );
 $check( 3 === $promotion_meta['_npcink_ad_paragraph_number']['default'], 'Paragraph number meta does not default to 3.' );
 $check( shortcode_exists( 'npcink_ad' ), 'The npcink_ad shortcode was not registered.' );
+$promotion_block = WP_Block_Type_Registry::get_instance()->get_registered( 'npcink-ad/promotion' );
+$check( $promotion_block instanceof WP_Block_Type, 'The npcink-ad/promotion block was not registered.' );
 $check(
-	WP_Block_Type_Registry::get_instance()->is_registered( 'npcink-ad/promotion' ),
-	'The npcink-ad/promotion block was not registered.'
+	$promotion_block instanceof WP_Block_Type && 'Insert a manually placed Npcink Ad promotion.' === $promotion_block->description,
+	'The registered Promotion block description does not explain manual placement.'
 );
+
+$block_metadata_path = WP_PLUGIN_DIR . '/npcink-ad/assets/blocks/npcink-ad-promotion/block.json';
+$block_metadata      = json_decode( (string) file_get_contents( $block_metadata_path ), true );
+$check( is_array( $block_metadata ), 'The packaged Promotion block metadata is not valid JSON.' );
+$check(
+	is_array( $block_metadata ) && 'Insert a manually placed Npcink Ad promotion.' === ( $block_metadata['description'] ?? '' ),
+	'The packaged Promotion block metadata description does not match the PHP registration.'
+);
+$block_attribute_names = is_array( $block_metadata ) && isset( $block_metadata['attributes'] ) && is_array( $block_metadata['attributes'] )
+	? array_keys( $block_metadata['attributes'] )
+	: array();
+sort( $block_attribute_names, SORT_STRING );
+$check(
+	array( 'preview', 'promotionId', 'reserveHeight' ) === $block_attribute_names,
+	'The Promotion block attribute contract changed outside its explicit three-field boundary.'
+);
+
+$frontend_css_path = WP_PLUGIN_DIR . '/npcink-ad/assets/css/frontend.css';
+$frontend_css      = (string) file_get_contents( $frontend_css_path );
+$check(
+	1 === preg_match_all(
+		'/@media\s*\(\s*max-width:\s*781px\s*\)\s*\{\s*\.npcink-ad-device-desktop\s*\{\s*display:\s*none\s*!important;\s*\}\s*\}/',
+		$frontend_css
+	),
+	'The frontend CSS does not hide desktop-only Promotions exactly once at 781px and below.'
+);
+$check(
+	1 === preg_match_all(
+		'/@media\s*\(\s*min-width:\s*782px\s*\)\s*\{\s*\.npcink-ad-device-mobile\s*\{\s*display:\s*none\s*!important;\s*\}\s*\}/',
+		$frontend_css
+	),
+	'The frontend CSS does not hide mobile-only Promotions exactly once at 782px and above.'
+);
+$check( 1 === substr_count( $frontend_css, '.npcink-ad-device-desktop' ), 'The desktop device selector is duplicated outside its fixed breakpoint rule.' );
+$check( 1 === substr_count( $frontend_css, '.npcink-ad-device-mobile' ), 'The mobile device selector is duplicated outside its fixed breakpoint rule.' );
+
 $editor_script = wp_scripts()->registered['npcink-ad-block-editor'] ?? null;
 $check( $editor_script instanceof _WP_Dependency, 'The block editor script was not registered.' );
+$check(
+	$editor_script instanceof _WP_Dependency && in_array( 'wp-edit-post', $editor_script->deps, true ),
+	'The block editor script does not declare its WordPress 6.5 edit-post compatibility dependency.'
+);
 $check( 'npcink-ad' === $editor_script->textdomain, 'The block editor script does not use the npcink-ad text domain.' );
 $check(
 	WP_PLUGIN_DIR . '/npcink-ad/languages' === $editor_script->translations_path,
@@ -651,6 +693,14 @@ ob_start();
 Preview_Page::render();
 $preview_page_html = (string) ob_get_clean();
 $check( str_contains( $preview_page_html, 'npcink_ad_preview=' . $promotion_id ), 'A manager could not render the bound real-page preview URL.' );
+$check(
+	str_contains( $preview_page_html, 'The promotion is rendered by the same server policy used on the live site. Preview mode may show blocked creative, but its verdict remains truthful.' ),
+	'The preview page omitted its truthful-verdict explanation.'
+);
+$check(
+	str_contains( $preview_page_html, 'Desktop represents the fixed rule at 782px and above. Mobile represents the fixed rule at 781px and below; its canvas is capped at 390px as a representative width, not as the breakpoint.' ),
+	'The preview page omitted the fixed device boundary and representative canvas explanation.'
+);
 $check( 1 === substr_count( $preview_page_html, 'aria-current="page"' ), 'The preview page did not expose exactly one current device.' );
 $check(
 	1 === preg_match( '#<a[^>]*aria-current="page"[^>]*>Mobile</a>#', $preview_page_html ),

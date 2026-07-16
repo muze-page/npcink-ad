@@ -101,9 +101,9 @@ Every proposed feature must answer both questions:
 
 If either answer is missing, the feature stays outside the core product.
 
-## Accepted 0.2 direction (partially implemented)
+## Accepted 0.2 direction (implemented in the development line)
 
-The runtime remains one bounded Promotion workflow. [ADR 005](decisions/005-controlled-delivery-expansion.md) accepts its controlled 0.2 delivery direction. Automatic delivery is limited to standard posts/pages, management surfaces provide a non-blocking advisory when automatic Promotions may appear together, and a Promotion can be placed after paragraph 1–20 using [ADR 006](decisions/006-paragraph-anchor-delivery.md). [ADR 007](decisions/007-canonical-editorial-scope.md) now defines and implements one mutually exclusive content population:
+The runtime remains one bounded Promotion workflow. [ADR 005](decisions/005-controlled-delivery-expansion.md) accepts its controlled 0.2 delivery direction. Automatic delivery is limited to standard posts/pages, management surfaces provide a non-blocking advisory when automatic Promotions may appear together, and a Promotion can be placed after paragraph 1–20 using [ADR 006](decisions/006-paragraph-anchor-delivery.md). [ADR 007](decisions/007-canonical-editorial-scope.md) defines one mutually exclusive automatic content population:
 
 - `all`: all standard posts and pages;
 - `posts`: all standard posts;
@@ -113,6 +113,10 @@ The runtime remains one bounded Promotion workflow. [ADR 005](decisions/005-cont
 
 Explicit ID exclusions always win. Terms are not combined with selected IDs, do not expand category descendants, do not apply to pages, and do not support custom taxonomies, CPTs, term exclusions, or boolean condition groups. A Promotion that must cover both a special page and a term-selected post population is intentionally split into two reviewable Promotions.
 
-The remaining ordered work is to improve manual-block guidance and explain the existing desktop/mobile breakpoint. This contract does not claim that guidance step is complete.
+For manual placement, [ADR 008](decisions/008-manual-placement-and-device-guidance.md) keeps the explicit block and `[npcink_ad promotion="ID"]` shortcode on the same `block` delivery path. Manual scope is `all | selected`: `all` applies wherever the Promotion is explicitly inserted, `selected` remains an allow-list of published standard posts/pages, and explicit ID exclusions always win. Missing-block inspection is contextual advisory evidence and does not block publication or become an eligibility reason.
+
+Device visibility uses one fixed CSS boundary: mobile at `781px` and below, desktop at `782px` and above, and `all` at every width. There is no tablet target or configurable breakpoint. The mobile preview canvas is capped at `390px` as a representative width, not as the production breakpoint; normal HTML remains cache-stable and does not branch by User-Agent.
+
+This completes the controlled 0.2 product scope in the development line. The package remains at its current version until the 0.2 version bump, changelog, final packaging, and release signoff are handled together in release closeout.
 
 Multiple eligible Promotions at one automatic location continue rendering in deterministic order, while management UI only advises that they **may** appear together. This direction does not add priority, weights, rotation, tablet targeting, arbitrary selectors or hooks, visitor state, tracking, or separate Slot/Placement records.

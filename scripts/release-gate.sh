@@ -84,10 +84,38 @@ if [[ -z "$REQUIRES_WORDPRESS" ]]; then
 fi
 
 if php -r 'exit(version_compare($argv[1], "6.6", "<") ? 0 : 1);' "$REQUIRES_WORDPRESS"; then
-  if grep -Fq 'react-jsx-runtime' build/index.asset.php; then
-    echo "[release-gate] build/index.asset.php requires react-jsx-runtime, which is unavailable before WordPress 6.6" >&2
-    exit 1
-  fi
+  php -r '
+    $asset_file = $argv[1];
+    $requires_wordpress = $argv[2];
+    if (!is_file($asset_file)) {
+      fwrite(STDERR, "[release-gate] Missing build asset manifest: {$asset_file}\n");
+      exit(1);
+    }
+
+    $asset = require $asset_file;
+    if (!is_array($asset) || !array_key_exists("dependencies", $asset) || !is_array($asset["dependencies"])) {
+      fwrite(STDERR, "[release-gate] build/index.asset.php must return a dependencies array\n");
+      exit(1);
+    }
+
+    $dependencies = $asset["dependencies"];
+    foreach ($dependencies as $dependency) {
+      if (!is_string($dependency) || "" === $dependency) {
+        fwrite(STDERR, "[release-gate] build/index.asset.php contains an invalid dependency entry\n");
+        exit(1);
+      }
+    }
+
+    if (in_array("react-jsx-runtime", $dependencies, true)) {
+      fwrite(STDERR, "[release-gate] build/index.asset.php requires react-jsx-runtime, which is unavailable before WordPress 6.6\n");
+      exit(1);
+    }
+
+    if (!in_array("wp-edit-post", $dependencies, true)) {
+      fwrite(STDERR, "[release-gate] build/index.asset.php must require wp-edit-post when Requires at least is {$requires_wordpress}; WordPress 6.5 needs it for the Promotion editor SlotFill compatibility fallback\n");
+      exit(1);
+    }
+  ' build/index.asset.php "$REQUIRES_WORDPRESS"
 fi
 
 INDEX_JS_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_INDEX_JS_KB:-40}"

@@ -13,8 +13,12 @@ import {
 import { store as coreDataStore } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import {
-	PluginDocumentSettingPanel,
-	PluginPrePublishPanel,
+	PluginDocumentSettingPanel as LegacyPluginDocumentSettingPanel,
+	PluginPrePublishPanel as LegacyPluginPrePublishPanel,
+} from '@wordpress/edit-post';
+import {
+	PluginDocumentSettingPanel as CurrentPluginDocumentSettingPanel,
+	PluginPrePublishPanel as CurrentPluginPrePublishPanel,
 	store as editorStore,
 } from '@wordpress/editor';
 import { __, _n, sprintf } from '@wordpress/i18n';
@@ -40,6 +44,16 @@ import {
 	advancePublishStatusRecovery,
 	createPublishStatusRecoveryState,
 } from './publish-status-recovery';
+import { selectEditorSlotFill } from './editor-slotfill-compat';
+
+const PluginDocumentSettingPanel = selectEditorSlotFill(
+	CurrentPluginDocumentSettingPanel,
+	LegacyPluginDocumentSettingPanel
+);
+const PluginPrePublishPanel = selectEditorSlotFill(
+	CurrentPluginPrePublishPanel,
+	LegacyPluginPrePublishPanel
+);
 
 interface PromotionMeta {
 	_npcink_ad_location?: PromotionLocation;
@@ -225,16 +239,23 @@ function ManualBlockInspectionNotice( {
 					) }
 				</Notice>
 			);
-		case 'loading':
+		case 'loading': {
+			const spokenMessage = __(
+				'Checking the selected page body for a matching promotion block…',
+				'npcink-ad'
+			);
+
 			return (
-				<Notice status="info" isDismissible={ false }>
+				<Notice
+					status="info"
+					isDismissible={ false }
+					spokenMessage={ spokenMessage }
+				>
 					<Spinner />
-					{ __(
-						'Checking the selected page body for a matching promotion block…',
-						'npcink-ad'
-					) }
+					{ spokenMessage }
 				</Notice>
 			);
+		}
 		case 'found':
 			return (
 				<Notice status="success" isDismissible={ false }>
@@ -247,10 +268,12 @@ function ManualBlockInspectionNotice( {
 		case 'missing':
 			return (
 				<Notice status="warning" isDismissible={ false }>
-					{ __(
-						'This promotion block was not found in the selected page body. A template or synced pattern may still insert it, so verify the result with the real-page preview.',
-						'npcink-ad'
-					) }
+					{
+						/* translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated. */ __(
+							'This promotion block was not found in the selected page body. A template, synced pattern, or [npcink_ad promotion="ID"] shortcode may still provide the manual insertion, so verify the result with the real-page preview.',
+							'npcink-ad'
+						)
+					}
 				</Notice>
 			);
 		case 'unavailable':
@@ -282,16 +305,23 @@ function ParagraphAnchorNotice( {
 					) }
 				</Notice>
 			);
-		case 'loading':
+		case 'loading': {
+			const spokenMessage = __(
+				'Checking the selected page body for the paragraph anchor…',
+				'npcink-ad'
+			);
+
 			return (
-				<Notice status="info" isDismissible={ false }>
+				<Notice
+					status="info"
+					isDismissible={ false }
+					spokenMessage={ spokenMessage }
+				>
 					<Spinner />
-					{ __(
-						'Checking the selected page body for the paragraph anchor…',
-						'npcink-ad'
-					) }
+					{ spokenMessage }
 				</Notice>
 			);
+		}
 		case 'invalid_number':
 			return (
 				<Notice status="warning" isDismissible={ false }>
@@ -1049,6 +1079,14 @@ function PromotionSettingsPanel() {
 					__next40pxDefaultSize
 					label={ __( 'Placement', 'npcink-ad' ) }
 					value={ location }
+					help={
+						isManualBlock
+							? /* translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated. */ __(
+									'Manual delivery is not inserted automatically. Save this Promotion first, then insert the Npcink Ad Promotion block where it should appear and select this Promotion. The block position is the live position; verify it with Real-page preview. The existing [npcink_ad promotion="ID"] shortcode remains an expert manual-insertion path.',
+									'npcink-ad'
+							  )
+							: undefined
+					}
 					options={ [
 						{
 							label: __( 'After post content', 'npcink-ad' ),
@@ -1087,19 +1125,29 @@ function PromotionSettingsPanel() {
 					__next40pxDefaultSize
 					label={ __( 'Content scope', 'npcink-ad' ) }
 					value={ contentScope }
+					help={
+						isManualBlock
+							? /* translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated. */ __(
+									'Manual delivery still requires the Npcink Ad Promotion block or [npcink_ad promotion="ID"] shortcode. "Only selected posts and pages" adds an allow-list; explicit exclusions always take priority.',
+									'npcink-ad'
+							  )
+							: undefined
+					}
 					options={
 						isManualBlock
 							? [
 									{
+										/* translators: Content scope option for a Promotion inserted by a block or shortcode. */
 										label: __(
-											'All posts and pages',
+											'Wherever manually inserted',
 											'npcink-ad'
 										),
 										value: 'all',
 									},
 									{
+										/* translators: Content scope option that limits manual delivery to an explicit post/page allow-list. */
 										label: __(
-											'Only selected content',
+											'Only selected posts and pages',
 											'npcink-ad'
 										),
 										value: 'selected',
@@ -1199,6 +1247,12 @@ function PromotionSettingsPanel() {
 					__next40pxDefaultSize
 					label={ __( 'Device', 'npcink-ad' ) }
 					value={ meta._npcink_ad_device || 'all' }
+					help={
+						/* translators: 782px is the fixed desktop minimum; 781px is the fixed mobile maximum. */ __(
+							'The All devices option shows the Promotion at every width. Desktop shows it at viewport widths of 782px and above; Mobile shows it at 781px and below. CSS applies this fixed breakpoint, with no separate tablet target.',
+							'npcink-ad'
+						)
+					}
 					options={ [
 						{
 							label: __( 'All devices', 'npcink-ad' ),
@@ -1377,6 +1431,7 @@ function PromotionSettingsPanel() {
 					onAdd={ setPreviewTarget }
 					onRemove={ () => setPreviewTarget( 0 ) }
 				/>
+				<ManualBlockInspectionNotice state={ manualBlockInspection } />
 				{ previewError && (
 					<Notice status="warning" isDismissible={ false }>
 						{ previewError }

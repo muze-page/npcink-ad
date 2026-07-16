@@ -25,23 +25,11 @@
             "Select a promotion": [
                 "\u9009\u62e9\u63a8\u5e7f"
             ],
-            "(Not published)": [
-                "\uff08\u672a\u53d1\u5e03\uff09"
-            ],
             "Npcink Ad promotion": [
                 "Npcink Ad \u63a8\u5e7f"
             ],
-            "Preview is disabled. The selected promotion will render here when eligible.": [
-                "\u9884\u89c8\u5df2\u5173\u95ed\u3002\u6240\u9009\u63a8\u5e7f\u7b26\u5408\u6761\u4ef6\u65f6\u4f1a\u5728\u6b64\u5904\u6e32\u67d3\u3002"
-            ],
-            "Select a promotion in the block settings.": [
-                "\u8bf7\u5728\u533a\u5757\u8bbe\u7f6e\u4e2d\u9009\u62e9\u63a8\u5e7f\u3002"
-            ],
             "Promotion settings": [
                 "\u63a8\u5e7f\u8bbe\u7f6e"
-            ],
-            "Published and draft promotions are available to editors.": [
-                "\u7f16\u8f91\u4eba\u5458\u53ef\u4ee5\u9009\u62e9\u5df2\u53d1\u5e03\u6216\u8349\u7a3f\u72b6\u6001\u7684\u63a8\u5e7f\u3002"
             ],
             "Reserved height": [
                 "\u9884\u7559\u9ad8\u5ea6"
@@ -54,12 +42,6 @@
             ],
             "Loading preview\u2026": [
                 "\u6b63\u5728\u52a0\u8f7d\u9884\u89c8\u2026"
-            ],
-            "Preview unavailable": [
-                "\u9884\u89c8\u4e0d\u53ef\u7528"
-            ],
-            "Check that the selected promotion is configured for block placement.": [
-                "\u8bf7\u68c0\u67e5\u6240\u9009\u63a8\u5e7f\u662f\u5426\u5df2\u914d\u7f6e\u4e3a\u624b\u52a8\u533a\u5757\u4f4d\u7f6e\u3002"
             ],
             "%1$s \u2014 %2$s": [
                 "%1$s \u2014 %2$s"
@@ -153,9 +135,6 @@
             ],
             "A matching promotion block was found in the selected page body.": [
                 "\u5df2\u5728\u6240\u9009\u9875\u9762\u6b63\u6587\u4e2d\u627e\u5230\u5339\u914d\u7684\u63a8\u5e7f\u533a\u5757\u3002"
-            ],
-            "This promotion block was not found in the selected page body. A template or synced pattern may still insert it, so verify the result with the real-page preview.": [
-                "\u6240\u9009\u9875\u9762\u6b63\u6587\u4e2d\u672a\u627e\u5230\u6b64\u63a8\u5e7f\u533a\u5757\u3002\u6a21\u677f\u6216\u540c\u6b65\u6837\u677f\u4ecd\u53ef\u80fd\u63d2\u5165\u5b83\uff0c\u8bf7\u901a\u8fc7\u771f\u5b9e\u9875\u9762\u9884\u89c8\u6838\u9a8c\u7ed3\u679c\u3002"
             ],
             "The selected page body could not be inspected from the editor data. This does not mean the block is missing; verify with the real-page preview.": [
                 "\u65e0\u6cd5\u901a\u8fc7\u7f16\u8f91\u5668\u6570\u636e\u68c0\u67e5\u6240\u9009\u9875\u9762\u6b63\u6587\u3002\u8fd9\u5e76\u4e0d\u8868\u793a\u533a\u5757\u7f3a\u5931\uff0c\u8bf7\u901a\u8fc7\u771f\u5b9e\u9875\u9762\u9884\u89c8\u6838\u9a8c\u3002"
@@ -285,6 +264,57 @@
             ],
             "No empty-scope, schedule, content, or paragraph errors were found in the current editor fields. Public selected targets and category or tag availability are confirmed by the server when publishing or scheduling.": [
                 "\u5f53\u524d\u7f16\u8f91\u5668\u5b57\u6bb5\u672a\u53d1\u73b0\u6295\u653e\u8303\u56f4\u4e3a\u7a7a\u3001\u6392\u671f\u3001\u5185\u5bb9\u6216\u6bb5\u843d\u76f8\u5173\u9519\u8bef\u3002\u53d1\u5e03\u6216\u6392\u7a0b\u65f6\uff0c\u670d\u52a1\u7aef\u4f1a\u786e\u8ba4\u6240\u9009\u516c\u5f00\u76ee\u6807\u4ee5\u53ca\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u662f\u5426\u53ef\u7528\u3002"
+            ],
+            "Untitled promotion": [
+                "\u672a\u547d\u540d\u63a8\u5e7f"
+            ],
+            "%1$s (#%2$d)": [
+                "%1$s\uff08#%2$d\uff09"
+            ],
+            "%s (Not published)": [
+                "%s\uff08\u672a\u53d1\u5e03\uff09"
+            ],
+            "Select a saved Promotion configured for Manual block in Promotion settings.": [
+                "\u8bf7\u5728\u201c\u63a8\u5e7f\u8bbe\u7f6e\u201d\u4e2d\u9009\u62e9\u5df2\u4fdd\u5b58\u4e14\u914d\u7f6e\u4e3a\u201c\u624b\u52a8\u533a\u5757\u201d\u7684\u63a8\u5e7f\u3002"
+            ],
+            "Editor preview is off. This block still controls the live position, and the selected Promotion renders here only when its rules allow.": [
+                "\u7f16\u8f91\u5668\u9884\u89c8\u5df2\u5173\u95ed\u3002\u6b64\u533a\u5757\u4ecd\u63a7\u5236\u6b63\u5f0f\u4f4d\u7f6e\uff1b\u6240\u9009\u63a8\u5e7f\u53ea\u6709\u5728\u89c4\u5219\u5141\u8bb8\u65f6\u624d\u4f1a\u5728\u6b64\u4f4d\u7f6e\u6e32\u67d3\u3002"
+            ],
+            "No preview content": [
+                "\u65e0\u9884\u89c8\u5185\u5bb9"
+            ],
+            "No editor preview content was returned for the selected Promotion. Confirm that it is saved, still available, and configured for Manual block, then try again.": [
+                "\u6240\u9009\u63a8\u5e7f\u672a\u8fd4\u56de\u7f16\u8f91\u5668\u9884\u89c8\u5185\u5bb9\u3002\u8bf7\u786e\u8ba4\u5b83\u5df2\u4fdd\u5b58\u3001\u4ecd\u7136\u53ef\u7528\u4e14\u914d\u7f6e\u4e3a\u201c\u624b\u52a8\u533a\u5757\u201d\uff0c\u7136\u540e\u91cd\u8bd5\u3002"
+            ],
+            "Choose a saved Promotion configured for Manual block. This block controls the live position; the Promotion rules decide whether it displays.": [
+                "\u8bf7\u9009\u62e9\u5df2\u4fdd\u5b58\u4e14\u914d\u7f6e\u4e3a\u201c\u624b\u52a8\u533a\u5757\u201d\u7684\u63a8\u5e7f\u3002\u6b64\u533a\u5757\u63a7\u5236\u6b63\u5f0f\u4f4d\u7f6e\uff1b\u63a8\u5e7f\u89c4\u5219\u51b3\u5b9a\u662f\u5426\u5c55\u793a\u3002"
+            ],
+            "Preview request failed": [
+                "\u9884\u89c8\u8bf7\u6c42\u5931\u8d25"
+            ],
+            "The editor could not load the preview. Try again.": [
+                "\u7f16\u8f91\u5668\u65e0\u6cd5\u52a0\u8f7d\u9884\u89c8\u3002\u8bf7\u91cd\u8bd5\u3002"
+            ],
+            "This promotion block was not found in the selected page body. A template, synced pattern, or [npcink_ad promotion=\"ID\"] shortcode may still provide the manual insertion, so verify the result with the real-page preview.": [
+                "\u5728\u6240\u9009\u9875\u9762\u6b63\u6587\u4e2d\u672a\u627e\u5230\u6b64\u63a8\u5e7f\u533a\u5757\u3002\u6a21\u677f\u3001\u540c\u6b65\u6837\u677f\u6216 [npcink_ad promotion=\"ID\"] \u77ed\u4ee3\u7801\u4ecd\u53ef\u80fd\u63d0\u4f9b\u624b\u52a8\u63d2\u5165\u5165\u53e3\uff0c\u8bf7\u901a\u8fc7\u771f\u5b9e\u9875\u9762\u9884\u89c8\u6838\u9a8c\u7ed3\u679c\u3002"
+            ],
+            "Manual delivery is not inserted automatically. Save this Promotion first, then insert the Npcink Ad Promotion block where it should appear and select this Promotion. The block position is the live position; verify it with Real-page preview. The existing [npcink_ad promotion=\"ID\"] shortcode remains an expert manual-insertion path.": [
+                "\u624b\u52a8\u6295\u653e\u4e0d\u4f1a\u81ea\u52a8\u63d2\u5165\u3002\u8bf7\u5148\u4fdd\u5b58\u6b64\u63a8\u5e7f\uff0c\u7136\u540e\u5728\u5e0c\u671b\u5c55\u793a\u7684\u4f4d\u7f6e\u63d2\u5165 Npcink Ad \u63a8\u5e7f\u533a\u5757\uff0c\u5e76\u9009\u62e9\u6b64\u63a8\u5e7f\u3002\u533a\u5757\u4f4d\u7f6e\u5c31\u662f\u6b63\u5f0f\u4f4d\u7f6e\uff1b\u8bf7\u4f7f\u7528\u771f\u5b9e\u9875\u9762\u9884\u89c8\u8fdb\u884c\u6838\u9a8c\u3002\u73b0\u6709 [npcink_ad promotion=\"ID\"] \u77ed\u4ee3\u7801\u4ecd\u53ef\u4f5c\u4e3a\u9762\u5411\u4e13\u5bb6\u7684\u624b\u52a8\u63d2\u5165\u65b9\u5f0f\u3002"
+            ],
+            "Manual delivery still requires the Npcink Ad Promotion block or [npcink_ad promotion=\"ID\"] shortcode. \"Only selected posts and pages\" adds an allow-list; explicit exclusions always take priority.": [
+                "\u624b\u52a8\u6295\u653e\u4ecd\u9700\u4f7f\u7528 Npcink Ad \u63a8\u5e7f\u533a\u5757\u6216 [npcink_ad promotion=\"ID\"] \u77ed\u4ee3\u7801\u3002\u201c\u4ec5\u6240\u9009\u6587\u7ae0\u548c\u9875\u9762\u201d\u4f1a\u589e\u52a0\u4e00\u4e2a\u5141\u8bb8\u5217\u8868\uff1b\u660e\u786e\u6392\u9664\u59cb\u7ec8\u4f18\u5148\u3002"
+            ],
+            "Wherever manually inserted": [
+                "\u624b\u52a8\u63d2\u5165\u7684\u4efb\u610f\u4f4d\u7f6e"
+            ],
+            "Only selected posts and pages": [
+                "\u4ec5\u6240\u9009\u6587\u7ae0\u548c\u9875\u9762"
+            ],
+            "(Not configured for Manual block)": [
+                "\uff08\u672a\u914d\u7f6e\u4e3a\u201c\u624b\u52a8\u533a\u5757\u201d\uff09"
+            ],
+            "The All devices option shows the Promotion at every width. Desktop shows it at viewport widths of 782px and above; Mobile shows it at 781px and below. CSS applies this fixed breakpoint, with no separate tablet target.": [
+                "\u201c\u6240\u6709\u8bbe\u5907\u201d\u9009\u9879\u4f1a\u5728\u4efb\u610f\u5bbd\u5ea6\u663e\u793a\u63a8\u5e7f\uff1b\u201c\u684c\u9762\u7aef\u201d\u4f1a\u5728\u89c6\u53e3\u5bbd\u5ea6\u4e3a 782px \u53ca\u4ee5\u4e0a\u65f6\u663e\u793a\uff0c\u201c\u79fb\u52a8\u7aef\u201d\u4f1a\u5728 781px \u53ca\u4ee5\u4e0b\u65f6\u663e\u793a\u3002CSS \u4f7f\u7528\u8fd9\u4e00\u56fa\u5b9a\u65ad\u70b9\uff0c\u4e0d\u63d0\u4f9b\u5355\u72ec\u7684\u5e73\u677f\u8bbe\u5907\u76ee\u6807\u3002"
             ]
         }
     }

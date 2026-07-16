@@ -124,6 +124,7 @@ final class Preview_Page {
 				<div>
 					<h1><?php esc_html_e( 'Real-page preview', 'npcink-ad' ); ?></h1>
 					<p><?php esc_html_e( 'The promotion is rendered by the same server policy used on the live site. Preview mode may show blocked creative, but its verdict remains truthful.', 'npcink-ad' ); ?></p>
+					<p><?php esc_html_e( 'Desktop represents the fixed rule at 782px and above. Mobile represents the fixed rule at 781px and below; its canvas is capped at 390px as a representative width, not as the breakpoint.', 'npcink-ad' ); ?></p>
 				</div>
 				<div class="npcink-ad-preview-page__actions">
 					<a class="button <?php echo 'desktop' === $device ? 'button-primary' : ''; ?>" href="<?php echo esc_url( $desktop_url ); ?>" aria-current="<?php echo esc_attr( $desktop_current ); ?>"><?php esc_html_e( 'Desktop', 'npcink-ad' ); ?></a>

@@ -43,7 +43,7 @@ final class Blocks {
 			$block_dir,
 			array(
 				'title'           => _x( 'Npcink Ad Promotion', 'block title', 'npcink-ad' ),
-				'description'     => _x( 'Insert a server-rendered Npcink Ad promotion.', 'block description', 'npcink-ad' ),
+				'description'     => _x( 'Insert a manually placed Npcink Ad promotion.', 'block description', 'npcink-ad' ),
 				'editor_script'   => self::EDITOR_SCRIPT,
 				'editor_style'    => self::EDITOR_STYLE,
 				'render_callback' => array( $this, 'render' ),

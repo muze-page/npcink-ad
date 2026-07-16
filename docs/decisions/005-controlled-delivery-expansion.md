@@ -13,7 +13,7 @@ Automatic locations also allow more than one published Promotion to match the sa
 
 ## Decision
 
-Npcink Ad 0.2 is a controlled extension of the single-Promotion model. This ADR defines the implementation boundary. The automatic-content guard, overlap advisory, after-paragraph placement, and canonical editorial content scope are now implemented. The remaining manual-block/device-guidance step stays governed by this boundary until completed.
+Npcink Ad 0.2 is a controlled extension of the single-Promotion model. This ADR defines the implementation boundary. The automatic-content guard, overlap advisory, after-paragraph placement, canonical editorial content scope, and manual-placement/device guidance are now implemented in the development line. [ADR 008](008-manual-placement-and-device-guidance.md) defines the final guidance step without adding runtime eligibility or storage.
 
 ### Automatic-content contract
 
@@ -45,9 +45,9 @@ Implementation proceeds in this order:
 
 1. **After the Nth paragraph (implemented)** — add one bounded automatic content position for standard posts and pages. It preserves main-query/main-loop safeguards and the shared eligibility and rendering path; ADR 006 defines its exact anchor behavior.
 2. **Collapsed advanced editorial scope (implemented)** — use one mutually exclusive `all | posts | pages | terms | selected` content scope for automatic standard-post/page delivery. `terms` directly matches any configured Core category/tag on standard posts; selected content and terms do not form a composite `OR` rule. Existing explicit selection and exclusion remains the simple path. [ADR 007](007-canonical-editorial-scope.md) defines the exact semantics and the intentional boundary against a generic boolean targeting engine or arbitrary taxonomy/CPT support.
-3. **Manual-block and device guidance** — make the explicit block-placement workflow clearer and document the fixed device boundary: mobile at `781px` and below, desktop at `782px` and above. No third device class is introduced.
+3. **Manual-block and device guidance (implemented)** — make the explicit block-or-shortcode workflow clearer and document the fixed device boundary: mobile at `781px` and below, desktop at `782px` and above. No third device class is introduced. [ADR 008](008-manual-placement-and-device-guidance.md) defines the exact entrypoint, advisory, cache, preview-canvas, and interface boundaries.
 
-Each step must be completed and verified before the next step widens the product surface. New eligibility rules remain authoritative in PHP and must be reflected consistently in publication preflight, list explanations, real-page preview, translations, and tests.
+The three ordered steps are complete in the development line. Any future eligibility rule remains authoritative in PHP and must be reflected consistently in publication preflight, list explanations, real-page preview, translations, and tests. Completing this source-level scope does not change the packaged version or substitute for release closeout.
 
 ## Explicit non-goals
 
@@ -80,7 +80,7 @@ Rejected. ADR 003 remains authoritative: there is no observed need that justifie
 
 ## Consequences
 
-- The automatic post/page guard, advisory overlap, paragraph anchor, and canonical editorial scope are current runtime behavior; manual-block/device guidance remains unfinished ordered work.
+- The automatic post/page guard, advisory overlap, paragraph anchor, canonical editorial scope, and manual-placement/device guidance are current development-line behavior. The controlled 0.2 scope is implemented, while the 0.2 version bump, changelog, final packaging, and release signoff remain separate closeout work.
 - Overlap detection is advisory evidence only. Its wording and tests must preserve uncertainty instead of presenting a false conflict guarantee, and the advisory must stay outside eligibility reason codes and publication preflight failures.
 - Rendering all eligible Promotions preserves existing behavior and avoids introducing hidden selection state.
 - The advanced scope must remain collapsed and bounded so the default publishing workflow keeps its current usability budget.
