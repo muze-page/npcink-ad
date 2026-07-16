@@ -6,7 +6,7 @@
     "start": "wp-scripts start --webpack-src-dir=assets/js --webpack-output-dir=build",
     "build": "wp-scripts build --webpack-src-dir=assets/js --webpack-output-dir=build",
     "lint:js": "wp-scripts lint-js assets/js webpack.config.js",
-    "lint:style": "wp-scripts lint-style assets/js/index.css",
+    "lint:style": "wp-scripts lint-style assets/js/*.css",
     "test:js": "wp-scripts test-unit-js --runInBand",
     "test:e2e:editor": "tests/e2e/run.sh",
     "typecheck": "tsc --noEmit",

@@ -82,10 +82,10 @@ final class Blocks {
 	}
 
 	/**
-	 * Register the single generated editor entrypoint and its stylesheet.
+	 * Register the focused block editor entrypoint and its stylesheet.
 	 */
 	private function register_editor_assets(): void {
-		$asset_file = NPCINK_AD_PATH . 'build/index.asset.php';
+		$asset_file = NPCINK_AD_PATH . 'build/block-editor.asset.php';
 		$asset      = file_exists( $asset_file ) ? require $asset_file : array();
 		$asset      = is_array( $asset ) ? $asset : array();
 		$version    = isset( $asset['version'] ) ? (string) $asset['version'] : NPCINK_AD_VERSION;
@@ -95,7 +95,7 @@ final class Blocks {
 
 		wp_register_script(
 			self::EDITOR_SCRIPT,
-			NPCINK_AD_URL . 'build/index.js',
+			NPCINK_AD_URL . 'build/block-editor.js',
 			$depends,
 			$version,
 			true
@@ -108,7 +108,7 @@ final class Blocks {
 
 		wp_register_style(
 			self::EDITOR_STYLE,
-			NPCINK_AD_URL . 'build/index.css',
+			NPCINK_AD_URL . 'build/block-editor.css',
 			array( 'wp-edit-blocks' ),
 			$version
 		);

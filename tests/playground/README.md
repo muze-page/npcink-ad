@@ -21,9 +21,11 @@ all temporary files on exit. It passes WordPress through the CLI and PHP through
 `preferredVersions`: this split is intentional because the current CLI's PHP
 flag is superseded by Blueprint resolution.
 
-The WordPress 6.5 row also protects the Promotion editor SlotFill dependency
-contract: the packaged editor script must register `wp-edit-post` so the legacy
-fallback can load when the current `wp-editor` SlotFills are unavailable. For a
-plugin whose `Requires at least` is below 6.6, the release gate parses
-`build/index.asset.php`, requires that `wp-edit-post` dependency, and rejects the
-pre-6.6-incompatible `react-jsx-runtime` dependency.
+The WordPress 6.5 row also protects the split editor dependency contract. The
+packaged `promotion-editor` manifest must register `wp-edit-post` so the legacy
+SlotFill fallback can load when the current `wp-editor` SlotFills are
+unavailable. The `block-editor` manifest must not carry `wp-edit-post`,
+`wp-editor`, or `wp-plugins`, so ordinary post editors do not load Promotion
+document behavior. For a plugin whose `Requires at least` is below 6.6, both
+manifests must also avoid the pre-6.6-incompatible `react-jsx-runtime`
+dependency.

@@ -178,6 +178,28 @@ function npcink_ad_build_editor_e2e_fixture(): void {
 			throw new RuntimeException( 'Could not create the E2E page: ' . $page_id->get_error_message() );
 		}
 
+		$automatic_promotion_title   = 'Status Action E2E Promotion';
+		$automatic_promotion_content = 'Automatic status E2E promotion.';
+		$automatic_promotion_id      = wp_insert_post(
+			array(
+				'post_type'    => 'npcink_promotion',
+				'post_status'  => 'publish',
+				'post_title'   => $automatic_promotion_title,
+				'post_content' => '<p>' . $automatic_promotion_content . '</p>',
+			),
+			true
+		);
+
+		if ( is_wp_error( $automatic_promotion_id ) ) {
+			throw new RuntimeException( 'Could not create the automatic E2E Promotion: ' . $automatic_promotion_id->get_error_message() );
+		}
+
+		update_post_meta( $automatic_promotion_id, '_npcink_ad_location', 'content_before' );
+		update_post_meta( $automatic_promotion_id, '_npcink_ad_content_scope', 'selected' );
+		update_post_meta( $automatic_promotion_id, '_npcink_ad_include_ids', array( $page_id ) );
+		update_post_meta( $automatic_promotion_id, '_npcink_ad_exclude_ids', array() );
+		update_post_meta( $automatic_promotion_id, '_npcink_ad_device', 'all' );
+
 		$fixture = array(
 			'username'   => $username,
 			'password'   => $password,
@@ -195,6 +217,11 @@ function npcink_ad_build_editor_e2e_fixture(): void {
 					'id'         => $search_target_id,
 					'title'      => $search_target_title,
 					'searchTerm' => 'Needle Match',
+				),
+				'automatic' => array(
+					'id'      => $automatic_promotion_id,
+					'title'   => $automatic_promotion_title,
+					'content' => $automatic_promotion_content,
 				),
 			),
 		);

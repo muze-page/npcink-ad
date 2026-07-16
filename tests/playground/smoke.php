@@ -5,6 +5,7 @@
  * @package NpcinkAd
  */
 
+use Npcink\Ad\Admin\Editor;
 use Npcink\Ad\Admin\Preview_Page;
 use Npcink\Ad\Admin\Promotion_List;
 use Npcink\Ad\Admin\Promotion_Status_Action;
@@ -135,16 +136,29 @@ $check(
 $check( 1 === substr_count( $frontend_css, '.npcink-ad-device-desktop' ), 'The desktop device selector is duplicated outside its fixed breakpoint rule.' );
 $check( 1 === substr_count( $frontend_css, '.npcink-ad-device-mobile' ), 'The mobile device selector is duplicated outside its fixed breakpoint rule.' );
 
-$editor_script = wp_scripts()->registered['npcink-ad-block-editor'] ?? null;
-$check( $editor_script instanceof _WP_Dependency, 'The block editor script was not registered.' );
+$block_editor_script = wp_scripts()->registered['npcink-ad-block-editor'] ?? null;
+$check( $block_editor_script instanceof _WP_Dependency, 'The block editor script was not registered.' );
 $check(
-	$editor_script instanceof _WP_Dependency && in_array( 'wp-edit-post', $editor_script->deps, true ),
-	'The block editor script does not declare its WordPress 6.5 edit-post compatibility dependency.'
+	$block_editor_script instanceof _WP_Dependency && array() === array_intersect( array( 'wp-edit-post', 'wp-editor', 'wp-plugins' ), $block_editor_script->deps ),
+	'The block editor script leaked Promotion-only dependencies.'
 );
-$check( 'npcink-ad' === $editor_script->textdomain, 'The block editor script does not use the npcink-ad text domain.' );
+$check( 'npcink-ad' === $block_editor_script->textdomain, 'The block editor script does not use the npcink-ad text domain.' );
 $check(
-	WP_PLUGIN_DIR . '/npcink-ad/languages' === $editor_script->translations_path,
+	WP_PLUGIN_DIR . '/npcink-ad/languages' === $block_editor_script->translations_path,
 	'The block editor script does not use the bundled languages directory.'
+);
+
+Editor::register_assets();
+$promotion_editor_script = wp_scripts()->registered['npcink-ad-promotion-editor'] ?? null;
+$check( $promotion_editor_script instanceof _WP_Dependency, 'The Promotion editor script was not registered.' );
+$check(
+	$promotion_editor_script instanceof _WP_Dependency && in_array( 'wp-edit-post', $promotion_editor_script->deps, true ),
+	'The Promotion editor script does not declare its WordPress 6.5 edit-post compatibility dependency.'
+);
+$check( 'npcink-ad' === $promotion_editor_script->textdomain, 'The Promotion editor script does not use the npcink-ad text domain.' );
+$check(
+	WP_PLUGIN_DIR . '/npcink-ad/languages' === $promotion_editor_script->translations_path,
+	'The Promotion editor script does not use the bundled languages directory.'
 );
 
 $force_simplified_chinese = static fn ( mixed $locale ): string => 'zh_CN';
@@ -159,18 +173,32 @@ $check(
 	'Npcink Ad 推广' === _x( 'Npcink Ad Promotion', 'block title', 'npcink-ad' ),
 	'The translated block metadata title did not resolve.'
 );
-$script_catalog_path = WP_PLUGIN_DIR . '/npcink-ad/languages/npcink-ad-zh_CN-npcink-ad-block-editor.json';
-$script_catalog      = json_decode( (string) file_get_contents( $script_catalog_path ), true );
+$block_script_catalog_path = WP_PLUGIN_DIR . '/npcink-ad/languages/npcink-ad-zh_CN-npcink-ad-block-editor.json';
+$block_script_catalog      = json_decode( (string) file_get_contents( $block_script_catalog_path ), true );
 $check(
-	is_array( $script_catalog ) &&
-	isset( $script_catalog['locale_data']['messages']['Npcink Ad delivery'][0] ) &&
-	'Npcink Ad 投放' === $script_catalog['locale_data']['messages']['Npcink Ad delivery'][0],
+	is_array( $block_script_catalog ) &&
+	isset( $block_script_catalog['locale_data']['messages']['Npcink Ad promotion'][0] ) &&
+	'Npcink Ad 推广' === $block_script_catalog['locale_data']['messages']['Npcink Ad promotion'][0],
 	'The block editor Simplified Chinese JSON catalog has an invalid translation.'
 );
-$script_translations = wp_scripts()->print_translations( 'npcink-ad-block-editor', false );
+$block_script_translations = wp_scripts()->print_translations( 'npcink-ad-block-editor', false );
 $check(
-	is_string( $script_translations ) && str_contains( $script_translations, 'Npcink Ad delivery' ),
+	is_string( $block_script_translations ) && str_contains( $block_script_translations, 'Npcink Ad promotion' ),
 	'The block editor Simplified Chinese JSON catalog did not resolve.'
+);
+
+$promotion_script_catalog_path = WP_PLUGIN_DIR . '/npcink-ad/languages/npcink-ad-zh_CN-npcink-ad-promotion-editor.json';
+$promotion_script_catalog      = json_decode( (string) file_get_contents( $promotion_script_catalog_path ), true );
+$check(
+	is_array( $promotion_script_catalog ) &&
+	isset( $promotion_script_catalog['locale_data']['messages']['Npcink Ad delivery'][0] ) &&
+	'Npcink Ad 投放' === $promotion_script_catalog['locale_data']['messages']['Npcink Ad delivery'][0],
+	'The Promotion editor Simplified Chinese JSON catalog has an invalid translation.'
+);
+$promotion_script_translations = wp_scripts()->print_translations( 'npcink-ad-promotion-editor', false );
+$check(
+	is_string( $promotion_script_translations ) && str_contains( $promotion_script_translations, 'Npcink Ad delivery' ),
+	'The Promotion editor Simplified Chinese JSON catalog did not resolve.'
 );
 remove_filter( 'pre_determine_locale', $force_simplified_chinese, PHP_INT_MAX );
 unload_textdomain( 'npcink-ad', true );
