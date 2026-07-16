@@ -83,43 +83,52 @@ if [[ -z "$REQUIRES_WORDPRESS" ]]; then
   exit 1
 fi
 
-if php -r 'exit(version_compare($argv[1], "6.6", "<") ? 0 : 1);' "$REQUIRES_WORDPRESS"; then
-  php -r '
-    $asset_file = $argv[1];
-    $requires_wordpress = $argv[2];
-    if (!is_file($asset_file)) {
-      fwrite(STDERR, "[release-gate] Missing build asset manifest: {$asset_file}\n");
-      exit(1);
-    }
+php -r '
+	$files = array(
+	  "block" => $argv[1],
+	  "promotion" => $argv[2],
+	);
+	$requires_wordpress = $argv[3];
+	$dependencies_by_entry = array();
+	foreach ($files as $entry => $asset_file) {
+	  if (!is_file($asset_file)) {
+		fwrite(STDERR, "[release-gate] Missing build asset manifest: {$asset_file}\n");
+		exit(1);
+	  }
+	  $asset = require $asset_file;
+	  if (!is_array($asset) || !array_key_exists("dependencies", $asset) || !is_array($asset["dependencies"])) {
+		fwrite(STDERR, "[release-gate] {$asset_file} must return a dependencies array\n");
+		exit(1);
+	  }
+	  foreach ($asset["dependencies"] as $dependency) {
+		if (!is_string($dependency) || "" === $dependency) {
+		  fwrite(STDERR, "[release-gate] {$asset_file} contains an invalid dependency entry\n");
+		  exit(1);
+		}
+	  }
+	  if (version_compare($requires_wordpress, "6.6", "<") && in_array("react-jsx-runtime", $asset["dependencies"], true)) {
+		fwrite(STDERR, "[release-gate] {$asset_file} requires react-jsx-runtime, which is unavailable before WordPress 6.6\n");
+		exit(1);
+	  }
+	  $dependencies_by_entry[$entry] = $asset["dependencies"];
+	}
 
-    $asset = require $asset_file;
-    if (!is_array($asset) || !array_key_exists("dependencies", $asset) || !is_array($asset["dependencies"])) {
-      fwrite(STDERR, "[release-gate] build/index.asset.php must return a dependencies array\n");
-      exit(1);
-    }
+	$promotion_only_dependencies = array("wp-edit-post", "wp-editor", "wp-plugins");
+	$block_leaks = array_values(array_intersect($promotion_only_dependencies, $dependencies_by_entry["block"]));
+	if (array() !== $block_leaks) {
+	  fwrite(STDERR, "[release-gate] The block editor bundle leaked Promotion-only dependencies: " . implode(", ", $block_leaks) . "\n");
+	  exit(1);
+	}
+	if (version_compare($requires_wordpress, "6.6", "<") && !in_array("wp-edit-post", $dependencies_by_entry["promotion"], true)) {
+	  fwrite(STDERR, "[release-gate] The Promotion editor bundle must require wp-edit-post when Requires at least is {$requires_wordpress}; WordPress 6.5 needs the SlotFill compatibility fallback\n");
+	  exit(1);
+	}
+' build/block-editor.asset.php build/promotion-editor.asset.php "$REQUIRES_WORDPRESS"
 
-    $dependencies = $asset["dependencies"];
-    foreach ($dependencies as $dependency) {
-      if (!is_string($dependency) || "" === $dependency) {
-        fwrite(STDERR, "[release-gate] build/index.asset.php contains an invalid dependency entry\n");
-        exit(1);
-      }
-    }
-
-    if (in_array("react-jsx-runtime", $dependencies, true)) {
-      fwrite(STDERR, "[release-gate] build/index.asset.php requires react-jsx-runtime, which is unavailable before WordPress 6.6\n");
-      exit(1);
-    }
-
-    if (!in_array("wp-edit-post", $dependencies, true)) {
-      fwrite(STDERR, "[release-gate] build/index.asset.php must require wp-edit-post when Requires at least is {$requires_wordpress}; WordPress 6.5 needs it for the Promotion editor SlotFill compatibility fallback\n");
-      exit(1);
-    }
-  ' build/index.asset.php "$REQUIRES_WORDPRESS"
-fi
-
-INDEX_JS_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_INDEX_JS_KB:-40}"
-INDEX_CSS_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_INDEX_CSS_KB:-20}"
+BLOCK_EDITOR_JS_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_BLOCK_EDITOR_JS_KB:-16}"
+PROMOTION_EDITOR_JS_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_PROMOTION_EDITOR_JS_KB:-36}"
+EDITOR_JS_TOTAL_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_EDITOR_JS_TOTAL_KB:-48}"
+EDITOR_CSS_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_EDITOR_CSS_KB:-4}"
 BUDGET_FAILED=0
 
 check_bundle_budget() {
@@ -145,8 +154,19 @@ check_bundle_budget() {
   fi
 }
 
-check_bundle_budget "build/index.js" "build/index.js" "$INDEX_JS_BUDGET_KB"
-check_bundle_budget "build/index.css" "build/index.css" "$INDEX_CSS_BUDGET_KB"
+check_bundle_budget "build/block-editor.js" "build/block-editor.js" "$BLOCK_EDITOR_JS_BUDGET_KB"
+check_bundle_budget "build/promotion-editor.js" "build/promotion-editor.js" "$PROMOTION_EDITOR_JS_BUDGET_KB"
+check_bundle_budget "build/block-editor.css" "build/block-editor.css" "$EDITOR_CSS_BUDGET_KB"
+check_bundle_budget "build/promotion-editor.css" "build/promotion-editor.css" "$EDITOR_CSS_BUDGET_KB"
+
+EDITOR_JS_TOTAL_BYTES=$(( $(wc -c < build/block-editor.js) + $(wc -c < build/promotion-editor.js) ))
+EDITOR_JS_TOTAL_KB=$(( (EDITOR_JS_TOTAL_BYTES + 1023) / 1024 ))
+if (( EDITOR_JS_TOTAL_KB > EDITOR_JS_TOTAL_BUDGET_KB )); then
+  echo "[release-gate] ERROR: combined editor JS ${EDITOR_JS_TOTAL_KB} KiB exceeds budget ${EDITOR_JS_TOTAL_BUDGET_KB} KiB" >&2
+  BUDGET_FAILED=1
+else
+  echo "[release-gate] OK: combined editor JS ${EDITOR_JS_TOTAL_KB} KiB (budget ${EDITOR_JS_TOTAL_BUDGET_KB} KiB)"
+fi
 
 if [[ "$BUDGET_FAILED" -eq 1 ]]; then
   exit 1
@@ -193,13 +213,17 @@ REQUIRED_ZIP_ENTRIES=(
   "${PLUGIN_DIR_NAME}/assets/blocks/npcink-ad-promotion/block.json"
   "${PLUGIN_DIR_NAME}/assets/css/admin-preview.css"
   "${PLUGIN_DIR_NAME}/assets/css/frontend.css"
-  "${PLUGIN_DIR_NAME}/build/index.asset.php"
-  "${PLUGIN_DIR_NAME}/build/index.css"
-  "${PLUGIN_DIR_NAME}/build/index.js"
+  "${PLUGIN_DIR_NAME}/build/block-editor.asset.php"
+  "${PLUGIN_DIR_NAME}/build/block-editor.css"
+  "${PLUGIN_DIR_NAME}/build/block-editor.js"
+  "${PLUGIN_DIR_NAME}/build/promotion-editor.asset.php"
+  "${PLUGIN_DIR_NAME}/build/promotion-editor.css"
+  "${PLUGIN_DIR_NAME}/build/promotion-editor.js"
   "${PLUGIN_DIR_NAME}/languages/npcink-ad.pot"
   "${PLUGIN_DIR_NAME}/languages/npcink-ad-zh_CN.po"
   "${PLUGIN_DIR_NAME}/languages/npcink-ad-zh_CN.mo"
   "${PLUGIN_DIR_NAME}/languages/npcink-ad-zh_CN-npcink-ad-block-editor.json"
+  "${PLUGIN_DIR_NAME}/languages/npcink-ad-zh_CN-npcink-ad-promotion-editor.json"
   "${PLUGIN_DIR_NAME}/src/Admin/Menu.php"
   "${PLUGIN_DIR_NAME}/src/Admin/Editor.php"
   "${PLUGIN_DIR_NAME}/src/Admin/Preview_Page.php"
@@ -227,6 +251,11 @@ REQUIRED_ZIP_ENTRIES=(
 for required_entry in "${REQUIRED_ZIP_ENTRIES[@]}"; do
   require_zip_entry "$required_entry"
 done
+
+if grep -Eq "^${PLUGIN_DIR_NAME}/build/index\.(asset\.php|css|js)$" <<<"$ZIP_ENTRIES"; then
+  echo "[release-gate] Legacy combined editor bundle found in release artifact" >&2
+  exit 1
+fi
 
 PACKAGE_AUDIT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/npcink-ad-package.XXXXXX")"
 trap 'rm -rf "$PACKAGE_AUDIT_DIR"' EXIT

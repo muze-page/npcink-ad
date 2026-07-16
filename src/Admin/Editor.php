@@ -18,7 +18,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Loads the focused delivery sidebar on promotion editor screens.
  */
 final class Editor {
-	private const SCRIPT_HANDLE = 'npcink-ad-block-editor';
+	private const SCRIPT_HANDLE = 'npcink-ad-promotion-editor';
+	private const STYLE_HANDLE  = 'npcink-ad-promotion-editor';
 
 	/**
 	 * Enqueue editor behavior and promotion-bound preview settings.
@@ -34,7 +35,9 @@ final class Editor {
 			return;
 		}
 
+		self::register_assets();
 		wp_enqueue_script( self::SCRIPT_HANDLE );
+		wp_enqueue_style( self::STYLE_HANDLE );
 		$repository       = new Repository();
 		$published        = $repository->find_published_automatic_promotions();
 		$overlap_settings = self::editor_overlap_settings(
@@ -58,6 +61,39 @@ final class Editor {
 			self::SCRIPT_HANDLE,
 			'window.NpcinkAdEditorSettings = ' . wp_json_encode( $settings ) . ';',
 			'before'
+		);
+	}
+
+	/**
+	 * Register assets that belong only to the Promotion document editor.
+	 */
+	public static function register_assets(): void {
+		$asset_file = NPCINK_AD_PATH . 'build/promotion-editor.asset.php';
+		$asset      = file_exists( $asset_file ) ? require $asset_file : array();
+		$asset      = is_array( $asset ) ? $asset : array();
+		$version    = isset( $asset['version'] ) ? (string) $asset['version'] : NPCINK_AD_VERSION;
+		$depends    = isset( $asset['dependencies'] ) && is_array( $asset['dependencies'] )
+			? $asset['dependencies']
+			: array();
+
+		wp_register_script(
+			self::SCRIPT_HANDLE,
+			NPCINK_AD_URL . 'build/promotion-editor.js',
+			$depends,
+			$version,
+			true
+		);
+		wp_set_script_translations(
+			self::SCRIPT_HANDLE,
+			'npcink-ad',
+			NPCINK_AD_PATH . 'languages'
+		);
+
+		wp_register_style(
+			self::STYLE_HANDLE,
+			NPCINK_AD_URL . 'build/promotion-editor.css',
+			array( 'wp-edit-blocks' ),
+			$version
 		);
 	}
 
