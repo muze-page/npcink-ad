@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-15
+- Amended: 2026-07-16 (Issue #8 selector reliability)
 
 ## Context
 
@@ -25,7 +26,9 @@ The management workflow for the `block` location is:
 
 The block description says that it inserts a manually placed Npcink Ad Promotion. Block-editor empty, preview-disabled, and transport-error states explain only their observed state; they do not invent a new delivery reason or claim that a Promotion is missing merely because it is absent from one list response.
 
-The current block selector deliberately keeps every Promotion returned by its bounded `per_page=100` request. It does not filter that already bounded response to `location=block`; instead, options configured for any automatic location remain selectable and receive an explicit **Not configured for Manual block** marker. Filtering after the first 100 results would further shrink an incomplete candidate set and could make a stored selected ID look deleted. **Issue #8** remains responsible for server-side search or pagination and for resolving a selected ID independently when it falls outside the first result set.
+The block selector uses Core REST/Core Data for debounced server-side title search and real `per_page=20` pagination. **Load more promotions** expands only the current search from page 1 through N; responses are merged by ID and a new search cannot inherit pages from the previous search.
+
+The stored `promotionId` is always resolved independently with `getEntityRecord` and injected into the options. Loading and failed requests retain the attribute and show a neutral ID-based placeholder; absence from the current page is never evidence that the Promotion was deleted. List and selected-record requests expose explicit loading, failure/retry, and empty states. Options configured for automatic locations remain selectable and receive the explicit **Not configured for Manual block** marker; unpublished and untitled labels also remain visible.
 
 ### Manual content scope
 
@@ -82,9 +85,9 @@ Rejected. User-agent-specific HTML is unsafe behind shared page caches, and a th
 
 Rejected. A site-wide scan is expensive and still cannot prove runtime composition. The selected real-page preview provides stronger evidence at the context the manager actually intends to verify.
 
-### Redesign the Promotion selector in this step
+### Filter the selector to Manual-block Promotions
 
-Deferred. The block editor still loads a bounded first result set. This step preserves and annotates every returned candidate rather than applying a second client-side Manual-block filter, but installations with more than 100 Promotions still need server-side search or pagination and explicit selected-ID resolution. **Issue #8** owns that follow-up. This guidance step does not claim that the limit is fixed and must not interpret absence from the first result set as proof that a saved Promotion was deleted.
+Rejected. Keeping automatic-location Promotions visible with an explicit marker lets an editor diagnose and correct placement without turning a management convenience into another eligibility filter. Server search, pagination, and selected-ID resolution solve the scalability and false-deletion problems without changing which records are selectable.
 
 ## Consequences
 
@@ -92,4 +95,4 @@ Deferred. The block editor still loads a bounded first result set. This step pre
 - Manual `all | selected`, explicit exclusions, preview authorization, cache behavior, and eligibility remain unchanged.
 - The fixed `781px`/`782px` boundary is visible in the editor and preview and is protected by packaged-plugin contract checks.
 - The controlled ADR 005 product scope is packaged as version 0.2.0. The version bump, changelog, and final package closeout are complete in 0.2.0; a Git tag, GitHub Release, and public distribution remain separate repository release actions.
-- Issue #8 remains open follow-up work for server-side search or pagination and selected-ID resolution; keeping and annotating the bounded result set is not a selector scalability fix.
+- Issue #8's selector limit is resolved without changing block attributes, Promotion meta, REST schemas, eligibility, or frontend delivery.

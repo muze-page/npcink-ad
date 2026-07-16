@@ -17,6 +17,7 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 * Create promotion content with core WordPress blocks.
 * Configure location, one canonical content scope, explicit exclusions, schedule, and device in the same editor.
 * For manual placement, insert the Npcink Ad Promotion block and select the same saved Promotion, or use the existing expert `[npcink_ad promotion="ID"]` shortcode.
+* Search Promotion titles from the manual block selector, load further 20-record pages on demand, and retain saved selections outside the current result page.
 * Place a promotion after a bounded top-level block paragraph or Classic HTML paragraph without frontend JavaScript.
 * Preview the promotion inside a real page and switch between desktop and mobile context. Desktop uses the fixed rule at `782px` and above, and mobile uses the fixed rule at `781px` and below; the `390px` mobile canvas is only a representative width.
 * Read a truthful verdict explaining why the promotion will or will not display.

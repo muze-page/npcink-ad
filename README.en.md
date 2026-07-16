@@ -9,6 +9,7 @@ Npcink Ad 0.2.0 is a WordPress-native, privacy-first workflow for site-owned pro
 - `npcink_promotion` is the only content type. Title, block content, draft/published state, and every delivery rule live on one record.
 - Typed metadata stores location, canonical content scope, included/excluded content, Core category/tag IDs, device, start time, end time, and paragraph number.
 - Locations include a manual block, before content, after content, and after paragraph 1–20 (default paragraph 3). Manual placement does not create an entrypoint automatically: save the Promotion, then insert the Npcink Ad Promotion block and select that same Promotion, or use the existing expert `[npcink_ad promotion="ID"]` shortcode.
+- The manual block selector searches Promotion titles on the server, loads real 20-record pages on demand, and resolves the saved Promotion ID independently so its selection is not treated as deleted merely because it is outside the current result page.
 - Gutenberg paragraph placement counts only top-level paragraph blocks; Classic content counts actual `<p>` elements. Live delivery renders nothing when the configured paragraph anchor is missing instead of silently moving the Promotion to the end.
 - Real-page preview uses the site's theme and the same PHP evaluator as live delivery. Managers may inspect blocked creative, but the verdict remains truthful.
 - The Promotion list summarizes rule status, placement, content scope, stop time, and reasons for inactivity, with inline pause/resume actions instead of another screen.

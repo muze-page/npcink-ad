@@ -8,15 +8,17 @@ import {
 	type BlockEditProps,
 } from '@wordpress/blocks';
 import {
+	Button,
+	ComboboxControl,
+	Notice,
 	PanelBody,
 	Placeholder,
 	RangeControl,
-	SelectControl,
 	Spinner,
 	ToggleControl,
 } from '@wordpress/components';
 import { store as coreDataStore } from '@wordpress/core-data';
-import { useSelect } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
 import { __, sprintf } from '@wordpress/i18n';
 import ServerSideRender from '@wordpress/server-side-render';
 
@@ -26,6 +28,16 @@ import {
 	formatPromotionOptionLabel,
 	type PromotionLocation,
 } from './promotion-option';
+import {
+	createPromotionSelectorQuery,
+	createPromotionSelectorState,
+	decidePromotionSelection,
+	mergePromotionRecords,
+	normalizePromotionSearch,
+	PROMOTION_SELECTOR_SEARCH_DELAY,
+	promotionSelectorReducer,
+	promotionSelectorPageNumbers,
+} from './promotion-selector';
 
 type PromotionStatus = 'publish' | 'draft' | 'future' | 'private';
 
@@ -49,12 +61,35 @@ interface BlockAttributes {
 	preview: boolean;
 }
 
-const promotionQuery = {
+interface PromotionPageResolution {
+	error: unknown;
+	hasFinished: boolean;
+	isResolving: boolean;
+	records: PromotionRecord[] | null;
+}
+
+interface ResolutionSelectors {
+	getResolutionError: (
+		selectorName: string,
+		args?: readonly unknown[]
+	) => unknown;
+	hasFinishedResolution: (
+		selectorName: string,
+		args?: readonly unknown[]
+	) => boolean;
+	isResolving: ( selectorName: string, args?: readonly unknown[] ) => boolean;
+}
+
+interface ResolutionActions {
+	invalidateResolution: (
+		selectorName: string,
+		args?: readonly unknown[]
+	) => void;
+}
+
+const selectedPromotionQuery = {
 	context: 'edit',
-	order: 'asc',
-	orderby: 'title',
-	per_page: 100,
-	status: [ 'publish', 'draft', 'future', 'private' ],
+	_fields: 'id,status,title,meta',
 } as const;
 
 function getPromotionTitle( promotion: PromotionRecord ): string {
@@ -76,49 +111,251 @@ function getPromotionTitle( promotion: PromotionRecord ): string {
 	);
 }
 
+function getPromotionOptionLabel( promotion: PromotionRecord ): string {
+	const promotionTitle = getPromotionTitle( promotion );
+	const publicationLabel =
+		promotion.status === 'publish'
+			? promotionTitle
+			: sprintf(
+					/* translators: %s: Promotion title followed by its ID. */
+					__( '%s (Not published)', 'npcink-ad' ),
+					promotionTitle
+			  );
+
+	return formatPromotionOptionLabel(
+		publicationLabel,
+		promotion.meta?._npcink_ad_location,
+		/* translators: Marker appended to a Promotion option whose placement is not Manual block. */ __(
+			'(Not configured for Manual block)',
+			'npcink-ad'
+		)
+	);
+}
+
 function Edit( {
 	attributes,
 	setAttributes,
 }: BlockEditProps< BlockAttributes > ) {
-	const promotions = useSelect(
-		( select ) =>
-			select( coreDataStore ).getEntityRecords(
+	const selectedPromotionId = attributes.promotionId;
+	const ignoreNextFocusReset = React.useRef( false );
+	const [ comboboxResetKey, setComboboxResetKey ] = React.useState( 0 );
+	const [ selectorState, dispatchSelectorState ] = React.useReducer(
+		promotionSelectorReducer,
+		undefined,
+		createPromotionSelectorState
+	);
+	const { filterInput, committedSearch, loadedPageCount } = selectorState;
+	const normalizedFilterInput = normalizePromotionSearch( filterInput );
+	const isSearchPending = normalizedFilterInput !== committedSearch;
+
+	React.useEffect( () => {
+		const timer = window.setTimeout( () => {
+			dispatchSelectorState( { type: 'commit_search' } );
+		}, PROMOTION_SELECTOR_SEARCH_DELAY );
+
+		return () => window.clearTimeout( timer );
+	}, [ filterInput ] );
+
+	const promotionQueries = React.useMemo(
+		() =>
+			promotionSelectorPageNumbers( loadedPageCount ).map( ( page ) =>
+				createPromotionSelectorQuery( committedSearch, page )
+			),
+		[ committedSearch, loadedPageCount ]
+	);
+	const selectedResolutionArgs = React.useMemo(
+		() =>
+			[
 				'postType',
 				'npcink_promotion',
-				promotionQuery
-			) as PromotionRecord[] | null,
-		[]
+				selectedPromotionId,
+				selectedPromotionQuery,
+			] as const,
+		[ selectedPromotionId ]
 	);
 
-	const promotionOptions = [
-		{
-			label: __( 'Select a promotion', 'npcink-ad' ),
-			value: '0',
-		},
-		...( promotions ?? [] ).map( ( promotion ) => {
-			const promotionTitle = getPromotionTitle( promotion );
-			const publicationLabel =
-				promotion.status === 'publish'
-					? promotionTitle
-					: sprintf(
-							/* translators: %s: Promotion title followed by its ID. */
-							__( '%s (Not published)', 'npcink-ad' ),
-							promotionTitle
-					  );
+	const { pages, selectedPromotion, selectedResolution, totalPages } =
+		useSelect(
+			( select ) => {
+				const coreData = select( coreDataStore );
+				const resolution = coreData as unknown as ResolutionSelectors;
+				const resolvedPages: PromotionPageResolution[] =
+					promotionQueries.map( ( query ) => {
+						const resolutionArgs = [
+							'postType',
+							'npcink_promotion',
+							query,
+						] as const;
 
-			return {
-				label: formatPromotionOptionLabel(
-					publicationLabel,
-					promotion.meta?._npcink_ad_location,
-					/* translators: Marker appended to a Promotion option whose placement is not Manual block. */ __(
-						'(Not configured for Manual block)',
-						'npcink-ad'
-					)
-				),
-				value: String( promotion.id ),
-			};
-		} ),
-	];
+						return {
+							error: resolution.getResolutionError(
+								'getEntityRecords',
+								resolutionArgs
+							),
+							hasFinished: resolution.hasFinishedResolution(
+								'getEntityRecords',
+								resolutionArgs
+							),
+							isResolving: resolution.isResolving(
+								'getEntityRecords',
+								resolutionArgs
+							),
+							records: coreData.getEntityRecords(
+								...resolutionArgs
+							) as PromotionRecord[] | null,
+						};
+					} );
+
+				const selected =
+					selectedPromotionId > 0
+						? ( coreData.getEntityRecord(
+								...selectedResolutionArgs
+						  ) as PromotionRecord | null )
+						: null;
+				const selectedState =
+					selectedPromotionId > 0
+						? {
+								error: resolution.getResolutionError(
+									'getEntityRecord',
+									selectedResolutionArgs
+								),
+								hasFinished: resolution.hasFinishedResolution(
+									'getEntityRecord',
+									selectedResolutionArgs
+								),
+								isResolving: resolution.isResolving(
+									'getEntityRecord',
+									selectedResolutionArgs
+								),
+						  }
+						: null;
+
+				return {
+					pages: resolvedPages,
+					selectedPromotion: selected,
+					selectedResolution: selectedState,
+					totalPages: Number(
+						coreData.getEntityRecordsTotalPages(
+							'postType',
+							'npcink_promotion',
+							promotionQueries[ 0 ]
+						) ?? 0
+					),
+				};
+			},
+			[ promotionQueries, selectedPromotionId, selectedResolutionArgs ]
+		);
+	const { invalidateResolution } = useDispatch(
+		coreDataStore
+	) as unknown as ResolutionActions;
+
+	const pagedPromotions = mergePromotionRecords(
+		null,
+		...pages.map( ( page ) => page.records )
+	).filter( ( promotion ) => promotion.id !== selectedPromotionId );
+	const promotions = mergePromotionRecords(
+		selectedPromotion,
+		isSearchPending ? [] : pagedPromotions
+	);
+	const selectedIsLoading = Boolean(
+		selectedPromotionId > 0 &&
+			! selectedPromotion &&
+			! selectedResolution?.error &&
+			( selectedResolution?.isResolving ||
+				! selectedResolution?.hasFinished )
+	);
+	const selectedFallbackLabel = selectedIsLoading
+		? sprintf(
+				/* translators: %d: Promotion ID. */
+				__( 'Promotion #%d (Loading details…)', 'npcink-ad' ),
+				selectedPromotionId
+		  )
+		: sprintf(
+				/* translators: %d: Promotion ID. */
+				__( 'Promotion #%d (Details unavailable)', 'npcink-ad' ),
+				selectedPromotionId
+		  );
+	const promotionOptions = promotions.map( ( promotion ) => ( {
+		label: getPromotionOptionLabel( promotion ),
+		value: String( promotion.id ),
+	} ) );
+
+	if ( selectedPromotionId > 0 && ! selectedPromotion ) {
+		promotionOptions.unshift( {
+			label: selectedFallbackLabel,
+			value: String( selectedPromotionId ),
+		} );
+	}
+
+	const selectedOptionLabel =
+		promotionOptions.find(
+			( option ) => option.value === String( selectedPromotionId )
+		)?.label ?? selectedFallbackLabel;
+	const firstPage = pages[ 0 ];
+	const pageError = pages.find( ( page ) => page.error );
+	const isPageLoading =
+		isSearchPending ||
+		pages.some(
+			( page ) =>
+				page.isResolving ||
+				( ! page.hasFinished && ! page.error && page.records === null )
+		);
+	const hasNoResults = Boolean(
+		! isSearchPending &&
+			firstPage?.hasFinished &&
+			! firstPage.error &&
+			firstPage.records?.length === 0
+	);
+	const canLoadMore = Boolean(
+		! isSearchPending &&
+			! isPageLoading &&
+			! pageError &&
+			totalPages > loadedPageCount
+	);
+	const handlePromotionFilterChange = ( value: string ) => {
+		const ignoreFocusReset = ignoreNextFocusReset.current && value === '';
+		ignoreNextFocusReset.current = false;
+		dispatchSelectorState( {
+			type: 'filter_change',
+			value,
+			ignoreFocusReset,
+		} );
+	};
+	const handlePromotionChange = ( value: string | null | undefined ) => {
+		const candidateId = Number.parseInt( value || '', 10 ) || 0;
+		const decision = decidePromotionSelection( {
+			candidateId,
+			currentId: selectedPromotionId,
+			filterInput,
+			committedSearch,
+			resolvedIds: pagedPromotions.map( ( promotion ) => promotion.id ),
+		} );
+
+		if ( decision !== 'select' ) {
+			return;
+		}
+
+		setAttributes( { promotionId: candidateId } );
+		dispatchSelectorState( { type: 'reset_filter' } );
+	};
+	const clearPromotionSearch = () => {
+		dispatchSelectorState( { type: 'reset_filter' } );
+		setComboboxResetKey( ( key ) => key + 1 );
+	};
+	const retryPromotionPages = () => {
+		pages.forEach( ( page, index ) => {
+			if ( page.error ) {
+				invalidateResolution( 'getEntityRecords', [
+					'postType',
+					'npcink_promotion',
+					promotionQueries[ index ],
+				] );
+			}
+		} );
+	};
+	const retrySelectedPromotion = () => {
+		invalidateResolution( 'getEntityRecord', selectedResolutionArgs );
+	};
 
 	const blockProps = useBlockProps( {
 		className: 'npcink-ad-block-editor',
@@ -184,27 +421,130 @@ function Edit( {
 					title={ __( 'Promotion settings', 'npcink-ad' ) }
 					initialOpen
 				>
-					{ promotions === null ? (
-						<Spinner />
-					) : (
-						<SelectControl
+					<div
+						onFocusCapture={ () => {
+							ignoreNextFocusReset.current = true;
+						} }
+					>
+						<ComboboxControl
+							key={ comboboxResetKey }
 							__next40pxDefaultSize
 							label={ __( 'Promotion', 'npcink-ad' ) }
-							value={ String( attributes.promotionId ) }
-							options={ promotionOptions }
-							onChange={ ( value ) =>
-								setAttributes( {
-									promotionId:
-										Number.parseInt( value, 10 ) || 0,
-								} )
+							value={
+								selectedPromotionId > 0
+									? String( selectedPromotionId )
+									: null
 							}
+							options={ promotionOptions }
+							onFilterValueChange={ handlePromotionFilterChange }
+							onChange={ handlePromotionChange }
 							help={
-								/* translators: Explains the contract of the Promotion selected by a manual block. */ __(
-									'Choose a saved Promotion configured for Manual block. This block controls the live position; the Promotion rules decide whether it displays.',
+								/* translators: Explains the contract and server search of the Promotion selected by a manual block. */ __(
+									'Choose or search for a saved Promotion configured for Manual block. This block controls the live position; the Promotion rules decide whether it displays.',
 									'npcink-ad'
 								)
 							}
 						/>
+					</div>
+					{ committedSearch && ! isSearchPending && (
+						<div className="npcink-ad-promotion-selector__status">
+							<span>
+								{ sprintf(
+									/* translators: %s: Current Promotion title search. */
+									__(
+										'Showing results for “%s”.',
+										'npcink-ad'
+									),
+									committedSearch
+								) }
+							</span>
+							<Button
+								variant="tertiary"
+								onClick={ clearPromotionSearch }
+							>
+								{ __( 'Clear promotion search', 'npcink-ad' ) }
+							</Button>
+						</div>
+					) }
+					{ selectedPromotionId > 0 && (
+						<div
+							className="npcink-ad-promotion-selector__selected"
+							data-testid="npcink-ad-selected-promotion"
+							role="status"
+							aria-live="polite"
+						>
+							<span>{ selectedOptionLabel }</span>
+							{ selectedIsLoading && <Spinner /> }
+						</div>
+					) }
+					{ Boolean( selectedResolution?.error ) && (
+						<Notice status="warning" isDismissible={ false }>
+							{ __(
+								'The selected Promotion details are unavailable. The saved selection has been retained.',
+								'npcink-ad'
+							) }
+							<Button
+								variant="secondary"
+								onClick={ retrySelectedPromotion }
+							>
+								{ __(
+									'Retry selected promotion',
+									'npcink-ad'
+								) }
+							</Button>
+						</Notice>
+					) }
+					{ isPageLoading && (
+						<div
+							className="npcink-ad-promotion-selector__status"
+							role="status"
+							aria-live="polite"
+						>
+							<Spinner />
+							<span>
+								{ __( 'Loading promotions…', 'npcink-ad' ) }
+							</span>
+						</div>
+					) }
+					{ ! isSearchPending && pageError && (
+						<Notice status="error" isDismissible={ false }>
+							{ __(
+								'Promotions could not be loaded. The current selection has not been changed.',
+								'npcink-ad'
+							) }
+							<Button
+								variant="secondary"
+								onClick={ retryPromotionPages }
+							>
+								{ __(
+									'Retry loading promotions',
+									'npcink-ad'
+								) }
+							</Button>
+						</Notice>
+					) }
+					{ hasNoResults && (
+						<Notice status="info" isDismissible={ false }>
+							{ committedSearch
+								? __(
+										'No matching Promotions were found.',
+										'npcink-ad'
+								  )
+								: __(
+										'No Promotions are available.',
+										'npcink-ad'
+								  ) }
+						</Notice>
+					) }
+					{ canLoadMore && (
+						<Button
+							variant="secondary"
+							onClick={ () =>
+								dispatchSelectorState( { type: 'load_more' } )
+							}
+						>
+							{ __( 'Load more promotions', 'npcink-ad' ) }
+						</Button>
 					) }
 					<RangeControl
 						__next40pxDefaultSize

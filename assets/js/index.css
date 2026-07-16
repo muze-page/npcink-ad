@@ -8,6 +8,27 @@
 	border: 1px dashed #949494;
 }
 
+.npcink-ad-promotion-selector__selected,
+.npcink-ad-promotion-selector__status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 12px;
+}
+
+.npcink-ad-promotion-selector__selected {
+	justify-content: space-between;
+	padding: 8px 12px;
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	background: #fff;
+}
+
+.npcink-ad-promotion-selector__selected span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .npcink-ad-editor-panel .components-base-control,
 .npcink-ad-editor-panel .components-panel__body {
 	margin-bottom: 16px;

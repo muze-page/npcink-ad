@@ -8,10 +8,12 @@
     "lint:js": "wp-scripts lint-js assets/js webpack.config.js",
     "lint:style": "wp-scripts lint-style assets/js/index.css",
     "test:js": "wp-scripts test-unit-js --runInBand",
+    "test:e2e:editor": "tests/e2e/run.sh",
     "typecheck": "tsc --noEmit",
     "check": "pnpm run typecheck && pnpm run test:js && pnpm run lint:js && pnpm run lint:style"
   },
   "devDependencies": {
+    "@playwright/test": "1.58.2",
     "@wordpress/block-editor": "wp-7.0",
     "@wordpress/blocks": "wp-7.0",
     "@wordpress/components": "wp-7.0",

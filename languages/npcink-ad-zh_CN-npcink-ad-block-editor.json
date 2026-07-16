@@ -22,9 +22,6 @@
             "Promotion": [
                 "\u63a8\u5e7f"
             ],
-            "Select a promotion": [
-                "\u9009\u62e9\u63a8\u5e7f"
-            ],
             "Npcink Ad promotion": [
                 "Npcink Ad \u63a8\u5e7f"
             ],
@@ -286,9 +283,6 @@
             "No editor preview content was returned for the selected Promotion. Confirm that it is saved, still available, and configured for Manual block, then try again.": [
                 "\u6240\u9009\u63a8\u5e7f\u672a\u8fd4\u56de\u7f16\u8f91\u5668\u9884\u89c8\u5185\u5bb9\u3002\u8bf7\u786e\u8ba4\u5b83\u5df2\u4fdd\u5b58\u3001\u4ecd\u7136\u53ef\u7528\u4e14\u914d\u7f6e\u4e3a\u201c\u624b\u52a8\u533a\u5757\u201d\uff0c\u7136\u540e\u91cd\u8bd5\u3002"
             ],
-            "Choose a saved Promotion configured for Manual block. This block controls the live position; the Promotion rules decide whether it displays.": [
-                "\u8bf7\u9009\u62e9\u5df2\u4fdd\u5b58\u4e14\u914d\u7f6e\u4e3a\u201c\u624b\u52a8\u533a\u5757\u201d\u7684\u63a8\u5e7f\u3002\u6b64\u533a\u5757\u63a7\u5236\u6b63\u5f0f\u4f4d\u7f6e\uff1b\u63a8\u5e7f\u89c4\u5219\u51b3\u5b9a\u662f\u5426\u5c55\u793a\u3002"
-            ],
             "Preview request failed": [
                 "\u9884\u89c8\u8bf7\u6c42\u5931\u8d25"
             ],
@@ -315,6 +309,45 @@
             ],
             "The All devices option shows the Promotion at every width. Desktop shows it at viewport widths of 782px and above; Mobile shows it at 781px and below. CSS applies this fixed breakpoint, with no separate tablet target.": [
                 "\u201c\u6240\u6709\u8bbe\u5907\u201d\u9009\u9879\u4f1a\u5728\u4efb\u610f\u5bbd\u5ea6\u663e\u793a\u63a8\u5e7f\uff1b\u201c\u684c\u9762\u7aef\u201d\u4f1a\u5728\u89c6\u53e3\u5bbd\u5ea6\u4e3a 782px \u53ca\u4ee5\u4e0a\u65f6\u663e\u793a\uff0c\u201c\u79fb\u52a8\u7aef\u201d\u4f1a\u5728 781px \u53ca\u4ee5\u4e0b\u65f6\u663e\u793a\u3002CSS \u4f7f\u7528\u8fd9\u4e00\u56fa\u5b9a\u65ad\u70b9\uff0c\u4e0d\u63d0\u4f9b\u5355\u72ec\u7684\u5e73\u677f\u8bbe\u5907\u76ee\u6807\u3002"
+            ],
+            "Promotion #%d (Loading details\u2026)": [
+                "\u63a8\u5e7f #%d\uff08\u6b63\u5728\u52a0\u8f7d\u8be6\u60c5\u2026\uff09"
+            ],
+            "Promotion #%d (Details unavailable)": [
+                "\u63a8\u5e7f #%d\uff08\u8be6\u60c5\u4e0d\u53ef\u7528\uff09"
+            ],
+            "Choose or search for a saved Promotion configured for Manual block. This block controls the live position; the Promotion rules decide whether it displays.": [
+                "\u9009\u62e9\u6216\u641c\u7d22\u5df2\u914d\u7f6e\u4e3a\u201c\u624b\u52a8\u533a\u5757\u201d\u7684\u5df2\u4fdd\u5b58\u63a8\u5e7f\u3002\u6b64\u533a\u5757\u63a7\u5236\u6b63\u5f0f\u5c55\u793a\u4f4d\u7f6e\uff1b\u63a8\u5e7f\u89c4\u5219\u51b3\u5b9a\u662f\u5426\u663e\u793a\u3002"
+            ],
+            "The selected Promotion details are unavailable. The saved selection has been retained.": [
+                "\u6240\u9009\u63a8\u5e7f\u7684\u8be6\u60c5\u4e0d\u53ef\u7528\u3002\u5df2\u4fdd\u5b58\u7684\u9009\u62e9\u4ecd\u4f1a\u4fdd\u7559\u3002"
+            ],
+            "Retry selected promotion": [
+                "\u91cd\u8bd5\u52a0\u8f7d\u6240\u9009\u63a8\u5e7f"
+            ],
+            "Loading promotions\u2026": [
+                "\u6b63\u5728\u52a0\u8f7d\u63a8\u5e7f\u2026"
+            ],
+            "Promotions could not be loaded. The current selection has not been changed.": [
+                "\u65e0\u6cd5\u52a0\u8f7d\u63a8\u5e7f\u3002\u5f53\u524d\u9009\u62e9\u672a\u88ab\u66f4\u6539\u3002"
+            ],
+            "Retry loading promotions": [
+                "\u91cd\u8bd5\u52a0\u8f7d\u63a8\u5e7f"
+            ],
+            "No matching Promotions were found.": [
+                "\u672a\u627e\u5230\u5339\u914d\u7684\u63a8\u5e7f\u3002"
+            ],
+            "No Promotions are available.": [
+                "\u6ca1\u6709\u53ef\u7528\u7684\u63a8\u5e7f\u3002"
+            ],
+            "Load more promotions": [
+                "\u52a0\u8f7d\u66f4\u591a\u63a8\u5e7f"
+            ],
+            "Showing results for \u201c%s\u201d.": [
+                "\u6b63\u5728\u663e\u793a\u201c%s\u201d\u7684\u641c\u7d22\u7ed3\u679c\u3002"
+            ],
+            "Clear promotion search": [
+                "\u6e05\u9664\u63a8\u5e7f\u641c\u7d22"
             ]
         }
     }

@@ -20,6 +20,7 @@
 /phpunit.xml.dist
 /tsconfig.json
 /webpack.config.js
+/playwright.config.ts
 /pnpm-lock.yaml
 /package.json
 /composer.json
