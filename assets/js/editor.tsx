@@ -99,10 +99,22 @@ interface SiteBaseRecord {
 }
 
 interface ResolutionSelectors {
+	getResolutionError: (
+		selectorName: string,
+		args?: readonly unknown[]
+	) => unknown;
 	hasFinishedResolution: (
 		selectorName: string,
 		args?: readonly unknown[]
 	) => boolean;
+	isResolving: ( selectorName: string, args?: readonly unknown[] ) => boolean;
+}
+
+interface ResolutionActions {
+	invalidateResolution: (
+		selectorName: string,
+		args?: readonly unknown[]
+	) => void;
 }
 
 type ManualBlockInspectionState =
@@ -115,12 +127,7 @@ type ManualBlockInspectionState =
 
 type ParagraphAnchorNoticeState =
 	| {
-			state:
-				| 'not_applicable'
-				| 'no_target'
-				| 'loading'
-				| 'invalid_number'
-				| 'unavailable';
+			state: 'not_applicable' | 'no_target' | 'loading' | 'unavailable';
 	  }
 	| {
 			state: 'available' | 'missing';
@@ -145,6 +152,17 @@ interface FirstRunGuideInput {
 	previewTargetId: number;
 }
 
+interface PreviewFeedback {
+	kind:
+		| 'unsaved'
+		| 'invalid_paragraph'
+		| 'no_target'
+		| 'popup_blocked'
+		| 'save_failed';
+	message: string;
+	status: 'warning' | 'error';
+}
+
 const editContextQuery = { context: 'edit' } as const;
 
 function recordTitle( record: ContentRecord ): string {
@@ -153,6 +171,15 @@ function recordTitle( record: ContentRecord ): string {
 	}
 
 	return record.title?.raw || record.title?.rendered || `#${ record.id }`;
+}
+
+export function isRecordsRequestLoading(
+	records: readonly unknown[] | null,
+	error: unknown,
+	hasFinished: boolean,
+	isResolving: boolean
+): boolean {
+	return ! error && records === null && ( isResolving || ! hasFinished );
 }
 
 function normalizeIds( value: unknown ): number[] {
@@ -375,12 +402,12 @@ function ManualBlockInspectionNotice( {
 			return null;
 		case 'no_target':
 			return (
-				<Notice status="info" isDismissible={ false }>
+				<p>
 					{ __(
 						'Choose a published page or post in Real-page preview before checking manual block placement.',
 						'npcink-ad'
 					) }
-				</Notice>
+				</p>
 			);
 		case 'loading': {
 			const spokenMessage = __(
@@ -441,12 +468,12 @@ function ParagraphAnchorNotice( {
 			return null;
 		case 'no_target':
 			return (
-				<Notice status="info" isDismissible={ false }>
+				<p>
 					{ __(
 						'Choose a published page or post in Real-page preview before checking the paragraph anchor.',
 						'npcink-ad'
 					) }
-				</Notice>
+				</p>
 			);
 		case 'loading': {
 			const spokenMessage = __(
@@ -465,20 +492,6 @@ function ParagraphAnchorNotice( {
 				</Notice>
 			);
 		}
-		case 'invalid_number':
-			return (
-				<Notice status="warning" isDismissible={ false }>
-					{ sprintf(
-						/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
-						__(
-							'Enter a whole paragraph number from %1$d to %2$d before checking this anchor.',
-							'npcink-ad'
-						),
-						MIN_PARAGRAPH_NUMBER,
-						MAX_PARAGRAPH_NUMBER
-					) }
-				</Notice>
-			);
 		case 'available': {
 			const message =
 				inspection.source === 'blocks'
@@ -568,31 +581,92 @@ function ContentPicker( {
 		} ),
 		[ filter ]
 	);
-
-	const records = useSelect(
-		( select ) => {
-			const posts = select( coreDataStore ).getEntityRecords(
-				'postType',
-				'post',
-				query
-			) as ContentRecord[] | null;
-			const pages = select( coreDataStore ).getEntityRecords(
-				'postType',
-				'page',
-				query
-			) as ContentRecord[] | null;
-
-			if ( posts === null || pages === null ) {
-				return null;
-			}
-
-			return [
-				...pages.map( ( page ) => ( { ...page, type: 'page' } ) ),
-				...posts.map( ( post ) => ( { ...post, type: 'post' } ) ),
-			];
-		},
+	const postResolutionArgs = React.useMemo(
+		() => [ 'postType', 'post', query ] as const,
 		[ query ]
 	);
+	const pageResolutionArgs = React.useMemo(
+		() => [ 'postType', 'page', query ] as const,
+		[ query ]
+	);
+
+	const { records, postError, pageError, isLoading } = useSelect(
+		( select ) => {
+			const coreData = select( coreDataStore );
+			const resolution = coreData as unknown as ResolutionSelectors;
+			const posts = coreData.getEntityRecords( ...postResolutionArgs ) as
+				| ContentRecord[]
+				| null;
+			const pages = coreData.getEntityRecords( ...pageResolutionArgs ) as
+				| ContentRecord[]
+				| null;
+			const nextPostError = resolution.getResolutionError(
+				'getEntityRecords',
+				postResolutionArgs
+			);
+			const nextPageError = resolution.getResolutionError(
+				'getEntityRecords',
+				pageResolutionArgs
+			);
+			const postHasFinished = resolution.hasFinishedResolution(
+				'getEntityRecords',
+				postResolutionArgs
+			);
+			const pageHasFinished = resolution.hasFinishedResolution(
+				'getEntityRecords',
+				pageResolutionArgs
+			);
+			const postIsResolving = resolution.isResolving(
+				'getEntityRecords',
+				postResolutionArgs
+			);
+			const pageIsResolving = resolution.isResolving(
+				'getEntityRecords',
+				pageResolutionArgs
+			);
+
+			return {
+				records: [
+					...( pages ?? [] ).map( ( page ) => ( {
+						...page,
+						type: 'page',
+					} ) ),
+					...( posts ?? [] ).map( ( post ) => ( {
+						...post,
+						type: 'post',
+					} ) ),
+				],
+				postError: nextPostError,
+				pageError: nextPageError,
+				isLoading:
+					isRecordsRequestLoading(
+						posts,
+						nextPostError,
+						postHasFinished,
+						postIsResolving
+					) ||
+					isRecordsRequestLoading(
+						pages,
+						nextPageError,
+						pageHasFinished,
+						pageIsResolving
+					),
+			};
+		},
+		[ postResolutionArgs, pageResolutionArgs ]
+	);
+	const { invalidateResolution } = useDispatch(
+		coreDataStore
+	) as unknown as ResolutionActions;
+	const hasResolutionError = Boolean( postError || pageError );
+	const retryRecords = () => {
+		if ( postError ) {
+			invalidateResolution( 'getEntityRecords', postResolutionArgs );
+		}
+		if ( pageError ) {
+			invalidateResolution( 'getEntityRecords', pageResolutionArgs );
+		}
+	};
 
 	const options: ContentOption[] = ( records ?? [] )
 		.filter( ( record ) => ! selectedIds.includes( record.id ) )
@@ -623,7 +697,7 @@ function ContentPicker( {
 				help={ help }
 				value={ null }
 				options={ options }
-				isLoading={ records === null }
+				isLoading={ isLoading }
 				onFilterValueChange={ setFilter }
 				onChange={ ( value ) => {
 					const id = Number.parseInt( value || '', 10 );
@@ -633,7 +707,19 @@ function ContentPicker( {
 					}
 				} }
 			/>
-			{ records === null && <Spinner /> }
+			{ hasResolutionError && (
+				<Notice status="error" isDismissible={ false }>
+					<p>
+						{ __(
+							'The available posts and pages could not be fully loaded. The current selection has not been changed.',
+							'npcink-ad'
+						) }
+					</p>
+					<Button variant="secondary" onClick={ retryRecords }>
+						{ __( 'Retry loading posts and pages', 'npcink-ad' ) }
+					</Button>
+				</Notice>
+			) }
 			{ selectedIds.length > 0 && (
 				<ul className="npcink-ad-content-picker__selected">
 					{ selectedIds.map( ( id ) => (
@@ -698,28 +784,102 @@ function TermPicker( {
 		} ),
 		[ selectedIds ]
 	);
+	const searchResolutionArgs = React.useMemo(
+		() => [ 'taxonomy', taxonomy, searchQuery ] as const,
+		[ taxonomy, searchQuery ]
+	);
+	const selectedResolutionArgs = React.useMemo(
+		() => [ 'taxonomy', taxonomy, selectedQuery ] as const,
+		[ taxonomy, selectedQuery ]
+	);
 
-	const { searchRecords, selectedRecords } = useSelect(
+	const {
+		searchRecords,
+		selectedRecords,
+		searchError,
+		selectedError,
+		isLoading,
+	} = useSelect(
 		( select ) => {
 			const coreData = select( coreDataStore );
+			const resolution = coreData as unknown as ResolutionSelectors;
+			const nextSearchRecords = coreData.getEntityRecords(
+				...searchResolutionArgs
+			) as TermRecord[] | null;
+			const nextSelectedRecords =
+				selectedIds.length === 0
+					? []
+					: ( coreData.getEntityRecords(
+							...selectedResolutionArgs
+					  ) as TermRecord[] | null );
+			const nextSearchError = resolution.getResolutionError(
+				'getEntityRecords',
+				searchResolutionArgs
+			);
+			const nextSelectedError =
+				selectedIds.length === 0
+					? null
+					: resolution.getResolutionError(
+							'getEntityRecords',
+							selectedResolutionArgs
+					  );
+			const searchHasFinished = resolution.hasFinishedResolution(
+				'getEntityRecords',
+				searchResolutionArgs
+			);
+			const selectedHasFinished =
+				selectedIds.length === 0
+					? true
+					: resolution.hasFinishedResolution(
+							'getEntityRecords',
+							selectedResolutionArgs
+					  );
+			const searchIsResolving = resolution.isResolving(
+				'getEntityRecords',
+				searchResolutionArgs
+			);
+			const selectedIsResolving =
+				selectedIds.length === 0
+					? false
+					: resolution.isResolving(
+							'getEntityRecords',
+							selectedResolutionArgs
+					  );
+
 			return {
-				searchRecords: coreData.getEntityRecords(
-					'taxonomy',
-					taxonomy,
-					searchQuery
-				) as TermRecord[] | null,
-				selectedRecords:
-					selectedIds.length === 0
-						? []
-						: ( coreData.getEntityRecords(
-								'taxonomy',
-								taxonomy,
-								selectedQuery
-						  ) as TermRecord[] | null ),
+				searchRecords: nextSearchRecords,
+				selectedRecords: nextSelectedRecords,
+				searchError: nextSearchError,
+				selectedError: nextSelectedError,
+				isLoading:
+					isRecordsRequestLoading(
+						nextSearchRecords,
+						nextSearchError,
+						searchHasFinished,
+						searchIsResolving
+					) ||
+					isRecordsRequestLoading(
+						nextSelectedRecords,
+						nextSelectedError,
+						selectedHasFinished,
+						selectedIsResolving
+					),
 			};
 		},
-		[ taxonomy, searchQuery, selectedQuery, selectedIds.length ]
+		[ searchResolutionArgs, selectedResolutionArgs, selectedIds.length ]
 	);
+	const { invalidateResolution } = useDispatch(
+		coreDataStore
+	) as unknown as ResolutionActions;
+	const hasResolutionError = Boolean( searchError || selectedError );
+	const retryRecords = () => {
+		if ( searchError ) {
+			invalidateResolution( 'getEntityRecords', searchResolutionArgs );
+		}
+		if ( selectedError ) {
+			invalidateResolution( 'getEntityRecords', selectedResolutionArgs );
+		}
+	};
 
 	const records = [
 		...( selectedRecords ?? [] ),
@@ -734,7 +894,6 @@ function TermPicker( {
 			label: record.name,
 			value: String( record.id ),
 		} ) );
-	const isLoading = searchRecords === null || selectedRecords === null;
 	const removeLabel =
 		taxonomy === 'category'
 			? /* translators: %s: category name. */ __(
@@ -764,8 +923,20 @@ function TermPicker( {
 					}
 				} }
 			/>
-			{ isLoading && <Spinner /> }
-			{ selectedIds.length > 0 && selectedRecords !== null && (
+			{ hasResolutionError && (
+				<Notice status="error" isDismissible={ false }>
+					<p>
+						{ __(
+							'Terms could not be loaded. The current selection has not been changed.',
+							'npcink-ad'
+						) }
+					</p>
+					<Button variant="secondary" onClick={ retryRecords }>
+						{ __( 'Retry loading terms', 'npcink-ad' ) }
+					</Button>
+				</Notice>
+			) }
+			{ selectedIds.length > 0 && (
 				<ul className="npcink-ad-content-picker__selected">
 					{ selectedIds.map( ( id ) => {
 						const termName = labels.get( id ) || `#${ id }`;
@@ -851,7 +1022,8 @@ function PromotionSettingsPanel() {
 		createPublishStatusRecoveryState()
 	);
 	const [ previewTarget, setPreviewTarget ] = React.useState( 0 );
-	const [ previewError, setPreviewError ] = React.useState( '' );
+	const [ previewFeedback, setPreviewFeedback ] =
+		React.useState< PreviewFeedback | null >( null );
 	const [ confirmedPublicIds, setConfirmedPublicIds ] = React.useState<
 		number[]
 	>( [] );
@@ -955,6 +1127,7 @@ function PromotionSettingsPanel() {
 		startAt: meta._npcink_ad_start_at,
 		endAt: meta._npcink_ad_end_at,
 	} );
+	const preflightMessages = preflightIssues.map( preflightIssueMessage );
 	const hasSchedule = Boolean(
 		meta._npcink_ad_start_at || meta._npcink_ad_end_at
 	);
@@ -987,6 +1160,30 @@ function PromotionSettingsPanel() {
 		previewTargetId: effectivePreviewTarget,
 	} );
 	const isParagraphLocation = location === 'content_after_paragraph';
+	React.useEffect( () => {
+		setPreviewFeedback( ( current ) => {
+			if ( current?.kind === 'no_target' && effectivePreviewTarget ) {
+				return null;
+			}
+			if (
+				current?.kind === 'invalid_paragraph' &&
+				( ! isParagraphLocation || paragraphNumberValid )
+			) {
+				return null;
+			}
+			if ( current?.kind === 'unsaved' && settings && postId ) {
+				return null;
+			}
+
+			return current;
+		} );
+	}, [
+		effectivePreviewTarget,
+		isParagraphLocation,
+		paragraphNumberValid,
+		postId,
+		settings,
+	] );
 	const manualBlockInspection = useSelect(
 		( select ): ManualBlockInspectionState => {
 			if ( ! isManualBlock ) {
@@ -1063,7 +1260,8 @@ function PromotionSettingsPanel() {
 				return { state: 'not_applicable' };
 			}
 			if ( ! paragraphNumberValid ) {
-				return { state: 'invalid_number' };
+				// The canonical preflight already renders the blocking error.
+				return { state: 'not_applicable' };
 			}
 			if ( ! effectivePreviewTarget ) {
 				return { state: 'no_target' };
@@ -1134,19 +1332,22 @@ function PromotionSettingsPanel() {
 	);
 
 	const openPreview = async () => {
-		setPreviewError( '' );
+		setPreviewFeedback( null );
 		if ( ! settings || ! postId ) {
-			setPreviewError(
-				__(
+			setPreviewFeedback( {
+				kind: 'unsaved',
+				message: __(
 					'Save the promotion before opening a preview.',
 					'npcink-ad'
-				)
-			);
+				),
+				status: 'warning',
+			} );
 			return;
 		}
 		if ( isParagraphLocation && ! paragraphNumberValid ) {
-			setPreviewError(
-				sprintf(
+			setPreviewFeedback( {
+				kind: 'invalid_paragraph',
+				message: sprintf(
 					/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
 					__(
 						'Enter a whole paragraph number from %1$d to %2$d before opening the real-page preview.',
@@ -1154,29 +1355,34 @@ function PromotionSettingsPanel() {
 					),
 					MIN_PARAGRAPH_NUMBER,
 					MAX_PARAGRAPH_NUMBER
-				)
-			);
+				),
+				status: 'warning',
+			} );
 			return;
 		}
 
 		if ( ! effectivePreviewTarget ) {
-			setPreviewError(
-				__(
+			setPreviewFeedback( {
+				kind: 'no_target',
+				message: __(
 					'Choose a published page or post to use as the preview context.',
 					'npcink-ad'
-				)
-			);
+				),
+				status: 'warning',
+			} );
 			return;
 		}
 
 		const previewWindow = window.open( '', 'npcink-ad-preview' );
 		if ( ! previewWindow ) {
-			setPreviewError(
-				__(
+			setPreviewFeedback( {
+				kind: 'popup_blocked',
+				message: __(
 					'Allow pop-ups for this site, then try preview again.',
 					'npcink-ad'
-				)
-			);
+				),
+				status: 'warning',
+			} );
 			return;
 		}
 
@@ -1187,12 +1393,14 @@ function PromotionSettingsPanel() {
 			}
 		} catch {
 			previewWindow.close();
-			setPreviewError(
-				__(
+			setPreviewFeedback( {
+				kind: 'save_failed',
+				message: __(
 					'The promotion could not be saved. Resolve the editor error, then try again.',
 					'npcink-ad'
-				)
-			);
+				),
+				status: 'error',
+			} );
 			return;
 		}
 		const url = new URL( settings.previewUrl );
@@ -1212,20 +1420,6 @@ function PromotionSettingsPanel() {
 				title={ __( 'Npcink Ad delivery', 'npcink-ad' ) }
 				className="npcink-ad-editor-panel"
 			>
-				{ preflightIssues.length > 0 && (
-					<Notice status="error" isDismissible={ false }>
-						{ sprintf(
-							/* translators: %d: number of delivery configuration errors. */
-							_n(
-								'%d delivery configuration error needs review before publishing.',
-								'%d delivery configuration errors need review before publishing.',
-								preflightIssues.length,
-								'npcink-ad'
-							),
-							preflightIssues.length
-						) }
-					</Notice>
-				) }
 				<SelectControl
 					__next40pxDefaultSize
 					label={ __( 'Placement', 'npcink-ad' ) }
@@ -1579,13 +1773,22 @@ function PromotionSettingsPanel() {
 					selectedIds={
 						effectivePreviewTarget ? [ effectivePreviewTarget ] : []
 					}
-					onAdd={ setPreviewTarget }
-					onRemove={ () => setPreviewTarget( 0 ) }
+					onAdd={ ( id ) => {
+						setPreviewTarget( id );
+						setPreviewFeedback( null );
+					} }
+					onRemove={ () => {
+						setPreviewTarget( 0 );
+						setPreviewFeedback( null );
+					} }
 				/>
 				<ManualBlockInspectionNotice state={ manualBlockInspection } />
-				{ previewError && (
-					<Notice status="warning" isDismissible={ false }>
-						{ previewError }
+				{ previewFeedback && (
+					<Notice
+						status={ previewFeedback.status }
+						isDismissible={ false }
+					>
+						{ previewFeedback.message }
 					</Notice>
 				) }
 				{ isParagraphLocation && ! paragraphNumberValid && (
@@ -1628,23 +1831,27 @@ function PromotionSettingsPanel() {
 					isParagraphLocation
 				}
 			>
-				{ preflightIssues.length > 0 ? (
-					preflightIssues.map( ( issue ) => (
-						<Notice
-							key={ issue }
-							status="error"
-							isDismissible={ false }
-						>
-							{ preflightIssueMessage( issue ) }
-						</Notice>
-					) )
+				{ preflightMessages.length > 0 ? (
+					<Notice
+						status="error"
+						isDismissible={ false }
+						spokenMessage={ preflightMessages.join( ' ' ) }
+					>
+						<ul className="npcink-ad-preflight-issues">
+							{ preflightMessages.map( ( message, index ) => (
+								<li key={ preflightIssues[ index ] }>
+									{ message }
+								</li>
+							) ) }
+						</ul>
+					</Notice>
 				) : (
-					<Notice status="info" isDismissible={ false }>
+					<p className="npcink-ad-preflight-summary">
 						{ __(
-							'No empty-scope, schedule, content, or paragraph errors were found in the current editor fields. Public selected targets and category or tag availability are confirmed by the server when publishing or scheduling.',
+							'Current content and delivery checks have passed.',
 							'npcink-ad'
 						) }
-					</Notice>
+					</p>
 				) }
 				{ potentiallyOverlappingIds.length > 0 && (
 					<Notice status="warning" isDismissible={ false }>
@@ -1699,7 +1906,7 @@ function PromotionSettingsPanel() {
 				/>
 				<p>
 					{ __(
-						'These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative.',
+						'Drafts can still be saved. Publishing or scheduling runs the final validation.',
 						'npcink-ad'
 					) }
 				</p>

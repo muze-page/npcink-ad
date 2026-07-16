@@ -524,7 +524,7 @@ function Edit( {
 						</Notice>
 					) }
 					{ hasNoResults && (
-						<Notice status="info" isDismissible={ false }>
+						<p className="npcink-ad-promotion-selector__empty">
 							{ committedSearch
 								? __(
 										'No matching Promotions were found.',
@@ -534,7 +534,7 @@ function Edit( {
 										'No Promotions are available.',
 										'npcink-ad'
 								  ) }
-						</Notice>
+						</p>
 					) }
 					{ canLoadMore && (
 						<Button

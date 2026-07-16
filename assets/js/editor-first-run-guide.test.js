@@ -38,7 +38,32 @@ jest.mock( './preflight', () => ( {
 	MIN_PARAGRAPH_NUMBER: 1,
 } ) );
 
-import { getFirstRunGuideState } from './editor';
+import { getFirstRunGuideState, isRecordsRequestLoading } from './editor';
+
+describe( 'isRecordsRequestLoading', () => {
+	test( 'keeps unresolved and active requests in loading state', () => {
+		expect( isRecordsRequestLoading( null, null, false, false ) ).toBe(
+			true
+		);
+		expect( isRecordsRequestLoading( null, null, false, true ) ).toBe(
+			true
+		);
+	} );
+
+	test( 'stops loading after a failure or completed resolution', () => {
+		expect(
+			isRecordsRequestLoading(
+				null,
+				new Error( 'request failed' ),
+				true,
+				false
+			)
+		).toBe( false );
+		expect( isRecordsRequestLoading( null, null, true, false ) ).toBe(
+			false
+		);
+	} );
+} );
 
 describe( 'getFirstRunGuideState', () => {
 	test( 'uses the existing preflight issues for content and delivery progress', () => {

@@ -261,8 +261,18 @@ test("completes a first selected-page Promotion from creation to live pause and 
   await expect(deliveryStep).toHaveAttribute("data-state", "complete");
   await expect(previewPublishStep).toHaveAttribute("data-state", "blocked");
 
-  await setPromotionCreative(page);
   await openSettingsPanel(page, "Npcink Ad delivery");
+  const deliveryPanel = page.locator(".components-panel__body").filter({
+    has: page.getByRole("button", {
+      name: "Npcink Ad delivery",
+      exact: true,
+    }),
+  });
+  await expect(
+    deliveryPanel.locator(".components-notice.is-error"),
+  ).toHaveCount(0);
+
+  await setPromotionCreative(page);
 
   await page
     .getByLabel("Placement", { exact: true })

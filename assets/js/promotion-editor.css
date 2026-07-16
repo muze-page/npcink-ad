@@ -88,3 +88,12 @@
 	color: #008a20;
 	font-weight: 600;
 }
+
+.npcink-ad-preflight-issues {
+	margin: 0;
+	padding-inline-start: 20px;
+}
+
+.npcink-ad-preflight-summary {
+	margin-top: 0;
+}
