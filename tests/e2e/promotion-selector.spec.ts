@@ -5,9 +5,8 @@ import {
   type Page,
   type Request,
 } from "@playwright/test";
+import { logInAsE2EAdmin } from "./support";
 
-const USERNAME = "npcink-e2e-admin";
-const PASSWORD = "npcink-e2e-password";
 const PAGE_SLUG = "npcink-ad-selector-e2e-page";
 const SELECTED_PROMOTION_TITLE = "ZZZ Selected Promotion";
 const SEARCH_TARGET_TITLE = "Needle Match Z25";
@@ -174,17 +173,7 @@ test("searches, paginates, saves, and restores a Promotion selection", async ({
     }
   });
 
-  await page.goto("/wp-login.php");
-  const username = page.locator("#user_login");
-  const password = page.locator("#user_pass");
-  await username.fill(USERNAME);
-  await password.fill(PASSWORD);
-  await expect(username).toHaveValue(USERNAME);
-  await expect(password).toHaveValue(PASSWORD);
-  await Promise.all([
-    page.waitForURL(/\/wp-admin\//),
-    page.getByRole("button", { name: "Log In" }).click(),
-  ]);
+  await logInAsE2EAdmin(page);
 
   const pageId = await resolveFixturePageId(page);
   await page.goto(`/wp-admin/post.php?post=${pageId}&action=edit`);

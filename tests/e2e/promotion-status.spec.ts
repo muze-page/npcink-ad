@@ -1,24 +1,9 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { logInAsE2EAdmin } from "./support";
 
-const USERNAME = "npcink-e2e-admin";
-const PASSWORD = "npcink-e2e-password";
 const PAGE_SLUG = "npcink-ad-selector-e2e-page";
 const AUTOMATIC_PROMOTION_TITLE = "Status Action E2E Promotion";
 const AUTOMATIC_PROMOTION_CONTENT = "Automatic status E2E promotion.";
-
-async function logIn(page: Page): Promise<void> {
-  await page.goto("/wp-login.php");
-  const username = page.locator("#user_login");
-  const password = page.locator("#user_pass");
-  await username.fill(USERNAME);
-  await password.fill(PASSWORD);
-  await expect(username).toHaveValue(USERNAME);
-  await expect(password).toHaveValue(PASSWORD);
-  await Promise.all([
-    page.waitForURL(/\/wp-admin\//),
-    page.getByRole("button", { name: "Log In" }).click(),
-  ]);
-}
 
 async function resolveFixturePageId(page: Page): Promise<number> {
   const pageIds = await page.evaluate(async (slug) => {
@@ -70,7 +55,7 @@ async function submitStatusAction(
 test("pauses and resumes an automatic Promotion from the list", async ({
   page,
 }) => {
-  await logIn(page);
+  await logInAsE2EAdmin(page);
   const fixturePageId = await resolveFixturePageId(page);
 
   await page.goto(`/?page_id=${fixturePageId}`);

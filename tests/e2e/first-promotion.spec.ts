@@ -1,7 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { logInAsE2EAdmin } from "./support";
 
-const USERNAME = "npcink-e2e-admin";
-const PASSWORD = "npcink-e2e-password";
 const PAGE_SLUG = "npcink-ad-selector-e2e-page";
 const PAGE_TITLE = "Npcink Ad selector E2E page";
 const PROMOTION_TITLE = `First-run E2E Promotion ${Date.now()}-${process.pid}`;
@@ -37,20 +36,6 @@ test.skip(
   process.env.NPCINK_AD_E2E_FIXTURE_MODE !== "first-run",
   "The true first-run flow requires its dedicated empty Promotion fixture.",
 );
-
-async function logIn(page: Page): Promise<void> {
-  await page.goto("/wp-login.php");
-  const username = page.locator("#user_login");
-  const password = page.locator("#user_pass");
-  await username.fill(USERNAME);
-  await password.fill(PASSWORD);
-  await expect(username).toHaveValue(USERNAME);
-  await expect(password).toHaveValue(PASSWORD);
-  await Promise.all([
-    page.waitForURL(/\/wp-admin\//),
-    page.getByRole("button", { name: "Log In" }).click(),
-  ]);
-}
 
 async function resolveFixturePageId(page: Page): Promise<number> {
   const pageIds = await page.evaluate(async (slug) => {
@@ -232,7 +217,7 @@ test.afterEach(async ({ page }) => {
 test("completes a first selected-page Promotion from creation to live pause and resume", async ({
   page,
 }) => {
-  await logIn(page);
+  await logInAsE2EAdmin(page);
   const fixturePageId = await resolveFixturePageId(page);
 
   await page.goto("/wp-admin/edit.php?post_type=npcink_promotion");

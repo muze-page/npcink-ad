@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { logInAsE2EAdmin } from "./support";
 
-const USERNAME = "npcink-e2e-admin";
-const PASSWORD = "npcink-e2e-password";
 const PAGE_SLUG = "npcink-ad-selector-e2e-page";
 const BLOCK_EDITOR_ASSET = "block-editor.js";
 const PROMOTION_EDITOR_ASSET = "promotion-editor.js";
@@ -27,20 +26,6 @@ interface WordPressWindow extends Window {
 
 function isEditorAsset(url: string, assetName: string): boolean {
   return new URL(url).pathname.endsWith(`/build/${assetName}`);
-}
-
-async function logIn(page: Page): Promise<void> {
-  await page.goto("/wp-login.php");
-  const username = page.locator("#user_login");
-  const password = page.locator("#user_pass");
-  await username.fill(USERNAME);
-  await password.fill(PASSWORD);
-  await expect(username).toHaveValue(USERNAME);
-  await expect(password).toHaveValue(PASSWORD);
-  await Promise.all([
-    page.waitForURL(/\/wp-admin\//),
-    page.getByRole("button", { name: "Log In" }).click(),
-  ]);
 }
 
 async function resolveFixturePageId(page: Page): Promise<number> {
@@ -102,7 +87,7 @@ test("loads editor assets only on their intended document screens", async ({
     }
   });
 
-  await logIn(page);
+  await logInAsE2EAdmin(page);
   const fixturePageId = await resolveFixturePageId(page);
 
   requestedEditorAssets.length = 0;
