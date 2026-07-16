@@ -115,6 +115,8 @@ Explicit ID exclusions always win. Terms are not combined with selected IDs, do 
 
 For manual placement, [ADR 008](decisions/008-manual-placement-and-device-guidance.md) keeps the explicit block and `[npcink_ad promotion="ID"]` shortcode on the same `block` delivery path. Manual scope is `all | selected`: `all` applies wherever the Promotion is explicitly inserted, `selected` remains an allow-list of published standard posts/pages, and explicit ID exclusions always win. Missing-block inspection is contextual advisory evidence and does not block publication or become an eligibility reason.
 
+The manual block selector is a management-only reliability surface: title search and 20-record pagination run through Core REST/Core Data, while the stored Promotion ID is always resolved independently and retained through loading or request failures. This changes no block attribute, Promotion metadata, eligibility rule, REST schema, or frontend delivery behavior.
+
 Device visibility uses one fixed CSS boundary: mobile at `781px` and below, desktop at `782px` and above, and `all` at every width. There is no tablet target or configurable breakpoint. The mobile preview canvas is capped at `390px` as a representative width, not as the production breakpoint; normal HTML remains cache-stable and does not branch by User-Agent.
 
 This is the controlled 0.2 product scope packaged as version 0.2.0. A Git tag, GitHub Release, and public distribution remain explicit repository release actions rather than claims made by this contract.

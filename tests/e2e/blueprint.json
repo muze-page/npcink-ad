@@ -1,0 +1,26 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "Npcink Ad editor E2E",
+    "author": "Npcink",
+    "description": "Installs the packaged plugin and prepares deterministic Promotion selector fixtures."
+  },
+  "preferredVersions": {
+    "php": "8.1",
+    "wp": "6.5"
+  },
+  "steps": [
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "bundled",
+        "path": "/npcink-ad.zip"
+      },
+      "options": {
+        "activate": true,
+        "targetFolderName": "npcink-ad"
+      },
+      "ifAlreadyInstalled": "overwrite"
+    }
+  ]
+}

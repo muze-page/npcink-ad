@@ -36,7 +36,7 @@ make_pot() {
 		--domain="$DOMAIN" \
 		--headers='{"Report-Msgid-Bugs-To":"https://github.com/muze-page/npcink-ad/issues","POT-Creation-Date":""}' \
 		--skip-block-json \
-		--exclude=.github,assets/js,dist,node_modules,vendor
+		--exclude=.github,assets/js,dist,node_modules,playwright-report,test-results,tests,vendor
 }
 
 TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/npcink-ad-i18n.XXXXXX")"

@@ -80,3 +80,39 @@ jobs:
 
       - name: Run minimum WordPress Playground matrix
         run: WP_VERSION=6.5 PHP_VERSION=8.1 tests/playground/run.sh
+
+  editor-e2e:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download PHP 8.1 release artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: npcink-ad-php-8.1
+          path: dist
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run minimum editor E2E
+        run: WP_VERSION=6.5 PHP_VERSION=8.1 pnpm run test:e2e:editor
+
+      - name: Run current editor E2E
+        run: WP_VERSION=7.0 PHP_VERSION=8.5 pnpm run test:e2e:editor

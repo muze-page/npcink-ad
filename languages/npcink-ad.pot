@@ -64,7 +64,7 @@ msgid "The preview page does not have a public URL."
 msgstr ""
 
 #: src/Admin/Preview_Page.php:125
-#: build/index.js:18
+#: build/index.js:21
 msgid "Real-page preview"
 msgstr ""
 
@@ -77,12 +77,12 @@ msgid "Desktop represents the fixed rule at 782px and above. Mobile represents t
 msgstr ""
 
 #: src/Admin/Preview_Page.php:130
-#: build/index.js:16
+#: build/index.js:19
 msgid "Desktop"
 msgstr ""
 
 #: src/Admin/Preview_Page.php:131
-#: build/index.js:16
+#: build/index.js:19
 msgid "Mobile"
 msgstr ""
 
@@ -99,12 +99,12 @@ msgid "Rule status"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:164
-#: build/index.js:11
+#: build/index.js:14
 msgid "Placement"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:165
-#: build/index.js:11
+#: build/index.js:14
 msgid "Content scope"
 msgstr ""
 
@@ -150,12 +150,12 @@ msgid "Resume"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:373
-#: build/index.js:15
+#: build/index.js:18
 msgid "All posts"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:376
-#: build/index.js:15
+#: build/index.js:18
 msgid "All pages"
 msgstr ""
 
@@ -176,7 +176,7 @@ msgid "Selected public posts/pages:"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:397
-#: build/index.js:15
+#: build/index.js:18
 msgid "All posts and pages"
 msgstr ""
 
@@ -338,7 +338,7 @@ msgstr ""
 
 #: src/Data/Post_Types.php:80
 #: src/Frontend/Renderer.php:52
-#: build/index.js:3
+#: build/index.js:5
 msgid "Promotion"
 msgstr ""
 
@@ -480,10 +480,6 @@ msgstr ""
 msgid "The promotion cannot be published until its delivery settings are complete."
 msgstr ""
 
-#: build/index.js:1
-msgid "Select a promotion"
-msgstr ""
-
 #. translators: Fallback title for a Promotion that has no title.
 #: build/index.js:1
 msgid "Untitled promotion"
@@ -506,178 +502,232 @@ msgstr ""
 msgid "(Not configured for Manual block)"
 msgstr ""
 
-#: build/index.js:3
+#. translators: %d: Promotion ID.
+#: build/index.js:4
+#, js-format
+msgid "Promotion #%d (Loading details…)"
+msgstr ""
+
+#. translators: %d: Promotion ID.
+#: build/index.js:5
+#, js-format
+msgid "Promotion #%d (Details unavailable)"
+msgstr ""
+
+#: build/index.js:5
 msgid "Npcink Ad promotion"
 msgstr ""
 
 #. translators: Guidance shown before a Promotion is selected for the block.
-#: build/index.js:3
+#: build/index.js:5
 msgid "Select a saved Promotion configured for Manual block in Promotion settings."
 msgstr ""
 
 #. translators: Guidance shown when a selected block has its editor preview turned off.
-#: build/index.js:3
+#: build/index.js:5
 msgid "Editor preview is off. This block still controls the live position, and the selected Promotion renders here only when its rules allow."
 msgstr ""
 
 #. translators: Editor placeholder title for an empty server-side Promotion preview.
-#: build/index.js:3
+#: build/index.js:5
 msgid "No preview content"
 msgstr ""
 
 #. translators: Guidance shown when a selected Promotion returns an empty editor preview.
-#: build/index.js:3
+#: build/index.js:5
 msgid "No editor preview content was returned for the selected Promotion. Confirm that it is saved, still available, and configured for Manual block, then try again."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:5
 msgid "Promotion settings"
 msgstr ""
 
-#. translators: Explains the contract of the Promotion selected by a manual block.
-#: build/index.js:3
-msgid "Choose a saved Promotion configured for Manual block. This block controls the live position; the Promotion rules decide whether it displays."
+#. translators: Explains the contract and server search of the Promotion selected by a manual block.
+#: build/index.js:5
+msgid "Choose or search for a saved Promotion configured for Manual block. This block controls the live position; the Promotion rules decide whether it displays."
 msgstr ""
 
-#: build/index.js:3
+#. translators: %s: Current Promotion title search.
+#: build/index.js:6
+#, js-format
+msgid "Showing results for “%s”."
+msgstr ""
+
+#: build/index.js:6
+msgid "Clear promotion search"
+msgstr ""
+
+#: build/index.js:6
+msgid "The selected Promotion details are unavailable. The saved selection has been retained."
+msgstr ""
+
+#: build/index.js:6
+msgid "Retry selected promotion"
+msgstr ""
+
+#: build/index.js:6
+msgid "Loading promotions…"
+msgstr ""
+
+#: build/index.js:6
+msgid "Promotions could not be loaded. The current selection has not been changed."
+msgstr ""
+
+#: build/index.js:6
+msgid "Retry loading promotions"
+msgstr ""
+
+#: build/index.js:6
+msgid "No matching Promotions were found."
+msgstr ""
+
+#: build/index.js:6
+msgid "No Promotions are available."
+msgstr ""
+
+#: build/index.js:6
+msgid "Load more promotions"
+msgstr ""
+
+#: build/index.js:6
 msgid "Reserved height"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Reserve vertical space to reduce layout shift."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Show live preview"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Loading preview…"
 msgstr ""
 
 #. translators: Editor placeholder title for a failed server-side preview request.
-#: build/index.js:3
+#: build/index.js:6
 msgid "Preview request failed"
 msgstr ""
 
 #. translators: Retry guidance for a failed server-side preview request.
-#: build/index.js:3
+#: build/index.js:6
 msgid "The editor could not load the preview. Try again."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Choose a published page or post in Real-page preview before checking manual block placement."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Checking the selected page body for a matching promotion block…"
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "A matching promotion block was found in the selected page body."
 msgstr ""
 
 #. translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated.
-#: build/index.js:3
+#: build/index.js:6
 msgid "This promotion block was not found in the selected page body. A template, synced pattern, or [npcink_ad promotion=\"ID\"] shortcode may still provide the manual insertion, so verify the result with the real-page preview."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "The selected page body could not be inspected from the editor data. This does not mean the block is missing; verify with the real-page preview."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Choose a published page or post in Real-page preview before checking the paragraph anchor."
 msgstr ""
 
-#: build/index.js:3
+#: build/index.js:6
 msgid "Checking the selected page body for the paragraph anchor…"
 msgstr ""
 
 #. translators: 1: minimum paragraph number, 2: maximum paragraph number.
-#: build/index.js:4
+#: build/index.js:7
 #, js-format
 msgid "Enter a whole paragraph number from %1$d to %2$d before checking this anchor."
 msgstr ""
 
 #. translators: 1: paragraph count, 2: requested paragraph number.
-#: build/index.js:5
+#: build/index.js:8
 #, js-format
 msgid "The saved page body has %1$d top-level paragraph blocks, so the anchor after paragraph %2$d is available."
 msgstr ""
 
 #. translators: 1: paragraph count, 2: requested paragraph number.
-#: build/index.js:6
+#: build/index.js:9
 #, js-format
 msgid "The saved Classic page body has %1$d actual paragraph elements, so the anchor after paragraph %2$d is available."
 msgstr ""
 
 #. translators: 1: paragraph count, 2: requested paragraph number.
-#: build/index.js:7
+#: build/index.js:10
 #, js-format
 msgid "The saved page body has only %1$d top-level paragraph blocks, so the anchor after paragraph %2$d was not found."
 msgstr ""
 
 #. translators: 1: paragraph count, 2: requested paragraph number.
-#: build/index.js:8
+#: build/index.js:11
 #, js-format
 msgid "The saved Classic page body has only %1$d actual paragraph elements, so the anchor after paragraph %2$d was not found."
 msgstr ""
 
-#: build/index.js:8
+#: build/index.js:11
 msgid "This anchor check is advisory and does not block publishing."
 msgstr ""
 
-#: build/index.js:8
+#: build/index.js:11
 msgid "The selected page body could not be inspected reliably for this paragraph anchor. This does not prove the anchor is missing; verify the result with the real-page preview."
 msgstr ""
 
 #. translators: 1: content title, 2: content type.
-#: build/index.js:9
+#: build/index.js:12
 #, js-format
 msgid "%1$s — %2$s"
 msgstr ""
 
-#: build/index.js:9
+#: build/index.js:12
 msgid "Page"
 msgstr ""
 
-#: build/index.js:9
+#: build/index.js:12
 msgid "Post"
 msgstr ""
 
 #. translators: %s: content title.
-#: build/index.js:10
+#: build/index.js:13
 #, js-format
 msgid "Remove %s"
 msgstr ""
 
-#: build/index.js:10
+#: build/index.js:13
 msgid "Remove"
 msgstr ""
 
 #. translators: %s: category name.
-#: build/index.js:10
+#: build/index.js:13
 #, js-format
 msgid "Remove category %s"
 msgstr ""
 
 #. translators: %s: tag name.
-#: build/index.js:10
+#: build/index.js:13
 #, js-format
 msgid "Remove tag %s"
 msgstr ""
 
-#: build/index.js:10
+#: build/index.js:13
 msgid "configured in WordPress"
 msgstr ""
 
-#: build/index.js:10
+#: build/index.js:13
 msgid "Npcink Ad delivery"
 msgstr ""
 
 #. translators: %d: number of delivery configuration errors.
-#: build/index.js:11
+#: build/index.js:14
 #, js-format
 msgid "%d delivery configuration error needs review before publishing."
 msgid_plural "%d delivery configuration errors need review before publishing."
@@ -685,226 +735,226 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated.
-#: build/index.js:11
+#: build/index.js:14
 msgid "Manual delivery is not inserted automatically. Save this Promotion first, then insert the Npcink Ad Promotion block where it should appear and select this Promotion. The block position is the live position; verify it with Real-page preview. The existing [npcink_ad promotion=\"ID\"] shortcode remains an expert manual-insertion path."
 msgstr ""
 
-#: build/index.js:11
+#: build/index.js:14
 msgid "After post content"
 msgstr ""
 
-#: build/index.js:11
+#: build/index.js:14
 msgid "Before post content"
 msgstr ""
 
-#: build/index.js:11
+#: build/index.js:14
 msgid "After paragraph N"
 msgstr ""
 
-#: build/index.js:11
+#: build/index.js:14
 msgid "Manual block"
 msgstr ""
 
 #. translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated.
-#: build/index.js:11
+#: build/index.js:14
 msgid "Manual delivery still requires the Npcink Ad Promotion block or [npcink_ad promotion=\"ID\"] shortcode. \"Only selected posts and pages\" adds an allow-list; explicit exclusions always take priority."
 msgstr ""
 
 #. translators: Content scope option for a Promotion inserted by a block or shortcode.
-#: build/index.js:13
+#: build/index.js:16
 msgid "Wherever manually inserted"
 msgstr ""
 
 #. translators: Content scope option that limits manual delivery to an explicit post/page allow-list.
-#: build/index.js:15
+#: build/index.js:18
 msgid "Only selected posts and pages"
 msgstr ""
 
-#: build/index.js:15
+#: build/index.js:18
 msgid "Posts in selected categories or tags"
 msgstr ""
 
-#: build/index.js:15
+#: build/index.js:18
 msgid "Only selected content"
 msgstr ""
 
-#: build/index.js:15
+#: build/index.js:18
 msgid "Paragraph number"
 msgstr ""
 
 #. translators: 1: minimum paragraph number, 2: maximum paragraph number.
-#: build/index.js:16
+#: build/index.js:19
 #, js-format
 msgid "Required. Enter a whole number from %1$d to %2$d. The default is 3."
 msgstr ""
 
-#: build/index.js:16
+#: build/index.js:19
 msgid "Included content"
 msgstr ""
 
-#: build/index.js:16
+#: build/index.js:19
 msgid "The promotion can appear only on these published posts and pages."
 msgstr ""
 
-#: build/index.js:16
+#: build/index.js:19
 msgid "Device"
 msgstr ""
 
 #. translators: 782px is the fixed desktop minimum; 781px is the fixed mobile maximum.
-#: build/index.js:16
+#: build/index.js:19
 msgid "The All devices option shows the Promotion at every width. Desktop shows it at viewport widths of 782px and above; Mobile shows it at 781px and below. CSS applies this fixed breakpoint, with no separate tablet target."
 msgstr ""
 
-#: build/index.js:16
+#: build/index.js:19
 msgid "All devices"
 msgstr ""
 
-#: build/index.js:16
+#: build/index.js:19
 msgid "Start showing"
 msgstr ""
 
 #. translators: %s: site timezone name or UTC offset.
-#: build/index.js:17
-#: build/index.js:18
+#: build/index.js:20
+#: build/index.js:21
 #, js-format
 msgid "Optional. Uses the site timezone: %s."
 msgstr ""
 
-#: build/index.js:17
+#: build/index.js:20
 msgid "Stop showing"
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Advanced editorial scope — needs attention"
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Advanced editorial scope"
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Categories and tags use ANY matching and apply only to standard posts. Exact excluded content always takes priority."
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Some selected categories or tags are no longer available. Remove them before publishing."
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Categories"
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Choose one or more categories."
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Tags"
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Choose one or more tags."
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Excluded content"
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "The promotion never appears on these posts and pages."
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Preview page"
 msgstr ""
 
-#: build/index.js:18
+#: build/index.js:21
 msgid "Choose the real post or page whose theme and layout should be used."
 msgstr ""
 
 #. translators: 1: minimum paragraph number, 2: maximum paragraph number.
-#: build/index.js:19
-#: build/index.js:20
+#: build/index.js:22
+#: build/index.js:23
 #, js-format
 msgid "Enter a whole paragraph number from %1$d to %2$d before opening the real-page preview."
 msgstr ""
 
-#: build/index.js:19
+#: build/index.js:22
 msgid "Save the promotion before opening a preview."
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "Choose a published page or post to use as the preview context."
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "Allow pop-ups for this site, then try preview again."
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "Preparing preview…"
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "The promotion could not be saved. Resolve the editor error, then try again."
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "Save and open preview"
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "Open preview"
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "Npcink Ad delivery preflight"
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "Add promotion content before publishing."
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "Add at least one valid included post or page that is not also excluded when Content scope is set to Only selected content."
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "Choose at least one available category or tag when Content scope is set to Posts in selected categories or tags."
 msgstr ""
 
-#: build/index.js:20
+#: build/index.js:23
 msgid "Stop showing must be later than Start showing."
 msgstr ""
 
 #. translators: 1: minimum paragraph number, 2: maximum paragraph number.
-#: build/index.js:21
+#: build/index.js:24
 #, js-format
 msgid "Paragraph number must be a whole number from %1$d to %2$d."
 msgstr ""
 
-#: build/index.js:21
+#: build/index.js:24
 msgid "No empty-scope, schedule, content, or paragraph errors were found in the current editor fields. Public selected targets and category or tag availability are confirmed by the server when publishing or scheduling."
 msgstr ""
 
 #. translators: %d: number of other published promotions that may share a delivery context.
-#: build/index.js:22
+#: build/index.js:25
 #, js-format
 msgid "This promotion may appear together with %d other published promotion in some post or page contexts."
 msgid_plural "This promotion may appear together with %d other published promotions in some post or page contexts."
 msgstr[0] ""
 msgstr[1] ""
 
-#: build/index.js:22
+#: build/index.js:25
 msgid "This advisory does not block publishing."
 msgstr ""
 
 #. translators: %s: site timezone name or UTC offset.
-#: build/index.js:23
+#: build/index.js:26
 #, js-format
 msgid "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use."
 msgstr ""
 
-#: build/index.js:23
+#: build/index.js:26
 msgid "These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative."
 msgstr ""

@@ -29,6 +29,7 @@
 ### 手动入口与设备边界
 
 - `_npcink_ad_location=block` 同时服务于动态 `npcink-ad/promotion` 区块和 `[npcink_ad promotion="ID"]` 短代码；两者都直接引用同一 Promotion，并复用 `block` location 的 PHP 投放路径。
+- 区块侧栏使用 Core REST/Core Data 做 `per_page=20` 的服务端标题搜索与真实分页；每次搜索只合并同一查询的第 1..N 页并按 ID 去重。已保存 ID 始终由 `getEntityRecord` 独立解析并注入选项，加载或请求失败只显示中性 ID 占位且保留区块属性，不把当前页缺失解释为记录已删除。
 - 手动 `all` 表示在区块或短代码被显式插入的位置应用其余规则，不继承自动位置的标准 post/page 限制；手动 `selected` 只接受显式选择的已发布标准文章/页面；ID 排除始终优先。
 - 编辑器对所选文章正文的区块核验只是非阻断证据。模板、同步样板、短代码和后续内容变更都可能让正文扫描不完整，真实页面预览才是管理者的最终上下文核验。
 - 正常投放始终输出 cache-stable HTML 与设备 class；CSS 在 `max-width: 781px` 隐藏 desktop-only，在 `min-width: 782px` 隐藏 mobile-only。没有 User-Agent 分叉、tablet、可配置断点或必需前端 JavaScript。
