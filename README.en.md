@@ -1,8 +1,8 @@
 # Npcink Ad
 
-Npcink Ad 0.2.0 is a WordPress-native, privacy-first workflow for site-owned promotions. It has one primary path: **create creative → set delivery rules → verify a real-page verdict → publish or pause**.
+Npcink Ad 0.2.1 is a WordPress-native, privacy-first workflow for site-owned promotions. It has one primary path: **create creative → set delivery rules → verify a real-page verdict → publish or pause**.
 
-> Version 0.2.0 continues the new pre-GA contract. It provides no compatibility layer for previous development data, APIs, blocks, or storage identifiers.
+> Version 0.2.1 continues the new pre-GA contract. It provides no compatibility layer for previous development data, APIs, blocks, or storage identifiers.
 
 ## Product boundary
 
@@ -20,11 +20,11 @@ Npcink Ad 0.2.0 is a WordPress-native, privacy-first workflow for site-owned pro
 
 See [the product contract](docs/product-contract.md), [ADR 003](docs/decisions/003-single-promotion-record.md), [ADR 008](docs/decisions/008-manual-placement-and-device-guidance.md), and [the architecture overview](docs/architecture-overview.md).
 
-Version 0.2.0 includes the controlled scope in [ADR 005](docs/decisions/005-controlled-delivery-expansion.md): [ADR 006](docs/decisions/006-paragraph-anchor-delivery.md) defines after-paragraph placement, [ADR 007](docs/decisions/007-canonical-editorial-scope.md) defines the mutually exclusive editorial scope, and [ADR 008](docs/decisions/008-manual-placement-and-device-guidance.md) defines explicit manual entrypoints and fixed device guidance. Manual scope exposes only `all | selected`, still requires an inserted block or shortcode, keeps explicit ID exclusions authoritative, and treats missing-block inspection as non-blocking evidence.
+Version 0.2.0 established the controlled delivery scope in [ADR 005](docs/decisions/005-controlled-delivery-expansion.md): [ADR 006](docs/decisions/006-paragraph-anchor-delivery.md) defines after-paragraph placement, [ADR 007](docs/decisions/007-canonical-editorial-scope.md) defines the mutually exclusive editorial scope, and [ADR 008](docs/decisions/008-manual-placement-and-device-guidance.md) defines explicit manual entrypoints and fixed device guidance. Version 0.2.1 closes Issue #8 only: server-side title search, real pagination, independent selected-ID resolution, and real Gutenberg editor E2E for the manual block selector, with no change to the Promotion schema, block attributes, REST contract, eligibility, or frontend delivery.
 
 ## Non-goals
 
-Version 0.2.0 has no AdSense management, analytics, tracking, reports, A/B tests, CMP, popup builder, frequency or geographic targeting, arbitrary PHP/JavaScript, template marketplace, custom database table, or legacy administration SPA.
+Version 0.2.1 has no AdSense management, analytics, tracking, reports, A/B tests, CMP, popup builder, frequency or geographic targeting, arbitrary PHP/JavaScript, template marketplace, custom database table, or legacy administration SPA.
 
 ## Development and verification
 
@@ -55,7 +55,7 @@ WP_VERSION=6.5 PHP_VERSION=8.1 tests/playground/run.sh
 WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 ```
 
-The fixture verifies the single Promotion model, typed meta, publish preflight, all five canonical content scopes, direct Core category/tag relationships and their dynamic changes, fail-closed behavior for deleted configured terms, time/device rules, block/shortcode/automatic delivery, the fixed `781px`/`782px` CSS boundary, the block's three-attribute contract, preview breakpoint guidance, top-level Gutenberg and Classic paragraph anchors, manager/subscriber/anonymous REST boundaries, promotion-bound preview nonces, timezone and schedule boundaries, absence of Placement/options/custom tables, and explicit uninstall cleanup. Browser interaction in the editor, list status actions, and theme remains a Local release check.
+The fixture verifies the single Promotion model, typed meta, publish preflight, all five canonical content scopes, direct Core category/tag relationships and their dynamic changes, fail-closed behavior for deleted configured terms, time/device rules, block/shortcode/automatic delivery, the fixed `781px`/`782px` CSS boundary, the block's three-attribute contract, preview breakpoint guidance, top-level Gutenberg and Classic paragraph anchors, manager/subscriber/anonymous REST boundaries, promotion-bound preview nonces, timezone and schedule boundaries, absence of Placement/options/custom tables, and explicit uninstall cleanup. Separate packaged-plugin Gutenberg editor E2E covers selector keyboard behavior, server search, page-two loading, persistence after reload, and browser errors; list actions and theme interaction remain supplemental Local release checks.
 
 ## Release package
 
@@ -65,4 +65,4 @@ bash scripts/release-gate.sh
 
 The artifact is `dist/npcink-ad-<Version>.zip` with the fixed top-level directory `npcink-ad/`. The gate requires the plugin header, `NPCINK_AD_VERSION`, `package.json`, and the readme Stable tag to share that version. In a tag-triggered build, `GITHUB_REF_NAME` must be `v<Version>`. It also verifies bundle budgets, required files, forbidden content, and the absence of legacy brand identifiers from the package.
 
-Schedules depend on the page being regenerated at the relevant boundary. Sites with third-party full-page caches must configure an appropriate TTL or purge the affected pages when a Promotion changes, starts, or stops; version 0.2.0 does not claim minute-accurate scheduling through arbitrary third-party caches.
+Schedules depend on the page being regenerated at the relevant boundary. Sites with third-party full-page caches must configure an appropriate TTL or purge the affected pages when a Promotion changes, starts, or stops; version 0.2.1 does not claim minute-accurate scheduling through arbitrary third-party caches.

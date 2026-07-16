@@ -1,6 +1,6 @@
 {
   "name": "npcink-ad",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "scripts": {
     "start": "wp-scripts start --webpack-src-dir=assets/js --webpack-output-dir=build",

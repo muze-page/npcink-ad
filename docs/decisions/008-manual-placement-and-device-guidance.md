@@ -94,5 +94,5 @@ Rejected. Keeping automatic-location Promotions visible with an explicit marker 
 - Authors receive one explicit block-or-shortcode workflow without a new Placement object.
 - Manual `all | selected`, explicit exclusions, preview authorization, cache behavior, and eligibility remain unchanged.
 - The fixed `781px`/`782px` boundary is visible in the editor and preview and is protected by packaged-plugin contract checks.
-- The controlled ADR 005 product scope is packaged as version 0.2.0. The version bump, changelog, and final package closeout are complete in 0.2.0; a Git tag, GitHub Release, and public distribution remain separate repository release actions.
-- Issue #8's selector limit is resolved without changing block attributes, Promotion meta, REST schemas, eligibility, or frontend delivery.
+- Version 0.2.0 established the controlled ADR 005 delivery scope. Version 0.2.1 resolves Issue #8's selector limit and adds packaged-plugin Gutenberg editor E2E without changing block attributes, Promotion meta, REST schemas, eligibility, or frontend delivery.
+- The 0.2.1 version bump, changelog, and package closeout record that ownership; a Git tag, GitHub Release, and public distribution remain separate repository release actions.
