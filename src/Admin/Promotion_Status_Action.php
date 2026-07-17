@@ -25,6 +25,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Promotion_Status_Action {
 	private const ACTION       = 'npcink_ad_change_promotion_status';
 	private const NOTICE_QUERY = 'npcink_ad_notice';
+	private const CONFIGURATION_REASONS = array(
+		'promotion_content_empty',
+		'promotion_video_source_missing',
+		'promotion_targets_empty',
+		'promotion_terms_invalid',
+		'promotion_schedule_invalid',
+		'promotion_paragraph_invalid',
+	);
 
 	/**
 	 * Create the status action.
@@ -285,15 +293,8 @@ final class Promotion_Status_Action {
 			return null;
 		}
 
-		$allowed_reasons = array(
-			'promotion_content_empty',
-			'promotion_targets_empty',
-			'promotion_terms_invalid',
-			'promotion_schedule_invalid',
-			'promotion_paragraph_invalid',
-		);
 		foreach ( $validation['reasons'] as $reason ) {
-			if ( in_array( $reason, $allowed_reasons, true ) ) {
+			if ( in_array( $reason, self::CONFIGURATION_REASONS, true ) ) {
 				return $reason;
 			}
 		}
@@ -349,14 +350,7 @@ final class Promotion_Status_Action {
 			return $messages[ $notice ];
 		}
 
-		$configuration_reasons = array(
-			'promotion_content_empty',
-			'promotion_targets_empty',
-			'promotion_terms_invalid',
-			'promotion_schedule_invalid',
-			'promotion_paragraph_invalid',
-		);
-		if ( ! in_array( $notice, $configuration_reasons, true ) ) {
+		if ( ! in_array( $notice, self::CONFIGURATION_REASONS, true ) ) {
 			return null;
 		}
 

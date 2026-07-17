@@ -262,12 +262,16 @@ final class EligibilityEvaluatorTest extends TestCase {
 			'invisible entity'         => array( '<p>&nbsp;&#160;&#x200b;</p>' ),
 			'html comment only'        => array( '<!-- note -->' ),
 			'media inside comment'     => array( '<!-- <img src="creative.jpg" alt="" /> -->' ),
+			'video inside comment'     => array( '<!-- <video src="creative.mp4"></video> -->' ),
 			'empty core paragraph'     => array( '<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->' ),
+			'non-video core block prefix' => array( '<!-- wp:video-playlist /-->' ),
+			'explicit non-video core block prefix' => array( '<!-- wp:core/video-poster /-->' ),
 			'empty nested group'       => array( '<!-- wp:group --><div class="wp-block-group"><!-- wp:columns --><div class="wp-block-columns"></div><!-- /wp:columns --></div><!-- /wp:group -->' ),
 			'empty shortcode block'     => array( '<!-- wp:shortcode --><!-- /wp:shortcode -->' ),
 			'script only'              => array( '<script>document.write("Creative")</script>' ),
 			'style background only'    => array( '<style>.creative{background-image:url(ad.jpg)}</style>' ),
 			'template media only'      => array( '<template><img src="creative.jpg" /></template>' ),
+			'template video only'      => array( '<template><video src="creative.mp4"></video></template>' ),
 			'empty background URL'     => array( '<div style="background-image:url(\'\')"></div>' ),
 		);
 	}
@@ -295,7 +299,7 @@ final class EligibilityEvaluatorTest extends TestCase {
 		return array(
 			'plain text'              => array( '<p>Current creative</p>' ),
 			'image'                   => array( '<figure><img src="creative.jpg" alt="" /></figure>' ),
-			'video'                   => array( '<video src="creative.mp4"></video>' ),
+			'video'                   => array( '<video src="/creative.mp4"></video>' ),
 			'background URL'          => array( '<div style="background-image:url(creative.jpg)"></div>' ),
 			'background gradient'     => array( '<div style="background-image:repeating-linear-gradient(red, blue)"></div>' ),
 			'background variable'     => array( '<div style="background-image:var(--creative)"></div>' ),
@@ -318,6 +322,114 @@ final class EligibilityEvaluatorTest extends TestCase {
 		$result               = ( new Eligibility_Evaluator() )->validate_configuration( $promotion );
 
 		self::assertNotContains( 'promotion_content_empty', $result['reasons'] );
+	}
+
+	/**
+	 * Provide video markup that does not contain a usable source.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function videos_without_valid_sources(): array {
+		return array(
+			'raw video without source'            => array( '<video controls></video>' ),
+			'raw video with empty source'          => array( '<video src=""></video>' ),
+			'raw video with blank source'          => array( '<video src="   "></video>' ),
+			'raw video with source lacking src'    => array( '<video><source type="video/mp4"></video>' ),
+			'child source cannot rescue video'     => array( '<video><source src="creative.mp4" type="video/mp4"></video>' ),
+			'raw video with data source only'      => array( '<video data-src="creative.mp4"></video>' ),
+			'source text inside a double-quoted attribute' => array( '<video title="foo src=/fake.mp4"></video>' ),
+			'source text inside a single-quoted attribute' => array( '<video title=\'foo src=https://example.com/fake.mp4\'></video>' ),
+			'raw video with javascript source'     => array( '<video src="javascript:alert(1)"></video>' ),
+			'raw video with data URL'                => array( '<video src="data:video/mp4;base64,AAAA"></video>' ),
+			'raw video with vbscript URL'            => array( '<video src="vbscript:msgbox(1)"></video>' ),
+			'obfuscated dangerous source'           => array( '<video src="java&#x73;cript:alert(1)"></video>' ),
+			'hex control entity in dangerous source' => array( '<video src="jav&#x0D;ascript:alert(1)"></video>' ),
+			'decimal control entity in dangerous source' => array( '<video src="jav&#13;ascript:alert(1)"></video>' ),
+			'named control entity in dangerous source' => array( '<video src="jav&Tab;ascript:alert(1)"></video>' ),
+			'trailing control entity in safe source'   => array( '<video src="https://example.com/promotion.mp4&#10;"></video>' ),
+			'double-encoded dangerous source'         => array( '<video src="java&amp;#x73;cript:alert(1)"></video>' ),
+			'deeply encoded dangerous source'         => array( '<video src="java&amp;amp;#x73;cript:alert(1)"></video>' ),
+			'explicit unsupported scheme'           => array( '<video src="ftp://example.com/creative.mp4"></video>' ),
+			'bare relative video source'            => array( '<video src="creative.mp4"></video>' ),
+			'parent-relative video source'          => array( '<video src="../media/creative.mp4"></video>' ),
+			'protocol-relative video source'        => array( '<video src="//cdn.example.com/creative.mp4"></video>' ),
+			'colon in a relative video path'        => array( '<video src="./media/foo:bar.mp4"></video>' ),
+			'HTTP scheme without a host'            => array( '<video src="http://"></video>' ),
+			'HTTPS scheme without a host'           => array( '<video src="https://"></video>' ),
+			'site root without a media path'        => array( '<video src="/"></video>' ),
+			'colon-only host'                       => array( '<video src="https://:/x.mp4"></video>' ),
+			'empty host after userinfo'              => array( '<video src="https://@/x.mp4"></video>' ),
+			'non-numeric port'                      => array( '<video src="https://host:bad/x.mp4"></video>' ),
+			'out-of-range port'                     => array( '<video src="https://host:99999/x.mp4"></video>' ),
+			'invalid encoded host'                  => array( '<video src="https://%zz/x.mp4"></video>' ),
+			'repaired triple-slash URL'             => array( '<video src="https:///evil.example/x.mp4"></video>' ),
+			'repaired single-slash URL'             => array( '<video src="https:/evil.example/x.mp4"></video>' ),
+			'repaired slash-less URL'               => array( '<video src="https:evil.example/x.mp4"></video>' ),
+			'backslash authority URL'               => array( '<video src="https:\\evil.example\\x.mp4"></video>' ),
+			'out-of-range IPv4 host'                => array( '<video src="https://256.256.256.256/x.mp4"></video>' ),
+			'null entity in dangerous source'       => array( '<video src="java&#0;script:alert(1)"></video>' ),
+			'text does not hide invalid video'      => array( '<p>Current creative</p><video></video>' ),
+			'one invalid video invalidates content' => array( '<video src="/first.mp4"></video><video></video>' ),
+			'empty self-closing core video'         => array( '<!-- wp:video /-->' ),
+			'empty self-closing explicit core video' => array( '<!-- wp:core/video /-->' ),
+			'paired core video without markup'      => array( '<!-- wp:video --><figure class="wp-block-video"></figure><!-- /wp:video -->' ),
+			'paired core video with invalid markup' => array( '<!-- wp:video --><figure class="wp-block-video"><video></video></figure><!-- /wp:video -->' ),
+		);
+	}
+
+	/**
+	 * Video source failures use one stable reason without an empty-content duplicate.
+	 *
+	 * @param string $content Serialized Promotion content.
+	 */
+	#[DataProvider( 'videos_without_valid_sources' )]
+	public function test_rejects_videos_without_valid_sources( string $content ): void {
+		$promotion            = $this->valid_promotion();
+		$promotion['content'] = $content;
+		$result               = ( new Eligibility_Evaluator() )->validate_configuration( $promotion );
+
+		self::assertFalse( $result['valid'] );
+		self::assertSame( array( 'promotion_video_source_missing' ), $result['reasons'] );
+	}
+
+	/**
+	 * Provide supported source forms for native video content.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function videos_with_valid_sources(): array {
+		return array(
+			'root-relative video source'   => array( '<video src="/wp-content/uploads/creative.mp4"></video>' ),
+			'HTTP video source'            => array( '<video src="http://example.com/creative.mp4"></video>' ),
+			'HTTPS video source'           => array( '<video src="https://example.com/creative.webm"></video>' ),
+			'unquoted source attribute'    => array( '<video src=/creative.mp4></video>' ),
+			'single-quoted source attribute' => array( '<video src=\'/creative.mp4\'></video>' ),
+			'paired core video'            => array( '<!-- wp:video --><figure class="wp-block-video"><video controls src="/creative.mp4"></video></figure><!-- /wp:video -->' ),
+			'multiple valid videos'        => array( '<video src="/first.mp4"></video><video src="https://cdn.example.com/second.webm"></video>' ),
+			'local HTTP source with port'  => array( '<video src="http://localhost:8080/creative.mp4"></video>' ),
+			'IPv4 HTTPS source'            => array( '<video src="https://127.0.0.1/creative.mp4"></video>' ),
+			'real source after quoted source text' => array( '<video title="greater > src=/fake.mp4" src="/creative.mp4"></video>' ),
+		);
+	}
+
+	/**
+	 * Native videos with a safe non-empty source remain valid Promotion content.
+	 *
+	 * @param string $content Serialized Promotion content.
+	 */
+	#[DataProvider( 'videos_with_valid_sources' )]
+	public function test_accepts_videos_with_valid_sources( string $content ): void {
+		$promotion            = $this->valid_promotion();
+		$promotion['content'] = $content;
+		$result               = ( new Eligibility_Evaluator() )->validate_configuration( $promotion );
+
+		self::assertSame(
+			array(
+				'valid'   => true,
+				'reasons' => array(),
+			),
+			$result
+		);
 	}
 
 	/**

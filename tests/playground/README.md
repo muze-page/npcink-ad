@@ -10,6 +10,7 @@ WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 `PLUGIN_ZIP` may override the package inferred from the `Version` header in
 `npcink-ad.php`. The smoke verifies the single Promotion CPT and typed rules,
 publication and future-schedule preflight (including invalid calendar values),
+source-less/unsafe Core Video rejection and valid site-controlled video rendering,
 site-timezone schedule boundaries, the page/time/device matrix,
 block/shortcode/automatic delivery, the fixed `781px`/`782px` frontend CSS
 boundary, the exact three-attribute Promotion block contract, registered block

@@ -99,6 +99,22 @@ describe( 'getFirstRunGuideState', () => {
 		} );
 	} );
 
+	test( 'treats a source-less video as incomplete content, not a delivery-rule failure', () => {
+		expect(
+			getFirstRunGuideState( {
+				postStatus: 'draft',
+				preflightIssues: [ 'video_source_missing' ],
+				previewTargetId: 12,
+			} )
+		).toEqual( {
+			isVisible: true,
+			content: 'incomplete',
+			delivery: 'complete',
+			previewAndPublish: 'blocked',
+			hasPreviewTarget: true,
+		} );
+	} );
+
 	test( 'keeps delivery incomplete when selected terms are unavailable', () => {
 		expect(
 			getFirstRunGuideState( {

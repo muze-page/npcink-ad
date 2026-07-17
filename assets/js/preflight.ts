@@ -2,6 +2,7 @@ import { getBlockType, parse, type BlockInstance } from '@wordpress/blocks';
 
 export type PromotionPreflightIssueCode =
 	| 'empty_content'
+	| 'video_source_missing'
 	| 'selected_scope_without_targets'
 	| 'terms_scope_without_terms'
 	| 'invalid_schedule_order'
@@ -98,6 +99,83 @@ const customDynamicBlockPattern =
 	/<!--\s+wp:(?!core\/)[a-z0-9-]+\/[a-z0-9-]+(?:\s+\{[\s\S]*?\})?\s*\/-->/i;
 const meaningfulCoreBlockPattern =
 	/<!--\s+wp:(?:archives|calendar|categories|latest-comments|latest-posts|loginout|page-list|post-author|post-author-biography|post-comments-form|post-content|post-date|post-excerpt|post-featured-image|post-terms|post-title|query|rss|search|site-logo|site-tagline|site-title|tag-cloud)\b/i;
+function selectHtmlElements( html: string, selector: string ): Element[] {
+	return Array.from(
+		new DOMParser()
+			.parseFromString( html, 'text/html' )
+			.body.querySelectorAll( selector )
+	);
+}
+
+function hasValidVideoSource( source: string ): boolean {
+	if (
+		/[\u0000-\u0020\u007f\ufffd]/.test( source ) ||
+		source.includes( '\\' ) ||
+		/%(?![0-9a-f]{2})/i.test( source )
+	) {
+		return false;
+	}
+	if ( /^\/(?!\/).+/.test( source ) ) {
+		return true;
+	}
+
+	const match = source.match(
+		/^https?:\/\/([a-z0-9.-]+)(?::([0-9]{1,5}))?(?:[/?#][^\\]*)?$/i
+	);
+	if ( ! match ) {
+		return false;
+	}
+
+	const hostname = match[ 1 ];
+	const labelsValid =
+		hostname.length <= 253 &&
+		hostname
+			.split( '.' )
+			.every( ( label ) =>
+				/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test( label )
+			);
+	const ipv4Valid =
+		! /^[0-9.]+$/.test( hostname ) ||
+		( hostname.split( '.' ).length === 4 &&
+			hostname
+				.split( '.' )
+				.every( ( octet ) => Number( octet ) <= 255 ) );
+	const port = match[ 2 ] ? Number( match[ 2 ] ) : 1;
+
+	return labelsValid && ipv4Valid && port > 0 && port <= 65535;
+}
+
+/**
+ * Identify video markup that asks the browser to autoplay without muted.
+ *
+ * This is an editor-only advisory. Browser and Core Video behavior remain
+ * authoritative, and the result never changes publication eligibility.
+ *
+ * @param content Serialized promotion post content.
+ */
+export function hasUnmutedAutoplayVideo( content: string ): boolean {
+	return (
+		selectHtmlElements( content, 'video[autoplay]:not([muted])' ).length > 0
+	);
+}
+
+function hasVideoWithoutValidSource( content: string ): boolean {
+	return (
+		[
+			...content.matchAll(
+				/<!--\s+wp:(?:core\/)?video(?=\s|\/-->|-->)[^>]*(?:\/-->|-->([\s\S]*?)<!--\s+\/wp:(?:core\/)?video\s*-->)/gi
+			),
+		].some(
+			( videoBlock ) =>
+				! videoBlock[ 1 ] ||
+				selectHtmlElements( videoBlock[ 1 ], 'video' ).length === 0
+		) ||
+		selectHtmlElements( content, 'video' ).some(
+			( video ) =>
+				! hasValidVideoSource( video.getAttribute( 'src' ) ?? '' )
+		)
+	);
+}
 
 function hasMeaningfulBackgroundImage( content: string ): boolean {
 	const urlDeclarations = content.matchAll(
@@ -407,11 +485,7 @@ export function inspectParagraphAnchor(
 	}
 
 	try {
-		const document = new DOMParser().parseFromString(
-			content,
-			'text/html'
-		);
-		const paragraphCount = document.body.querySelectorAll( 'p' ).length;
+		const paragraphCount = selectHtmlElements( content, 'p' ).length;
 		if ( paragraphCount >= paragraphNumber ) {
 			return {
 				state: 'available',
@@ -641,7 +715,9 @@ export function getPromotionPreflightIssues( {
 }: PromotionPreflightInput ): PromotionPreflightIssueCode[] {
 	const issues: PromotionPreflightIssueCode[] = [];
 
-	if ( ! hasMeaningfulPromotionContent( content ) ) {
+	if ( hasVideoWithoutValidSource( content ) ) {
+		issues.push( 'video_source_missing' );
+	} else if ( ! hasMeaningfulPromotionContent( content ) ) {
 		issues.push( 'empty_content' );
 	}
 

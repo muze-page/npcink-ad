@@ -33,6 +33,7 @@ import {
 	getEffectivePromotionTargetIds,
 	getPotentiallyOverlappingPromotionIds,
 	getPromotionPreflightIssues,
+	hasUnmutedAutoplayVideo,
 	inspectParagraphAnchor,
 	isValidParagraphNumber,
 	MAX_PARAGRAPH_NUMBER,
@@ -245,6 +246,11 @@ function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
 				'Add promotion content before publishing.',
 				'npcink-ad'
 			);
+		case 'video_source_missing':
+			return __(
+				'Select a video source before publishing.',
+				'npcink-ad'
+			);
 		case 'selected_scope_without_targets':
 			return __(
 				'Add at least one valid included post or page that is not also excluded when Content scope is set to Only selected content.',
@@ -260,16 +266,19 @@ function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
 				'Stop showing must be later than Start showing.',
 				'npcink-ad'
 			);
-		case 'invalid_paragraph_number':
+		case 'invalid_paragraph_number': {
+			/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
+			const message = __(
+				'Paragraph number must be a whole number from %1$d to %2$d.',
+				'npcink-ad'
+			);
+
 			return sprintf(
-				/* translators: 1: minimum paragraph number, 2: maximum paragraph number. */
-				__(
-					'Paragraph number must be a whole number from %1$d to %2$d.',
-					'npcink-ad'
-				),
+				message,
 				MIN_PARAGRAPH_NUMBER,
 				MAX_PARAGRAPH_NUMBER
 			);
+		}
 	}
 }
 
@@ -291,11 +300,12 @@ export function getFirstRunGuideState( {
 	preflightIssues,
 	previewTargetId,
 }: FirstRunGuideInput ): FirstRunGuideState {
-	const isVisible = ! [ 'publish', 'future' ].includes( postStatus );
-	const contentComplete = ! preflightIssues.includes( 'empty_content' );
+	const isContentIssue = ( issue: PromotionPreflightIssueCode ) =>
+		issue === 'empty_content' || issue === 'video_source_missing';
+	const isVisible = postStatus !== 'publish' && postStatus !== 'future';
+	const contentComplete = ! preflightIssues.some( isContentIssue );
 	const deliveryComplete =
-		! deliveryNeedsAttention &&
-		preflightIssues.every( ( issue ) => issue === 'empty_content' );
+		! deliveryNeedsAttention && preflightIssues.every( isContentIssue );
 	const hasPreviewTarget = previewTargetId > 0;
 
 	return {
@@ -1138,6 +1148,7 @@ function PromotionSettingsPanel() {
 		startAt: meta._npcink_ad_start_at,
 		endAt: meta._npcink_ad_end_at,
 	} );
+	const hasUnmutedAutoplay = hasUnmutedAutoplayVideo( content );
 	const placementHasIssue = preflightIssues.includes(
 		'invalid_paragraph_number'
 	);
@@ -2058,6 +2069,7 @@ function PromotionSettingsPanel() {
 					preflightIssues.length > 0 ||
 					termsScopeHasIssue ||
 					potentiallyOverlappingIds.length > 0 ||
+					hasUnmutedAutoplay ||
 					hasAdvancedPageCache ||
 					hasSchedule ||
 					isManualBlock ||
@@ -2085,6 +2097,14 @@ function PromotionSettingsPanel() {
 							'npcink-ad'
 						) }
 					</p>
+				) }
+				{ hasUnmutedAutoplay && (
+					<Notice status="warning" isDismissible={ false }>
+						{ __(
+							'This video requests autoplay without being muted. Browsers may block playback; enable Muted in the Video block or keep playback controls. This advisory does not block publishing.',
+							'npcink-ad'
+						) }
+					</Notice>
 				) }
 				{ potentiallyOverlappingIds.length > 0 && (
 					<Notice status="warning" isDismissible={ false }>

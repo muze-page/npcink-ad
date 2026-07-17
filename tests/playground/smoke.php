@@ -1127,6 +1127,110 @@ $assert_preflight_error(
 );
 $check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected future schedule changed the Promotion status.' );
 
+$source_less_video_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<!-- wp:video --><figure class="wp-block-video"><video controls></video></figure><!-- /wp:video -->',
+	)
+);
+$assert_preflight_error(
+	$source_less_video_response,
+	'promotion_video_source_missing',
+	'Core REST allowed a source-less Core Video block to publish.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected source-less video publish changed the Promotion status.' );
+
+$nested_source_only_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<video controls><source src="/wp-content/uploads/promotion.mp4" type="video/mp4"></video>',
+	)
+);
+$assert_preflight_error(
+	$nested_source_only_response,
+	'promotion_video_source_missing',
+	'Core REST accepted a nested source that the frontend KSES contract removes.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected nested-source video publish changed the Promotion status.' );
+
+$unsafe_video_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<!-- wp:video --><figure class="wp-block-video"><video controls src="javascript:alert(1)"></video></figure><!-- /wp:video -->',
+	)
+);
+$assert_preflight_error(
+	$unsafe_video_response,
+	'promotion_video_source_missing',
+	'Core REST treated an unsafe video source as playable creative.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected unsafe video publish changed the Promotion status.' );
+
+$obfuscated_unsafe_video_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<video src="jav&#x0D;ascript:alert(1)"></video>',
+	)
+);
+$assert_preflight_error(
+	$obfuscated_unsafe_video_response,
+	'promotion_video_source_missing',
+	'Core REST allowed a control-character entity to conceal an unsafe video scheme.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected obfuscated video source changed the Promotion status.' );
+
+$double_encoded_unsafe_video_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => '<video src="java&amp;#x73;cript:alert(1)"></video>',
+	)
+);
+$assert_preflight_error(
+	$double_encoded_unsafe_video_response,
+	'promotion_video_source_missing',
+	'Core REST allowed a double-encoded unsafe video scheme.'
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'A rejected double-encoded video source changed the Promotion status.' );
+
+$valid_video_content  = '<!-- wp:video --><figure class="wp-block-video"><video controls muted playsinline preload="metadata" poster="/wp-content/uploads/promotion-poster.jpg" src="/wp-content/uploads/promotion.mp4"></video></figure><!-- /wp:video -->';
+$valid_video_response = $write_promotion_via_rest(
+	$rest_promotion_id,
+	array(
+		'status'  => 'publish',
+		'content' => $valid_video_content,
+	)
+);
+$check( 200 === $valid_video_response->get_status(), 'Core REST rejected a Core Video block with a usable same-origin source.' );
+$check( 'publish' === get_post_status( $rest_promotion_id ), 'Core REST did not publish the valid video Promotion.' );
+$video_promotion = ( new Repository() )->find_promotion( $rest_promotion_id );
+$check( is_array( $video_promotion ), 'The published video Promotion could not be reloaded.' );
+$rendered_video = is_array( $video_promotion ) ? ( new Renderer() )->render( $video_promotion ) : '';
+$check( str_contains( $rendered_video, '<video' ), 'The Renderer omitted the published Core Video element.' );
+$check( str_contains( $rendered_video, 'src="/wp-content/uploads/promotion.mp4"' ), 'The Renderer omitted the usable site-controlled video source.' );
+$check( str_contains( $rendered_video, 'poster="/wp-content/uploads/promotion-poster.jpg"' ), 'The Renderer omitted the Core Video poster.' );
+$check( 1 === preg_match( '/<video\b[^>]*\bcontrols\b/', $rendered_video ), 'The Renderer omitted Core Video controls.' );
+$check( 1 === preg_match( '/<video\b[^>]*\bmuted\b/', $rendered_video ), 'The Renderer omitted the muted Core Video attribute.' );
+$check( 1 === preg_match( '/<video\b[^>]*\bplaysinline\b/', $rendered_video ), 'The Renderer omitted the playsinline Core Video attribute.' );
+$check( str_contains( $rendered_video, 'preload="metadata"' ), 'The Renderer omitted the Core Video preload policy.' );
+$source_only_kses = wp_kses_post( '<video controls><source src="/wp-content/uploads/promotion.mp4" type="video/mp4"></video>' );
+$check( ! str_contains( $source_only_kses, '<source' ), 'Core post KSES unexpectedly retained the unsupported source child.' );
+$unsafe_video_kses = wp_kses_post( '<video src="javascript:alert(1)" onplay="alert(2)"><script>alert(3)</script></video>' );
+$check( ! str_contains( $unsafe_video_kses, 'javascript:' ), 'Core post KSES retained an executable video source.' );
+$check( ! str_contains( $unsafe_video_kses, 'onplay=' ), 'Core post KSES retained a video event handler.' );
+$check( ! str_contains( $unsafe_video_kses, '<script' ), 'Core post KSES retained a script inside video markup.' );
+wp_update_post(
+	array(
+		'ID'          => $rest_promotion_id,
+		'post_status' => 'draft',
+	)
+);
+$check( 'draft' === get_post_status( $rest_promotion_id ), 'The valid video fixture could not return to draft for later preflight checks.' );
+
 $invalid_terms_response = $write_promotion_via_rest(
 	$rest_promotion_id,
 	array(

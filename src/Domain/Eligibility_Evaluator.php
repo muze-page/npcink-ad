@@ -19,8 +19,11 @@ final class Eligibility_Evaluator {
 	 */
 	public function validate_configuration( array $promotion ): array {
 		$reasons = array();
+		$content = (string) ( $promotion['content'] ?? '' );
 
-		if ( ! $this->has_meaningful_content( (string) ( $promotion['content'] ?? '' ) ) ) {
+		if ( $this->has_video_without_valid_source( $content ) ) {
+			$reasons[] = 'promotion_video_source_missing';
+		} elseif ( ! $this->has_meaningful_content( $content ) ) {
 			$reasons[] = 'promotion_content_empty';
 		}
 
@@ -89,14 +92,7 @@ final class Eligibility_Evaluator {
 			return true;
 		}
 
-		$renderable_content = preg_replace(
-			array(
-				'/<(?:script|style|template)\b[^>]*>[\s\S]*?<\/(?:script|style|template)>/i',
-				'/<!--[\s\S]*?-->/',
-			),
-			'',
-			$content
-		);
+		$renderable_content = $this->strip_non_rendered_source( $content );
 		if ( null === $renderable_content ) {
 			return false;
 		}
@@ -122,6 +118,207 @@ final class Eligibility_Evaluator {
 		);
 
 		return null !== $visible_text && '' !== $visible_text;
+	}
+
+	/**
+	 * Remove source that browsers do not render as Promotion content.
+	 *
+	 * @param string $content Serialized Promotion content.
+	 */
+	private function strip_non_rendered_source( string $content ): ?string {
+		return preg_replace(
+			array(
+				'/<(?:script|style|template)\b[^>]*>[\s\S]*?<\/(?:script|style|template)>/i',
+				'/<!--[\s\S]*?-->/',
+			),
+			'',
+			$content
+		);
+	}
+
+	/**
+	 * Check whether every rendered video and core Video block has a usable source.
+	 *
+	 * @param string $content Serialized Promotion content.
+	 */
+	private function has_video_without_valid_source( string $content ): bool {
+		if ( $this->has_core_video_without_markup( $content ) ) {
+			return true;
+		}
+
+		$renderable_content = $this->strip_non_rendered_source( $content );
+
+		return null !== $renderable_content && $this->has_raw_video_without_valid_source( $renderable_content );
+	}
+
+	/**
+	 * Detect an empty, self-closing, or structurally incomplete core Video block.
+	 *
+	 * Raw video source validity is checked separately after comments are removed.
+	 *
+	 * @param string $content Serialized Promotion content.
+	 */
+	private function has_core_video_without_markup( string $content ): bool {
+		$opening_count = preg_match_all(
+			'/<!--\s+wp:(?:core\/)?video(?=\s|\/-->|-->)[\s\S]*?-->/i',
+			$content,
+			$openings,
+			PREG_OFFSET_CAPTURE
+		);
+		if ( false === $opening_count || 0 === $opening_count ) {
+			return false;
+		}
+
+		foreach ( $openings[0] as $opening_match ) {
+			$opening        = (string) $opening_match[0];
+			$opening_offset = (int) $opening_match[1];
+			if ( 1 === preg_match( '/\/\s*-->$/', $opening ) ) {
+				return true;
+			}
+
+			$body_offset = $opening_offset + strlen( $opening );
+			$closed       = preg_match(
+				'/<!--\s+\/wp:(?:core\/)?video\s*-->/i',
+				$content,
+				$closing_match,
+				PREG_OFFSET_CAPTURE,
+				$body_offset
+			);
+			if ( 1 !== $closed ) {
+				return true;
+			}
+
+			$body_length     = (int) $closing_match[0][1] - $body_offset;
+			$block_body      = substr( $content, $body_offset, $body_length );
+			$renderable_body = $this->strip_non_rendered_source( $block_body );
+			if ( null === $renderable_body || 1 !== preg_match( '/<video(?=[\s\/>])/i', $renderable_body ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check each rendered video element for its own valid src attribute.
+	 *
+	 * @param string $content Renderable Promotion markup.
+	 */
+	private function has_raw_video_without_valid_source( string $content ): bool {
+		$video_count = preg_match_all(
+			'/<video(?=[\s\/>])((?:"[^"]*"|\'[^\']*\'|[^\'">])*)>/i',
+			$content,
+			$videos,
+			PREG_SET_ORDER
+		);
+		if ( false === $video_count || 0 === $video_count ) {
+			return false;
+		}
+
+		foreach ( $videos as $video ) {
+			if ( ! $this->attributes_have_valid_source( (string) $video[1] ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Extract and validate an HTML media src attribute.
+	 *
+	 * @param string $attributes Opening-tag attributes.
+	 */
+	private function attributes_have_valid_source( string $attributes ): bool {
+		$matched = preg_match(
+			'/(?:(?:"[^"]*"|\'[^\']*\')(*SKIP)(*F))|(?:^|\s)src\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s"\'<>`=]+))/i',
+			$attributes,
+			$source_match,
+			PREG_UNMATCHED_AS_NULL
+		);
+		if ( 1 !== $matched ) {
+			return false;
+		}
+
+		$source = (string) ( $source_match[1] ?? $source_match[2] ?? $source_match[3] ?? '' );
+		$source = $this->decode_url_character_references( $source );
+		if (
+			'' === $source
+			|| 1 === preg_match( '/[\x00-\x20\x7f]/', $source )
+			|| str_contains( $source, "\xef\xbf\xbd" )
+			|| str_contains( $source, '\\' )
+			|| 1 === preg_match( '/%(?![0-9a-f]{2})/i', $source )
+		) {
+			return false;
+		}
+
+		if ( 1 === preg_match( '~^/(?!/).+~', $source ) ) {
+			return true;
+		}
+
+		$matched = preg_match(
+			'~^https?://([a-z0-9.-]+)(?::([0-9]{1,5}))?(?:[/?#][^\\\\]*)?$~iD',
+			$source,
+			$url_match
+		);
+		if ( 1 !== $matched ) {
+			return false;
+		}
+
+		$hostname = (string) $url_match[1];
+		if ( 253 < strlen( $hostname ) ) {
+			return false;
+		}
+		foreach ( explode( '.', $hostname ) as $label ) {
+			if ( 1 !== preg_match( '/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/iD', $label ) ) {
+				return false;
+			}
+		}
+
+		if ( 1 === preg_match( '/^[0-9.]+$/', $hostname ) ) {
+			$octets = explode( '.', $hostname );
+			if ( 4 !== count( $octets ) ) {
+				return false;
+			}
+			foreach ( $octets as $octet ) {
+				if ( 255 < (int) $octet ) {
+					return false;
+				}
+			}
+		}
+
+		$port = isset( $url_match[2] ) ? (int) $url_match[2] : 1;
+
+		return 0 < $port && 65535 >= $port;
+	}
+
+	/**
+	 * Decode URL character references that can conceal an ASCII scheme.
+	 *
+	 * PHP intentionally leaves numeric references for some control characters
+	 * untouched, while browsers and Core KSES decode them before protocol
+	 * checks. Decode the ASCII range explicitly so eligibility cannot approve a
+	 * source that the Renderer later strips.
+	 *
+	 * @param string $source Raw media source attribute.
+	 */
+	private function decode_url_character_references( string $source ): string {
+		$decoded = html_entity_decode( $source, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$decoded = preg_replace_callback(
+			'/&#(?:x([0-9a-f]+)|([0-9]+));?/i',
+			static function ( array $matches ): string {
+				$codepoint = '' !== ( $matches[1] ?? '' )
+					? hexdec( (string) $matches[1] )
+					: (int) ( $matches[2] ?? 0 );
+
+				return 0 <= $codepoint && 0x7f >= $codepoint
+					? chr( $codepoint )
+					: (string) $matches[0];
+			},
+			$decoded
+		);
+
+		return null === $decoded ? '' : $decoded;
 	}
 
 	/**

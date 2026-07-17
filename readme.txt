@@ -15,6 +15,7 @@ Create, preview, and publish site-owned promotions without a full advertising pl
 Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate cards, campaign creative, and other site-owned promotions.
 
 * Create promotion content with core WordPress blocks.
+* Publish site-controlled Core Video creative through the same Promotion, preflight, preview, and delivery workflow.
 * Configure location, one canonical content scope, explicit exclusions, schedule, and device in the same editor.
 * For manual placement, insert the Npcink Ad Promotion block and select the same saved Promotion, or use the existing expert `[npcink_ad promotion="ID"]` shortcode.
 * Search Promotion titles from the manual block selector, load further 20-record pages on demand, and retain saved selections outside the current result page.
@@ -24,14 +25,15 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 * Review rule status, placement, content scope, stop time, and inactivity reasons directly in the Promotion list.
 * Follow a native three-step first-Promotion guide without opening another settings or wizard page.
 * Catch empty creative, missing public targets, invalid paragraph settings, invalid schedules, and unverified placement before publication.
+* Reject a saved Video block that has no usable root-relative or explicit HTTP(S) media source instead of reporting an empty player as ready.
 * Receive an explicit TTL-or-purge warning when WordPress has an enabled advanced page-cache drop-in.
 * Publish, pause, or expire one Promotion record without a separate placement object.
 * Deliver from the server without visitor tracking, custom tables, or required frontend JavaScript.
 * Use the bundled Simplified Chinese translation in both PHP screens and the block editor.
 
-Version 0.2.2 intentionally has no analytics, tracking cookies, external requests, A/B testing, ad-network integration, popup builder, arbitrary code execution, or custom database tables.
+Version 0.2.2 intentionally has no analytics, tracking cookies, plugin-initiated external API requests, A/B testing, ad-network integration, popup builder, arbitrary code execution, or custom database tables. A visitor's browser still requests media URLs selected by the site operator.
 
-Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-paragraph delivery, mutually exclusive editorial content scopes, explicit manual block-or-shortcode guidance, and the fixed desktop/mobile boundary. Version 0.2.1 made the manual block selector reliable beyond its former bounded result set. Version 0.2.2 keeps the schema and frontend behavior unchanged while tightening editor asset ownership, first-Promotion guidance, complete browser validation, and cache-boundary disclosure.
+Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-paragraph delivery, mutually exclusive editorial content scopes, explicit manual block-or-shortcode guidance, and the fixed desktop/mobile boundary. Version 0.2.1 made the manual block selector reliable beyond its former bounded result set. Version 0.2.2 keeps one Promotion and one delivery system while tightening editor asset ownership, first-Promotion guidance, complete browser validation, cache-boundary disclosure, and site-controlled Core Video validation.
 
 == Installation ==
 
@@ -46,7 +48,7 @@ Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-parag
 
 = Does Npcink Ad track visitors? =
 
-No. Version 0.2.2 does not collect impression or click analytics, set visitor tracking cookies, or contact an external service.
+No. Version 0.2.2 does not collect impression or click analytics, set visitor tracking cookies, or make an external API request. The browser requests only the creative media URL selected by the site operator.
 
 = Why is there no separate placement or ad group? =
 
@@ -64,6 +66,10 @@ No. Save the Promotion, insert the Npcink Ad Promotion block at the intended loc
 
 Desktop is visible at `782px` and above, Mobile at `781px` and below, and All devices at every width. The boundary is fixed and there is no separate tablet target. Device visibility uses CSS so normal cached HTML does not branch by User-Agent. The preview's mobile canvas is capped at `390px` as a representative width, not as the production breakpoint.
 
+= What kind of video advertising is supported? =
+
+Npcink Ad supports a site-controlled Core Video block as Promotion creative. It validates that the saved video has a root-relative or explicit HTTP(S) source and then reuses the normal preflight, real-page preview, device, schedule, and placement rules. Bare relative paths and protocol-relative URLs are rejected to preserve the same source through Core KSES. It does not provide VAST/IMA, pre-roll or rewarded video, playback analytics, popup video, or an ad-network player. URL availability, codecs, media requests, and browser autoplay policy remain site and browser responsibilities.
+
 = Does 0.2.2 migrate data from earlier development snapshots? =
 
 No. Version 0.2.2 remains pre-GA and has no compatibility adapters or migrations for earlier development snapshots or unpublished identifiers.
@@ -77,6 +83,7 @@ No. Version 0.2.2 remains pre-GA and has no compatibility adapters or migrations
 * Warn in Promotion management surfaces when WordPress exposes an enabled advanced-cache drop-in; keep TTL or affected-page purge as an operator responsibility.
 * Validate scheduled start, scheduled end, pause, and resume against a real WP Super Cache Simple-mode page cache and record the deployment evidence in ADR 004.
 * Add packaged-plugin E2E from Add New through selected-page configuration, authenticated real-page preview, publish, live delivery, pause, resume, and cleanup on the minimum and current WordPress matrices.
+* Treat site-controlled Core Video as Promotion creative and reject source-less or unsafe video sources through the shared publication policy.
 
 = 0.2.1 =
 
