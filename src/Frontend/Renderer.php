@@ -17,7 +17,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Renders trusted post content without recursively invoking the_content.
  */
 final class Renderer {
-	private const FRONTEND_STYLE = 'npcink-ad-frontend';
+	private const FRONTEND_STYLE  = 'npcink-ad-frontend';
+	private const PAGE_BAR_SCRIPT = 'npcink-ad-page-bar';
+	private const BAR_LOCATIONS   = array( 'bar_top', 'bar_bottom' );
 
 	/**
 	 * Render an eligible promotion.
@@ -42,15 +44,35 @@ final class Renderer {
 		if ( ! in_array( $device, array( 'all', 'desktop', 'mobile' ), true ) ) {
 			$device = 'all';
 		}
+		$location = isset( $promotion['location'] )
+			? sanitize_key( (string) $promotion['location'] )
+			: 'content_after';
+		$is_page_bar = in_array( $location, self::BAR_LOCATIONS, true );
+		$classes     = 'npcink-ad-promotion npcink-ad-device-' . $device;
+		$attributes  = '';
+		$label       = __( 'Promotion', 'npcink-ad' );
+		if ( $is_page_bar ) {
+			$position   = 'bar_top' === $location ? 'top' : 'bottom';
+			$classes   .= ' npcink-ad-page-bar npcink-ad-page-bar--' . $position;
+			$attributes = ' role="region" data-npcink-ad-bar';
+			$label      = __( 'Promotion bar', 'npcink-ad' );
+			$content    = sprintf(
+				'<div class="npcink-ad-page-bar__content">%1$s</div><button type="button" class="npcink-ad-page-bar__dismiss" data-npcink-ad-dismiss aria-label="%2$s"><span aria-hidden="true">&times;</span></button>',
+				$content,
+				esc_attr__( 'Dismiss promotion bar', 'npcink-ad' )
+			);
+			wp_enqueue_script( self::PAGE_BAR_SCRIPT );
+		}
 
 		wp_enqueue_style( self::FRONTEND_STYLE );
 
 		return sprintf(
-			'<div class="npcink-ad-promotion npcink-ad-device-%1$s" data-npcink-ad-promotion="%2$d" aria-label="%3$s"%4$s>%5$s</div>',
-			esc_attr( $device ),
+			'<div class="%1$s" data-npcink-ad-promotion="%2$d" aria-label="%3$s"%4$s%5$s>%6$s</div>',
+			esc_attr( $classes ),
 			$promotion_id,
-			esc_attr__( 'Promotion', 'npcink-ad' ),
+			esc_attr( $label ),
 			$this->reserve_style( $reserve ),
+			$attributes,
 			$content
 		);
 	}

@@ -397,6 +397,8 @@ final class RepositoryTest extends TestCase {
 			16 => $this->promotion_post( 16, 'publish', 1 ),
 			17 => $this->promotion_post( 17, 'draft', 1 ),
 			18 => $this->promotion_post( 18, 'publish', 2 ),
+			19 => $this->promotion_post( 19, 'publish', 5 ),
+			20 => $this->promotion_post( 20, 'publish', 6 ),
 		);
 		$GLOBALS['npcink_ad_test_meta']  = array(
 			10 => $this->paragraph_meta( 3 ),
@@ -408,6 +410,8 @@ final class RepositoryTest extends TestCase {
 			16 => $this->promotion_meta( 'content_after' ),
 			17 => $this->paragraph_meta( 5 ),
 			18 => $this->paragraph_meta( '' ),
+			19 => $this->promotion_meta( 'bar_top' ),
+			20 => $this->promotion_meta( 'bar_bottom' ),
 		);
 
 		$catalog = ( new Repository() )->find_published_automatic_catalog();
@@ -422,6 +426,8 @@ final class RepositoryTest extends TestCase {
 		);
 		self::assertSame( array( 16 ), $catalog['location_ids']['content_after'] );
 		self::assertSame( array(), $catalog['location_ids']['content_before'] );
+		self::assertSame( array( 19 ), $catalog['location_ids']['bar_top'] );
+		self::assertSame( array( 20 ), $catalog['location_ids']['bar_bottom'] );
 		self::assertCount( 1, $queries );
 		self::assertArrayNotHasKey( 'fields', $queries[0] );
 		self::assertSame(
@@ -433,7 +439,7 @@ final class RepositoryTest extends TestCase {
 		);
 		self::assertSame( 'OR', $queries[0]['meta_query']['relation'] );
 		self::assertSame(
-			array( 'content_before', 'content_after', 'content_after_paragraph' ),
+			Post_Types::AUTOMATIC_LOCATIONS,
 			$queries[0]['meta_query'][0]['value']
 		);
 		self::assertTrue( $queries[0]['update_post_meta_cache'] );

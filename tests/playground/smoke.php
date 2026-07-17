@@ -93,6 +93,10 @@ $check( 'array' === $promotion_meta['_npcink_ad_tag_ids']['type'], 'Tag IDs meta
 $check( ! isset( $promotion_meta['_npcink_ad_page_scope'] ), 'The removed page-scope meta is still registered.' );
 $check( 'integer' === $promotion_meta['_npcink_ad_paragraph_number']['type'], 'Paragraph number meta is not typed as an integer.' );
 $check( 3 === $promotion_meta['_npcink_ad_paragraph_number']['default'], 'Paragraph number meta does not default to 3.' );
+$check(
+	Post_Types::LOCATIONS === $promotion_meta['_npcink_ad_location']['show_in_rest']['schema']['enum'],
+	'The REST location enum does not expose the complete single-Promotion location contract.'
+);
 $check( shortcode_exists( 'npcink_ad' ), 'The npcink_ad shortcode was not registered.' );
 $promotion_block = WP_Block_Type_Registry::get_instance()->get_registered( 'npcink-ad/promotion' );
 $check( $promotion_block instanceof WP_Block_Type, 'The npcink-ad/promotion block was not registered.' );
@@ -135,6 +139,7 @@ $check(
 );
 $check( 1 === substr_count( $frontend_css, '.npcink-ad-device-desktop' ), 'The desktop device selector is duplicated outside its fixed breakpoint rule.' );
 $check( 1 === substr_count( $frontend_css, '.npcink-ad-device-mobile' ), 'The mobile device selector is duplicated outside its fixed breakpoint rule.' );
+$check( str_contains( $frontend_css, '.npcink-ad-page-bar' ), 'The packaged frontend CSS omitted page-bar presentation.' );
 
 $block_editor_script = wp_scripts()->registered['npcink-ad-block-editor'] ?? null;
 $check( $block_editor_script instanceof _WP_Dependency, 'The block editor script was not registered.' );
@@ -147,6 +152,15 @@ $check(
 	WP_PLUGIN_DIR . '/npcink-ad/languages' === $block_editor_script->translations_path,
 	'The block editor script does not use the bundled languages directory.'
 );
+$page_bar_script = wp_scripts()->registered['npcink-ad-page-bar'] ?? null;
+$check( $page_bar_script instanceof _WP_Dependency, 'The page-bar dismissal script was not registered.' );
+$check(
+	$page_bar_script instanceof _WP_Dependency && array() === $page_bar_script->deps,
+	'The page-bar dismissal script unexpectedly depends on the editor or another frontend runtime.'
+);
+$page_bar_script_source = (string) file_get_contents( WP_PLUGIN_DIR . '/npcink-ad/build/page-bar.js' );
+$check( ! str_contains( $page_bar_script_source, 'localStorage' ), 'The page-bar script persisted dismissal in localStorage.' );
+$check( ! str_contains( $page_bar_script_source, 'cookie' ), 'The page-bar script wrote or read visitor Cookies.' );
 
 Editor::register_assets();
 $promotion_editor_script = wp_scripts()->registered['npcink-ad-promotion-editor'] ?? null;
@@ -209,6 +223,9 @@ $check(
 	wp_style_is( 'npcink-ad-frontend', 'enqueued' ),
 	'The frontend device stylesheet was not enqueued before content rendering.'
 );
+$check( ! wp_script_is( 'npcink-ad-page-bar', 'enqueued' ), 'The page-bar script loaded before a page bar rendered.' );
+$check( 0 < has_action( 'wp_body_open' ), 'Top page-bar delivery did not register on wp_body_open.' );
+$check( 0 < has_action( 'wp_footer' ), 'Bottom page-bar delivery did not register on wp_footer.' );
 
 wp_set_current_user( 1 );
 
@@ -517,6 +534,35 @@ $check(
 );
 $set_main_singular( $page_b_id );
 $check( ! str_contains( $after_delivery->filter_content( '<p>Page body</p>' ), 'Playground smoke creative' ), 'Automatic delivery ignored page exclusion.' );
+
+wp_set_current_user( 1 );
+update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'bar_top' );
+update_post_meta( $promotion_id, Post_Types::CONTENT_SCOPE_META, 'all' );
+update_post_meta( $promotion_id, Post_Types::EXCLUDE_IDS_META, array() );
+wp_set_current_user( 0 );
+$set_main_singular( $page_a_id );
+$top_bar_delivery = new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() );
+ob_start();
+$top_bar_delivery->render_top_page_bar();
+$top_bar_output = (string) ob_get_clean();
+ob_start();
+$top_bar_delivery->render_bottom_page_bar();
+$wrong_bar_output = (string) ob_get_clean();
+$check( str_contains( $top_bar_output, 'Playground smoke creative' ), 'Top page-bar delivery did not render.' );
+$check( str_contains( $top_bar_output, 'npcink-ad-page-bar--top' ), 'Top page-bar output omitted its bounded presentation class.' );
+$check( str_contains( $top_bar_output, 'data-npcink-ad-dismiss' ), 'Top page-bar output omitted its accessible dismissal control.' );
+$check( '' === $wrong_bar_output, 'A top page-bar Promotion also rendered at the bottom hook.' );
+$check( wp_script_is( 'npcink-ad-page-bar', 'enqueued' ), 'Rendering a page bar did not enqueue its small dismissal script.' );
+
+wp_set_current_user( 1 );
+update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'bar_bottom' );
+wp_set_current_user( 0 );
+$bottom_bar_delivery = new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() );
+ob_start();
+$bottom_bar_delivery->render_bottom_page_bar();
+$bottom_bar_output = (string) ob_get_clean();
+$check( str_contains( $bottom_bar_output, 'Playground smoke creative' ), 'Bottom page-bar delivery did not render.' );
+$check( str_contains( $bottom_bar_output, 'npcink-ad-page-bar--bottom' ), 'Bottom page-bar output omitted its bounded presentation class.' );
 
 wp_set_current_user( 1 );
 update_post_meta( $promotion_id, Post_Types::LOCATION_META, 'content_after_paragraph' );

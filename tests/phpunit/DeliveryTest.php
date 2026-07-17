@@ -53,6 +53,7 @@ final class DeliveryTest extends TestCase {
 		$GLOBALS['npcink_ad_test_get_the_terms_results'] = array();
 		$GLOBALS['npcink_ad_test_get_the_terms']         = array();
 		$GLOBALS['npcink_ad_test_enqueued_styles']    = array();
+		$GLOBALS['npcink_ad_test_enqueued_scripts']   = array();
 	}
 
 	/**
@@ -68,6 +69,56 @@ final class DeliveryTest extends TestCase {
 			array( array( 'post', 'page' ) ),
 			$GLOBALS['npcink_ad_test_singular_arguments']
 		);
+	}
+
+	/**
+	 * Top and bottom bars render through their real hooks, outside post content.
+	 */
+	public function test_page_bars_render_in_deterministic_hook_locations(): void {
+		$this->add_automatic_promotion( 50, 'bar_top', 'all' );
+		$this->add_automatic_promotion( 51, 'bar_bottom', 'all' );
+		$delivery = new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() );
+
+		$content = $delivery->filter_content( '<p>Body</p>' );
+		ob_start();
+		$delivery->render_top_page_bar();
+		$top = (string) ob_get_clean();
+		ob_start();
+		$delivery->render_bottom_page_bar();
+		$bottom = (string) ob_get_clean();
+
+		self::assertSame( '<p>Body</p>', $content );
+		self::assertStringContainsString( 'data-npcink-ad-promotion="50"', $top );
+		self::assertStringNotContainsString( 'data-npcink-ad-promotion="51"', $top );
+		self::assertStringContainsString( 'data-npcink-ad-promotion="51"', $bottom );
+		self::assertStringNotContainsString( 'data-npcink-ad-promotion="50"', $bottom );
+		self::assertSame(
+			array( 'npcink-ad-page-bar', 'npcink-ad-page-bar' ),
+			$GLOBALS['npcink_ad_test_enqueued_scripts']
+		);
+	}
+
+	/**
+	 * An authorized preview suppresses ordinary bars and uses the selected hook.
+	 */
+	public function test_page_bar_preview_uses_only_the_selected_real_hook(): void {
+		$this->add_automatic_promotion( 52, 'bar_top', 'all' );
+		$GLOBALS['npcink_ad_test_posts'][52]->post_status = 'draft';
+		$delivery = new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() );
+		$delivery->enable_preview_request();
+		$delivery->enable_page_bar_preview( 52, 'bar_top', 'mobile', 99 );
+
+		ob_start();
+		$delivery->render_bottom_page_bar();
+		$bottom = (string) ob_get_clean();
+		ob_start();
+		$delivery->render_top_page_bar();
+		$top = (string) ob_get_clean();
+
+		self::assertSame( '', $bottom );
+		self::assertStringContainsString( 'data-npcink-ad-promotion="52"', $top );
+		self::assertStringContainsString( 'Not currently eligible', $top );
+		self::assertTrue( $delivery->has_rendered_page_bar_preview() );
 	}
 
 	/**

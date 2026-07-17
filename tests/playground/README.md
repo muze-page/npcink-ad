@@ -12,7 +12,8 @@ WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 publication and future-schedule preflight (including invalid calendar values),
 source-less/unsafe Core Video rejection and valid site-controlled video rendering,
 site-timezone schedule boundaries, the page/time/device matrix,
-block/shortcode/automatic delivery, the fixed `781px`/`782px` frontend CSS
+block/shortcode/automatic delivery, bounded top/bottom page-bar hooks and their
+conditional no-storage dismissal script, the fixed `781px`/`782px` frontend CSS
 boundary, the exact three-attribute Promotion block contract, registered block
 description, visible preview breakpoint guidance, authorized and denied REST
 access, promotion-bound preview nonces, preview capability checks, absence of

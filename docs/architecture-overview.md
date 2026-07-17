@@ -16,7 +16,7 @@
 
 - `post_title`、`post_content`：标题和原生区块创意；
 - `post_status`：草稿/发布的唯一状态真相；
-- `_npcink_ad_location`：`block | content_before | content_after | content_after_paragraph`；
+- `_npcink_ad_location`：`block | content_before | content_after | content_after_paragraph | bar_top | bar_bottom`；后两者分别由 `wp_body_open` 与 `wp_footer` 在正常文档流输出；
 - `_npcink_ad_paragraph_number`：仅段落位置使用的整数，默认 `3`，有效范围 `1..20`；
 - `_npcink_ad_content_scope`：`all | posts | pages | terms | selected`；自动投放使用五种互斥范围，手动区块/短代码只保留 `all | selected`，其他高级值由 PHP 按 `all` 处理；
 - `_npcink_ad_include_ids`、`_npcink_ad_exclude_ids`：去重、最多 50 个正整数 ID；
@@ -32,7 +32,8 @@
 - 区块侧栏使用 Core REST/Core Data 做 `per_page=20` 的服务端标题搜索与真实分页；每次搜索只合并同一查询的第 1..N 页并按 ID 去重。已保存 ID 始终由 `getEntityRecord` 独立解析并注入选项，加载或请求失败只显示中性 ID 占位且保留区块属性，不把当前页缺失解释为记录已删除。
 - 手动 `all` 表示在区块或短代码被显式插入的位置应用其余规则，不继承自动位置的标准 post/page 限制；手动 `selected` 只接受显式选择的已发布标准文章/页面；ID 排除始终优先。
 - 编辑器对所选文章正文的区块核验只是非阻断证据。模板、同步样板、短代码和后续内容变更都可能让正文扫描不完整，真实页面预览才是管理者的最终上下文核验。
-- 正常投放始终输出 cache-stable HTML 与设备 class；CSS 在 `max-width: 781px` 隐藏 desktop-only，在 `min-width: 782px` 隐藏 mobile-only。没有 User-Agent 分叉、tablet、可配置断点或必需前端 JavaScript。
+- 正常投放始终输出 cache-stable HTML 与设备 class；CSS 在 `max-width: 781px` 隐藏 desktop-only，在 `min-width: 782px` 隐藏 mobile-only。没有 User-Agent 分叉、tablet 或可配置断点；正文与手动投放不需要前端 JavaScript。
+- 页面横栏仍由服务端判定并输出；仅命中横栏的页面条件加载一个当前文档关闭脚本。关闭不写 Cookie、session 或 localStorage，刷新/跳转后重新以服务端结果为准。横栏不悬浮、不吸顶，也不计算主题偏移。
 - 真实页面预览的 mobile iframe 最多 `390px`，只代表一种移动画布宽度，不是正式投放断点；预览仍使用同一 evaluator 并显示真实 verdict。
 - 该引导未新增 meta、REST 字段、reason code 或 block attribute；区块 attributes 仍严格为 `promotionId`、`reserveHeight`、`preview`。
 
@@ -42,7 +43,7 @@
 - `Repository`：把 WordPress Post/meta 映射为领域数组，并以当前 Core term 状态解析 `category_ids`、`tag_ids` 与派生的 `terms_valid`；
 - `Eligibility_Evaluator`：无 WordPress 调用的纯策略，依次提供配置、就绪度和完整请求判定；
 - `Overlap_Detector`：无 WordPress 调用的纯提示策略，只判断两个自动投放规则是否可能同时展示，不改变资格或发布结果；
-- `Delivery`：构造内容 ID、标准 post/page 类型、文章直接分类/标签、位置、时间和预览设备上下文；page 不提供 term 上下文，CPT 不进入自动投放；
+- `Delivery`：构造内容 ID、标准 post/page 类型、文章直接分类/标签、位置、时间和预览设备上下文；page 不提供 term 上下文，CPT 不进入自动投放；正文位置进入 `the_content`，页面横栏进入标准主题挂钩；
 - `Paragraph_Inserter`：在区块渲染前标记顶层段落锚点，并在渲染后替换为服务端输出；Classic 内容由 Core HTML tokenizer 识别真实 `P` closer，排除 comment、raw-text、template 后代和 attribute 中的伪标签；
 - `Renderer`：安全渲染创意、管理占位和预览结论；
 - `Eligibility_Messages`：把稳定 reason codes 映射为所有管理/预览界面共用的文案；
@@ -80,6 +81,7 @@
 - 预览响应发送 no-cache 与 noindex 头，匿名请求返回 403；
 - 预览与正式投放共用 evaluator/renderer，唯一差异是管理者可强制看见被规则阻止的创意；
 - 段落位置在 Gutenberg 中只计算顶层 `core/paragraph`；Classic 内容计算渲染后的 `<p>`；正式投放缺少锚点时不回退，授权预览才会在文末显示创意并明确报告 `content_anchor_missing`；
+- 页面顶部/底部横栏的授权预览使用真实 `wp_body_open`/`wp_footer` 挂钩；顶部挂钩缺失但页脚挂钩存在时显示明确诊断，不把创意移动到错误位置；
 - 正式设备规则使用固定 CSS 断点：mobile 为 `781px` 及以下，desktop 为 `782px` 及以上，`all` 不隐藏；HTML 不按 User-Agent 分叉；
 - 第三方整页缓存可能延迟发布、暂停、开始和停止时间边界；0.2.0 要求站点配置合适的 TTL 或主动清理受影响页面，不宣称穿透任意第三方缓存。
 
@@ -89,7 +91,7 @@
 - PHPCS / PHPStan：WordPress 编码、安全与类型边界；
 - TypeScript / JS / CSS lint：编辑器与动态区块；
 - Promotion 编辑器 SlotFill 优先使用当前 `@wordpress/editor` 导出及其 `wp-editor` 依赖；WordPress 6.5 保留 `@wordpress/edit-post` / `wp-edit-post` fallback。`Requires at least` 低于 6.6 时，release gate 解析构建资产的 dependency array，要求该 fallback 依赖存在，并拒绝 6.6 之前不可用的 `react-jsx-runtime`；
-- Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、五种 canonical content scope、真实 Core category/tag 直接关系与动态变更、term fail-closed、REST 发布/恢复预检、真实 `the_content` 优先级 `8 → 9 → 10` 的 marker 复制后单次渲染与残余清理、固定 `781px`/`782px` CSS 契约、区块三属性边界、预览说明、时区/排期边界、无表/Options、卸载；
+- Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、五种 canonical content scope、真实 Core category/tag 直接关系与动态变更、term fail-closed、REST 发布/恢复预检、真实 `the_content` 优先级 `8 → 9 → 10` 的 marker 复制后单次渲染与残余清理、顶部/底部横栏挂钩与按需关闭脚本、固定 `781px`/`782px` CSS 契约、区块三属性边界、预览说明、时区/排期边界、无表/Options、卸载；
 - Local 浏览器：同一编辑页创建规则、列表范围摘要、真实主题预览、发布/暂停和匿名前台。
 
 发布包固定为 `npcink-ad/`，包含构建产物、运行 PHP、前端/预览 CSS、`readme.txt` 和许可证，不包含源码 JS、测试、文档或旧品牌运行标识。

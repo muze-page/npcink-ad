@@ -355,6 +355,19 @@ final class OverlapDetectorTest extends TestCase {
 	}
 
 	/**
+	 * Page bars use the existing same-location overlap advisory.
+	 */
+	public function test_page_bars_overlap_only_at_the_same_bar_location(): void {
+		$detector  = new Overlap_Detector();
+		$top       = array_replace( $this->promotion(), array( 'location' => 'bar_top' ) );
+		$other_top = array_replace( $this->promotion( 2 ), array( 'location' => 'bar_top' ) );
+		$bottom    = array_replace( $this->promotion( 3 ), array( 'location' => 'bar_bottom' ) );
+
+		self::assertTrue( $detector->may_overlap( $top, $other_top ) );
+		self::assertFalse( $detector->may_overlap( $top, $bottom ) );
+	}
+
+	/**
 	 * Build one valid automatic Promotion rule.
 	 *
 	 * @param int $id Promotion ID.

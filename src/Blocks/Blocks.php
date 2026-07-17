@@ -20,6 +20,7 @@ final class Blocks {
 	private const EDITOR_SCRIPT = 'npcink-ad-block-editor';
 	private const EDITOR_STYLE  = 'npcink-ad-block-editor';
 	private const FRONTEND_STYLE = 'npcink-ad-frontend';
+	private const PAGE_BAR_SCRIPT = 'npcink-ad-page-bar';
 
 	/**
 	 * Store the delivery orchestrator used by the render callback.
@@ -118,6 +119,24 @@ final class Blocks {
 			NPCINK_AD_URL . 'assets/css/frontend.css',
 			array(),
 			NPCINK_AD_VERSION
+		);
+
+		$page_bar_asset_file = NPCINK_AD_PATH . 'build/page-bar.asset.php';
+		$page_bar_asset      = file_exists( $page_bar_asset_file ) ? require $page_bar_asset_file : array();
+		$page_bar_asset      = is_array( $page_bar_asset ) ? $page_bar_asset : array();
+		$page_bar_version    = isset( $page_bar_asset['version'] )
+			? (string) $page_bar_asset['version']
+			: NPCINK_AD_VERSION;
+		$page_bar_depends    = isset( $page_bar_asset['dependencies'] ) && is_array( $page_bar_asset['dependencies'] )
+			? $page_bar_asset['dependencies']
+			: array();
+
+		wp_register_script(
+			self::PAGE_BAR_SCRIPT,
+			NPCINK_AD_URL . 'build/page-bar.js',
+			$page_bar_depends,
+			$page_bar_version,
+			true
 		);
 	}
 }

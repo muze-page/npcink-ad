@@ -24,10 +24,15 @@ final class PostTypesTest extends TestCase {
 	}
 
 	/**
-	 * Paragraph placement is an explicit location without changing the legacy default.
+	 * Automatic content and page-bar locations extend one unchanged default.
 	 */
 	public function test_paragraph_location_is_supported_without_changing_the_default(): void {
 		self::assertContains( 'content_after_paragraph', Post_Types::LOCATIONS );
+		self::assertSame( array( 'bar_top', 'bar_bottom' ), Post_Types::BAR_LOCATIONS );
+		self::assertSame(
+			array( 'content_before', 'content_after', 'content_after_paragraph', 'bar_top', 'bar_bottom' ),
+			Post_Types::AUTOMATIC_LOCATIONS
+		);
 		self::assertSame( 'content_after', Post_Types::sanitize_location( 'unsupported' ) );
 	}
 

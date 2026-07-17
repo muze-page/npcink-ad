@@ -51,6 +51,10 @@ module.exports = {
 			process.cwd(),
 			'assets/js/block-editor-entry.tsx'
 		),
+		'page-bar': path.resolve(
+			process.cwd(),
+			'assets/js/page-bar-entry.ts'
+		),
 		'promotion-editor': path.resolve(
 			process.cwd(),
 			'assets/js/promotion-editor-entry.tsx'

@@ -1,0 +1,1 @@
+(()=>{"use strict";!function(e=document){e.addEventListener("click",e=>{if(!(e.target instanceof Element))return;const t=e.target.closest("[data-npcink-ad-dismiss]"),n=t?.closest("[data-npcink-ad-bar]");n instanceof HTMLElement&&(n.querySelectorAll("audio, video").forEach(e=>e.pause()),n.hidden=!0)})}()})();

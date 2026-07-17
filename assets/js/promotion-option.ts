@@ -2,7 +2,9 @@ export type PromotionLocation =
 	| 'block'
 	| 'content_before'
 	| 'content_after'
-	| 'content_after_paragraph';
+	| 'content_after_paragraph'
+	| 'bar_top'
+	| 'bar_bottom';
 
 const DEFAULT_PROMOTION_LOCATION: PromotionLocation = 'content_after';
 
