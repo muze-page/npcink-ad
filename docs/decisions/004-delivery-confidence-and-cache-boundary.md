@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-15
+- Amended: 2026-07-16 (WP Super Cache deployment validation)
 
 ## Context
 
@@ -43,6 +44,35 @@ With a full-page cache or CDN, minute-level switching cannot be guaranteed by th
 | Request occurs exactly at `end` without full-page caching | Promotion is expired and does not render. |
 | Full-page cache or CDN serves older HTML across a boundary | No minute-accuracy claim is made; TTL or boundary purge is required. |
 | Authorized preview | Uses the same rules, reports the truthful verdict, and is non-cacheable. |
+
+## Deployment validation evidence
+
+On 2026-07-16 the boundary was exercised on the Local `ad.local` test site with
+WordPress 7.0.1, PHP 8.2.29, and WP Super Cache 3.1.1 in Simple mode. The cache
+timeout was set to 60 seconds. Each comparison used the same public page: the
+normal URL was allowed to use its generated static HTML, while a unique query
+parameter forced a dynamic WordPress request. An explicit WP Super Cache purge
+then regenerated the normal URL.
+
+| Transition inside the 60-second TTL | Cached normal URL | Dynamic URL | Normal URL after purge |
+| --- | --- | --- | --- |
+| Scheduled start | Still omitted the Promotion | Rendered the Promotion | Rendered the Promotion |
+| Scheduled end | Still rendered the Promotion | Omitted the Promotion | Omitted the Promotion |
+| Pause | Still rendered the Promotion | Omitted the Promotion | Omitted the Promotion |
+| Resume | Still omitted the Promotion | Rendered the Promotion | Rendered the Promotion |
+
+The cached responses were positively identified by the
+`X-WP-Super-Cache: Served supercache file from PHP` header. This confirms that
+the evaluator handled all four transitions correctly when PHP ran, while the
+full-page cache intentionally continued serving its older HTML. Saving or
+changing a Promotion did not purge the selected target page automatically in
+this configuration.
+
+This result is deployment evidence, not a provider-specific compatibility
+promise. Npcink Ad still does not call third-party purge APIs. A detected
+WordPress advanced-cache drop-in therefore warrants an explicit management
+warning, and every target deployment must define either a suitable TTL or an
+affected-page purge path for publish, pause, resume, start, and stop.
 
 ## Alternatives considered
 

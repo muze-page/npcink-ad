@@ -49,4 +49,14 @@ final class EligibilityMessagesTest extends TestCase {
 		self::assertStringContainsString( 'does not match', $messages[2] );
 		self::assertStringContainsString( 'could not be read', $messages[3] );
 	}
+
+	/**
+	 * Video source failures remain explicit across list, preview, and preflight.
+	 */
+	public function test_video_source_reason_has_message(): void {
+		self::assertSame(
+			array( 'A video in the promotion has no usable source.' ),
+			Eligibility_Messages::messages( array( 'promotion_video_source_missing' ) )
+		);
+	}
 }

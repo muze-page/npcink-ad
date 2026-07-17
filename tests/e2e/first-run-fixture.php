@@ -1,0 +1,109 @@
+<?php
+/**
+ * Plugin Name: Npcink Ad first-run E2E fixture
+ * Description: Builds a clean first-use session without stored Promotions.
+ *
+ * @package NpcinkAd
+ */
+
+declare(strict_types=1);
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Build the clean first-run fixture once in the shared Playground database.
+ */
+function npcink_ad_build_first_run_e2e_fixture(): void {
+	$ready_option = 'npcink_ad_first_run_e2e_fixture_ready';
+	$lock_option  = 'npcink_ad_first_run_e2e_fixture_building';
+
+	if ( ! post_type_exists( 'npcink_promotion' ) ) {
+		return;
+	}
+	if ( get_option( $ready_option ) ) {
+		return;
+	}
+	if ( ! add_option( $lock_option, (string) microtime( true ), '', false ) ) {
+		return;
+	}
+
+	try {
+		$username = 'npcink-e2e-admin';
+		$password = 'npcink-e2e-password';
+		$email    = 'npcink-e2e@example.test';
+		$user_id  = username_exists( $username );
+
+		if ( ! is_int( $user_id ) || 1 > $user_id ) {
+			$user_id = wp_insert_user(
+				array(
+					'user_login' => $username,
+					'user_pass'  => $password,
+					'user_email' => $email,
+					'role'       => 'administrator',
+				)
+			);
+		}
+
+		if ( is_wp_error( $user_id ) ) {
+			throw new RuntimeException( 'Could not create the first-run E2E administrator: ' . $user_id->get_error_message() );
+		}
+
+		wp_set_password( $password, $user_id );
+		$user = get_user_by( 'id', $user_id );
+		if ( false === $user ) {
+			throw new RuntimeException( 'Could not load the first-run E2E administrator.' );
+		}
+		$user->set_role( 'administrator' );
+		update_user_meta( $user_id, 'locale', 'en_US' );
+		update_user_meta(
+			$user_id,
+			'wp_persisted_preferences',
+			array(
+				'core/edit-post' => array(
+					'welcomeGuide' => false,
+				),
+			)
+		);
+
+		$page_id = wp_insert_post(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_title'   => 'Npcink Ad selector E2E page',
+				'post_name'    => 'npcink-ad-selector-e2e-page',
+				'post_content' => '<!-- wp:paragraph --><p>Npcink Ad first-run E2E target page.</p><!-- /wp:paragraph -->',
+			),
+			true
+		);
+
+		if ( is_wp_error( $page_id ) ) {
+			throw new RuntimeException( 'Could not create the first-run E2E page: ' . $page_id->get_error_message() );
+		}
+
+		$counts = wp_count_posts( 'npcink_promotion', 'readable' );
+		foreach ( get_object_vars( $counts ) as $count ) {
+			if ( 0 < (int) $count ) {
+				throw new RuntimeException( 'The first-run E2E fixture unexpectedly contains a Promotion.' );
+			}
+		}
+
+		update_option(
+			$ready_option,
+			array(
+				'username' => $username,
+				'password' => $password,
+				'page'     => array(
+					'id'   => $page_id,
+					'slug' => 'npcink-ad-selector-e2e-page',
+				),
+			),
+			false
+		);
+	} catch ( Throwable $error ) {
+		update_option( 'npcink_ad_first_run_e2e_fixture_error', $error->getMessage(), false );
+		error_log( 'Npcink Ad first-run E2E fixture failed: ' . $error->getMessage() );
+	}
+}
+add_action( 'init', 'npcink_ad_build_first_run_e2e_fixture', 100 );

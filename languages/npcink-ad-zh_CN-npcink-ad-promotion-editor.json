@@ -10,8 +10,8 @@
                 "lang": "zh_CN",
                 "plural-forms": "nplurals=1; plural=0;"
             },
-            "Real-page preview": [
-                "\u771f\u5b9e\u9875\u9762\u9884\u89c8"
+            "Preview": [
+                "\u9884\u89c8"
             ],
             "Desktop": [
                 "\u684c\u9762\u7aef"
@@ -118,9 +118,6 @@
             "configured in WordPress": [
                 "WordPress \u4e2d\u7684\u914d\u7f6e"
             ],
-            "%d delivery configuration error needs review before publishing.": [
-                "\u53d1\u5e03\u524d\u6709 %d \u4e2a\u6295\u653e\u914d\u7f6e\u95ee\u9898\u9700\u8981\u68c0\u67e5\u3002"
-            ],
             "Optional. Uses the site timezone: %s.": [
                 "\u53ef\u9009\u3002\u4f7f\u7528\u7ad9\u70b9\u65f6\u533a\uff1a%s\u3002"
             ],
@@ -133,12 +130,6 @@
             "Stop showing must be later than Start showing.": [
                 "\u505c\u6b62\u5c55\u793a\u65f6\u95f4\u5fc5\u987b\u665a\u4e8e\u5f00\u59cb\u5c55\u793a\u65f6\u95f4\u3002"
             ],
-            "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use.": [
-                "\u6392\u671f\u65f6\u95f4\u4f7f\u7528\u7ad9\u70b9\u65f6\u533a\uff08%s\uff09\u3002\u6574\u9875\u7f13\u5b58\u548c CDN \u9700\u8981\u5408\u9002\u7684 TTL \u6216\u6e05\u7406\u7b56\u7565\uff1b\u7f13\u5b58\u9875\u9762\u4ecd\u5728\u4f7f\u7528\u65f6\uff0c\u65e0\u6cd5\u4fdd\u8bc1\u5206\u949f\u7ea7\u5207\u6362\u3002"
-            ],
-            "These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative.": [
-                "\u8fd9\u4e9b\u7f16\u8f91\u5668\u68c0\u67e5\u4e0d\u4f1a\u963b\u6b62\u4fdd\u5b58\u3002PHP \u6295\u653e\u5224\u5b9a\u548c Core REST \u54cd\u5e94\u4ecd\u662f\u6700\u7ec8\u4f9d\u636e\u3002"
-            ],
             "Open preview": [
                 "\u6253\u5f00\u9884\u89c8"
             ],
@@ -148,14 +139,14 @@
             "This advisory does not block publishing.": [
                 "\u6b64\u63d0\u793a\u4e0d\u4f1a\u963b\u6b62\u53d1\u5e03\u3002"
             ],
+            "After paragraph %d": [
+                "\u7b2c %d \u6bb5\u540e"
+            ],
             "Choose a published page or post in Real-page preview before checking the paragraph anchor.": [
                 "\u8bf7\u5148\u5728\u201c\u771f\u5b9e\u9875\u9762\u9884\u89c8\u201d\u4e2d\u9009\u62e9\u5df2\u53d1\u5e03\u7684\u9875\u9762\u6216\u6587\u7ae0\uff0c\u518d\u68c0\u67e5\u6bb5\u843d\u951a\u70b9\u3002"
             ],
             "Checking the selected page body for the paragraph anchor\u2026": [
                 "\u6b63\u5728\u68c0\u67e5\u6240\u9009\u9875\u9762\u6b63\u6587\u4e2d\u7684\u6bb5\u843d\u951a\u70b9\u2026\u2026"
-            ],
-            "Enter a whole paragraph number from %1$d to %2$d before checking this anchor.": [
-                "\u8bf7\u5148\u8f93\u5165 %1$d \u5230 %2$d \u4e4b\u95f4\u7684\u6574\u6570\u6bb5\u843d\u53f7\uff0c\u518d\u68c0\u67e5\u6b64\u951a\u70b9\u3002"
             ],
             "The saved page body has %1$d top-level paragraph blocks, so the anchor after paragraph %2$d is available.": [
                 "\u6240\u9009\u9875\u9762\u5df2\u4fdd\u5b58\u7684\u6b63\u6587\u4e2d\u6709 %1$d \u4e2a\u9876\u5c42\u6bb5\u843d\u533a\u5757\uff0c\u56e0\u6b64\u7b2c %2$d \u6bb5\u540e\u7684\u951a\u70b9\u53ef\u7528\u3002"
@@ -184,9 +175,6 @@
             "Required. Enter a whole number from %1$d to %2$d. The default is 3.": [
                 "\u5fc5\u586b\u3002\u8bf7\u8f93\u5165 %1$d \u5230 %2$d \u4e4b\u95f4\u7684\u6574\u6570\uff0c\u9ed8\u8ba4\u4e3a 3\u3002"
             ],
-            "Enter a whole paragraph number from %1$d to %2$d before opening the real-page preview.": [
-                "\u8bf7\u5148\u8f93\u5165 %1$d \u5230 %2$d \u4e4b\u95f4\u7684\u6574\u6570\u6bb5\u843d\u53f7\uff0c\u518d\u6253\u5f00\u771f\u5b9e\u9875\u9762\u9884\u89c8\u3002"
-            ],
             "Paragraph number must be a whole number from %1$d to %2$d.": [
                 "\u6bb5\u843d\u53f7\u5fc5\u987b\u662f %1$d \u5230 %2$d \u4e4b\u95f4\u7684\u6574\u6570\u3002"
             ],
@@ -207,15 +195,6 @@
             ],
             "Posts in selected categories or tags": [
                 "\u6240\u9009\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u4e2d\u7684\u6587\u7ae0"
-            ],
-            "Advanced editorial scope \u2014 needs attention": [
-                "\u9ad8\u7ea7\u5185\u5bb9\u6295\u653e\u8303\u56f4\u2014\u2014\u9700\u8981\u5904\u7406"
-            ],
-            "Advanced editorial scope": [
-                "\u9ad8\u7ea7\u5185\u5bb9\u6295\u653e\u8303\u56f4"
-            ],
-            "Categories and tags use ANY matching and apply only to standard posts. Exact excluded content always takes priority.": [
-                "\u5206\u7c7b\u76ee\u5f55\u548c\u6807\u7b7e\u6309\u201c\u4efb\u4e00\u5339\u914d\u201d\u751f\u6548\uff0c\u4e14\u4ec5\u9002\u7528\u4e8e\u6807\u51c6\u6587\u7ae0\u3002\u660e\u786e\u6392\u9664\u7684\u5185\u5bb9\u59cb\u7ec8\u4f18\u5148\u3002"
             ],
             "Some selected categories or tags are no longer available. Remove them before publishing.": [
                 "\u90e8\u5206\u6240\u9009\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u5df2\u4e0d\u53ef\u7528\u3002\u8bf7\u5148\u79fb\u9664\uff0c\u518d\u53d1\u5e03\u3002"
@@ -238,17 +217,8 @@
             "Choose at least one available category or tag when Content scope is set to Posts in selected categories or tags.": [
                 "\u5f53\u5185\u5bb9\u8303\u56f4\u8bbe\u4e3a\u201c\u6240\u9009\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u4e2d\u7684\u6587\u7ae0\u201d\u65f6\uff0c\u8bf7\u81f3\u5c11\u9009\u62e9\u4e00\u4e2a\u53ef\u7528\u7684\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u3002"
             ],
-            "No empty-scope, schedule, content, or paragraph errors were found in the current editor fields. Public selected targets and category or tag availability are confirmed by the server when publishing or scheduling.": [
-                "\u5f53\u524d\u7f16\u8f91\u5668\u5b57\u6bb5\u672a\u53d1\u73b0\u6295\u653e\u8303\u56f4\u4e3a\u7a7a\u3001\u6392\u671f\u3001\u5185\u5bb9\u6216\u6bb5\u843d\u76f8\u5173\u9519\u8bef\u3002\u53d1\u5e03\u6216\u6392\u7a0b\u65f6\uff0c\u670d\u52a1\u7aef\u4f1a\u786e\u8ba4\u6240\u9009\u516c\u5f00\u76ee\u6807\u4ee5\u53ca\u5206\u7c7b\u76ee\u5f55\u6216\u6807\u7b7e\u662f\u5426\u53ef\u7528\u3002"
-            ],
             "This promotion block was not found in the selected page body. A template, synced pattern, or [npcink_ad promotion=\"ID\"] shortcode may still provide the manual insertion, so verify the result with the real-page preview.": [
                 "\u5728\u6240\u9009\u9875\u9762\u6b63\u6587\u4e2d\u672a\u627e\u5230\u6b64\u63a8\u5e7f\u533a\u5757\u3002\u6a21\u677f\u3001\u540c\u6b65\u6837\u677f\u6216 [npcink_ad promotion=\"ID\"] \u77ed\u4ee3\u7801\u4ecd\u53ef\u80fd\u63d0\u4f9b\u624b\u52a8\u63d2\u5165\u5165\u53e3\uff0c\u8bf7\u901a\u8fc7\u771f\u5b9e\u9875\u9762\u9884\u89c8\u6838\u9a8c\u7ed3\u679c\u3002"
-            ],
-            "Manual delivery is not inserted automatically. Save this Promotion first, then insert the Npcink Ad Promotion block where it should appear and select this Promotion. The block position is the live position; verify it with Real-page preview. The existing [npcink_ad promotion=\"ID\"] shortcode remains an expert manual-insertion path.": [
-                "\u624b\u52a8\u6295\u653e\u4e0d\u4f1a\u81ea\u52a8\u63d2\u5165\u3002\u8bf7\u5148\u4fdd\u5b58\u6b64\u63a8\u5e7f\uff0c\u7136\u540e\u5728\u5e0c\u671b\u5c55\u793a\u7684\u4f4d\u7f6e\u63d2\u5165 Npcink Ad \u63a8\u5e7f\u533a\u5757\uff0c\u5e76\u9009\u62e9\u6b64\u63a8\u5e7f\u3002\u533a\u5757\u4f4d\u7f6e\u5c31\u662f\u6b63\u5f0f\u4f4d\u7f6e\uff1b\u8bf7\u4f7f\u7528\u771f\u5b9e\u9875\u9762\u9884\u89c8\u8fdb\u884c\u6838\u9a8c\u3002\u73b0\u6709 [npcink_ad promotion=\"ID\"] \u77ed\u4ee3\u7801\u4ecd\u53ef\u4f5c\u4e3a\u9762\u5411\u4e13\u5bb6\u7684\u624b\u52a8\u63d2\u5165\u65b9\u5f0f\u3002"
-            ],
-            "Manual delivery still requires the Npcink Ad Promotion block or [npcink_ad promotion=\"ID\"] shortcode. \"Only selected posts and pages\" adds an allow-list; explicit exclusions always take priority.": [
-                "\u624b\u52a8\u6295\u653e\u4ecd\u9700\u4f7f\u7528 Npcink Ad \u63a8\u5e7f\u533a\u5757\u6216 [npcink_ad promotion=\"ID\"] \u77ed\u4ee3\u7801\u3002\u201c\u4ec5\u6240\u9009\u6587\u7ae0\u548c\u9875\u9762\u201d\u4f1a\u589e\u52a0\u4e00\u4e2a\u5141\u8bb8\u5217\u8868\uff1b\u660e\u786e\u6392\u9664\u59cb\u7ec8\u4f18\u5148\u3002"
             ],
             "Wherever manually inserted": [
                 "\u624b\u52a8\u63d2\u5165\u7684\u4efb\u610f\u4f4d\u7f6e"
@@ -256,8 +226,122 @@
             "Only selected posts and pages": [
                 "\u4ec5\u6240\u9009\u6587\u7ae0\u548c\u9875\u9762"
             ],
-            "The All devices option shows the Promotion at every width. Desktop shows it at viewport widths of 782px and above; Mobile shows it at 781px and below. CSS applies this fixed breakpoint, with no separate tablet target.": [
-                "\u201c\u6240\u6709\u8bbe\u5907\u201d\u9009\u9879\u4f1a\u5728\u4efb\u610f\u5bbd\u5ea6\u663e\u793a\u63a8\u5e7f\uff1b\u201c\u684c\u9762\u7aef\u201d\u4f1a\u5728\u89c6\u53e3\u5bbd\u5ea6\u4e3a 782px \u53ca\u4ee5\u4e0a\u65f6\u663e\u793a\uff0c\u201c\u79fb\u52a8\u7aef\u201d\u4f1a\u5728 781px \u53ca\u4ee5\u4e0b\u65f6\u663e\u793a\u3002CSS \u4f7f\u7528\u8fd9\u4e00\u56fa\u5b9a\u65ad\u70b9\uff0c\u4e0d\u63d0\u4f9b\u5355\u72ec\u7684\u5e73\u677f\u8bbe\u5907\u76ee\u6807\u3002"
+            "Next": [
+                "\u4e0b\u4e00\u6b65"
+            ],
+            "Ready": [
+                "\u5c31\u7eea"
+            ],
+            "Choose a page": [
+                "\u9009\u62e9\u9875\u9762"
+            ],
+            "Publish in three steps": [
+                "\u5206\u4e09\u6b65\u53d1\u5e03"
+            ],
+            "This checklist follows the current content and delivery preflight.": [
+                "\u6b64\u6e05\u5355\u6839\u636e\u5f53\u524d\u5185\u5bb9\u548c\u6295\u653e\u9884\u68c0\u7ed3\u679c\u66f4\u65b0\u3002"
+            ],
+            "Add promotion content": [
+                "\u6dfb\u52a0\u63a8\u5e7f\u5185\u5bb9"
+            ],
+            "Done": [
+                "\u5df2\u5b8c\u6210"
+            ],
+            "Needs content": [
+                "\u9700\u8981\u5185\u5bb9"
+            ],
+            "Confirm delivery rules": [
+                "\u786e\u8ba4\u6295\u653e\u89c4\u5219"
+            ],
+            "Needs attention": [
+                "\u9700\u8981\u5904\u7406"
+            ],
+            "Preview a real page and publish": [
+                "\u5728\u771f\u5b9e\u9875\u9762\u4e2d\u9884\u89c8\u5e76\u53d1\u5e03"
+            ],
+            "WordPress has an advanced page-cache drop-in enabled. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires.": [
+                "WordPress \u5df2\u542f\u7528 advanced page-cache drop-in\u3002\u53d1\u5e03\u3001\u6682\u505c\u3001\u6062\u590d\u4ee5\u53ca\u5b9a\u65f6\u5f00\u59cb\u6216\u505c\u6b62\u540e\u7684\u65e7\u9875\u9762\u53ef\u80fd\u7ee7\u7eed\u7531\u7f13\u5b58\u63d0\u4f9b\uff0c\u76f4\u81f3\u53d7\u5f71\u54cd\u9875\u9762\u88ab\u6e05\u7406\u6216\u7f13\u5b58 TTL \u5230\u671f\u3002"
+            ],
+            "Schedule times use the site timezone (%s).": [
+                "\u6392\u671f\u65f6\u95f4\u4f7f\u7528\u7ad9\u70b9\u65f6\u533a\uff08%s\uff09\u3002"
+            ],
+            "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while cached HTML remains in use.": [
+                "\u6392\u671f\u65f6\u95f4\u4f7f\u7528\u7ad9\u70b9\u65f6\u533a\uff08%s\uff09\u3002\u6574\u9875\u7f13\u5b58\u548c CDN \u9700\u8981\u5408\u9002\u7684 TTL \u6216\u6e05\u7406\u673a\u5236\uff1b\u53ea\u8981\u7f13\u5b58 HTML \u4ecd\u5728\u4f7f\u7528\uff0c\u5c31\u65e0\u6cd5\u4fdd\u8bc1\u5206\u949f\u7ea7\u5207\u6362\u3002"
+            ],
+            "Retry loading posts and pages": [
+                "\u91cd\u8bd5\u52a0\u8f7d\u6587\u7ae0\u548c\u9875\u9762"
+            ],
+            "Terms could not be loaded. The current selection has not been changed.": [
+                "\u65e0\u6cd5\u52a0\u8f7d\u5206\u7c7b\u6216\u6807\u7b7e\u3002\u5f53\u524d\u9009\u62e9\u672a\u53d1\u751f\u66f4\u6539\u3002"
+            ],
+            "Retry loading terms": [
+                "\u91cd\u8bd5\u52a0\u8f7d\u5206\u7c7b\u6216\u6807\u7b7e"
+            ],
+            "Current content and delivery checks have passed.": [
+                "\u5f53\u524d\u5185\u5bb9\u548c\u6295\u653e\u68c0\u67e5\u5df2\u901a\u8fc7\u3002"
+            ],
+            "Drafts can still be saved. Publishing or scheduling runs the final validation.": [
+                "\u8349\u7a3f\u4ecd\u53ef\u4fdd\u5b58\u3002\u53d1\u5e03\u6216\u6392\u671f\u65f6\u4f1a\u6267\u884c\u6700\u7ec8\u9a8c\u8bc1\u3002"
+            ],
+            "The available posts and pages could not be fully loaded. The current selection has not been changed.": [
+                "\u6587\u7ae0\u548c\u9875\u9762\u672a\u80fd\u5b8c\u6574\u52a0\u8f7d\u3002\u5f53\u524d\u9009\u62e9\u672a\u53d1\u751f\u66f4\u6539\u3002"
+            ],
+            "Custom schedule": [
+                "\u81ea\u5b9a\u4e49\u6392\u671f"
+            ],
+            "No schedule": [
+                "\u672a\u8bbe\u7f6e\u6392\u671f"
+            ],
+            "Device and schedule": [
+                "\u8bbe\u5907\u4e0e\u6392\u671f"
+            ],
+            "Delivery settings need attention.": [
+                "\u6295\u653e\u8bbe\u7f6e\u9700\u8981\u5904\u7406\u3002"
+            ],
+            "Delivery settings checked.": [
+                "\u6295\u653e\u8bbe\u7f6e\u5df2\u68c0\u67e5\u3002"
+            ],
+            "Edit delivery settings": [
+                "\u7f16\u8f91\u6295\u653e\u8bbe\u7f6e"
+            ],
+            "Npcink Ad delivery settings": [
+                "Npcink Ad \u6295\u653e\u8bbe\u7f6e"
+            ],
+            "Manual delivery requires the Promotion block or [npcink_ad promotion=\"ID\"]. The insertion point is the live position.": [
+                "\u624b\u52a8\u6295\u653e\u9700\u8981\u4f7f\u7528\u201c\u63a8\u5e7f\u201d\u533a\u5757\u6216 [npcink_ad promotion=\"ID\"]\u3002\u63d2\u5165\u4f4d\u7f6e\u5373\u5b9e\u9645\u5c55\u793a\u4f4d\u7f6e\u3002"
+            ],
+            "For manual delivery, selected content adds an allow-list; exclusions always take priority.": [
+                "\u624b\u52a8\u6295\u653e\u4e2d\uff0c\u6240\u9009\u5185\u5bb9\u4f1a\u5f62\u6210\u5141\u8bb8\u5217\u8868\uff1b\u6392\u9664\u9879\u59cb\u7ec8\u4f18\u5148\u3002"
+            ],
+            "Matches any selected category or tag on standard posts. Exclusions take priority.": [
+                "\u6807\u51c6\u6587\u7ae0\u53ea\u9700\u5339\u914d\u4efb\u4e00\u6240\u9009\u5206\u7c7b\u6216\u6807\u7b7e\uff1b\u6392\u9664\u9879\u4f18\u5148\u3002"
+            ],
+            "Exclusions": [
+                "\u6392\u9664\u9879"
+            ],
+            "Desktop starts at 782px; Mobile ends at 781px. There is no separate tablet target.": [
+                "\u684c\u9762\u8bbe\u5907\u4ece 782px \u8d77\uff1b\u79fb\u52a8\u8bbe\u5907\u622a\u81f3 781px\u3002\u4e0d\u5355\u72ec\u63d0\u4f9b\u5e73\u677f\u8bbe\u5907\u76ee\u6807\u3002"
+            ],
+            "Placement \u2014 needs attention": [
+                "\u5c55\u793a\u4f4d\u7f6e \u2014 \u9700\u8981\u5904\u7406"
+            ],
+            "Content scope \u2014 needs attention": [
+                "\u5185\u5bb9\u8303\u56f4 \u2014 \u9700\u8981\u5904\u7406"
+            ],
+            "Device and schedule \u2014 needs attention": [
+                "\u8bbe\u5907\u4e0e\u6392\u671f \u2014 \u9700\u8981\u5904\u7406"
+            ],
+            "Close settings": [
+                "\u5173\u95ed\u8bbe\u7f6e"
+            ],
+            "Page selected": [
+                "\u5df2\u9009\u9875\u9762"
+            ],
+            "Select a video source before publishing.": [
+                "\u53d1\u5e03\u524d\u8bf7\u9009\u62e9\u89c6\u9891\u6765\u6e90\u3002"
+            ],
+            "This video requests autoplay without being muted. Browsers may block playback; enable Muted in the Video block or keep playback controls. This advisory does not block publishing.": [
+                "\u6b64\u89c6\u9891\u8bf7\u6c42\u5728\u672a\u9759\u97f3\u65f6\u81ea\u52a8\u64ad\u653e\u3002\u6d4f\u89c8\u5668\u53ef\u80fd\u4f1a\u963b\u6b62\u64ad\u653e\uff1b\u8bf7\u5728\u89c6\u9891\u533a\u5757\u4e2d\u542f\u7528\u201c\u9759\u97f3\u201d\uff0c\u6216\u4fdd\u7559\u64ad\u653e\u63a7\u4ef6\u3002\u6b64\u5efa\u8bae\u4e0d\u4f1a\u963b\u6b62\u53d1\u5e03\u3002"
             ]
         }
     }

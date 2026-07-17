@@ -34,6 +34,15 @@ page, pauses it from the Promotion list, verifies the success notice, paused row
 state, and missing frontend output, then resumes it and verifies the rule-ready
 row state and restored frontend output.
 
+The first-run test uses a separate Playground session with no stored
+Promotions. It verifies the empty-list guide, enters through **Add first
+Promotion**, and checks the editor guide from incomplete rules through the
+ready state and its disappearance after publication. Gutenberg title, content,
+and saves use only the top-level WordPress data store so the same test remains
+independent of the WordPress 7.0 editor iframe. It also verifies the generated
+real-page preview, live delivery, pause, resume, and cleanup. A full run starts
+one standard fixture session and one isolated first-run session.
+
 Build a release ZIP and install Chromium once:
 
 ```sh
@@ -47,6 +56,12 @@ Run the minimum and current compatibility rows:
 ```sh
 WP_VERSION=6.5 PHP_VERSION=8.1 pnpm run test:e2e:editor
 WP_VERSION=7.0 PHP_VERSION=8.5 pnpm run test:e2e:editor
+```
+
+Pass a spec path after `--` when iterating on one flow:
+
+```sh
+WP_VERSION=6.5 PHP_VERSION=8.1 pnpm run test:e2e:editor -- tests/e2e/first-promotion.spec.ts
 ```
 
 `PLUGIN_ZIP` may override the release package inferred from the plugin Version

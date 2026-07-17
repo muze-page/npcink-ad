@@ -58,6 +58,7 @@
 - `promotion_not_started`
 - `promotion_expired`
 - `promotion_content_empty`
+- `promotion_video_source_missing`
 - `promotion_targets_empty`
 - `promotion_terms_invalid`
 - `promotion_schedule_invalid`
@@ -71,7 +72,7 @@
 - `content_anchor_missing`（只在真实页面段落预览提供了锚点上下文时产生）
 - `device_mismatch`（只用于显式预览设备上下文）
 
-`content_not_included` 与 `content_excluded` 同时覆盖标准 post/page ID 范围；pre-GA 不保留旧的 page 命名双码。协调层还可产生 `promotion_missing` 与 `recursive_promotion`。新增规则必须先扩充 evaluator 的表驱动测试。
+`promotion_video_source_missing` 表示创意包含 Core Video 或 raw `<video>`，但至少一个 `<video>` 自身没有可用的根相对或显式 HTTP(S) `src`；显式 URL 仅接受 ASCII 主机名或 IPv4、可选的 1–65535 端口及结构明确的路径，裸相对路径、协议相对 URL、反斜杠、控制字符、畸形百分号和仅有会被 Core post KSES 移除的子 `<source>` 都不算有效，它也不检查文件当前是否可访问。`content_not_included` 与 `content_excluded` 同时覆盖标准 post/page ID 范围；pre-GA 不保留旧的 page 命名双码。协调层还可产生 `promotion_missing` 与 `recursive_promotion`。新增规则必须先扩充 evaluator 的表驱动测试。
 
 ## 5. 预览、安全和缓存
 

@@ -2,13 +2,24 @@
 	box-sizing: border-box;
 }
 
+.npcink-ad-promotion figure.wp-block-video,
+.npcink-ad-promotion video {
+	max-width: 100%;
+}
+
+.npcink-ad-promotion video {
+	height: auto;
+}
+
 @media (max-width: 781px) {
+
 	.npcink-ad-device-desktop {
 		display: none !important;
 	}
 }
 
 @media (min-width: 782px) {
+
 	.npcink-ad-device-mobile {
 		display: none !important;
 	}
@@ -28,4 +39,3 @@
 	border-left-color: #d63638;
 	background: #fcf0f1;
 }
-

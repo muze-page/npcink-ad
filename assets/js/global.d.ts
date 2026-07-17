@@ -8,6 +8,7 @@ interface Window {
 		publicContentIds: number[];
 		validCategoryIds: number[];
 		validTagIds: number[];
+		hasAdvancedPageCache: boolean;
 		publishedAutomaticPromotions: Array< {
 			id: number;
 			location:

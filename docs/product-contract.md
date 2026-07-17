@@ -33,7 +33,7 @@ Implementation details such as slots, variants, resolvers, targeting engines, te
 
 One complete vertical workflow is more important than broad feature coverage:
 
-1. Create a promotion using WordPress blocks.
+1. Create a promotion using WordPress blocks, including a site-controlled Core Video block when motion creative is needed.
 2. Choose a placement: manual block or shortcode, before content, after content, or after paragraph 1–20.
 3. Choose all posts/pages, all posts, all pages, posts matching selected Core categories/tags, or specific published posts/pages; optionally exclude explicit content IDs.
 4. Optionally set a start and end time.
@@ -66,6 +66,8 @@ Npcink Ad 0.2:
 - removes only its own documented data during explicit uninstall.
 
 Analytics, A/B testing, frequency controls, consent integrations, and visitor targeting require a new decision record backed by observed user demand and a privacy design.
+
+Site-controlled video is Promotion content, not a second delivery model. [ADR 010](decisions/010-site-controlled-video-creative.md) accepts the Core Video block with a root-relative or explicit HTTP(S) source while keeping VAST, video-ad protocols, playback analytics, popup video, and interstitial delivery outside the core product.
 
 ## Explicit non-goals
 
@@ -119,6 +121,6 @@ The manual block selector is a management-only reliability surface: title search
 
 Device visibility uses one fixed CSS boundary: mobile at `781px` and below, desktop at `782px` and above, and `all` at every width. There is no tablet target or configurable breakpoint. The mobile preview canvas is capped at `390px` as a representative width, not as the production breakpoint; normal HTML remains cache-stable and does not branch by User-Agent.
 
-Version 0.2.0 established the controlled 0.2 delivery scope. Version 0.2.1 changes only the management-side manual block selector and its packaged-plugin Gutenberg editor E2E coverage; the stored schema, public interfaces, eligibility policy, and frontend delivery remain the 0.2.0 contract. Git tags, GitHub Releases, and public distribution remain explicit repository release actions rather than claims made by this contract.
+Version 0.2.0 established the controlled 0.2 delivery scope. Version 0.2.1 changes only the management-side manual block selector and its packaged-plugin Gutenberg editor E2E coverage. Version 0.2.2 adds first-Promotion guidance, editor asset isolation, complete selected-page browser validation, conservative advanced-cache disclosure, and the explicit site-controlled-video creative contract; it does not add a second data or delivery model. Git tags, GitHub Releases, and public distribution remain explicit repository release actions rather than claims made by this contract.
 
 Multiple eligible Promotions at one automatic location continue rendering in deterministic order, while management UI only advises that they **may** appear together. This direction does not add priority, weights, rotation, tablet targeting, arbitrary selectors or hooks, visitor state, tracking, or separate Slot/Placement records.

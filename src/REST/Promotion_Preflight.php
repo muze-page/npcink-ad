@@ -93,7 +93,7 @@ final class Promotion_Preflight {
 
 		return new WP_Error(
 			'npcink_ad_promotion_not_ready',
-			__( 'The promotion cannot be published until its delivery settings are complete.', 'npcink-ad' ),
+			__( 'The promotion cannot be published until its content and delivery settings are complete.', 'npcink-ad' ),
 			array(
 				'status'  => 400,
 				'reasons' => $result['reasons'],

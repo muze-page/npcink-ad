@@ -9,6 +9,7 @@ namespace Npcink\Ad\Admin;
 
 use Npcink\Ad\Data\Post_Types;
 use Npcink\Ad\Data\Repository;
+use Npcink\Ad\Environment\Page_Cache;
 use WP_Post;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -55,6 +56,7 @@ final class Editor {
 			'validCategoryIds'              => $overlap_settings['validCategoryIds'],
 			'validTagIds'                   => $overlap_settings['validTagIds'],
 			'publishedAutomaticPromotions' => $overlap_settings['publishedAutomaticPromotions'],
+			'hasAdvancedPageCache'          => Page_Cache::has_advanced_cache_drop_in(),
 		);
 
 		wp_add_inline_script(

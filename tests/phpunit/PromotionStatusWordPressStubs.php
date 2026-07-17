@@ -101,9 +101,86 @@ if ( ! function_exists( 'current_user_can' ) ) {
 	 * @param mixed  ...$args    Optional capability context.
 	 */
 	function current_user_can( string $capability, mixed ...$args ): bool {
-		unset( $capability, $args );
+		unset( $args );
+		$capabilities = $GLOBALS['npcink_ad_test_capabilities'] ?? null;
+		if ( is_array( $capabilities ) && array_key_exists( $capability, $capabilities ) ) {
+			return (bool) $capabilities[ $capability ];
+		}
 
 		return true;
+	}
+}
+
+if ( ! function_exists( 'add_action' ) ) {
+	/**
+	 * Capture action registrations for isolated list tests.
+	 *
+	 * @param string $hook_name     Action name.
+	 * @param mixed  $callback      Registered callback.
+	 * @param int    $priority      Hook priority.
+	 * @param int    $accepted_args Accepted argument count.
+	 */
+	function add_action( string $hook_name, mixed $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+		$GLOBALS['npcink_ad_test_actions'][] = compact( 'hook_name', 'callback', 'priority', 'accepted_args' );
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'add_filter' ) ) {
+	/**
+	 * Capture filter registrations for isolated list tests.
+	 *
+	 * @param string $hook_name     Filter name.
+	 * @param mixed  $callback      Registered callback.
+	 * @param int    $priority      Hook priority.
+	 * @param int    $accepted_args Accepted argument count.
+	 */
+	function add_filter( string $hook_name, mixed $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+		$GLOBALS['npcink_ad_test_filters'][] = compact( 'hook_name', 'callback', 'priority', 'accepted_args' );
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'get_current_screen' ) ) {
+	/**
+	 * Return the current deterministic admin screen.
+	 */
+	function get_current_screen(): object|false {
+		$screen = $GLOBALS['npcink_ad_test_current_screen'] ?? false;
+
+		return is_object( $screen ) ? $screen : false;
+	}
+}
+
+if ( ! function_exists( 'wp_count_posts' ) ) {
+	/**
+	 * Return deterministic post counts for every status.
+	 *
+	 * @param string $post_type Post type being counted.
+	 * @param string $perm      Permission context.
+	 */
+	function wp_count_posts( string $post_type, string $perm = '' ): object {
+		$GLOBALS['npcink_ad_test_count_posts_calls'][] = array(
+			'post_type' => $post_type,
+			'perm'      => $perm,
+		);
+
+		$counts = $GLOBALS['npcink_ad_test_post_counts'] ?? (object) array();
+
+		return is_object( $counts ) ? $counts : (object) array();
+	}
+}
+
+if ( ! function_exists( 'wp_unslash' ) ) {
+	/**
+	 * Return already-unslashed deterministic request input.
+	 *
+	 * @param mixed $value Raw request value.
+	 */
+	function wp_unslash( mixed $value ): mixed {
+		return $value;
 	}
 }
 

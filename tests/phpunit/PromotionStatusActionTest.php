@@ -102,6 +102,15 @@ final class PromotionStatusActionTest extends TestCase {
 	}
 
 	/**
+	 * A source-less video returns the shared configuration reason on resume.
+	 */
+	public function test_resume_preflight_reports_a_source_less_video(): void {
+		$GLOBALS['npcink_ad_test_posts'][1]->post_content = '<video controls></video>';
+
+		self::assertSame( 'promotion_video_source_missing', $this->resume_blocking_reason() );
+	}
+
+	/**
 	 * Stored invalid calendar dates block resume through the shared evaluator.
 	 */
 	public function test_resume_preflight_rejects_an_invalid_stored_calendar_date(): void {
@@ -185,6 +194,17 @@ final class PromotionStatusActionTest extends TestCase {
 		self::assertNotNull( $message );
 		self::assertSame( 'error', $message['type'] );
 		self::assertStringContainsString( 'unavailable or could not be validated', $message['text'] );
+	}
+
+	/**
+	 * A source-less video resume failure tells the operator what is wrong.
+	 */
+	public function test_source_less_video_notice_contains_actionable_guidance(): void {
+		$message = $this->notice_message( 'promotion_video_source_missing' );
+
+		self::assertNotNull( $message );
+		self::assertSame( 'error', $message['type'] );
+		self::assertStringContainsString( 'no usable source', $message['text'] );
 	}
 
 	/**

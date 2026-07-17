@@ -11,6 +11,7 @@ import {
 	getEffectivePromotionTermSelection,
 	getPotentiallyOverlappingPromotionIds,
 	getPromotionPreflightIssues,
+	hasUnmutedAutoplayVideo,
 	inspectParagraphAnchor,
 } from './preflight';
 
@@ -358,6 +359,213 @@ describe( 'current Promotion target normalization', () => {
 				]
 			)
 		).toEqual( [ 2 ] );
+	} );
+} );
+
+describe( 'video source preflight', () => {
+	const promotionInput = ( content ) => ( {
+		content,
+		contentScope: 'all',
+		includeIds: [],
+		excludeIds: [],
+	} );
+
+	test.each( [
+		[ 'an empty self-closing core Video block', '<!-- wp:video /-->' ],
+		[
+			'an empty explicit core namespace Video block',
+			'<!-- wp:core/video /-->',
+		],
+		[
+			'a paired core Video block without a source',
+			'<!-- wp:video --><figure class="wp-block-video"><video controls></video></figure><!-- /wp:video -->',
+		],
+		[ 'a raw video without a source', '<video controls></video>' ],
+		[
+			'source text inside a double-quoted attribute',
+			'<video title="foo src=/fake.mp4"></video>',
+		],
+		[
+			'source text inside a single-quoted attribute',
+			"<video title='foo src=https://example.com/fake.mp4'></video>",
+		],
+		[
+			'a video whose source uses a blocked scheme',
+			'<video src="javascript:alert(1)"></video>',
+		],
+		[
+			'a video whose child source uses a blocked scheme',
+			'<video><source src="data:video/mp4;base64,AAAA"></video>',
+		],
+		[
+			'a video whose only source is a safe child element',
+			'<video><source src="https://example.com/promotion.webm"></video>',
+		],
+		[
+			'a core Video block whose only video is inside a template',
+			'<!-- wp:video --><template><video src="promotion.mp4"></video></template><!-- /wp:video -->',
+		],
+		[
+			'a video whose source uses the VBScript scheme',
+			'<video src="vbscript:msgbox(1)"></video>',
+		],
+		[
+			'a video whose blocked scheme uses character references',
+			'<video src="java&#x73;cript&colon;alert(1)"></video>',
+		],
+		[
+			'a video whose blocked scheme uses a control character reference',
+			'<video src="jav&#x0D;ascript:alert(1)"></video>',
+		],
+		[
+			'an otherwise safe source with a trailing line-feed reference',
+			'<video src="https://example.com/promotion.mp4&#10;"></video>',
+		],
+		[
+			'a video whose blocked scheme is double encoded',
+			'<video src="java&amp;#x73;cript:alert(1)"></video>',
+		],
+		[
+			'a video whose blocked scheme contains a null entity',
+			'<video src="java&#0;script:alert(1)"></video>',
+		],
+		[
+			'a bare relative video source',
+			'<video src="media/promotion.mp4"></video>',
+		],
+		[
+			'a parent-relative video source',
+			'<video src="../media/promotion.mp4"></video>',
+		],
+		[
+			'a protocol-relative video source',
+			'<video src="//cdn.example.com/promotion.mp4"></video>',
+		],
+		[
+			'a colon in a relative video path',
+			'<video src="./media/foo:bar.mp4"></video>',
+		],
+		[ 'an HTTP scheme without a host', '<video src="http://"></video>' ],
+		[ 'an HTTPS scheme without a host', '<video src="https://"></video>' ],
+		[ 'the site root without a media path', '<video src="/"></video>' ],
+		[ 'a colon-only host', '<video src="https://:/x.mp4"></video>' ],
+		[
+			'an empty host after userinfo',
+			'<video src="https://@/x.mp4"></video>',
+		],
+		[
+			'a non-numeric port',
+			'<video src="https://host:bad/x.mp4"></video>',
+		],
+		[
+			'an out-of-range port',
+			'<video src="https://host:99999/x.mp4"></video>',
+		],
+		[
+			'an invalid encoded host',
+			'<video src="https://%zz/x.mp4"></video>',
+		],
+		[
+			'a repaired triple-slash URL',
+			'<video src="https:///evil.example/x.mp4"></video>',
+		],
+		[
+			'a repaired single-slash URL',
+			'<video src="https:/evil.example/x.mp4"></video>',
+		],
+		[
+			'a repaired slash-less URL',
+			'<video src="https:evil.example/x.mp4"></video>',
+		],
+		[
+			'a backslash authority URL',
+			'<video src="https:\\evil.example\\x.mp4"></video>',
+		],
+		[
+			'an out-of-range IPv4 host',
+			'<video src="https://256.256.256.256/x.mp4"></video>',
+		],
+	] )(
+		'blocks publishing for %s without also reporting empty content',
+		( _, content ) => {
+			expect(
+				getPromotionPreflightIssues( promotionInput( content ) )
+			).toEqual( [ 'video_source_missing' ] );
+		}
+	);
+
+	test.each( [
+		[
+			'an absolute-path video source',
+			'<video src="/wp-content/uploads/promotion.mp4"></video>',
+		],
+		[
+			'an HTTP video source',
+			'<video src="http://example.com/promotion.mp4"></video>',
+		],
+		[
+			'a paired core Video block with an HTTPS source',
+			'<!-- wp:video --><figure class="wp-block-video"><video src="https://example.com/promotion.mp4"></video></figure><!-- /wp:video -->',
+		],
+		[
+			'a local HTTP source with a port',
+			'<video src="http://localhost:8080/promotion.mp4"></video>',
+		],
+		[
+			'an IPv4 HTTPS source',
+			'<video src="https://127.0.0.1/promotion.mp4"></video>',
+		],
+		[
+			'a real source after source text in another attribute',
+			'<video title="greater > src=/fake.mp4" src="/promotion.mp4"></video>',
+		],
+	] )( 'accepts %s', ( _, content ) => {
+		expect(
+			getPromotionPreflightIssues( promotionInput( content ) )
+		).toEqual( [] );
+	} );
+
+	test.each( [
+		[ 'a video-playlist block', '<!-- wp:video-playlist /-->' ],
+		[ 'a core/video-poster block', '<!-- wp:core/video-poster /-->' ],
+	] )(
+		'does not misclassify %s as a source-less Video block',
+		( _, block ) => {
+			expect(
+				getPromotionPreflightIssues(
+					promotionInput( `<p>Promotion</p>${ block }` )
+				)
+			).toEqual( [] );
+		}
+	);
+
+	test( 'reports one invalid video even when other text and video are valid', () => {
+		const issues = getPromotionPreflightIssues(
+			promotionInput(
+				'<p>Promotion</p><video src="/valid.mp4"></video><video controls></video>'
+			)
+		);
+
+		expect( issues ).toEqual( [ 'video_source_missing' ] );
+	} );
+} );
+
+describe( 'video autoplay advisory', () => {
+	test( 'identifies autoplay without a muted attribute', () => {
+		expect(
+			hasUnmutedAutoplayVideo(
+				'<video autoplay src="/promotion.mp4"></video>'
+			)
+		).toBe( true );
+	} );
+
+	test.each( [
+		'<video autoplay muted src="/promotion.mp4"></video>',
+		'<video controls src="/promotion.mp4"></video>',
+		'<!-- <video autoplay src="/promotion.mp4"></video> -->',
+		'<template><video autoplay src="/promotion.mp4"></video></template>',
+	] )( 'does not advise for %s', ( content ) => {
+		expect( hasUnmutedAutoplayVideo( content ) ).toBe( false );
 	} );
 } );
 

@@ -91,6 +91,26 @@ final class PromotionPreflightTest extends TestCase {
 	}
 
 	/**
+	 * The final REST error names both creative content and delivery settings.
+	 */
+	public function test_publish_error_names_content_and_delivery_settings(): void {
+		$prepared               = $this->prepared_post( 'publish' );
+		$prepared->post_content = '';
+
+		$result = $this->preflight()->validate_before_save(
+			$prepared,
+			$this->request_with_meta( array() )
+		);
+
+		self::assertInstanceOf( WP_Error::class, $result );
+		self::assertSame(
+			'The promotion cannot be published until its content and delivery settings are complete.',
+			$result->get_error_message()
+		);
+		self::assertSame( array( 'promotion_content_empty' ), $result->get_error_data()['reasons'] );
+	}
+
+	/**
 	 * Provide publish states and invalid raw integer anchors.
 	 *
 	 * @return array<string, array{string, int}>

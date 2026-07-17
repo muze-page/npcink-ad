@@ -13,7 +13,7 @@ if ( ! class_exists( 'WP_Post_Type' ) ) {
 		/**
 		 * Post type capabilities.
 		 *
-		 * @var object{edit_post: string, publish_posts: string}
+		 * @var object{edit_post: string, publish_posts: string, create_posts: string}
 		 */
 		public object $cap;
 
@@ -24,6 +24,7 @@ if ( ! class_exists( 'WP_Post_Type' ) ) {
 			$this->cap = (object) array(
 				'edit_post'     => 'manage_npcink_ads',
 				'publish_posts' => 'manage_npcink_ads',
+				'create_posts'  => 'manage_npcink_ads',
 			);
 		}
 	}

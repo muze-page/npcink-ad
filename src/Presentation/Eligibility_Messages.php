@@ -32,6 +32,7 @@ final class Eligibility_Messages {
 			'promotion_not_started'      => __( 'The promotion has not started.', 'npcink-ad' ),
 			'promotion_expired'          => __( 'The promotion has expired.', 'npcink-ad' ),
 			'promotion_content_empty'    => __( 'The promotion has no content.', 'npcink-ad' ),
+			'promotion_video_source_missing' => __( 'A video in the promotion has no usable source.', 'npcink-ad' ),
 			'promotion_targets_empty'    => __( 'Select at least one valid delivery target that is not excluded.', 'npcink-ad' ),
 			'promotion_terms_invalid'    => __( 'One or more selected categories or tags are unavailable or could not be validated.', 'npcink-ad' ),
 			'promotion_paragraph_invalid' => __( 'Choose a paragraph number from 1 to 20.', 'npcink-ad' ),

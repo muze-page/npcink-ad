@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Npcink Ad 0.2.1\n"
+"Project-Id-Version: Npcink Ad 0.2.2\n"
 "Report-Msgid-Bugs-To: https://github.com/muze-page/npcink-ad/issues\n"
 "Last-Translator: Npcink\n"
 "Language-Team: Chinese (Simplified)\n"
@@ -44,6 +44,7 @@ msgid "Npcink Ad Preview"
 msgstr "Npcink Ad 预览"
 
 #: src/Admin/Preview_Page.php:44
+#: build/promotion-editor.js:10
 msgid "Preview"
 msgstr "预览"
 
@@ -64,7 +65,6 @@ msgid "The preview page does not have a public URL."
 msgstr "预览页面没有公开 URL。"
 
 #: src/Admin/Preview_Page.php:125
-#: build/promotion-editor.js:16
 msgid "Real-page preview"
 msgstr "真实页面预览"
 
@@ -226,19 +226,19 @@ msgstr "此推广已过期。"
 msgid "The promotion has no content."
 msgstr "此推广没有内容。"
 
-#: src/Presentation/Eligibility_Messages.php:44
+#: src/Presentation/Eligibility_Messages.php:45
 msgid "The promotion location does not match this delivery method."
 msgstr "推广位置与当前投放方式不匹配。"
 
-#: src/Presentation/Eligibility_Messages.php:46
+#: src/Presentation/Eligibility_Messages.php:47
 msgid "The promotion does not target the simulated device."
 msgstr "此推广不面向当前模拟设备。"
 
-#: src/Presentation/Eligibility_Messages.php:47
+#: src/Presentation/Eligibility_Messages.php:48
 msgid "The promotion recursively includes itself."
 msgstr "此推广递归包含了自身。"
 
-#: src/Presentation/Eligibility_Messages.php:57
+#: src/Presentation/Eligibility_Messages.php:58
 msgid "This promotion is not eligible to render."
 msgstr "此推广不符合渲染条件。"
 
@@ -271,68 +271,68 @@ msgid "Loading preview…"
 msgstr "正在加载预览…"
 
 #. translators: 1: content title, 2: content type.
-#: build/promotion-editor.js:7
+#: build/promotion-editor.js:8
 #, js-format
 msgid "%1$s — %2$s"
 msgstr "%1$s — %2$s"
 
-#: build/promotion-editor.js:7
+#: build/promotion-editor.js:8
 msgid "Page"
 msgstr "页面"
 
-#: build/promotion-editor.js:7
+#: build/promotion-editor.js:8
 msgid "Post"
 msgstr "文章"
 
 #. translators: %s: content title.
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 #, js-format
 msgid "Remove %s"
 msgstr "移除 %s"
 
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 msgid "Remove"
 msgstr "移除"
 
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:15
 msgid "Npcink Ad delivery"
 msgstr "Npcink Ad 投放"
 
-#: src/Admin/Promotion_List.php:164
-#: build/promotion-editor.js:9
+#: src/Admin/Promotion_List.php:261
+#: build/promotion-editor.js:10
 msgid "Placement"
 msgstr "展示位置"
 
-#: build/promotion-editor.js:9
+#: build/promotion-editor.js:10
 msgid "After post content"
 msgstr "正文之后"
 
-#: build/promotion-editor.js:9
+#: build/promotion-editor.js:10
 msgid "Before post content"
 msgstr "正文之前"
 
-#: build/promotion-editor.js:9
+#: build/promotion-editor.js:10
 msgid "Manual block"
 msgstr "手动区块"
 
-#: src/Admin/Promotion_List.php:397
-#: build/promotion-editor.js:13
+#: src/Admin/Promotion_List.php:494
+#: build/promotion-editor.js:14
 msgid "All posts and pages"
 msgstr "所有文章和页面"
 
-#: build/promotion-editor.js:13
+#: build/promotion-editor.js:14
 msgid "Only selected content"
 msgstr "仅所选内容"
 
-#: build/promotion-editor.js:14
+#: build/promotion-editor.js:16
 msgid "Included content"
 msgstr "包含内容"
 
-#: build/promotion-editor.js:14
+#: build/promotion-editor.js:16
 msgid "The promotion can appear only on these published posts and pages."
 msgstr "此推广仅会出现在这些已发布的文章和页面上。"
 
-#: build/promotion-editor.js:14
+#: build/promotion-editor.js:16
 msgid "Device"
 msgstr "设备"
 
@@ -340,11 +340,11 @@ msgstr "设备"
 msgid "All devices"
 msgstr "所有设备"
 
-#: build/promotion-editor.js:14
+#: build/promotion-editor.js:16
 msgid "Start showing"
 msgstr "开始展示"
 
-#: build/promotion-editor.js:15
+#: build/promotion-editor.js:16
 msgid "Stop showing"
 msgstr "停止展示"
 
@@ -364,27 +364,27 @@ msgstr "预览页面"
 msgid "Choose the real post or page whose theme and layout should be used."
 msgstr "选择要使用其主题和布局的真实文章或页面。"
 
-#: build/promotion-editor.js:17
+#: build/promotion-editor.js:15
 msgid "Save the promotion before opening a preview."
 msgstr "请先保存推广，再打开预览。"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:15
 msgid "Choose a published page or post to use as the preview context."
 msgstr "请选择已发布的页面或文章作为预览环境。"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:15
 msgid "Allow pop-ups for this site, then try preview again."
 msgstr "请允许此站点打开弹窗，然后重试预览。"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:15
 msgid "Preparing preview…"
 msgstr "正在准备预览…"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:15
 msgid "The promotion could not be saved. Resolve the editor error, then try again."
 msgstr "无法保存推广。请解决编辑器错误后重试。"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:16
 msgid "Save and open preview"
 msgstr "保存并打开预览"
 
@@ -393,388 +393,343 @@ msgctxt "block title"
 msgid "Npcink Ad Promotion"
 msgstr "Npcink Ad 推广"
 
-#: src/Admin/Promotion_List.php:163
+#: src/Admin/Promotion_List.php:260
 msgid "Rule status"
 msgstr "规则状态"
 
-#: src/Admin/Promotion_List.php:166
+#: src/Admin/Promotion_List.php:263
 msgid "Stops"
 msgstr "停止时间"
 
-#: src/Admin/Promotion_List.php:167
+#: src/Admin/Promotion_List.php:264
 msgid "Why not"
 msgstr "不展示原因"
 
-#: src/Admin/Promotion_List.php:259
+#: src/Admin/Promotion_List.php:356
 msgid "Needs completion"
 msgstr "需要完善"
 
-#: src/Admin/Promotion_List.php:262
+#: src/Admin/Promotion_List.php:359
 msgid "Paused"
 msgstr "已暂停"
 
-#: src/Admin/Promotion_List.php:265
-#: src/Admin/Promotion_List.php:271
+#: src/Admin/Promotion_List.php:362
+#: src/Admin/Promotion_List.php:368
 msgid "Not started"
 msgstr "未开始"
 
-#: src/Admin/Promotion_List.php:268
+#: src/Admin/Promotion_List.php:365
 msgid "Not published"
 msgstr "未发布"
 
-#: src/Admin/Promotion_List.php:274
+#: src/Admin/Promotion_List.php:371
 msgid "Ended"
 msgstr "已结束"
 
-#: src/Admin/Promotion_List.php:277
+#: src/Admin/Promotion_List.php:374
 msgid "Rule ready"
 msgstr "规则就绪"
 
-#: src/Admin/Promotion_List.php:298
+#: src/Admin/Promotion_List.php:395
 msgid "Pause"
 msgstr "暂停"
 
-#: src/Admin/Promotion_List.php:299
+#: src/Admin/Promotion_List.php:396
 msgid "Resume"
 msgstr "恢复"
 
-#: src/Admin/Promotion_List.php:403
+#: src/Admin/Promotion_List.php:500
 msgid "Configured exclusions:"
 msgstr "已配置排除："
 
-#: src/Admin/Promotion_List.php:394
+#: src/Admin/Promotion_List.php:491
 msgid "Selected public posts/pages:"
 msgstr "已选公开文章/页面："
 
-#: src/Admin/Promotion_List.php:453
+#: src/Admin/Promotion_List.php:550
 msgid "Block"
 msgstr "手动区块"
 
-#: src/Admin/Promotion_List.php:454
+#: src/Admin/Promotion_List.php:551
 msgid "Before content"
 msgstr "正文之前"
 
-#: src/Admin/Promotion_List.php:455
+#: src/Admin/Promotion_List.php:552
 msgid "After content"
 msgstr "正文之后"
 
-#: src/Admin/Promotion_List.php:458
+#: src/Admin/Promotion_List.php:555
 msgid "Unknown"
 msgstr "未知"
 
-#: src/Admin/Promotion_List.php:496
+#: src/Admin/Promotion_List.php:593
 msgid "No end time"
 msgstr "无停止时间"
 
-#: src/Admin/Promotion_Status_Action.php:75
+#: src/Admin/Promotion_Status_Action.php:83
 msgid "Promotion status changes require a POST request."
 msgstr "推广状态变更必须使用 POST 请求。"
 
-#: src/Admin/Promotion_Status_Action.php:89
+#: src/Admin/Promotion_Status_Action.php:97
 msgid "The promotion status request is invalid."
 msgstr "推广状态请求无效。"
 
-#: src/Admin/Promotion_Status_Action.php:100
+#: src/Admin/Promotion_Status_Action.php:108
 msgid "The requested promotion does not exist."
 msgstr "请求的推广不存在。"
 
-#: src/Admin/Promotion_Status_Action.php:109
+#: src/Admin/Promotion_Status_Action.php:117
 msgid "You are not allowed to change this promotion status."
 msgstr "您无权更改此推广的状态。"
 
-#: src/Admin/Promotion_Status_Action.php:116
+#: src/Admin/Promotion_Status_Action.php:124
 msgid "You are not allowed to publish promotions."
 msgstr "您无权发布推广。"
 
-#: src/Admin/Promotion_Status_Action.php:324
+#: src/Admin/Promotion_Status_Action.php:325
 msgid "The promotion is paused."
 msgstr "推广已暂停。"
 
-#: src/Admin/Promotion_Status_Action.php:332
+#: src/Admin/Promotion_Status_Action.php:333
 msgid "The promotion was already paused."
 msgstr "推广已经处于暂停状态。"
 
-#: src/Admin/Promotion_Status_Action.php:336
+#: src/Admin/Promotion_Status_Action.php:337
 msgid "The promotion was already published."
 msgstr "推广已经处于发布状态。"
 
-#: src/Admin/Promotion_Status_Action.php:340
+#: src/Admin/Promotion_Status_Action.php:341
 msgid "Only published or draft promotions can use this status action."
 msgstr "只有已发布或草稿状态的推广可以使用此状态操作。"
 
-#: src/Admin/Promotion_Status_Action.php:344
+#: src/Admin/Promotion_Status_Action.php:345
 msgid "The promotion status could not be changed."
 msgstr "无法更改推广状态。"
 
-#: src/Admin/Promotion_Status_Action.php:367
+#: src/Admin/Promotion_Status_Action.php:361
 msgid "The promotion was not resumed:"
 msgstr "推广未恢复："
 
-#: src/Presentation/Eligibility_Messages.php:38
+#: src/Presentation/Eligibility_Messages.php:39
 msgid "The promotion end time must be later than its start time."
 msgstr "推广的停止时间必须晚于开始时间。"
 
-#: src/REST/Promotion_Preflight.php:96
-msgid "The promotion cannot be published until its delivery settings are complete."
-msgstr "请先完善推广的投放设置，再进行发布。"
-
-#: build/promotion-editor.js:1
+#: build/promotion-editor.js:3
 msgid "Choose a published page or post in Real-page preview before checking manual block placement."
 msgstr "请先在“真实页面预览”中选择已发布的页面或文章，再检查手动区块位置。"
 
-#: build/promotion-editor.js:1
+#: build/promotion-editor.js:3
 msgid "Checking the selected page body for a matching promotion block…"
 msgstr "正在检查所选页面正文中是否有匹配的推广区块…"
 
-#: build/promotion-editor.js:1
+#: build/promotion-editor.js:3
 msgid "A matching promotion block was found in the selected page body."
 msgstr "已在所选页面正文中找到匹配的推广区块。"
 
-#: build/promotion-editor.js:1
+#: build/promotion-editor.js:3
 msgid "The selected page body could not be inspected from the editor data. This does not mean the block is missing; verify with the real-page preview."
 msgstr "无法通过编辑器数据检查所选页面正文。这并不表示区块缺失，请通过真实页面预览核验。"
 
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 msgid "configured in WordPress"
 msgstr "WordPress 中的配置"
 
-#. translators: %d: number of delivery configuration errors.
-#: build/promotion-editor.js:9
-#, js-format
-msgid "%d delivery configuration error needs review before publishing."
-msgid_plural "%d delivery configuration errors need review before publishing."
-msgstr[0] "发布前有 %d 个投放配置问题需要检查。"
-
 #. translators: %s: site timezone name or UTC offset.
-#: build/promotion-editor.js:15
-#: build/promotion-editor.js:16
+#: build/promotion-editor.js:10
 #, js-format
 msgid "Optional. Uses the site timezone: %s."
 msgstr "可选。使用站点时区：%s。"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:16
 msgid "Npcink Ad delivery preflight"
 msgstr "Npcink Ad 投放预检"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:1
 msgid "Add promotion content before publishing."
 msgstr "发布前请添加推广内容。"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:1
 msgid "Stop showing must be later than Start showing."
 msgstr "停止展示时间必须晚于开始展示时间。"
 
-#. translators: %s: site timezone name or UTC offset.
-#: build/promotion-editor.js:21
-#, js-format
-msgid "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while a cached page remains in use."
-msgstr "排期时间使用站点时区（%s）。整页缓存和 CDN 需要合适的 TTL 或清理策略；缓存页面仍在使用时，无法保证分钟级切换。"
-
-#: build/promotion-editor.js:21
-msgid "These editor checks do not block saving. PHP delivery evaluation and Core REST responses remain authoritative."
-msgstr "这些编辑器检查不会阻止保存。PHP 投放判定和 Core REST 响应仍是最终依据。"
-
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:16
 msgid "Open preview"
 msgstr "打开预览"
 
 #. translators: %d: number of published Promotions with intersecting automatic delivery rules.
-#: src/Admin/Promotion_List.php:477
+#: src/Admin/Promotion_List.php:574
 #, php-format
 msgid "May appear together with %d published promotion."
 msgid_plural "May appear together with %d published promotions."
 msgstr[0] "可能与另外 %d 个已发布推广同时展示。"
 
 #. translators: %d: number of other published promotions that may share a delivery context.
-#: build/promotion-editor.js:20
+#: build/promotion-editor.js:17
 #, js-format
 msgid "This promotion may appear together with %d other published promotion in some post or page contexts."
 msgid_plural "This promotion may appear together with %d other published promotions in some post or page contexts."
 msgstr[0] "此推广在某些文章或页面情境中，可能与另外 %d 个已发布推广同时展示。"
 
-#: build/promotion-editor.js:20
+#: build/promotion-editor.js:17
 msgid "This advisory does not block publishing."
 msgstr "此提示不会阻止发布。"
 
-#: src/Admin/Promotion_List.php:442
+#: src/Admin/Promotion_List.php:539
 msgid "After paragraph (invalid)"
 msgstr "段落后（设置无效）"
 
 #. translators: %d: paragraph number after which the Promotion appears.
-#: src/Admin/Promotion_List.php:447
-#, php-format
+#. translators: %d: paragraph number.
+#: src/Admin/Promotion_List.php:544
+#: build/promotion-editor.js:15
+#, php-format,js-format
 msgid "After paragraph %d"
 msgstr "第 %d 段后"
 
-#: src/Presentation/Eligibility_Messages.php:37
+#: src/Presentation/Eligibility_Messages.php:38
 msgid "Choose a paragraph number from 1 to 20."
 msgstr "请选择 1 到 20 之间的段落号。"
 
-#: src/Presentation/Eligibility_Messages.php:45
+#: src/Presentation/Eligibility_Messages.php:46
 msgid "The selected paragraph is not available in this content."
 msgstr "当前内容中不存在所选段落。"
 
-#: build/promotion-editor.js:1
+#: build/promotion-editor.js:3
 msgid "Choose a published page or post in Real-page preview before checking the paragraph anchor."
 msgstr "请先在“真实页面预览”中选择已发布的页面或文章，再检查段落锚点。"
 
-#: build/promotion-editor.js:1
+#: build/promotion-editor.js:3
 msgid "Checking the selected page body for the paragraph anchor…"
 msgstr "正在检查所选页面正文中的段落锚点……"
 
-#. translators: 1: minimum paragraph number, 2: maximum paragraph number.
-#: build/promotion-editor.js:2
-#, js-format
-msgid "Enter a whole paragraph number from %1$d to %2$d before checking this anchor."
-msgstr "请先输入 %1$d 到 %2$d 之间的整数段落号，再检查此锚点。"
-
 #. translators: 1: paragraph count, 2: requested paragraph number.
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:4
 #, js-format
 msgid "The saved page body has %1$d top-level paragraph blocks, so the anchor after paragraph %2$d is available."
 msgstr "所选页面已保存的正文中有 %1$d 个顶层段落区块，因此第 %2$d 段后的锚点可用。"
 
 #. translators: 1: paragraph count, 2: requested paragraph number.
-#: build/promotion-editor.js:4
+#: build/promotion-editor.js:5
 #, js-format
 msgid "The saved Classic page body has %1$d actual paragraph elements, so the anchor after paragraph %2$d is available."
 msgstr "所选页面已保存的经典正文中有 %1$d 个实际段落元素，因此第 %2$d 段后的锚点可用。"
 
 #. translators: 1: paragraph count, 2: requested paragraph number.
-#: build/promotion-editor.js:5
+#: build/promotion-editor.js:6
 #, js-format
 msgid "The saved page body has only %1$d top-level paragraph blocks, so the anchor after paragraph %2$d was not found."
 msgstr "所选页面已保存的正文中只有 %1$d 个顶层段落区块，因此未找到第 %2$d 段后的锚点。"
 
 #. translators: 1: paragraph count, 2: requested paragraph number.
-#: build/promotion-editor.js:6
+#: build/promotion-editor.js:7
 #, js-format
 msgid "The saved Classic page body has only %1$d actual paragraph elements, so the anchor after paragraph %2$d was not found."
 msgstr "所选页面已保存的经典正文中只有 %1$d 个实际段落元素，因此未找到第 %2$d 段后的锚点。"
 
-#: build/promotion-editor.js:6
+#: build/promotion-editor.js:7
 msgid "This anchor check is advisory and does not block publishing."
 msgstr "此锚点检查仅供参考，不会阻止发布。"
 
-#: build/promotion-editor.js:6
+#: build/promotion-editor.js:7
 msgid "The selected page body could not be inspected reliably for this paragraph anchor. This does not prove the anchor is missing; verify the result with the real-page preview."
 msgstr "无法可靠检查所选页面正文的此段落锚点。这并不表示锚点缺失；请通过真实页面预览验证结果。"
 
-#: build/promotion-editor.js:9
+#: build/promotion-editor.js:10
 msgid "After paragraph N"
 msgstr "第 N 段后"
 
-#: build/promotion-editor.js:13
+#: build/promotion-editor.js:15
 msgid "Paragraph number"
 msgstr "段落号"
 
 #. translators: 1: minimum paragraph number, 2: maximum paragraph number.
-#: build/promotion-editor.js:14
+#: build/promotion-editor.js:16
 #, js-format
 msgid "Required. Enter a whole number from %1$d to %2$d. The default is 3."
 msgstr "必填。请输入 %1$d 到 %2$d 之间的整数，默认为 3。"
 
 #. translators: 1: minimum paragraph number, 2: maximum paragraph number.
-#: build/promotion-editor.js:17
-#: build/promotion-editor.js:18
-#, js-format
-msgid "Enter a whole paragraph number from %1$d to %2$d before opening the real-page preview."
-msgstr "请先输入 %1$d 到 %2$d 之间的整数段落号，再打开真实页面预览。"
-
-#. translators: 1: minimum paragraph number, 2: maximum paragraph number.
-#: build/promotion-editor.js:19
+#: build/promotion-editor.js:3
 #, js-format
 msgid "Paragraph number must be a whole number from %1$d to %2$d."
 msgstr "段落号必须是 %1$d 到 %2$d 之间的整数。"
 
-#: src/Admin/Promotion_List.php:165
-#: build/promotion-editor.js:9
+#: src/Admin/Promotion_List.php:262
+#: build/promotion-editor.js:10
 msgid "Content scope"
 msgstr "内容范围"
 
-#: src/Admin/Promotion_List.php:373
-#: build/promotion-editor.js:13
+#: src/Admin/Promotion_List.php:470
+#: build/promotion-editor.js:14
 msgid "All posts"
 msgstr "所有文章"
 
-#: src/Admin/Promotion_List.php:376
-#: build/promotion-editor.js:13
+#: src/Admin/Promotion_List.php:473
+#: build/promotion-editor.js:14
 msgid "All pages"
 msgstr "所有页面"
 
-#: src/Admin/Promotion_List.php:381
+#: src/Admin/Promotion_List.php:478
 msgid "Posts matching categories/tags"
 msgstr "匹配分类目录/标签的文章"
 
-#: src/Admin/Promotion_List.php:382
+#: src/Admin/Promotion_List.php:479
 msgid "Configured terms:"
 msgstr "已配置分类/标签："
 
-#: src/Admin/Promotion_List.php:384
+#: src/Admin/Promotion_List.php:481
 msgid "Invalid category/tag selection"
 msgstr "分类/标签选择无效"
 
-#: src/Admin/Promotion_Status_Action.php:328
+#: src/Admin/Promotion_Status_Action.php:329
 msgid "The promotion was published. Delivery still depends on its schedule and content rules."
 msgstr "推广已发布。是否投放仍取决于排期和内容规则。"
 
-#: src/Presentation/Eligibility_Messages.php:35
+#: src/Presentation/Eligibility_Messages.php:36
 msgid "Select at least one valid delivery target that is not excluded."
 msgstr "请至少选择一个有效且未被排除的投放目标。"
 
-#: src/Presentation/Eligibility_Messages.php:36
+#: src/Presentation/Eligibility_Messages.php:37
 msgid "One or more selected categories or tags are unavailable or could not be validated."
 msgstr "一个或多个所选分类目录或标签不可用或无法验证。"
 
-#: src/Presentation/Eligibility_Messages.php:39
+#: src/Presentation/Eligibility_Messages.php:40
 msgid "This content is not explicitly included."
 msgstr "当前内容不在明确包含范围内。"
 
-#: src/Presentation/Eligibility_Messages.php:40
+#: src/Presentation/Eligibility_Messages.php:41
 msgid "This content is excluded."
 msgstr "当前内容已被排除。"
 
-#: src/Presentation/Eligibility_Messages.php:41
+#: src/Presentation/Eligibility_Messages.php:42
 msgid "This content type is not included."
 msgstr "当前内容类型不在投放范围内。"
 
-#: src/Presentation/Eligibility_Messages.php:42
+#: src/Presentation/Eligibility_Messages.php:43
 msgid "This post does not match the selected categories or tags."
 msgstr "当前文章不匹配所选分类目录或标签。"
 
-#: src/Presentation/Eligibility_Messages.php:43
+#: src/Presentation/Eligibility_Messages.php:44
 msgid "This post's categories or tags could not be read."
 msgstr "无法读取当前文章的分类目录或标签。"
 
 #. translators: %s: category name.
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 #, js-format
 msgid "Remove category %s"
 msgstr "移除分类目录 %s"
 
 #. translators: %s: tag name.
-#: build/promotion-editor.js:8
+#: build/promotion-editor.js:9
 #, js-format
 msgid "Remove tag %s"
 msgstr "移除标签 %s"
 
-#: build/promotion-editor.js:13
+#: build/promotion-editor.js:14
 msgid "Posts in selected categories or tags"
 msgstr "所选分类目录或标签中的文章"
 
-#: build/promotion-editor.js:16
-msgid "Advanced editorial scope — needs attention"
-msgstr "高级内容投放范围——需要处理"
-
-#: build/promotion-editor.js:16
-msgid "Advanced editorial scope"
-msgstr "高级内容投放范围"
-
-#: build/promotion-editor.js:16
-msgid "Categories and tags use ANY matching and apply only to standard posts. Exact excluded content always takes priority."
-msgstr "分类目录和标签按“任一匹配”生效，且仅适用于标准文章。明确排除的内容始终优先。"
-
-#: build/promotion-editor.js:16
+#: build/promotion-editor.js:9
 msgid "Some selected categories or tags are no longer available. Remove them before publishing."
 msgstr "部分所选分类目录或标签已不可用。请先移除，再发布。"
 
@@ -794,17 +749,13 @@ msgstr "标签"
 msgid "Choose one or more tags."
 msgstr "请选择一个或多个标签。"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:1
 msgid "Add at least one valid included post or page that is not also excluded when Content scope is set to Only selected content."
 msgstr "当内容范围设为“仅所选内容”时，请至少添加一篇有效且未被排除的文章或页面。"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:1
 msgid "Choose at least one available category or tag when Content scope is set to Posts in selected categories or tags."
 msgstr "当内容范围设为“所选分类目录或标签中的文章”时，请至少选择一个可用的分类目录或标签。"
-
-#: build/promotion-editor.js:19
-msgid "No empty-scope, schedule, content, or paragraph errors were found in the current editor fields. Public selected targets and category or tag availability are confirmed by the server when publishing or scheduling."
-msgstr "当前编辑器字段未发现投放范围为空、排期、内容或段落相关错误。发布或排程时，服务端会确认所选公开目标以及分类目录或标签是否可用。"
 
 #: src/Admin/Preview_Page.php:127
 msgid "Desktop represents the fixed rule at 782px and above. Mobile represents the fixed rule at 781px and below; its canvas is capped at 390px as a representative width, not as the breakpoint."
@@ -863,27 +814,17 @@ msgid "The editor could not load the preview. Try again."
 msgstr "编辑器无法加载预览。请重试。"
 
 #. translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated.
-#: build/promotion-editor.js:1
+#: build/promotion-editor.js:3
 msgid "This promotion block was not found in the selected page body. A template, synced pattern, or [npcink_ad promotion=\"ID\"] shortcode may still provide the manual insertion, so verify the result with the real-page preview."
 msgstr "在所选页面正文中未找到此推广区块。模板、同步样板或 [npcink_ad promotion=\"ID\"] 短代码仍可能提供手动插入入口，请通过真实页面预览核验结果。"
 
-#. translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated.
-#: build/promotion-editor.js:9
-msgid "Manual delivery is not inserted automatically. Save this Promotion first, then insert the Npcink Ad Promotion block where it should appear and select this Promotion. The block position is the live position; verify it with Real-page preview. The existing [npcink_ad promotion=\"ID\"] shortcode remains an expert manual-insertion path."
-msgstr "手动投放不会自动插入。请先保存此推广，然后在希望展示的位置插入 Npcink Ad 推广区块，并选择此推广。区块位置就是正式位置；请使用真实页面预览进行核验。现有 [npcink_ad promotion=\"ID\"] 短代码仍可作为面向专家的手动插入方式。"
-
-#. translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated.
-#: build/promotion-editor.js:9
-msgid "Manual delivery still requires the Npcink Ad Promotion block or [npcink_ad promotion=\"ID\"] shortcode. \"Only selected posts and pages\" adds an allow-list; explicit exclusions always take priority."
-msgstr "手动投放仍需使用 Npcink Ad 推广区块或 [npcink_ad promotion=\"ID\"] 短代码。“仅所选文章和页面”会增加一个允许列表；明确排除始终优先。"
-
 #. translators: Content scope option for a Promotion inserted by a block or shortcode.
-#: build/promotion-editor.js:11
+#: build/promotion-editor.js:12
 msgid "Wherever manually inserted"
 msgstr "手动插入的任意位置"
 
 #. translators: Content scope option that limits manual delivery to an explicit post/page allow-list.
-#: build/promotion-editor.js:13
+#: build/promotion-editor.js:14
 msgid "Only selected posts and pages"
 msgstr "仅所选文章和页面"
 
@@ -891,11 +832,6 @@ msgstr "仅所选文章和页面"
 #: build/block-editor.js:3
 msgid "(Not configured for Manual block)"
 msgstr "（未配置为“手动区块”）"
-
-#. translators: 782px is the fixed desktop minimum; 781px is the fixed mobile maximum.
-#: build/promotion-editor.js:14
-msgid "The All devices option shows the Promotion at every width. Desktop shows it at viewport widths of 782px and above; Mobile shows it at 781px and below. CSS applies this fixed breakpoint, with no separate tablet target."
-msgstr "“所有设备”选项会在任意宽度显示推广；“桌面端”会在视口宽度为 782px 及以上时显示，“移动端”会在 781px 及以下时显示。CSS 使用这一固定断点，不提供单独的平板设备目标。"
 
 #. translators: %d: Promotion ID.
 #: build/block-editor.js:4
@@ -955,3 +891,198 @@ msgstr "正在显示“%s”的搜索结果。"
 #: build/block-editor.js:6
 msgid "Clear promotion search"
 msgstr "清除推广搜索"
+
+#: src/Admin/Promotion_List.php:125
+msgid "Npcink Ad detected the WordPress advanced page-cache drop-in. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires."
+msgstr "Npcink Ad 检测到 WordPress advanced page-cache drop-in。发布、暂停、恢复以及定时开始或停止后的旧页面可能继续由缓存提供，直至受影响页面被清理或缓存 TTL 到期。"
+
+#: src/Admin/Promotion_List.php:152
+msgid "Publish your first Promotion in three steps"
+msgstr "分三步发布你的第一条推广"
+
+#: src/Admin/Promotion_List.php:154
+msgid "Add the content you want to show."
+msgstr "添加要展示的内容。"
+
+#: src/Admin/Promotion_List.php:155
+msgid "Choose its placement and content scope."
+msgstr "选择展示位置和内容范围。"
+
+#: src/Admin/Promotion_List.php:156
+msgid "Preview it on a real page, then publish."
+msgstr "在真实页面中预览，然后发布。"
+
+#: src/Admin/Promotion_List.php:158
+msgid "Add first Promotion"
+msgstr "添加第一条推广"
+
+#: build/promotion-editor.js:3
+msgid "Next"
+msgstr "下一步"
+
+#: build/promotion-editor.js:3
+msgid "Ready"
+msgstr "就绪"
+
+#: build/promotion-editor.js:3
+#: build/promotion-editor.js:15
+msgid "Choose a page"
+msgstr "选择页面"
+
+#: build/promotion-editor.js:3
+msgid "Publish in three steps"
+msgstr "分三步发布"
+
+#: build/promotion-editor.js:3
+msgid "This checklist follows the current content and delivery preflight."
+msgstr "此清单根据当前内容和投放预检结果更新。"
+
+#: build/promotion-editor.js:3
+msgid "Add promotion content"
+msgstr "添加推广内容"
+
+#: build/promotion-editor.js:3
+msgid "Done"
+msgstr "已完成"
+
+#: build/promotion-editor.js:3
+msgid "Needs content"
+msgstr "需要内容"
+
+#: build/promotion-editor.js:3
+msgid "Confirm delivery rules"
+msgstr "确认投放规则"
+
+#: build/promotion-editor.js:3
+msgid "Needs attention"
+msgstr "需要处理"
+
+#: build/promotion-editor.js:3
+msgid "Preview a real page and publish"
+msgstr "在真实页面中预览并发布"
+
+#: build/promotion-editor.js:17
+msgid "WordPress has an advanced page-cache drop-in enabled. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires."
+msgstr "WordPress 已启用 advanced page-cache drop-in。发布、暂停、恢复以及定时开始或停止后的旧页面可能继续由缓存提供，直至受影响页面被清理或缓存 TTL 到期。"
+
+#. translators: %s: site timezone name or UTC offset.
+#: build/promotion-editor.js:18
+#, js-format
+msgid "Schedule times use the site timezone (%s)."
+msgstr "排期时间使用站点时区（%s）。"
+
+#. translators: %s: site timezone name or UTC offset.
+#: build/promotion-editor.js:19
+#, js-format
+msgid "Schedule times use the site timezone (%s). Full-page caches and CDNs need an appropriate TTL or purge; minute-level switching cannot be guaranteed while cached HTML remains in use."
+msgstr "排期时间使用站点时区（%s）。整页缓存和 CDN 需要合适的 TTL 或清理机制；只要缓存 HTML 仍在使用，就无法保证分钟级切换。"
+
+#: src/REST/Promotion_Preflight.php:96
+msgid "The promotion cannot be published until its content and delivery settings are complete."
+msgstr "完善推广内容和投放设置后才能发布。"
+
+#: build/promotion-editor.js:8
+msgid "Retry loading posts and pages"
+msgstr "重试加载文章和页面"
+
+#: build/promotion-editor.js:9
+msgid "Terms could not be loaded. The current selection has not been changed."
+msgstr "无法加载分类或标签。当前选择未发生更改。"
+
+#: build/promotion-editor.js:9
+msgid "Retry loading terms"
+msgstr "重试加载分类或标签"
+
+#: build/promotion-editor.js:16
+msgid "Current content and delivery checks have passed."
+msgstr "当前内容和投放检查已通过。"
+
+#: build/promotion-editor.js:19
+msgid "Drafts can still be saved. Publishing or scheduling runs the final validation."
+msgstr "草稿仍可保存。发布或排期时会执行最终验证。"
+
+#: build/promotion-editor.js:8
+msgid "The available posts and pages could not be fully loaded. The current selection has not been changed."
+msgstr "文章和页面未能完整加载。当前选择未发生更改。"
+
+#: build/promotion-editor.js:15
+msgid "Custom schedule"
+msgstr "自定义排期"
+
+#: build/promotion-editor.js:15
+msgid "No schedule"
+msgstr "未设置排期"
+
+#: build/promotion-editor.js:10
+msgid "Device and schedule"
+msgstr "设备与排期"
+
+#: build/promotion-editor.js:15
+msgid "Delivery settings need attention."
+msgstr "投放设置需要处理。"
+
+#: build/promotion-editor.js:15
+msgid "Delivery settings checked."
+msgstr "投放设置已检查。"
+
+#: build/promotion-editor.js:15
+msgid "Edit delivery settings"
+msgstr "编辑投放设置"
+
+#: build/promotion-editor.js:15
+msgid "Npcink Ad delivery settings"
+msgstr "Npcink Ad 投放设置"
+
+#. translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated.
+#: build/promotion-editor.js:15
+msgid "Manual delivery requires the Promotion block or [npcink_ad promotion=\"ID\"]. The insertion point is the live position."
+msgstr "手动投放需要使用“推广”区块或 [npcink_ad promotion=\"ID\"]。插入位置即实际展示位置。"
+
+#: build/promotion-editor.js:16
+msgid "For manual delivery, selected content adds an allow-list; exclusions always take priority."
+msgstr "手动投放中，所选内容会形成允许列表；排除项始终优先。"
+
+#: build/promotion-editor.js:16
+msgid "Matches any selected category or tag on standard posts. Exclusions take priority."
+msgstr "标准文章只需匹配任一所选分类或标签；排除项优先。"
+
+#: build/promotion-editor.js:16
+msgid "Exclusions"
+msgstr "排除项"
+
+#. translators: 782px is the fixed desktop minimum; 781px is the fixed mobile maximum.
+#: build/promotion-editor.js:16
+msgid "Desktop starts at 782px; Mobile ends at 781px. There is no separate tablet target."
+msgstr "桌面设备从 782px 起；移动设备截至 781px。不单独提供平板设备目标。"
+
+#: build/promotion-editor.js:15
+msgid "Placement — needs attention"
+msgstr "展示位置 — 需要处理"
+
+#: build/promotion-editor.js:15
+msgid "Content scope — needs attention"
+msgstr "内容范围 — 需要处理"
+
+#: build/promotion-editor.js:15
+msgid "Device and schedule — needs attention"
+msgstr "设备与排期 — 需要处理"
+
+#: build/promotion-editor.js:16
+msgid "Close settings"
+msgstr "关闭设置"
+
+#: build/promotion-editor.js:15
+msgid "Page selected"
+msgstr "已选页面"
+
+#: src/Presentation/Eligibility_Messages.php:35
+msgid "A video in the promotion has no usable source."
+msgstr "推广中的某个视频没有可用来源。"
+
+#: build/promotion-editor.js:1
+msgid "Select a video source before publishing."
+msgstr "发布前请选择视频来源。"
+
+#: build/promotion-editor.js:16
+msgid "This video requests autoplay without being muted. Browsers may block playback; enable Muted in the Video block or keep playback controls. This advisory does not block publishing."
+msgstr "此视频请求在未静音时自动播放。浏览器可能会阻止播放；请在视频区块中启用“静音”，或保留播放控件。此建议不会阻止发布。"
