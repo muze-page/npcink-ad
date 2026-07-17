@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Npcink Ad 0.3.0\n"
+"Project-Id-Version: Npcink Ad 0.3.1\n"
 "Report-Msgid-Bugs-To: https://github.com/muze-page/npcink-ad/issues\n"
 "Last-Translator: Npcink\n"
 "Language-Team: Chinese (Simplified)\n"
@@ -107,6 +107,7 @@ msgid "Explain the benefit in one short sentence."
 msgstr "用一句简短的话说明具体价值。"
 
 #: src/Blocks/Patterns.php:46
+#: src/Blocks/Patterns.php:92
 msgid "Learn more"
 msgstr "了解更多"
 
@@ -133,10 +134,6 @@ msgstr "查看优惠"
 #: src/Blocks/Patterns.php:81
 msgid "Compact announcement"
 msgstr "简洁公告"
-
-#: src/Blocks/Patterns.php:82
-msgid "A small site-owned announcement with an inline link."
-msgstr "带有行内链接的小型站内公告。"
 
 #: src/Blocks/Patterns.php:87
 msgid "New:"
@@ -1144,3 +1141,7 @@ msgstr "关闭推广横栏"
 #: build/promotion-editor.js:12
 msgid "Page bars stay in the normal page flow and can be dismissed for the current page. They are not sticky and do not store visitor state."
 msgstr "页面横栏位于正常页面流中，可在当前页面关闭。它不会吸顶，也不会保存访客状态。"
+
+#: src/Blocks/Patterns.php:82
+msgid "A compact site-owned announcement with short copy and a call-to-action button."
+msgstr "一个包含简短文案和行动按钮的紧凑站内公告。"

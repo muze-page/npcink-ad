@@ -2,7 +2,7 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Npcink Ad 0.3.0\n"
+"Project-Id-Version: Npcink Ad 0.3.1\n"
 "Report-Msgid-Bugs-To: https://github.com/muze-page/npcink-ad/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -333,6 +333,7 @@ msgid "Explain the benefit in one short sentence."
 msgstr ""
 
 #: src/Blocks/Patterns.php:46
+#: src/Blocks/Patterns.php:92
 msgid "Learn more"
 msgstr ""
 
@@ -361,7 +362,7 @@ msgid "Compact announcement"
 msgstr ""
 
 #: src/Blocks/Patterns.php:82
-msgid "A small site-owned announcement with an inline link."
+msgid "A compact site-owned announcement with short copy and a call-to-action button."
 msgstr ""
 
 #: src/Blocks/Patterns.php:87

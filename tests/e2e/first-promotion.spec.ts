@@ -12,7 +12,8 @@ const FILTER_TAG_NAME = "Npcink Ad E2E tag";
 const PROMOTION_TITLE = `First-run E2E Promotion ${Date.now()}-${process.pid}`;
 const PROMOTION_CONTENT = `First-run E2E creative ${Date.now()}-${
   process.pid
-}.`;
+}. This intentionally long announcement verifies that page-bar copy wraps safely on a narrow mobile viewport.`;
+const PROMOTION_CTA = "Review this deliberately descriptive next step";
 
 interface WordPressWindow extends Window {
   wp?: {
@@ -70,7 +71,9 @@ async function resolveFilterFixtureIds(page: Page): Promise<{
     async ({ postSlug, categorySlug, tagSlug }) => {
       const loadId = async (restBase: string, slug: string) => {
         const response = await fetch(
-          `/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(slug)}&_fields=id`,
+          `/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(
+            slug,
+          )}&_fields=id`,
           { credentials: "same-origin" },
         );
         if (!response.ok) {
@@ -220,14 +223,15 @@ async function selectDeliveryTab(
 
 async function setPromotionCreative(page: Page): Promise<void> {
   await page.evaluate(
-    ({ title, content }) => {
+    ({ title, content, cta }) => {
       const wordpress = (window as WordPressWindow).wp;
       wordpress?.data?.dispatch?.("core/editor")?.editPost?.({
         title,
-        content: `<!-- wp:paragraph --><p>${content}</p><!-- /wp:paragraph -->`,
+        content: `<!-- wp:paragraph --><p>${content}</p><!-- /wp:paragraph -->
+<!-- wp:buttons --><div class="wp-block-buttons"><!-- wp:button --><div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#next-step">${cta}</a></div><!-- /wp:button --></div><!-- /wp:buttons -->`,
       });
     },
-    { title: PROMOTION_TITLE, content: PROMOTION_CONTENT },
+    { title: PROMOTION_TITLE, content: PROMOTION_CONTENT, cta: PROMOTION_CTA },
   );
 
   await expect
@@ -668,6 +672,7 @@ test("completes a first selected-page Promotion from creation to live pause and 
     .toBe("publish");
   await expect(firstRunGuide).toHaveCount(0);
 
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/?page_id=${fixturePageId}`);
   const livePromotion = page.locator(
     `[data-npcink-ad-promotion="${createdPromotionId}"]`,
@@ -675,11 +680,60 @@ test("completes a first selected-page Promotion from creation to live pause and 
   await expect(livePromotion).toBeVisible();
   await expect(livePromotion).toHaveClass(/npcink-ad-page-bar--top/);
   await expect(livePromotion).toContainText(PROMOTION_CONTENT);
-  await livePromotion
-    .getByRole("button", { name: "Dismiss promotion bar", exact: true })
-    .click();
+  await expect(
+    livePromotion.getByRole("link", { name: PROMOTION_CTA }),
+  ).toBeVisible();
+
+  const dismissButton = livePromotion.getByRole("button", {
+    name: "Dismiss promotion bar",
+    exact: true,
+  });
+  const dismissBox = await dismissButton.boundingBox();
+  expect(dismissBox).not.toBeNull();
+  expect(dismissBox?.width).toBeGreaterThanOrEqual(44);
+  expect(dismissBox?.height).toBeGreaterThanOrEqual(44);
+  const viewportGeometry = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(viewportGeometry.clientWidth).toBe(390);
+  expect(viewportGeometry.scrollWidth).toBeLessThanOrEqual(
+    viewportGeometry.clientWidth,
+  );
+
+  await page.evaluate(() => {
+    document.documentElement.dir = "rtl";
+  });
+  const rtlGeometry = await livePromotion.evaluate((promotion) => {
+    const content = promotion.querySelector<HTMLElement>(
+      ".npcink-ad-page-bar__content",
+    );
+    const firstCreative = content?.firstElementChild as HTMLElement | null;
+    const dismiss = promotion.querySelector<HTMLElement>(
+      "[data-npcink-ad-dismiss]",
+    );
+    if (!content || !firstCreative || !dismiss) {
+      throw new Error("Page-bar geometry elements are missing.");
+    }
+
+    const contentStyles = getComputedStyle(content);
+    const creativeBox = firstCreative.getBoundingClientRect();
+    const dismissBox = dismiss.getBoundingClientRect();
+    return {
+      creativeLeft: creativeBox.left,
+      dismissRight: dismissBox.right,
+      paddingLeft: Number.parseFloat(contentStyles.paddingLeft),
+    };
+  });
+  expect(rtlGeometry.paddingLeft).toBeGreaterThanOrEqual(68);
+  expect(rtlGeometry.creativeLeft).toBeGreaterThanOrEqual(
+    rtlGeometry.dismissRight,
+  );
+
+  await dismissButton.click();
   await expect(livePromotion).toBeHidden();
 
+  await page.setViewportSize({ width: 1440, height: 1000 });
   let row = await openPromotionListRow(page);
   await expect(row).toContainText("Rule ready");
   await submitStatusAction(page, `Pause: ${PROMOTION_TITLE}`, "paused");

@@ -4,7 +4,7 @@ Tags: promotion, advertising, marketing, block
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -32,9 +32,9 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 * Deliver eligibility and markup from the server without visitor tracking or custom tables. Only a rendered page bar loads its small current-page dismissal script; standard placements require no frontend JavaScript.
 * Use the bundled Simplified Chinese translation in both PHP screens and the block editor.
 
-Version 0.3.0 intentionally has no analytics, tracking cookies, plugin-initiated external API requests, A/B testing, ad-network integration, popup or sticky/floating bar builder, arbitrary code execution, or custom database tables. A visitor's browser still requests media URLs selected by the site operator.
+Version 0.3.1 intentionally has no analytics, tracking cookies, plugin-initiated external API requests, A/B testing, ad-network integration, popup or sticky/floating bar builder, arbitrary code execution, or custom database tables. A visitor's browser still requests media URLs selected by the site operator.
 
-Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-paragraph delivery, mutually exclusive editorial content scopes, explicit manual block-or-shortcode guidance, and the fixed desktop/mobile boundary. Version 0.2.1 made the manual block selector reliable beyond its former bounded result set. Version 0.2.2 tightened editor asset ownership, first-Promotion guidance, complete browser validation, cache-boundary disclosure, and site-controlled Core Video validation. Version 0.3.0 keeps one Promotion and one delivery system while adding bounded normal-flow page bars.
+Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-paragraph delivery, mutually exclusive editorial content scopes, explicit manual block-or-shortcode guidance, and the fixed desktop/mobile boundary. Version 0.2.1 made the manual block selector reliable beyond its former bounded result set. Version 0.2.2 tightened editor asset ownership, first-Promotion guidance, complete browser validation, cache-boundary disclosure, and site-controlled Core Video validation. Version 0.3.0 keeps one Promotion and one delivery system while adding bounded normal-flow page bars. Version 0.3.1 improves their touch target, RTL spacing, and compact announcement pattern without changing delivery rules.
 
 == Installation ==
 
@@ -49,7 +49,7 @@ Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-parag
 
 = Does Npcink Ad track visitors? =
 
-No. Version 0.3.0 does not collect impression or click analytics, set visitor tracking cookies, persist page-bar dismissal, or make an external API request. The browser requests only the creative media URL selected by the site operator.
+No. Version 0.3.1 does not collect impression or click analytics, set visitor tracking cookies, persist page-bar dismissal, or make an external API request. The browser requests only the creative media URL selected by the site operator.
 
 = Why is there no separate placement or ad group? =
 
@@ -57,7 +57,7 @@ The first release optimizes for one short publishing workflow. Location and deli
 
 = How do full-page caches affect schedules? =
 
-The page must be regenerated after publish, pause, resume, start, and end transitions. Configure the cache TTL or purge affected pages at those boundaries. Version 0.3.0 warns when WordPress exposes an enabled advanced-cache drop-in, but it does not claim automatic purging or minute-accurate schedules through every cache provider.
+The page must be regenerated after publish, pause, resume, start, and end transitions. Configure the cache TTL or purge affected pages at those boundaries. Version 0.3.1 warns when WordPress exposes an enabled advanced-cache drop-in, but it does not claim automatic purging or minute-accurate schedules through every cache provider.
 
 = Does choosing Manual block insert the Promotion automatically? =
 
@@ -73,13 +73,19 @@ Npcink Ad supports a site-controlled Core Video block as Promotion creative. It 
 
 = Are page bars sticky or remembered after a visitor closes them? =
 
-No. Version 0.3.0 page bars remain in normal document flow. The close button hides a bar only for the current page and does not use cookies or local storage. Sticky, floating, delayed, frequency-controlled, and popup behavior remain outside this release.
+No. Version 0.3.1 page bars remain in normal document flow. The close button hides a bar only for the current page and does not use cookies or local storage. Sticky, floating, delayed, frequency-controlled, and popup behavior remain outside this release.
 
-= Does 0.3.0 migrate data from earlier development snapshots? =
+= Does 0.3.1 migrate data from earlier development snapshots? =
 
-No. Version 0.3.0 remains pre-GA and has no compatibility adapters or migrations for earlier development snapshots or unpublished identifiers.
+No. Version 0.3.1 remains pre-GA and has no compatibility adapters or migrations for earlier development snapshots or unpublished identifiers.
 
 == Changelog ==
+
+= 0.3.1 =
+
+* Increase the normal-flow page-bar dismiss target to 44 by 44 CSS pixels and reserve its space with RTL-safe logical padding.
+* Refine the existing compact announcement pattern into wrapping short copy plus an editable Core Button CTA.
+* Add packaged mobile-width and RTL geometry checks while preserving current-page dismissal, device rules, and the dependency-free 1 KiB script budget.
 
 = 0.3.0 =
 

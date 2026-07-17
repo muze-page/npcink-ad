@@ -109,6 +109,12 @@ schema would recreate the split that ADR 003 removed.
   order.
 - The small dismissal script is a presentation enhancement only. Eligibility
   and bar markup remain server-authoritative and work without visitor storage.
+- The dismiss target is at least 44 by 44 CSS pixels. Creative padding reserves
+  the logical end of the bar, so the control remains clear of content in both
+  left-to-right and right-to-left documents.
+- The existing compact announcement pattern uses wrapping Core blocks for short
+  copy and a CTA. It is an insertion template, so previously inserted creative
+  remains unchanged and no second bar-specific editor is introduced.
 - Popup delivery remains a separate future decision with modal accessibility,
   focus restoration, scroll locking, conflicts, preview, cache, and visitor
   state explicitly unresolved.
