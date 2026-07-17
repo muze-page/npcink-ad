@@ -6,6 +6,9 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -23,12 +26,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
           coverage: none
+          extensions: pdo_sqlite, sqlite3
           tools: composer:v2, wp-cli
 
       - name: Install gettext
@@ -58,7 +64,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: npcink-ad-php-${{ matrix.php-version }}
-          path: dist/*.zip
+          path: |
+            dist/*.zip
+            dist/*.zip.sha256
           if-no-files-found: error
           retention-days: 7
 
@@ -68,6 +76,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -89,6 +99,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -118,3 +130,38 @@ jobs:
 
       - name: Run current editor E2E
         run: WP_VERSION=7.0 PHP_VERSION=8.5 pnpm run test:e2e:editor
+
+  theme-compatibility:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download PHP 8.1 release artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: npcink-ad-php-8.1
+          path: dist
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run classic and block theme compatibility matrix
+        run: tests/e2e/run-theme-matrix.sh

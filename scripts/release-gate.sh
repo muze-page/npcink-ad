@@ -6,14 +6,14 @@ PLUGIN_DIR_NAME="npcink-ad"
 
 cd "$ROOT_DIR"
 
-for required_command in php composer pnpm rsync zip unzip wp msgcmp msgfmt; do
+for required_command in curl php composer pnpm rsync zip unzip wp msgcmp msgfmt; do
   if ! command -v "$required_command" >/dev/null 2>&1; then
     echo "[release-gate] Required command not found: ${required_command}" >&2
     exit 1
   fi
 done
 
-echo "[release-gate] 1/9 Version contract"
+echo "[release-gate] 1/10 Version contract"
 PLUGIN_VERSION="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p' npcink-ad.php | head -n 1)"
 CONSTANT_VERSION="$(sed -nE "s/^[[:space:]]*define\([[:space:]]*'NPCINK_AD_VERSION',[[:space:]]*'([^']+)'[[:space:]]*\);.*/\1/p" npcink-ad.php | head -n 1)"
 PACKAGE_VERSION="$(php -r '$package = json_decode((string) file_get_contents("package.json"), true, 512, JSON_THROW_ON_ERROR); echo isset($package["version"]) ? $package["version"] : "";')"
@@ -52,7 +52,7 @@ if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
   fi
 fi
 
-echo "[release-gate] 2/9 PHP syntax check"
+echo "[release-gate] 2/10 PHP syntax check"
 while IFS= read -r -d '' php_file; do
   php -l "$php_file" >/dev/null
 done < <(
@@ -63,10 +63,10 @@ done < <(
     -print0
 )
 
-echo "[release-gate] 3/9 Composer checks"
+echo "[release-gate] 3/10 Composer checks"
 composer check
 
-echo "[release-gate] 4/9 Frontend type and lint checks"
+echo "[release-gate] 4/10 Frontend type and lint checks"
 if grep -RInE '@wordpress/(ui|private-apis)|core/edit-post|(^|[^[:alnum:]_])unlock[[:space:]]*\(' assets/js package.json; then
   echo "[release-gate] Private WordPress UI APIs or stores are not allowed in plugin source" >&2
   exit 1
@@ -76,13 +76,13 @@ pnpm run test:js
 pnpm run lint:js
 pnpm run lint:style
 
-echo "[release-gate] 5/9 Build production assets once"
+echo "[release-gate] 5/10 Build production assets once"
 pnpm run build
 
-echo "[release-gate] 6/9 Translation catalog checks"
+echo "[release-gate] 6/10 Translation catalog checks"
 composer run i18n:check
 
-echo "[release-gate] 7/9 Build contract and strict bundle budget checks"
+echo "[release-gate] 7/10 Build contract and strict bundle budget checks"
 REQUIRES_WORDPRESS="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Requires at least:[[:space:]]*([^[:space:]]+).*/\1/p' npcink-ad.php | head -n 1)"
 if [[ -z "$REQUIRES_WORDPRESS" ]]; then
   echo "[release-gate] Requires at least is missing from npcink-ad.php" >&2
@@ -185,15 +185,32 @@ if [[ "$BUDGET_FAILED" -eq 1 ]]; then
   exit 1
 fi
 
-echo "[release-gate] 8/9 Build release zip"
+echo "[release-gate] 8/10 Build release artifacts"
 bash scripts/release.sh
 
-echo "[release-gate] 9/9 Verify artifact"
+echo "[release-gate] 9/10 Verify artifact and checksum"
 RELEASE_ZIP="dist/${PLUGIN_DIR_NAME}-${PLUGIN_VERSION}.zip"
+RELEASE_CHECKSUM="${RELEASE_ZIP}.sha256"
 if [[ ! -f "$RELEASE_ZIP" ]]; then
   echo "[release-gate] Expected release zip not found: ${RELEASE_ZIP}" >&2
   exit 1
 fi
+if [[ ! -f "$RELEASE_CHECKSUM" ]]; then
+  echo "[release-gate] Expected release checksum not found: ${RELEASE_CHECKSUM}" >&2
+  exit 1
+fi
+
+php -r '
+	$zip = $argv[1];
+	$checksum_file = $argv[2];
+	$hash = hash_file("sha256", $zip);
+	$expected = false === $hash ? "" : $hash . "  " . basename($zip);
+	$actual = trim((string) file_get_contents($checksum_file));
+	if ("" === $expected || !hash_equals($expected, $actual)) {
+		fwrite(STDERR, "[release-gate] Release checksum does not match the ZIP.\n");
+		exit(1);
+	}
+' "$RELEASE_ZIP" "$RELEASE_CHECKSUM"
 
 ZIP_ENTRIES="$(unzip -Z1 "$RELEASE_ZIP")"
 
@@ -292,3 +309,7 @@ for rejected_prefix in \
 done
 
 echo "[release-gate] OK: ${RELEASE_ZIP}"
+echo "[release-gate] OK: ${RELEASE_CHECKSUM}"
+
+echo "[release-gate] 10/10 Official Plugin Check"
+bash tests/plugin-check/run.sh

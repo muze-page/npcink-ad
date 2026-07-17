@@ -1,5 +1,5 @@
 === Npcink Ad ===
-Contributors: Npcink
+Contributors: muze233
 Tags: promotion, advertising, marketing, block
 Requires at least: 6.5
 Tested up to: 7.0
@@ -79,6 +79,17 @@ No. Version 0.3.1 page bars remain in normal document flow. The close button hid
 
 No. Version 0.3.1 remains pre-GA and has no compatibility adapters or migrations for earlier development snapshots or unpublished identifiers.
 
+== Development ==
+
+The complete, human-readable source code and build instructions are available at https://github.com/muze-page/npcink-ad.
+
+The JavaScript and CSS files in `build/` are generated from the tagged source with Node.js 20 and pnpm 10:
+
+1. Run `pnpm install --frozen-lockfile`.
+2. Run `pnpm run build`.
+
+Composer dependencies are development-only quality tools and are not bundled in the release package.
+
 == Changelog ==
 
 = 0.3.1 =
@@ -86,6 +97,8 @@ No. Version 0.3.1 remains pre-GA and has no compatibility adapters or migrations
 * Increase the normal-flow page-bar dismiss target to 44 by 44 CSS pixels and reserve its space with RTL-safe logical padding.
 * Refine the existing compact announcement pattern into wrapping short copy plus an editable Core Button CTA.
 * Add packaged mobile-width and RTL geometry checks while preserving current-page dismissal, device rules, and the dependency-free 1 KiB script budget.
+* Align the GPLv2 license, WordPress.org contributor, public source, and reproducible build disclosures.
+* Add official Plugin Check, classic/block theme compatibility, SHA-256 artifacts, and gated GitHub prerelease automation.
 
 = 0.3.0 =
 
