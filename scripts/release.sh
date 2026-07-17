@@ -17,12 +17,26 @@ fi
 mkdir -p "$DIST_DIR"
 rm -rf "$STAGING_DIR"
 
+RELEASE_ZIP="$DIST_DIR/${PLUGIN_DIR_NAME}-${VERSION}.zip"
+RELEASE_CHECKSUM="${RELEASE_ZIP}.sha256"
+rm -f "$RELEASE_ZIP" "$RELEASE_CHECKSUM"
+
 rsync -am \
   --exclude-from="$ROOT_DIR/.distignore" \
   "$ROOT_DIR/" "$STAGING_DIR/"
 
 cd "$DIST_DIR"
-rm -f "${PLUGIN_DIR_NAME}-${VERSION}.zip"
 LC_ALL=C zip -X -rq "${PLUGIN_DIR_NAME}-${VERSION}.zip" "$PLUGIN_DIR_NAME"
 rm -rf "$STAGING_DIR"
-echo "Release package created: ${DIST_DIR}/${PLUGIN_DIR_NAME}-${VERSION}.zip"
+php -r '
+	$file = $argv[1];
+	$checksum_file = $argv[2];
+	$checksum = hash_file("sha256", $file);
+	if (false === $checksum || false === file_put_contents($checksum_file, $checksum . "  " . basename($file) . PHP_EOL)) {
+		fwrite(STDERR, "Could not create the release checksum.\n");
+		exit(1);
+	}
+' "$RELEASE_ZIP" "$RELEASE_CHECKSUM"
+
+echo "Release package created: ${RELEASE_ZIP}"
+echo "SHA-256 checksum created: ${RELEASE_CHECKSUM}"

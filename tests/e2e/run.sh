@@ -39,6 +39,7 @@ fi
 case "$FIXTURE_MODE" in
 	standard) FIXTURE_SOURCE="$SCRIPT_DIR/fixture.php" ;;
 	first-run) FIXTURE_SOURCE="$SCRIPT_DIR/first-run-fixture.php" ;;
+	theme-bars) FIXTURE_SOURCE="$SCRIPT_DIR/theme-bars-fixture.php" ;;
 	*)
 		echo "Unknown NPCINK_AD_E2E_FIXTURE_MODE: $FIXTURE_MODE" >&2
 		exit 1
@@ -79,10 +80,33 @@ cp "$PLUGIN_ZIP" "$TEMP_DIR/npcink-ad.zip"
 mkdir -p "$TEMP_DIR/mu-plugins"
 cp "$FIXTURE_SOURCE" "$TEMP_DIR/mu-plugins/npcink-ad-editor-e2e-fixture.php"
 cp "$SCRIPT_DIR/health.txt" "$TEMP_DIR/mu-plugins/health.txt"
+
+THEME_SLUG="${NPCINK_AD_E2E_THEME_SLUG:-}"
+THEME_ZIP="${NPCINK_AD_E2E_THEME_ZIP:-}"
+if { [ -n "$THEME_SLUG" ] && [ -z "$THEME_ZIP" ]; } || { [ -z "$THEME_SLUG" ] && [ -n "$THEME_ZIP" ]; }; then
+	echo 'NPCINK_AD_E2E_THEME_SLUG and NPCINK_AD_E2E_THEME_ZIP must be set together.' >&2
+	exit 1
+fi
+if [ -n "$THEME_ZIP" ]; then
+	if [ ! -f "$THEME_ZIP" ]; then
+		echo "Theme ZIP not found: $THEME_ZIP" >&2
+		exit 1
+	fi
+	cp "$THEME_ZIP" "$TEMP_DIR/theme.zip"
+fi
+
 jq \
 	--arg wordpress "$WP_VERSION" \
 	--arg php "$PHP_VERSION" \
-	'.preferredVersions = {php: $php, wp: $wordpress}' \
+	--arg theme_slug "$THEME_SLUG" \
+	'.preferredVersions = {php: $php, wp: $wordpress}
+	| if $theme_slug != "" then
+		.steps += [{
+			"step": "installTheme",
+			"themeData": {"resource": "bundled", "path": "/theme.zip"},
+			"options": {"activate": true}
+		}]
+	else . end' \
 	"$SCRIPT_DIR/blueprint.json" > "$TEMP_DIR/blueprint.json"
 
 if [ -n "${NPCINK_AD_E2E_PORT:-}" ]; then

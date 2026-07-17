@@ -6,6 +6,13 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release-gate:
     runs-on: ubuntu-latest
@@ -17,12 +24,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify tag belongs to master
+        if: github.ref_type == 'tag'
+        run: |
+          if ! git show-ref --verify --quiet refs/remotes/origin/master; then
+            echo 'The checkout does not contain origin/master.' >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/master; then
+            echo "Tag $GITHUB_REF_NAME does not point to a commit contained in master." >&2
+            exit 1
+          fi
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
           coverage: none
+          extensions: pdo_sqlite, sqlite3
           tools: composer:v2, wp-cli
 
       - name: Install gettext
@@ -51,9 +74,50 @@ jobs:
       - name: Run current WordPress Playground matrix
         run: WP_VERSION=latest PHP_VERSION=8.5 tests/playground/run.sh
 
-      - name: Upload release zip
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run classic and block theme compatibility matrix
+        run: tests/e2e/run-theme-matrix.sh
+
+      - name: Upload release artifacts
         uses: actions/upload-artifact@v7
         with:
           name: npcink-ad-release
-          path: dist/*.zip
+          path: |
+            dist/*.zip
+            dist/*.zip.sha256
           if-no-files-found: error
+
+  publish-prerelease:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: release-gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified release artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: npcink-ad-release
+          path: dist
+
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            is_prerelease="$(gh release view "$GITHUB_REF_NAME" --json isPrerelease --jq '.isPrerelease')"
+            if [[ "$is_prerelease" != 'true' ]]; then
+              echo "Release $GITHUB_REF_NAME is already final; leaving it unchanged."
+              exit 0
+            fi
+            gh release edit "$GITHUB_REF_NAME" --title "Npcink Ad ${GITHUB_REF_NAME#v}"
+            gh release upload "$GITHUB_REF_NAME" dist/*.zip dist/*.sha256 --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.sha256 \
+              --prerelease \
+              --verify-tag \
+              --title "Npcink Ad ${GITHUB_REF_NAME#v}" \
+              --generate-notes
+          fi
