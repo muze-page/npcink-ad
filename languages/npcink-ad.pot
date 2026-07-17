@@ -646,6 +646,14 @@ msgid "The editor could not load the preview. Try again."
 msgstr ""
 
 #: build/promotion-editor.js:1
+msgid "Date"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Time"
+msgstr ""
+
+#: build/promotion-editor.js:1
 msgid "Add promotion content before publishing."
 msgstr ""
 
@@ -789,6 +797,30 @@ msgstr ""
 
 #: build/promotion-editor.js:8
 msgid "Post"
+msgstr ""
+
+#: build/promotion-editor.js:8
+msgid "Filter candidate posts"
+msgstr ""
+
+#: build/promotion-editor.js:8
+msgid "These filters only narrow the posts shown below. Pages are hidden while a filter is active, and the saved rule still contains only the posts or pages you explicitly add."
+msgstr ""
+
+#: build/promotion-editor.js:8
+msgid "Filter by categories"
+msgstr ""
+
+#: build/promotion-editor.js:8
+msgid "Optional. Matching any selected category is enough."
+msgstr ""
+
+#: build/promotion-editor.js:8
+msgid "Filter by tags"
+msgstr ""
+
+#: build/promotion-editor.js:8
+msgid "Optional. Matching any selected tag is enough; when categories are also selected, posts must match both filters."
 msgstr ""
 
 #: build/promotion-editor.js:8
@@ -965,7 +997,7 @@ msgid "Required. Enter a whole number from %1$d to %2$d. The default is 3."
 msgstr ""
 
 #: build/promotion-editor.js:16
-msgid "For manual delivery, selected content adds an allow-list; exclusions always take priority."
+msgid "Manual delivery supports an explicit allow-list of posts and pages; exclusions take priority. To target categories or tags automatically, first choose Before post content, After post content, or After paragraph N in Placement."
 msgstr ""
 
 #: build/promotion-editor.js:16

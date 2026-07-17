@@ -344,6 +344,14 @@ msgstr "所有设备"
 msgid "Start showing"
 msgstr "开始展示"
 
+#: build/promotion-editor.js:1
+msgid "Date"
+msgstr "日期"
+
+#: build/promotion-editor.js:1
+msgid "Time"
+msgstr "时间"
+
 #: build/promotion-editor.js:16
 msgid "Stop showing"
 msgstr "停止展示"
@@ -1039,10 +1047,6 @@ msgid "Manual delivery requires the Promotion block or [npcink_ad promotion=\"ID
 msgstr "手动投放需要使用“推广”区块或 [npcink_ad promotion=\"ID\"]。插入位置即实际展示位置。"
 
 #: build/promotion-editor.js:16
-msgid "For manual delivery, selected content adds an allow-list; exclusions always take priority."
-msgstr "手动投放中，所选内容会形成允许列表；排除项始终优先。"
-
-#: build/promotion-editor.js:16
 msgid "Matches any selected category or tag on standard posts. Exclusions take priority."
 msgstr "标准文章只需匹配任一所选分类或标签；排除项优先。"
 
@@ -1086,3 +1090,31 @@ msgstr "发布前请选择视频来源。"
 #: build/promotion-editor.js:16
 msgid "This video requests autoplay without being muted. Browsers may block playback; enable Muted in the Video block or keep playback controls. This advisory does not block publishing."
 msgstr "此视频请求在未静音时自动播放。浏览器可能会阻止播放；请在视频区块中启用“静音”，或保留播放控件。此建议不会阻止发布。"
+
+#: build/promotion-editor.js:8
+msgid "Filter candidate posts"
+msgstr "筛选候选文章"
+
+#: build/promotion-editor.js:8
+msgid "These filters only narrow the posts shown below. Pages are hidden while a filter is active, and the saved rule still contains only the posts or pages you explicitly add."
+msgstr "这些筛选项只会缩小下方显示的文章范围。启用筛选时不会显示页面；保存的规则仍只包含您明确添加的文章或页面。"
+
+#: build/promotion-editor.js:8
+msgid "Filter by categories"
+msgstr "按分类筛选"
+
+#: build/promotion-editor.js:8
+msgid "Optional. Matching any selected category is enough."
+msgstr "可选。文章匹配任一所选分类即可。"
+
+#: build/promotion-editor.js:8
+msgid "Filter by tags"
+msgstr "按标签筛选"
+
+#: build/promotion-editor.js:8
+msgid "Optional. Matching any selected tag is enough; when categories are also selected, posts must match both filters."
+msgstr "可选。文章匹配任一所选标签即可；如果同时选择了分类，则必须同时符合两类筛选条件。"
+
+#: build/promotion-editor.js:16
+msgid "Manual delivery supports an explicit allow-list of posts and pages; exclusions take priority. To target categories or tags automatically, first choose Before post content, After post content, or After paragraph N in Placement."
+msgstr "手动投放仅支持明确的文章和页面允许列表，排除项优先。如需按分类或标签自动投放，请先在“展示位置”中选择“正文之前”“正文之后”或“第 N 段后”。"

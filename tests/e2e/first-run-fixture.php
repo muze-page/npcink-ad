@@ -82,6 +82,54 @@ function npcink_ad_build_first_run_e2e_fixture(): void {
 			throw new RuntimeException( 'Could not create the first-run E2E page: ' . $page_id->get_error_message() );
 		}
 
+		$filter_category = wp_insert_term(
+			'Npcink Ad E2E category',
+			'category',
+			array( 'slug' => 'npcink-ad-e2e-category' )
+		);
+		if ( is_wp_error( $filter_category ) ) {
+			throw new RuntimeException( 'Could not create the first-run E2E category: ' . $filter_category->get_error_message() );
+		}
+
+		$filter_tag = wp_insert_term(
+			'Npcink Ad E2E tag',
+			'post_tag',
+			array( 'slug' => 'npcink-ad-e2e-tag' )
+		);
+		if ( is_wp_error( $filter_tag ) ) {
+			throw new RuntimeException( 'Could not create the first-run E2E tag: ' . $filter_tag->get_error_message() );
+		}
+
+		$filtered_post_id = wp_insert_post(
+			array(
+				'post_type'    => 'post',
+				'post_status'  => 'publish',
+				'post_title'   => 'Npcink Ad filtered E2E post',
+				'post_name'    => 'npcink-ad-filtered-e2e-post',
+				'post_content' => '<!-- wp:paragraph --><p>Npcink Ad filtered E2E target post.</p><!-- /wp:paragraph -->',
+			),
+			true
+		);
+		if ( is_wp_error( $filtered_post_id ) ) {
+			throw new RuntimeException( 'Could not create the first-run filtered E2E post: ' . $filtered_post_id->get_error_message() );
+		}
+
+		$category_assignment = wp_set_post_terms(
+			$filtered_post_id,
+			array( (int) $filter_category['term_id'] ),
+			'category',
+			false
+		);
+		$tag_assignment      = wp_set_post_terms(
+			$filtered_post_id,
+			array( (int) $filter_tag['term_id'] ),
+			'post_tag',
+			false
+		);
+		if ( is_wp_error( $category_assignment ) || is_wp_error( $tag_assignment ) ) {
+			throw new RuntimeException( 'Could not assign the first-run E2E category and tag.' );
+		}
+
 		$counts = wp_count_posts( 'npcink_promotion', 'readable' );
 		foreach ( get_object_vars( $counts ) as $count ) {
 			if ( 0 < (int) $count ) {
@@ -97,6 +145,12 @@ function npcink_ad_build_first_run_e2e_fixture(): void {
 				'page'     => array(
 					'id'   => $page_id,
 					'slug' => 'npcink-ad-selector-e2e-page',
+				),
+				'filteredPost' => array(
+					'id'       => $filtered_post_id,
+					'slug'     => 'npcink-ad-filtered-e2e-post',
+					'category' => (int) $filter_category['term_id'],
+					'tag'      => (int) $filter_tag['term_id'],
 				),
 			),
 			false

@@ -3,6 +3,12 @@ import { logInAsE2EAdmin } from "./support";
 
 const PAGE_SLUG = "npcink-ad-selector-e2e-page";
 const PAGE_TITLE = "Npcink Ad selector E2E page";
+const FILTERED_POST_SLUG = "npcink-ad-filtered-e2e-post";
+const FILTERED_POST_TITLE = "Npcink Ad filtered E2E post";
+const FILTER_CATEGORY_SLUG = "npcink-ad-e2e-category";
+const FILTER_CATEGORY_NAME = "Npcink Ad E2E category";
+const FILTER_TAG_SLUG = "npcink-ad-e2e-tag";
+const FILTER_TAG_NAME = "Npcink Ad E2E tag";
 const PROMOTION_TITLE = `First-run E2E Promotion ${Date.now()}-${process.pid}`;
 const PROMOTION_CONTENT = `First-run E2E creative ${Date.now()}-${
   process.pid
@@ -53,6 +59,66 @@ async function resolveFixturePageId(page: Page): Promise<number> {
 
   expect(pageIds).toHaveLength(1);
   return pageIds[0];
+}
+
+async function resolveFilterFixtureIds(page: Page): Promise<{
+  postId: number;
+  categoryId: number;
+  tagId: number;
+}> {
+  const ids = await page.evaluate(
+    async ({ postSlug, categorySlug, tagSlug }) => {
+      const loadId = async (restBase: string, slug: string) => {
+        const response = await fetch(
+          `/wp-json/wp/v2/${restBase}?slug=${encodeURIComponent(slug)}&_fields=id`,
+          { credentials: "same-origin" },
+        );
+        if (!response.ok) {
+          throw new Error(
+            `Fixture ${restBase} REST request failed: ${response.status}`,
+          );
+        }
+
+        const records = (await response.json()) as Array<{ id: number }>;
+        if (records.length !== 1) {
+          throw new Error(
+            `Expected one ${restBase} fixture record, received ${records.length}.`,
+          );
+        }
+        return records[0].id;
+      };
+
+      const [postId, categoryId, tagId] = await Promise.all([
+        loadId("posts", postSlug),
+        loadId("categories", categorySlug),
+        loadId("tags", tagSlug),
+      ]);
+
+      return { postId, categoryId, tagId };
+    },
+    {
+      postSlug: FILTERED_POST_SLUG,
+      categorySlug: FILTER_CATEGORY_SLUG,
+      tagSlug: FILTER_TAG_SLUG,
+    },
+  );
+
+  expect(ids.postId).toBeGreaterThan(0);
+  expect(ids.categoryId).toBeGreaterThan(0);
+  expect(ids.tagId).toBeGreaterThan(0);
+  return ids;
+}
+
+function queryIncludesId(
+  query: URLSearchParams,
+  key: string,
+  id: number,
+): boolean {
+  return [...query.entries()].some(
+    ([name, value]) =>
+      (name === key || name.startsWith(`${key}[`)) &&
+      value.split(",").includes(String(id)),
+  );
 }
 
 async function waitForPromotionEditor(page: Page): Promise<void> {
@@ -271,6 +337,7 @@ test("completes a first selected-page Promotion from creation to live pause and 
 }) => {
   await logInAsE2EAdmin(page);
   const fixturePageId = await resolveFixturePageId(page);
+  const filterFixtureIds = await resolveFilterFixtureIds(page);
 
   await page.goto("/wp-admin/edit.php?post_type=npcink_promotion");
   await expect(page.locator("tr.type-npcink_promotion")).toHaveCount(0);
@@ -318,9 +385,24 @@ test("completes a first selected-page Promotion from creation to live pause and 
   const { deliveryPanel, dialog: deliveryDialog } =
     await openDeliverySettings(page);
   await selectDeliveryTab(deliveryDialog, "Placement");
-  await deliveryDialog
-    .getByRole("combobox", { name: "Placement", exact: true })
-    .selectOption("content_before");
+  const placement = deliveryDialog.getByRole("combobox", {
+    name: "Placement",
+    exact: true,
+  });
+  await placement.selectOption("block");
+
+  await selectDeliveryTab(deliveryDialog, "Content scope");
+  await expect(deliveryDialog).toContainText(
+    "To target categories or tags automatically, first choose Before post content, After post content, or After paragraph N in Placement.",
+  );
+  await expect(
+    deliveryDialog
+      .getByRole("combobox", { name: "Content scope", exact: true })
+      .locator('option[value="terms"]'),
+  ).toHaveCount(0);
+
+  await selectDeliveryTab(deliveryDialog, "Placement");
+  await placement.selectOption("content_before");
 
   await selectDeliveryTab(deliveryDialog, "Content scope");
   await deliveryDialog
@@ -353,6 +435,80 @@ test("completes a first selected-page Promotion from creation to live pause and 
     name: "Included content",
   });
   await expect(includedContent).toBeVisible();
+  const categoryFilter = deliveryDialog.getByRole("combobox", {
+    name: "Filter by categories",
+  });
+  const tagFilter = deliveryDialog.getByRole("combobox", {
+    name: "Filter by tags",
+  });
+  await categoryFilter.fill(FILTER_CATEGORY_NAME);
+  await page
+    .getByRole("option", { name: FILTER_CATEGORY_NAME, exact: true })
+    .click();
+  await tagFilter.fill(FILTER_TAG_NAME);
+  await page
+    .getByRole("option", { name: FILTER_TAG_NAME, exact: true })
+    .click();
+
+  const filteredPostResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname.includes("/wp-json/wp/v2/posts") &&
+      url.searchParams.get("search") === FILTERED_POST_TITLE &&
+      queryIncludesId(
+        url.searchParams,
+        "categories",
+        filterFixtureIds.categoryId,
+      ) &&
+      queryIncludesId(url.searchParams, "tags", filterFixtureIds.tagId)
+    );
+  });
+  await includedContent.fill(FILTERED_POST_TITLE);
+  expect((await filteredPostResponse).ok()).toBe(true);
+  await page
+    .getByRole("option")
+    .filter({ hasText: `${FILTERED_POST_TITLE} — Post` })
+    .click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const meta = (window as WordPressWindow).wp?.data
+          ?.select?.("core/editor")
+          ?.getEditedPostAttribute?.("meta") as
+          | Record<string, unknown>
+          | undefined;
+
+        return {
+          includeIds: meta?._npcink_ad_include_ids ?? [],
+          categoryIds: meta?._npcink_ad_category_ids ?? [],
+          tagIds: meta?._npcink_ad_tag_ids ?? [],
+        };
+      }),
+    )
+    .toEqual({
+      includeIds: [filterFixtureIds.postId],
+      categoryIds: [],
+      tagIds: [],
+    });
+  await deliveryDialog
+    .getByRole("button", {
+      name: `Remove ${FILTERED_POST_TITLE}`,
+      exact: true,
+    })
+    .click();
+  await deliveryDialog
+    .getByRole("button", {
+      name: `Remove category ${FILTER_CATEGORY_NAME}`,
+      exact: true,
+    })
+    .click();
+  await deliveryDialog
+    .getByRole("button", {
+      name: `Remove tag ${FILTER_TAG_NAME}`,
+      exact: true,
+    })
+    .click();
+
   await includedContent.fill(PAGE_TITLE);
   const pageOption = page
     .getByRole("option")
@@ -378,6 +534,54 @@ test("completes a first selected-page Promotion from creation to live pause and 
   await expect(
     deliveryDialog.getByRole("combobox", { name: "Device", exact: true }),
   ).toBeVisible();
+
+  const startSchedule = deliveryDialog.getByRole("group", {
+    name: "Start showing",
+    exact: true,
+  });
+  const stopSchedule = deliveryDialog.getByRole("group", {
+    name: "Stop showing",
+    exact: true,
+  });
+  await expect(startSchedule).toBeVisible();
+  await expect(stopSchedule).toBeVisible();
+
+  const startDate = startSchedule.getByLabel("Date", { exact: true });
+  const startTime = startSchedule.getByLabel("Time", { exact: true });
+  await expect(startDate).toHaveAttribute("type", "date");
+  await expect(startTime).toHaveAttribute("type", "time");
+  await expect(startTime).toBeDisabled();
+
+  await startDate.fill("2026-07-23");
+  await expect(startTime).toBeEnabled();
+  await expect(startTime).toHaveValue("00:00");
+  await startTime.fill("19:14");
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const meta = (window as WordPressWindow).wp?.data
+          ?.select?.("core/editor")
+          ?.getEditedPostAttribute?.("meta") as
+          | Record<string, unknown>
+          | undefined;
+        return meta?._npcink_ad_start_at;
+      }),
+    )
+    .toBe("2026-07-23 19:14:00");
+  await startDate.fill("");
+  await expect(startTime).toBeDisabled();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const meta = (window as WordPressWindow).wp?.data
+          ?.select?.("core/editor")
+          ?.getEditedPostAttribute?.("meta") as
+          | Record<string, unknown>
+          | undefined;
+        return meta?._npcink_ad_start_at;
+      }),
+    )
+    .toBe("");
 
   const createdPromotionId = await savePromotion(page, "draft");
   await selectDeliveryTab(deliveryDialog, "Preview");

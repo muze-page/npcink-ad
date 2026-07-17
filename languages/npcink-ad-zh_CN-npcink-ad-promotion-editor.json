@@ -70,6 +70,12 @@
             "Start showing": [
                 "\u5f00\u59cb\u5c55\u793a"
             ],
+            "Date": [
+                "\u65e5\u671f"
+            ],
+            "Time": [
+                "\u65f6\u95f4"
+            ],
             "Stop showing": [
                 "\u505c\u6b62\u5c55\u793a"
             ],
@@ -310,9 +316,6 @@
             "Manual delivery requires the Promotion block or [npcink_ad promotion=\"ID\"]. The insertion point is the live position.": [
                 "\u624b\u52a8\u6295\u653e\u9700\u8981\u4f7f\u7528\u201c\u63a8\u5e7f\u201d\u533a\u5757\u6216 [npcink_ad promotion=\"ID\"]\u3002\u63d2\u5165\u4f4d\u7f6e\u5373\u5b9e\u9645\u5c55\u793a\u4f4d\u7f6e\u3002"
             ],
-            "For manual delivery, selected content adds an allow-list; exclusions always take priority.": [
-                "\u624b\u52a8\u6295\u653e\u4e2d\uff0c\u6240\u9009\u5185\u5bb9\u4f1a\u5f62\u6210\u5141\u8bb8\u5217\u8868\uff1b\u6392\u9664\u9879\u59cb\u7ec8\u4f18\u5148\u3002"
-            ],
             "Matches any selected category or tag on standard posts. Exclusions take priority.": [
                 "\u6807\u51c6\u6587\u7ae0\u53ea\u9700\u5339\u914d\u4efb\u4e00\u6240\u9009\u5206\u7c7b\u6216\u6807\u7b7e\uff1b\u6392\u9664\u9879\u4f18\u5148\u3002"
             ],
@@ -342,6 +345,27 @@
             ],
             "This video requests autoplay without being muted. Browsers may block playback; enable Muted in the Video block or keep playback controls. This advisory does not block publishing.": [
                 "\u6b64\u89c6\u9891\u8bf7\u6c42\u5728\u672a\u9759\u97f3\u65f6\u81ea\u52a8\u64ad\u653e\u3002\u6d4f\u89c8\u5668\u53ef\u80fd\u4f1a\u963b\u6b62\u64ad\u653e\uff1b\u8bf7\u5728\u89c6\u9891\u533a\u5757\u4e2d\u542f\u7528\u201c\u9759\u97f3\u201d\uff0c\u6216\u4fdd\u7559\u64ad\u653e\u63a7\u4ef6\u3002\u6b64\u5efa\u8bae\u4e0d\u4f1a\u963b\u6b62\u53d1\u5e03\u3002"
+            ],
+            "Filter candidate posts": [
+                "\u7b5b\u9009\u5019\u9009\u6587\u7ae0"
+            ],
+            "These filters only narrow the posts shown below. Pages are hidden while a filter is active, and the saved rule still contains only the posts or pages you explicitly add.": [
+                "\u8fd9\u4e9b\u7b5b\u9009\u9879\u53ea\u4f1a\u7f29\u5c0f\u4e0b\u65b9\u663e\u793a\u7684\u6587\u7ae0\u8303\u56f4\u3002\u542f\u7528\u7b5b\u9009\u65f6\u4e0d\u4f1a\u663e\u793a\u9875\u9762\uff1b\u4fdd\u5b58\u7684\u89c4\u5219\u4ecd\u53ea\u5305\u542b\u60a8\u660e\u786e\u6dfb\u52a0\u7684\u6587\u7ae0\u6216\u9875\u9762\u3002"
+            ],
+            "Filter by categories": [
+                "\u6309\u5206\u7c7b\u7b5b\u9009"
+            ],
+            "Optional. Matching any selected category is enough.": [
+                "\u53ef\u9009\u3002\u6587\u7ae0\u5339\u914d\u4efb\u4e00\u6240\u9009\u5206\u7c7b\u5373\u53ef\u3002"
+            ],
+            "Filter by tags": [
+                "\u6309\u6807\u7b7e\u7b5b\u9009"
+            ],
+            "Optional. Matching any selected tag is enough; when categories are also selected, posts must match both filters.": [
+                "\u53ef\u9009\u3002\u6587\u7ae0\u5339\u914d\u4efb\u4e00\u6240\u9009\u6807\u7b7e\u5373\u53ef\uff1b\u5982\u679c\u540c\u65f6\u9009\u62e9\u4e86\u5206\u7c7b\uff0c\u5219\u5fc5\u987b\u540c\u65f6\u7b26\u5408\u4e24\u7c7b\u7b5b\u9009\u6761\u4ef6\u3002"
+            ],
+            "Manual delivery supports an explicit allow-list of posts and pages; exclusions take priority. To target categories or tags automatically, first choose Before post content, After post content, or After paragraph N in Placement.": [
+                "\u624b\u52a8\u6295\u653e\u4ec5\u652f\u6301\u660e\u786e\u7684\u6587\u7ae0\u548c\u9875\u9762\u5141\u8bb8\u5217\u8868\uff0c\u6392\u9664\u9879\u4f18\u5148\u3002\u5982\u9700\u6309\u5206\u7c7b\u6216\u6807\u7b7e\u81ea\u52a8\u6295\u653e\uff0c\u8bf7\u5148\u5728\u201c\u5c55\u793a\u4f4d\u7f6e\u201d\u4e2d\u9009\u62e9\u201c\u6b63\u6587\u4e4b\u524d\u201d\u201c\u6b63\u6587\u4e4b\u540e\u201d\u6216\u201c\u7b2c N \u6bb5\u540e\u201d\u3002"
             ]
         }
     }

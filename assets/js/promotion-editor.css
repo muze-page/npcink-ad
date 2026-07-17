@@ -176,6 +176,22 @@
 	gap: 24px;
 }
 
+.npcink-ad-schedule-control {
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.npcink-ad-schedule-control__fields {
+	display: grid;
+	gap: 12px;
+}
+
+.npcink-ad-schedule-control__fields .components-base-control {
+	margin-bottom: 0;
+}
+
 .npcink-ad-settings-group {
 	margin-top: 24px;
 	padding-top: 20px;
