@@ -18,7 +18,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Maps WordPress request data into the pure eligibility policy.
  */
 final class Delivery {
-	private const PARAGRAPH_LOCATION = 'content_after_paragraph';
+	private const PARAGRAPH_LOCATION  = 'content_after_paragraph';
+	private const AUTOMATIC_LOCATIONS = array( 'content_before', 'content_after', 'content_after_paragraph', 'bar_top', 'bar_bottom' );
+	private const BAR_LOCATIONS       = array( 'bar_top', 'bar_bottom' );
 
 	/**
 	 * Promotions currently being rendered, used to stop recursive content.
@@ -53,7 +55,7 @@ final class Delivery {
 	 *
 	 * @var array{
 	 *     by_id: array<int, array<string, mixed>>,
-	 *     location_ids: array{content_before: list<int>, content_after: list<int>},
+	 *     location_ids: array{content_before: list<int>, content_after: list<int>, bar_top: list<int>, bar_bottom: list<int>},
 	 *     paragraph_ids: array<int, list<int>>
 	 * }|null
 	 */
@@ -109,6 +111,20 @@ final class Delivery {
 	private bool $block_preview_rendered = false;
 
 	/**
+	 * Authorized real-page preview context for a page bar.
+	 *
+	 * @var array{promotion_id: int, location: string, device: string, post_id: int}|null
+	 */
+	private ?array $page_bar_preview_context = null;
+
+	/**
+	 * Whether the selected page-bar hook rendered the forced preview.
+	 *
+	 * @var bool
+	 */
+	private bool $page_bar_preview_rendered = false;
+
+	/**
 	 * Compose delivery from native storage, the pure policy, and rendering.
 	 *
 	 * @param Repository              $repository Native WordPress data mapper.
@@ -140,6 +156,8 @@ final class Delivery {
 		add_filter( 'the_content', array( $this, 'prepare_content' ), 8 );
 		add_filter( 'the_content', array( $this, 'filter_content' ), 10 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_style' ) );
+		add_action( 'wp_body_open', array( $this, 'render_top_page_bar' ), 5 );
+		add_action( 'wp_footer', array( $this, 'render_bottom_page_bar' ), 5 );
 	}
 
 	/**
@@ -151,6 +169,22 @@ final class Delivery {
 	 */
 	public function enqueue_frontend_style(): void {
 		wp_enqueue_style( 'npcink-ad-frontend' );
+	}
+
+	/**
+	 * Emit eligible top bars through WordPress's standard body-open hook.
+	 */
+	public function render_top_page_bar(): void {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Renderer and management placeholders return escaped plugin-owned markup.
+		echo $this->render_page_bar_location( 'bar_top' );
+	}
+
+	/**
+	 * Emit eligible bottom bars through WordPress's standard footer hook.
+	 */
+	public function render_bottom_page_bar(): void {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Renderer and management placeholders return escaped plugin-owned markup.
+		echo $this->render_page_bar_location( 'bar_bottom' );
 	}
 
 	/**
@@ -167,6 +201,28 @@ final class Delivery {
 			'post_id'      => absint( $post_id ),
 		);
 		$this->block_preview_rendered = false;
+	}
+
+	/**
+	 * Force one page bar through its real theme hook for an authorized preview.
+	 *
+	 * @param int    $promotion_id Promotion post ID.
+	 * @param string $location     Top or bottom page-bar location.
+	 * @param string $device       Desktop or mobile preview context.
+	 * @param int    $post_id      Real page used by the preview.
+	 */
+	public function enable_page_bar_preview( int $promotion_id, string $location, string $device, int $post_id ): void {
+		if ( ! in_array( $location, self::BAR_LOCATIONS, true ) ) {
+			return;
+		}
+
+		$this->page_bar_preview_context = array(
+			'promotion_id' => absint( $promotion_id ),
+			'location'     => $location,
+			'device'       => in_array( $device, array( 'desktop', 'mobile' ), true ) ? $device : 'desktop',
+			'post_id'      => absint( $post_id ),
+		);
+		$this->page_bar_preview_rendered = false;
 	}
 
 	/**
@@ -197,6 +253,13 @@ final class Delivery {
 	 */
 	public function has_rendered_block_preview(): bool {
 		return $this->block_preview_rendered;
+	}
+
+	/**
+	 * Report whether the selected theme hook rendered the forced page bar.
+	 */
+	public function has_rendered_page_bar_preview(): bool {
+		return $this->page_bar_preview_rendered;
 	}
 
 	/**
@@ -693,11 +756,64 @@ final class Delivery {
 	}
 
 	/**
+	 * Render one page-bar location in a standard singular post/page context.
+	 *
+	 * During any authorized preview request, ordinary bars are suppressed. A
+	 * matching bar preview is force-rendered through its actual theme hook.
+	 *
+	 * @param string $location Top or bottom page-bar location.
+	 */
+	private function render_page_bar_location( string $location ): string {
+		if ( ! in_array( $location, self::BAR_LOCATIONS, true ) ) {
+			return '';
+		}
+
+		$post_id = $this->page_bar_post_id();
+		if ( 1 > $post_id ) {
+			return '';
+		}
+
+		if ( $this->preview_request_active ) {
+			$preview = $this->page_bar_preview_context;
+			if (
+				null === $preview
+				|| $location !== $preview['location']
+				|| $post_id !== $preview['post_id']
+			) {
+				return '';
+			}
+
+			$output = $this->render_preview(
+				$preview['promotion_id'],
+				$location,
+				$preview['device'],
+				$post_id
+			);
+			$this->page_bar_preview_rendered = '' !== $output;
+
+			return $output;
+		}
+
+		return $this->render_content_location( $location, $post_id );
+	}
+
+	/**
+	 * Return the current standard singular target for page-bar delivery.
+	 */
+	private function page_bar_post_id(): int {
+		if ( is_admin() || is_feed() || ! is_singular( array( 'post', 'page' ) ) ) {
+			return 0;
+		}
+
+		return absint( get_queried_object_id() );
+	}
+
+	/**
 	 * Load one Repository-owned automatic catalog for this delivery request.
 	 *
 	 * @return array{
 	 *     by_id: array<int, array<string, mixed>>,
-	 *     location_ids: array{content_before: list<int>, content_after: list<int>},
+	 *     location_ids: array{content_before: list<int>, content_after: list<int>, bar_top: list<int>, bar_bottom: list<int>},
 	 *     paragraph_ids: array<int, list<int>>
 	 * }
 	 */
@@ -762,7 +878,7 @@ final class Delivery {
 	 * @return array{post_type?: string, category_ids?: list<int>, tag_ids?: list<int>, content_terms_available?: bool}
 	 */
 	private function automatic_content_context( array $promotion, string $expected_location, int $post_id ): array {
-		if ( ! in_array( $expected_location, array( 'content_before', 'content_after', 'content_after_paragraph' ), true ) || 1 > $post_id ) {
+		if ( ! in_array( $expected_location, self::AUTOMATIC_LOCATIONS, true ) || 1 > $post_id ) {
 			return array();
 		}
 

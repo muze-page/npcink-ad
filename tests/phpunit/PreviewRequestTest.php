@@ -67,6 +67,8 @@ final class PreviewRequestTest extends TestCase {
 		$GLOBALS['npcink_ad_test_current_post_id']     = self::TARGET_ID;
 		$GLOBALS['npcink_ad_test_queried_post_id']     = self::TARGET_ID;
 		$GLOBALS['npcink_ad_test_enqueued_styles']     = array();
+		$GLOBALS['npcink_ad_test_enqueued_scripts']    = array();
+		$GLOBALS['npcink_ad_test_actions']             = array();
 	}
 
 	/**
@@ -113,6 +115,24 @@ final class PreviewRequestTest extends TestCase {
 
 		self::assertSame( array(), $GLOBALS['npcink_ad_test_preview_filters'] );
 		self::assertFalse( $GLOBALS['npcink_ad_test_preview_nocache'] );
+	}
+
+	/**
+	 * Page bars remain inside the standard post/page preview boundary.
+	 */
+	public function test_page_bar_preview_rejects_a_custom_post_type(): void {
+		$GLOBALS['npcink_ad_test_meta'][ self::PROMOTION_ID ] = $this->promotion_meta( 'bar_top' );
+		$GLOBALS['npcink_ad_test_preview_target_type']        = 'product';
+		$GLOBALS['npcink_ad_test_singular_post_type']         = 'product';
+
+		try {
+			$this->preview_request()->activate();
+			self::fail( 'Expected the page-bar custom-post-type preview to be rejected.' );
+		} catch ( PreviewRequestWpDieException $exception ) {
+			self::assertSame( 400, $exception->response );
+		}
+
+		self::assertSame( array(), $GLOBALS['npcink_ad_test_preview_filters'] );
 	}
 
 	/**
@@ -194,6 +214,47 @@ final class PreviewRequestTest extends TestCase {
 		$request->activate();
 
 		self::assertSame( 'BLOCK_SOURCE', $delivery->prepare_content( 'BLOCK_SOURCE' ) );
+	}
+
+	/**
+	 * A page bar leaves content untouched and renders through its actual hook.
+	 */
+	public function test_top_page_bar_preview_renders_through_body_open(): void {
+		$GLOBALS['npcink_ad_test_meta'][ self::PROMOTION_ID ] = $this->promotion_meta( 'bar_top' );
+		$services = $this->preview_services( array( $this->block( null, '<p>Classic</p>' ) ) );
+		$request  = $services['request'];
+		$delivery = $services['delivery'];
+
+		$request->activate();
+		self::assertSame( '<p>Body</p>', $request->filter_content( '<p>Body</p>' ) );
+
+		ob_start();
+		$delivery->render_top_page_bar();
+		$bar = (string) ob_get_clean();
+		ob_start();
+		$request->render_page_bar_fallback();
+		$fallback = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'data-npcink-ad-promotion="' . self::PROMOTION_ID . '"', $bar );
+		self::assertStringContainsString( 'npcink-ad-page-bar--top', $bar );
+		self::assertSame( '', $fallback );
+		self::assertTrue( $delivery->has_rendered_page_bar_preview() );
+	}
+
+	/**
+	 * Missing theme integration is reported without moving the preview into content.
+	 */
+	public function test_missing_page_bar_hook_has_a_contextual_fallback(): void {
+		$GLOBALS['npcink_ad_test_meta'][ self::PROMOTION_ID ] = $this->promotion_meta( 'bar_top' );
+		$request = $this->preview_request();
+
+		$request->activate();
+		ob_start();
+		$request->render_page_bar_fallback();
+		$fallback = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'did not render the selected page-bar hook', $fallback );
+		self::assertStringContainsString( 'is-blocked', $fallback );
 	}
 
 	/**

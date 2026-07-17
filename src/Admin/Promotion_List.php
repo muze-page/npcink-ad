@@ -550,6 +550,8 @@ final class Promotion_List {
 			'block'          => __( 'Block', 'npcink-ad' ),
 			'content_before' => __( 'Before content', 'npcink-ad' ),
 			'content_after'  => __( 'After content', 'npcink-ad' ),
+			'bar_top'        => __( 'Top page bar', 'npcink-ad' ),
+			'bar_bottom'     => __( 'Bottom page bar', 'npcink-ad' ),
 		);
 
 		return $labels[ $location ] ?? __( 'Unknown', 'npcink-ad' );
@@ -651,7 +653,7 @@ final class Promotion_List {
 			}
 			$has_automatic_promotion = $has_automatic_promotion || in_array(
 				$promotion['location'] ?? '',
-				array( 'content_before', 'content_after', 'content_after_paragraph' ),
+				Post_Types::AUTOMATIC_LOCATIONS,
 				true
 			);
 

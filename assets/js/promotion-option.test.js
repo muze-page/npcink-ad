@@ -14,6 +14,8 @@ describe( 'formatPromotionOptionLabel', () => {
 		'content_before',
 		'content_after',
 		'content_after_paragraph',
+		'bar_top',
+		'bar_bottom',
 	] )( 'marks the non-manual %s location', ( location ) => {
 		expect(
 			formatPromotionOptionLabel( titleWithId, location, nonManualMarker )

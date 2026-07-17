@@ -145,6 +145,17 @@ if ( ! function_exists( 'wp_enqueue_style' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_enqueue_script' ) ) {
+	/**
+	 * Record frontend script enqueueing.
+	 *
+	 * @param string $handle Registered script handle.
+	 */
+	function wp_enqueue_script( string $handle ): void {
+		$GLOBALS['npcink_ad_test_enqueued_scripts'][] = $handle;
+	}
+}
+
 if ( ! function_exists( 'esc_attr__' ) ) {
 	/**
 	 * Return escaped untranslated fixture text.

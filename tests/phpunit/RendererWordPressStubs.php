@@ -119,6 +119,28 @@ if ( ! function_exists( 'wp_enqueue_style' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_enqueue_script' ) ) {
+	/**
+	 * Record a requested frontend script.
+	 *
+	 * @param string $handle Script handle.
+	 */
+	function wp_enqueue_script( string $handle ): void {
+		$GLOBALS['npcink_ad_renderer_test_scripts'][] = $handle;
+	}
+}
+
+if ( ! function_exists( '__' ) ) {
+	/**
+	 * Return untranslated fixture text.
+	 *
+	 * @param string $text Source text.
+	 */
+	function __( string $text ): string {
+		return $text;
+	}
+}
+
 if ( ! function_exists( 'esc_attr' ) ) {
 	/**
 	 * Escape an HTML attribute.

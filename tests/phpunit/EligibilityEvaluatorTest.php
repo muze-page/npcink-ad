@@ -715,6 +715,33 @@ final class EligibilityEvaluatorTest extends TestCase {
 	}
 
 	/**
+	 * Page bars retain the same standard-content scope boundary as inline auto delivery.
+	 */
+	public function test_page_bars_use_the_automatic_content_scope_contract(): void {
+		$evaluator = new Eligibility_Evaluator();
+		foreach ( array( 'bar_top', 'bar_bottom' ) as $location ) {
+			$promotion = array_replace(
+				$this->valid_promotion(),
+				array(
+					'location'      => $location,
+					'content_scope' => 'pages',
+				)
+			);
+			$context = array_replace(
+				$this->matching_context(),
+				array(
+					'expected_location' => $location,
+					'post_type'         => 'page',
+				)
+			);
+
+			self::assertTrue( $evaluator->evaluate( $promotion, $context )['allowed'], $location );
+			$context['post_type'] = 'post';
+			self::assertSame( array( 'content_type_mismatch' ), $evaluator->evaluate( $promotion, $context )['reasons'], $location );
+		}
+	}
+
+	/**
 	 * Exclusion takes precedence over every manual content scope.
 	 *
 	 * @param string $scope            Content scope.

@@ -11,6 +11,8 @@ namespace Npcink\Ad\Domain;
  * Pure eligibility policy with no WordPress API calls.
  */
 final class Eligibility_Evaluator {
+	private const AUTOMATIC_LOCATIONS = array( 'content_before', 'content_after', 'content_after_paragraph', 'bar_top', 'bar_bottom' );
+
 	/**
 	 * Validate configuration that is independent of publication time and page context.
 	 *
@@ -479,7 +481,7 @@ final class Eligibility_Evaluator {
 	 * @param string $location Delivery location.
 	 */
 	private function is_automatic_location( string $location ): bool {
-		return in_array( $location, array( 'content_before', 'content_after', 'content_after_paragraph' ), true );
+		return in_array( $location, self::AUTOMATIC_LOCATIONS, true );
 	}
 
 	/**

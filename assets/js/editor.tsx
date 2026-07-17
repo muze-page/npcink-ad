@@ -1358,6 +1358,7 @@ function PromotionSettingsPanel() {
 		previewTargetId: effectivePreviewTarget,
 	} );
 	const isParagraphLocation = location === 'content_after_paragraph';
+	const isBarLocation = location === 'bar_top' || location === 'bar_bottom';
 	const placementLabel = __( 'Placement', 'npcink-ad' );
 	const contentScopeLabel = __( 'Content scope', 'npcink-ad' );
 	const deviceScheduleLabel = __( 'Device and schedule', 'npcink-ad' );
@@ -1375,8 +1376,29 @@ function PromotionSettingsPanel() {
 			label: __( 'After paragraph N', 'npcink-ad' ),
 			value: 'content_after_paragraph',
 		},
+		{
+			label: __( 'Top page bar', 'npcink-ad' ),
+			value: 'bar_top',
+		},
+		{
+			label: __( 'Bottom page bar', 'npcink-ad' ),
+			value: 'bar_bottom',
+		},
 		{ label: __( 'Manual block', 'npcink-ad' ), value: 'block' },
 	];
+	let placementHelp: string | undefined;
+	if ( isManualBlock ) {
+		/* translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated. */
+		placementHelp = __(
+			'Manual delivery requires the Promotion block or [npcink_ad promotion="ID"]. The insertion point is the live position.',
+			'npcink-ad'
+		);
+	} else if ( isBarLocation ) {
+		placementHelp = __(
+			'Page bars stay in the normal page flow and can be dismissed for the current page. They are not sticky and do not store visitor state.',
+			'npcink-ad'
+		);
+	}
 	const contentScopeOptions: ContentOption[] = isManualBlock
 		? [
 				{
@@ -1722,14 +1744,7 @@ function PromotionSettingsPanel() {
 							__next40pxDefaultSize
 							label={ placementLabel }
 							value={ location }
-							help={
-								isManualBlock
-									? /* translators: [npcink_ad promotion="ID"] is an example shortcode and must not be translated. */ __(
-											'Manual delivery requires the Promotion block or [npcink_ad promotion="ID"]. The insertion point is the live position.',
-											'npcink-ad'
-									  )
-									: undefined
-							}
+							help={ placementHelp }
 							options={ placementOptions }
 							onChange={ ( value ) => {
 								const nextLocation = value as PromotionLocation;
@@ -1803,7 +1818,7 @@ function PromotionSettingsPanel() {
 							help={
 								isManualBlock
 									? __(
-											'Manual delivery supports an explicit allow-list of posts and pages; exclusions take priority. To target categories or tags automatically, first choose Before post content, After post content, or After paragraph N in Placement.',
+											'Manual delivery supports an explicit allow-list of posts and pages; exclusions take priority. To target categories or tags automatically, choose an automatic placement: before or after content, after a paragraph, or a page bar.',
 											'npcink-ad'
 									  )
 									: undefined

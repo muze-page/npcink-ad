@@ -7,6 +7,7 @@
 
 namespace Npcink\Ad\Frontend;
 
+use Npcink\Ad\Data\Post_Types;
 use Npcink\Ad\Data\Repository;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -102,6 +103,14 @@ final class Preview_Request {
 				! array_key_exists( 'paragraph_number_valid', $promotion ) || (bool) $promotion['paragraph_number_valid'],
 				$target_id
 			);
+		} elseif ( in_array( $location, Post_Types::BAR_LOCATIONS, true ) ) {
+			$this->delivery->enable_page_bar_preview(
+				$promotion_id,
+				$location,
+				$this->device,
+				$target_id
+			);
+			add_action( 'wp_footer', array( $this, 'render_page_bar_fallback' ), 999 );
 		}
 
 		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
@@ -133,7 +142,7 @@ final class Preview_Request {
 		}
 
 		$location = isset( $promotion['location'] ) ? (string) $promotion['location'] : 'content_after';
-		if ( ! in_array( $location, array( 'content_before', 'content_after', 'content_after_paragraph' ), true ) ) {
+		if ( ! in_array( $location, Post_Types::AUTOMATIC_LOCATIONS, true ) ) {
 			return true;
 		}
 
@@ -158,6 +167,9 @@ final class Preview_Request {
 		$this->rendered = true;
 
 		$location = isset( $promotion['location'] ) ? (string) $promotion['location'] : 'content_after';
+		if ( in_array( $location, Post_Types::BAR_LOCATIONS, true ) ) {
+			return $content;
+		}
 		if ( 'block' === $location && $this->delivery->has_rendered_block_preview() ) {
 			return $content;
 		}
@@ -187,5 +199,21 @@ final class Preview_Request {
 		}
 
 		return 'content_before' === $location ? $preview . $content : $content . $preview;
+	}
+
+	/**
+	 * Explain a missing page-bar theme hook without faking another location.
+	 *
+	 * This fallback itself requires `wp_footer`. A theme that omits that hook
+	 * cannot support bottom-bar delivery or its contextual warning.
+	 */
+	public function render_page_bar_fallback(): void {
+		if ( $this->delivery->has_rendered_page_bar_preview() ) {
+			return;
+		}
+
+		echo '<div class="npcink-ad-preview-verdict is-blocked">';
+		echo esc_html__( 'The active theme did not render the selected page-bar hook. This placement cannot display in this template.', 'npcink-ad' );
+		echo '</div>';
 	}
 }

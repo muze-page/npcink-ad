@@ -28,7 +28,9 @@ final class Post_Types {
 	public const END_AT_META           = '_npcink_ad_end_at';
 	public const PARAGRAPH_NUMBER_META = '_npcink_ad_paragraph_number';
 
-	public const LOCATIONS                = array( 'block', 'content_before', 'content_after', 'content_after_paragraph' );
+	public const LOCATIONS                = array( 'block', 'content_before', 'content_after', 'content_after_paragraph', 'bar_top', 'bar_bottom' );
+	public const AUTOMATIC_LOCATIONS      = array( 'content_before', 'content_after', 'content_after_paragraph', 'bar_top', 'bar_bottom' );
+	public const BAR_LOCATIONS            = array( 'bar_top', 'bar_bottom' );
 	public const CONTENT_SCOPES           = array( 'all', 'posts', 'pages', 'terms', 'selected' );
 	public const DEVICES                  = array( 'all', 'desktop', 'mobile' );
 	public const MAX_POST_IDS             = 50;

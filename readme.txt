@@ -4,7 +4,7 @@ Tags: promotion, advertising, marketing, block
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.2.2
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,6 +20,7 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 * For manual placement, insert the Npcink Ad Promotion block and select the same saved Promotion, or use the existing expert `[npcink_ad promotion="ID"]` shortcode.
 * Search Promotion titles from the manual block selector, load further 20-record pages on demand, and retain saved selections outside the current result page.
 * Place a promotion after a bounded top-level block paragraph or Classic HTML paragraph without frontend JavaScript.
+* Publish a normal-flow page bar at the standard top or bottom theme hook, with a current-page close button and no persisted visitor state.
 * Preview the promotion inside a real page and switch between desktop and mobile context. Desktop uses the fixed rule at `782px` and above, and mobile uses the fixed rule at `781px` and below; the `390px` mobile canvas is only a representative width.
 * Read a truthful verdict explaining why the promotion will or will not display.
 * Review rule status, placement, content scope, stop time, and inactivity reasons directly in the Promotion list.
@@ -28,18 +29,18 @@ Npcink Ad is a focused, WordPress-native workflow for announcements, affiliate c
 * Reject a saved Video block that has no usable root-relative or explicit HTTP(S) media source instead of reporting an empty player as ready.
 * Receive an explicit TTL-or-purge warning when WordPress has an enabled advanced page-cache drop-in.
 * Publish, pause, or expire one Promotion record without a separate placement object.
-* Deliver from the server without visitor tracking, custom tables, or required frontend JavaScript.
+* Deliver eligibility and markup from the server without visitor tracking or custom tables. Only a rendered page bar loads its small current-page dismissal script; standard placements require no frontend JavaScript.
 * Use the bundled Simplified Chinese translation in both PHP screens and the block editor.
 
-Version 0.2.2 intentionally has no analytics, tracking cookies, plugin-initiated external API requests, A/B testing, ad-network integration, popup builder, arbitrary code execution, or custom database tables. A visitor's browser still requests media URLs selected by the site operator.
+Version 0.3.0 intentionally has no analytics, tracking cookies, plugin-initiated external API requests, A/B testing, ad-network integration, popup or sticky/floating bar builder, arbitrary code execution, or custom database tables. A visitor's browser still requests media URLs selected by the site operator.
 
-Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-paragraph delivery, mutually exclusive editorial content scopes, explicit manual block-or-shortcode guidance, and the fixed desktop/mobile boundary. Version 0.2.1 made the manual block selector reliable beyond its former bounded result set. Version 0.2.2 keeps one Promotion and one delivery system while tightening editor asset ownership, first-Promotion guidance, complete browser validation, cache-boundary disclosure, and site-controlled Core Video validation.
+Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-paragraph delivery, mutually exclusive editorial content scopes, explicit manual block-or-shortcode guidance, and the fixed desktop/mobile boundary. Version 0.2.1 made the manual block selector reliable beyond its former bounded result set. Version 0.2.2 tightened editor asset ownership, first-Promotion guidance, complete browser validation, cache-boundary disclosure, and site-controlled Core Video validation. Version 0.3.0 keeps one Promotion and one delivery system while adding bounded normal-flow page bars.
 
 == Installation ==
 
 1. Upload the `npcink-ad` folder to `/wp-content/plugins/` and activate Npcink Ad.
 2. Open Npcink Ad > Promotions and add a Promotion.
-3. Build the creative with WordPress blocks and set its location, content scope, explicit exclusions, device, and optional schedule in the editor sidebar. Paragraph placement accepts 1 through 20 and defaults to 3.
+3. Build the creative with WordPress blocks and set its location, content scope, explicit exclusions, device, and optional schedule in the editor sidebar. Paragraph placement accepts 1 through 20 and defaults to 3; page bars use the active theme's standard top or bottom hook.
 4. For Manual block placement, save the Promotion, then insert the Npcink Ad Promotion block where it should appear and select that same Promotion. The `[npcink_ad promotion="ID"]` shortcode remains an expert alternative.
 5. Save and open the real-page preview. Confirm the runtime verdict on desktop (`782px` and above) and mobile (`781px` and below).
 6. Publish the Promotion. Change it to Draft whenever it should be paused.
@@ -48,7 +49,7 @@ Version 0.2.0 established the controlled 0.2 delivery scope: bounded after-parag
 
 = Does Npcink Ad track visitors? =
 
-No. Version 0.2.2 does not collect impression or click analytics, set visitor tracking cookies, or make an external API request. The browser requests only the creative media URL selected by the site operator.
+No. Version 0.3.0 does not collect impression or click analytics, set visitor tracking cookies, persist page-bar dismissal, or make an external API request. The browser requests only the creative media URL selected by the site operator.
 
 = Why is there no separate placement or ad group? =
 
@@ -56,7 +57,7 @@ The first release optimizes for one short publishing workflow. Location and deli
 
 = How do full-page caches affect schedules? =
 
-The page must be regenerated after publish, pause, resume, start, and end transitions. Configure the cache TTL or purge affected pages at those boundaries. Version 0.2.2 warns when WordPress exposes an enabled advanced-cache drop-in, but it does not claim automatic purging or minute-accurate schedules through every cache provider.
+The page must be regenerated after publish, pause, resume, start, and end transitions. Configure the cache TTL or purge affected pages at those boundaries. Version 0.3.0 warns when WordPress exposes an enabled advanced-cache drop-in, but it does not claim automatic purging or minute-accurate schedules through every cache provider.
 
 = Does choosing Manual block insert the Promotion automatically? =
 
@@ -70,11 +71,22 @@ Desktop is visible at `782px` and above, Mobile at `781px` and below, and All de
 
 Npcink Ad supports a site-controlled Core Video block as Promotion creative. It validates that the saved video has a root-relative or explicit HTTP(S) source and then reuses the normal preflight, real-page preview, device, schedule, and placement rules. Bare relative paths and protocol-relative URLs are rejected to preserve the same source through Core KSES. It does not provide VAST/IMA, pre-roll or rewarded video, playback analytics, popup video, or an ad-network player. URL availability, codecs, media requests, and browser autoplay policy remain site and browser responsibilities.
 
-= Does 0.2.2 migrate data from earlier development snapshots? =
+= Are page bars sticky or remembered after a visitor closes them? =
 
-No. Version 0.2.2 remains pre-GA and has no compatibility adapters or migrations for earlier development snapshots or unpublished identifiers.
+No. Version 0.3.0 page bars remain in normal document flow. The close button hides a bar only for the current page and does not use cookies or local storage. Sticky, floating, delayed, frequency-controlled, and popup behavior remain outside this release.
+
+= Does 0.3.0 migrate data from earlier development snapshots? =
+
+No. Version 0.3.0 remains pre-GA and has no compatibility adapters or migrations for earlier development snapshots or unpublished identifiers.
 
 == Changelog ==
+
+= 0.3.0 =
+
+* Add top and bottom page-bar locations to the existing Promotion REST enum, evaluator, scope, schedule, device, overlap, list, and preflight contracts.
+* Render bars through `wp_body_open` and `wp_footer` in normal document flow, with truthful real-page preview and a missing-hook diagnostic.
+* Add an accessible current-page dismissal control backed by a tiny conditional script with no cookies, local storage, frequency state, or tracking.
+* Keep popup, sticky/floating, interstitial, and visitor-state behavior outside the bounded page-bar contract.
 
 = 0.2.2 =
 

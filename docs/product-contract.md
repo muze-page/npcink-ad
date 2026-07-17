@@ -29,12 +29,12 @@ The default interface exposes three concepts:
 
 Implementation details such as slots, variants, resolvers, targeting engines, templates, events, queues, and consent adapters must not become primary navigation or required vocabulary.
 
-## Required 0.2 workflow
+## Required workflow
 
 One complete vertical workflow is more important than broad feature coverage:
 
 1. Create a promotion using WordPress blocks, including a site-controlled Core Video block when motion creative is needed.
-2. Choose a placement: manual block or shortcode, before content, after content, or after paragraph 1–20.
+2. Choose a placement: manual block or shortcode, before content, after content, after paragraph 1–20, or a normal-flow top/bottom page bar.
 3. Choose all posts/pages, all posts, all pages, posts matching selected Core categories/tags, or specific published posts/pages; optionally exclude explicit content IDs.
 4. Optionally set a start and end time.
 5. Choose all devices, desktop, or mobile.
@@ -46,17 +46,17 @@ The default path must not require custom HTML or JavaScript. Expert code inserti
 
 ## Usability budgets
 
-The 0.2 product is accepted only when:
+The product is accepted only when:
 
 - a new user can publish a valid promotion in no more than three minutes without reading documentation;
 - no more than seven primary controls are visible before opening advanced settings;
 - the user does not need to create or understand a separate ad group, slot, variant, or tracking object;
 - the product explains invalid or inactive delivery before publication;
-- the basic frontend delivery path adds no tracking request and no required frontend JavaScript.
+- the basic inline frontend delivery path adds no tracking request and no required frontend JavaScript. A rendered page bar may load only its current-document dismissal script and stores no visitor state.
 
 ## Privacy and data boundaries
 
-Npcink Ad 0.2:
+Npcink Ad:
 
 - stores its source of truth in WordPress posts and registered typed metadata;
 - performs eligibility and rendering on the server;
@@ -71,12 +71,12 @@ Site-controlled video is Promotion content, not a second delivery model. [ADR 01
 
 ## Explicit non-goals
 
-Npcink Ad 0.2 is not:
+Npcink Ad is not:
 
 - an AdSense or Google Ad Manager integration;
 - a generic arbitrary-code inserter;
 - an advertising analytics platform;
-- a popup, sticky banner, or background-ad builder;
+- a popup, sticky/floating bar, or background-ad builder;
 - an A/B testing, rotation, frequency, geolocation, or click-fraud suite;
 - a CMP or consent-detection product;
 - a template marketplace;
@@ -86,13 +86,13 @@ Npcink Ad 0.2 is not:
 
 The Magick AD `master` branch is a product-research corpus, not an implementation target. A feature may be brought forward only when all of the following are true:
 
-1. it directly improves the required 0.2 workflow;
+1. it directly improves the required workflow;
 2. it can be expressed with the current product language;
 3. it does not restore deleted tracking, table, queue, migration, or broad targeting dependencies;
 4. its permission, privacy, storage, uninstall, and test contracts are explicit;
 5. selective reuse is simpler and safer than a fresh implementation.
 
-Real-page preview, device preview, and human-readable runtime verdicts are candidates for selective reconstruction. The old administration SPA, tracking system, statistics dashboard, A/B subsystem, CMP integrations, template marketplace, and compatibility/debug menus are not candidates for restoration.
+Real-page preview, device preview, human-readable runtime verdicts, and the bounded normal-flow bar principles were selectively reconstructed. The old administration SPA, tracking system, statistics dashboard, A/B subsystem, CMP integrations, template marketplace, and compatibility/debug menus are not candidates for restoration.
 
 ## Feature admission rule
 
@@ -122,5 +122,7 @@ The manual block selector is a management-only reliability surface: title search
 Device visibility uses one fixed CSS boundary: mobile at `781px` and below, desktop at `782px` and above, and `all` at every width. There is no tablet target or configurable breakpoint. The mobile preview canvas is capped at `390px` as a representative width, not as the production breakpoint; normal HTML remains cache-stable and does not branch by User-Agent.
 
 Version 0.2.0 established the controlled 0.2 delivery scope. Version 0.2.1 changes only the management-side manual block selector and its packaged-plugin Gutenberg editor E2E coverage. Version 0.2.2 adds first-Promotion guidance, editor asset isolation, complete selected-page browser validation, conservative advanced-cache disclosure, and the explicit site-controlled-video creative contract; it does not add a second data or delivery model. Git tags, GitHub Releases, and public distribution remain explicit repository release actions rather than claims made by this contract.
+
+Version 0.3.0 adds `bar_top` and `bar_bottom` as automatic locations on the same Promotion. [ADR 011](decisions/011-bounded-page-bar-delivery.md) keeps them in normal document flow, reuses every existing rule and preview surface, and permits only current-document dismissal. It adds no container record, sticky/floating behavior, popup, frequency state, tracking, Cookie, or local storage.
 
 Multiple eligible Promotions at one automatic location continue rendering in deterministic order, while management UI only advises that they **may** appear together. This direction does not add priority, weights, rotation, tablet targeting, arbitrary selectors or hooks, visitor state, tracking, or separate Slot/Placement records.

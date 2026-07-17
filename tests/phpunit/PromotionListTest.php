@@ -448,6 +448,8 @@ final class PromotionListTest extends TestCase {
 			'After paragraph (invalid)',
 			$method->invoke( $this->promotion_list(), 'content_after_paragraph', 3, false )
 		);
+		self::assertSame( 'Top page bar', $method->invoke( $this->promotion_list(), 'bar_top' ) );
+		self::assertSame( 'Bottom page bar', $method->invoke( $this->promotion_list(), 'bar_bottom' ) );
 	}
 
 	/**

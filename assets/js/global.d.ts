@@ -14,7 +14,9 @@ interface Window {
 			location:
 				| 'content_before'
 				| 'content_after'
-				| 'content_after_paragraph';
+				| 'content_after_paragraph'
+				| 'bar_top'
+				| 'bar_bottom';
 			contentScope: 'all' | 'posts' | 'pages' | 'terms' | 'selected';
 			includeIds: number[];
 			excludeIds: number[];

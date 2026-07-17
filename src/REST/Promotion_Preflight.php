@@ -160,7 +160,7 @@ final class Promotion_Preflight {
 		$promotion['terms_valid'] = true;
 		if (
 			'terms' !== ( $promotion['content_scope'] ?? 'all' )
-			|| ! in_array( $promotion['location'] ?? 'content_after', array( 'content_before', 'content_after', 'content_after_paragraph' ), true )
+			|| ! in_array( $promotion['location'] ?? 'content_after', Post_Types::AUTOMATIC_LOCATIONS, true )
 		) {
 			return;
 		}

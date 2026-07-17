@@ -26,6 +26,7 @@ final class RendererTest extends TestCase {
 		$GLOBALS['npcink_ad_renderer_test_do_blocks'] = array();
 		$GLOBALS['npcink_ad_renderer_test_kses']      = array();
 		$GLOBALS['npcink_ad_renderer_test_styles']    = array();
+		$GLOBALS['npcink_ad_renderer_test_scripts']   = array();
 	}
 
 	/**
@@ -58,6 +59,7 @@ final class RendererTest extends TestCase {
 		self::assertStringContainsString( 'preload="metadata"', $output );
 		self::assertStringContainsString( '<figcaption>Product demonstration</figcaption>', $output );
 		self::assertSame( array( 'npcink-ad-frontend' ), $GLOBALS['npcink_ad_renderer_test_styles'] );
+		self::assertSame( array(), $GLOBALS['npcink_ad_renderer_test_scripts'] );
 	}
 
 	/**
@@ -86,5 +88,27 @@ final class RendererTest extends TestCase {
 		self::assertStringNotContainsString( ' autoplay', $output );
 		self::assertStringNotContainsString( '<script', $output );
 		self::assertStringNotContainsString( '<iframe', $output );
+	}
+
+	/**
+	 * Page bars remain server-rendered and enqueue only current-page dismissal.
+	 */
+	public function test_page_bar_wraps_native_content_with_accessible_dismissal(): void {
+		$output = ( new Renderer() )->render(
+			array(
+				'id'       => 43,
+				'content'  => '<p>Site announcement</p>',
+				'location' => 'bar_top',
+				'device'   => 'mobile',
+			)
+		);
+
+		self::assertStringContainsString( 'npcink-ad-device-mobile', $output );
+		self::assertStringContainsString( 'npcink-ad-page-bar--top', $output );
+		self::assertStringContainsString( 'role="region"', $output );
+		self::assertStringContainsString( 'data-npcink-ad-bar', $output );
+		self::assertStringContainsString( 'data-npcink-ad-dismiss', $output );
+		self::assertStringContainsString( 'aria-label="Dismiss promotion bar"', $output );
+		self::assertSame( array( 'npcink-ad-page-bar' ), $GLOBALS['npcink_ad_renderer_test_scripts'] );
 	}
 }

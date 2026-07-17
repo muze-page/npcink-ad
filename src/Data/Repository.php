@@ -60,7 +60,7 @@ final class Repository {
 	 *
 	 * @return array{
 	 *     by_id: array<int, array<string, mixed>>,
-	 *     location_ids: array{content_before: list<int>, content_after: list<int>},
+	 *     location_ids: array{content_before: list<int>, content_after: list<int>, bar_top: list<int>, bar_bottom: list<int>},
 	 *     paragraph_ids: array<int, list<int>>
 	 * }
 	 */
@@ -78,7 +78,7 @@ final class Repository {
 					'relation' => 'OR',
 					array(
 						'key'     => Post_Types::LOCATION_META,
-						'value'   => array( 'content_before', 'content_after', 'content_after_paragraph' ),
+						'value'   => Post_Types::AUTOMATIC_LOCATIONS,
 						'compare' => 'IN',
 					),
 					array(
@@ -105,6 +105,8 @@ final class Repository {
 			'location_ids'  => array(
 				'content_before' => array(),
 				'content_after'  => array(),
+				'bar_top'       => array(),
+				'bar_bottom'    => array(),
 			),
 			'paragraph_ids' => array(),
 		);
@@ -165,7 +167,7 @@ final class Repository {
 		$category_ids  = Post_Types::sanitize_post_ids( get_post_meta( $post->ID, Post_Types::CATEGORY_IDS_META, true ) );
 		$tag_ids       = Post_Types::sanitize_post_ids( get_post_meta( $post->ID, Post_Types::TAG_IDS_META, true ) );
 		$terms_valid   = true;
-		if ( 'terms' === $content_scope && in_array( $location, array( 'content_before', 'content_after', 'content_after_paragraph' ), true ) ) {
+		if ( 'terms' === $content_scope && in_array( $location, Post_Types::AUTOMATIC_LOCATIONS, true ) ) {
 			if ( null === $term_snapshot ) {
 				$terms_valid = $category_ids === $this->filter_existing_term_ids( $category_ids, 'category' )
 					&& $tag_ids === $this->filter_existing_term_ids( $tag_ids, 'post_tag' );
@@ -212,7 +214,7 @@ final class Repository {
 		foreach ( $posts as $post ) {
 			$location      = Post_Types::sanitize_location( get_post_meta( $post->ID, Post_Types::LOCATION_META, true ) );
 			$content_scope = Post_Types::sanitize_content_scope( get_post_meta( $post->ID, Post_Types::CONTENT_SCOPE_META, true ) );
-			if ( 'terms' !== $content_scope || ! in_array( $location, array( 'content_before', 'content_after', 'content_after_paragraph' ), true ) ) {
+			if ( 'terms' !== $content_scope || ! in_array( $location, Post_Types::AUTOMATIC_LOCATIONS, true ) ) {
 				continue;
 			}
 

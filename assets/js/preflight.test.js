@@ -139,6 +139,19 @@ describe( 'getPotentiallyOverlappingPromotionIds', () => {
 		).toEqual( [] );
 	} );
 
+	test( 'page bars overlap only at the same bar location', () => {
+		expect(
+			getPotentiallyOverlappingPromotionIds(
+				promotionRule( { location: 'bar_top' } ),
+				[
+					promotionRule( { id: 2, location: 'bar_top' } ),
+					promotionRule( { id: 3, location: 'bar_bottom' } ),
+					promotionRule( { id: 4, location: 'content_before' } ),
+				]
+			)
+		).toEqual( [ 2 ] );
+	} );
+
 	test( 'paragraph placement overlaps only at the same valid effective anchor', () => {
 		const candidate = promotionRule( {
 			location: 'content_after_paragraph',

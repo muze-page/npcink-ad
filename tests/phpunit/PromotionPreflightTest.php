@@ -199,16 +199,18 @@ final class PromotionPreflightTest extends TestCase {
 	 */
 	public function test_publish_accepts_existing_term_without_content_matches(): void {
 		$GLOBALS['npcink_ad_test_term_taxonomies']['category'] = array( 7 );
-		$prepared = $this->prepared_post( 'publish' );
-		$request  = $this->request_with_meta(
-			array(
-				Post_Types::LOCATION_META      => 'content_after',
-				Post_Types::CONTENT_SCOPE_META => 'terms',
-				Post_Types::CATEGORY_IDS_META  => array( 7 ),
-			)
-		);
+		foreach ( array( 'content_after', 'bar_top', 'bar_bottom' ) as $location ) {
+			$prepared = $this->prepared_post( 'publish' );
+			$request  = $this->request_with_meta(
+				array(
+					Post_Types::LOCATION_META      => $location,
+					Post_Types::CONTENT_SCOPE_META => 'terms',
+					Post_Types::CATEGORY_IDS_META  => array( 7 ),
+				)
+			);
 
-		self::assertSame( $prepared, $this->preflight()->validate_before_save( $prepared, $request ) );
+			self::assertSame( $prepared, $this->preflight()->validate_before_save( $prepared, $request ), $location );
+		}
 	}
 
 	/**

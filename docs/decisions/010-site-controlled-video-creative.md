@@ -104,5 +104,7 @@ vocabulary without adding a distinct capability.
 - Autoplay without `muted` remains publishable but is called out before
   publication so WordPress 6.5, current Core, and raw HTML receive one explicit
   product-level advisory.
-- A future Overlay mode requires a separate decision covering frontend state,
-  accessibility, frequency, conflicts, privacy, preview, and cache behavior.
+- ADR 011 later accepts only normal-flow top and bottom page bars with
+  current-document dismissal. A future popup or Overlay mode still requires a
+  separate decision covering frontend state, modal accessibility, frequency,
+  conflicts, privacy, preview, and cache behavior.

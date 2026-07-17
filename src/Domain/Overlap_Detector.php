@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Pure overlap policy with no WordPress API calls.
  */
 final class Overlap_Detector {
-	private const AUTOMATIC_LOCATIONS = array( 'content_before', 'content_after', 'content_after_paragraph' );
+	private const AUTOMATIC_LOCATIONS = array( 'content_before', 'content_after', 'content_after_paragraph', 'bar_top', 'bar_bottom' );
 
 	/**
 	 * Find published Promotions that may share one delivery context.

@@ -93,8 +93,9 @@ php -r '
 	$files = array(
 	  "block" => $argv[1],
 	  "promotion" => $argv[2],
+	  "page_bar" => $argv[3],
 	);
-	$requires_wordpress = $argv[3];
+	$requires_wordpress = $argv[4];
 	$dependencies_by_entry = array();
 	foreach ($files as $entry => $asset_file) {
 	  if (!is_file($asset_file)) {
@@ -129,10 +130,15 @@ php -r '
 	  fwrite(STDERR, "[release-gate] The Promotion editor bundle must require wp-edit-post when Requires at least is {$requires_wordpress}; WordPress 6.5 needs the SlotFill compatibility fallback\n");
 	  exit(1);
 	}
-' build/block-editor.asset.php build/promotion-editor.asset.php "$REQUIRES_WORDPRESS"
+	if (array() !== $dependencies_by_entry["page_bar"]) {
+	  fwrite(STDERR, "[release-gate] The page-bar bundle must remain dependency-free; found: " . implode(", ", $dependencies_by_entry["page_bar"]) . "\n");
+	  exit(1);
+	}
+' build/block-editor.asset.php build/promotion-editor.asset.php build/page-bar.asset.php "$REQUIRES_WORDPRESS"
 
 BLOCK_EDITOR_JS_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_BLOCK_EDITOR_JS_KB:-16}"
 PROMOTION_EDITOR_JS_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_PROMOTION_EDITOR_JS_KB:-38}"
+PAGE_BAR_JS_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_PAGE_BAR_JS_KB:-1}"
 EDITOR_JS_TOTAL_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_EDITOR_JS_TOTAL_KB:-48}"
 EDITOR_CSS_BUDGET_KB="${NPCINK_AD_BUNDLE_MAX_EDITOR_CSS_KB:-4}"
 BUDGET_FAILED=0
@@ -162,6 +168,7 @@ check_bundle_budget() {
 
 check_bundle_budget "build/block-editor.js" "build/block-editor.js" "$BLOCK_EDITOR_JS_BUDGET_KB"
 check_bundle_budget "build/promotion-editor.js" "build/promotion-editor.js" "$PROMOTION_EDITOR_JS_BUDGET_KB"
+check_bundle_budget "build/page-bar.js" "build/page-bar.js" "$PAGE_BAR_JS_BUDGET_KB"
 check_bundle_budget "build/block-editor.css" "build/block-editor.css" "$EDITOR_CSS_BUDGET_KB"
 check_bundle_budget "build/promotion-editor.css" "build/promotion-editor.css" "$EDITOR_CSS_BUDGET_KB"
 
@@ -222,6 +229,8 @@ REQUIRED_ZIP_ENTRIES=(
   "${PLUGIN_DIR_NAME}/build/block-editor.asset.php"
   "${PLUGIN_DIR_NAME}/build/block-editor.css"
   "${PLUGIN_DIR_NAME}/build/block-editor.js"
+  "${PLUGIN_DIR_NAME}/build/page-bar.asset.php"
+  "${PLUGIN_DIR_NAME}/build/page-bar.js"
   "${PLUGIN_DIR_NAME}/build/promotion-editor.asset.php"
   "${PLUGIN_DIR_NAME}/build/promotion-editor.css"
   "${PLUGIN_DIR_NAME}/build/promotion-editor.js"

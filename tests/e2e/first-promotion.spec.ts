@@ -393,7 +393,7 @@ test("completes a first selected-page Promotion from creation to live pause and 
 
   await selectDeliveryTab(deliveryDialog, "Content scope");
   await expect(deliveryDialog).toContainText(
-    "To target categories or tags automatically, first choose Before post content, After post content, or After paragraph N in Placement.",
+    "To target categories or tags automatically, choose an automatic placement: before or after content, after a paragraph, or a page bar.",
   );
   await expect(
     deliveryDialog
@@ -402,7 +402,10 @@ test("completes a first selected-page Promotion from creation to live pause and 
   ).toHaveCount(0);
 
   await selectDeliveryTab(deliveryDialog, "Placement");
-  await placement.selectOption("content_before");
+  await placement.selectOption("bar_top");
+  await expect(deliveryDialog).toContainText(
+    "Page bars stay in the normal page flow and can be dismissed for the current page. They are not sticky and do not store visitor state.",
+  );
 
   await selectDeliveryTab(deliveryDialog, "Content scope");
   await deliveryDialog
@@ -622,6 +625,8 @@ test("completes a first selected-page Promotion from creation to live pause and 
   expect(previewHtml).toContain(
     "Not currently eligible: The promotion is not published.",
   );
+  expect(previewHtml).toContain("npcink-ad-page-bar--top");
+  expect(previewHtml).toContain("data-npcink-ad-dismiss");
   expect(previewHtml).toContain(PROMOTION_CONTENT);
   await previewPage.close();
 
@@ -635,7 +640,7 @@ test("completes a first selected-page Promotion from creation to live pause and 
   });
   await expect(editDeliverySettingsButton).toBeVisible();
   await expect(deliveryPanel).toContainText("Delivery settings checked.");
-  await expect(deliveryPanel).toContainText("Before post content");
+  await expect(deliveryPanel).toContainText("Top page bar");
   await expect(deliveryPanel).toContainText("Only selected content");
   await expect(deliveryPanel).toContainText("All devices · No schedule");
   await expect(deliveryPanel).toContainText("Page selected");
@@ -668,7 +673,12 @@ test("completes a first selected-page Promotion from creation to live pause and 
     `[data-npcink-ad-promotion="${createdPromotionId}"]`,
   );
   await expect(livePromotion).toBeVisible();
+  await expect(livePromotion).toHaveClass(/npcink-ad-page-bar--top/);
   await expect(livePromotion).toContainText(PROMOTION_CONTENT);
+  await livePromotion
+    .getByRole("button", { name: "Dismiss promotion bar", exact: true })
+    .click();
+  await expect(livePromotion).toBeHidden();
 
   let row = await openPromotionListRow(page);
   await expect(row).toContainText("Rule ready");
