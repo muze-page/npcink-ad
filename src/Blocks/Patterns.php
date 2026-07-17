@@ -79,13 +79,19 @@ final class Patterns {
 			'npcink-ad/announcement',
 			array(
 				'title'       => __( 'Compact announcement', 'npcink-ad' ),
-				'description' => __( 'A small site-owned announcement with an inline link.', 'npcink-ad' ),
+				'description' => __( 'A compact site-owned announcement with short copy and a call-to-action button.', 'npcink-ad' ),
 				'categories'  => array( 'npcink-ad' ),
 				'postTypes'   => array( Post_Types::PROMOTION_POST_TYPE ),
-				'content'     => '<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|20","right":"var:preset|spacing|30","bottom":"var:preset|spacing|20","left":"var:preset|spacing|30"}},"border":{"left":{"color":"var:preset|color|accent","width":"4px"}}},"backgroundColor":"base-2","layout":{"type":"constrained"}} -->
-<div class="wp-block-group has-base-2-background-color has-background" style="border-left-color:var(--wp--preset--color--accent);border-left-width:4px;padding-top:var(--wp--preset--spacing--20);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--20);padding-left:var(--wp--preset--spacing--30)"><!-- wp:paragraph -->
+				'content'     => '<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20","padding":{"top":"var:preset|spacing|20","right":"var:preset|spacing|30","bottom":"var:preset|spacing|20","left":"var:preset|spacing|30"}},"border":{"width":"1px","radius":"8px"}},"backgroundColor":"base-2","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
+<div class="wp-block-group has-base-2-background-color has-background" style="border-width:1px;border-radius:8px;padding-top:var(--wp--preset--spacing--20);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--20);padding-left:var(--wp--preset--spacing--30)"><!-- wp:paragraph -->
 <p><strong>' . esc_html__( 'New:', 'npcink-ad' ) . '</strong> ' . esc_html__( 'Share a concise update and add a link to the next step.', 'npcink-ad' ) . '</p>
-<!-- /wp:paragraph --></div>
+<!-- /wp:paragraph -->
+
+<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"right"}} -->
+<div class="wp-block-buttons"><!-- wp:button {"backgroundColor":"contrast","textColor":"base"} -->
+<div class="wp-block-button"><a class="wp-block-button__link has-base-color has-contrast-background-color has-text-color has-background wp-element-button">' . esc_html__( 'Learn more', 'npcink-ad' ) . '</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons --></div>
 <!-- /wp:group -->',
 			)
 		);

@@ -125,4 +125,6 @@ Version 0.2.0 established the controlled 0.2 delivery scope. Version 0.2.1 chang
 
 Version 0.3.0 adds `bar_top` and `bar_bottom` as automatic locations on the same Promotion. [ADR 011](decisions/011-bounded-page-bar-delivery.md) keeps them in normal document flow, reuses every existing rule and preview surface, and permits only current-document dismissal. It adds no container record, sticky/floating behavior, popup, frequency state, tracking, Cookie, or local storage.
 
+Version 0.3.1 keeps that delivery contract unchanged while making the dismiss target touch-sized, reserving its space with RTL-safe logical CSS, and refining the existing compact announcement pattern into wrapping short copy plus a Core Button CTA. It adds no location, visitor state, or separate bar builder.
+
 Multiple eligible Promotions at one automatic location continue rendering in deterministic order, while management UI only advises that they **may** appear together. This direction does not add priority, weights, rotation, tablet targeting, arbitrary selectors or hooks, visitor state, tracking, or separate Slot/Placement records.

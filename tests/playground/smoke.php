@@ -140,6 +140,42 @@ $check(
 $check( 1 === substr_count( $frontend_css, '.npcink-ad-device-desktop' ), 'The desktop device selector is duplicated outside its fixed breakpoint rule.' );
 $check( 1 === substr_count( $frontend_css, '.npcink-ad-device-mobile' ), 'The mobile device selector is duplicated outside its fixed breakpoint rule.' );
 $check( str_contains( $frontend_css, '.npcink-ad-page-bar' ), 'The packaged frontend CSS omitted page-bar presentation.' );
+$check( str_contains( $frontend_css, 'padding-inline: 16px 68px;' ), 'The page-bar content does not reserve logical end space for its dismiss control.' );
+$check( str_contains( $frontend_css, 'inset-inline-end: 12px;' ), 'The page-bar dismiss control is not positioned at the logical end.' );
+$check(
+	1 === preg_match(
+		'/\.npcink-ad-page-bar__dismiss\s*\{[^}]*\bwidth:\s*44px;[^}]*\bheight:\s*44px;/s',
+		$frontend_css
+	),
+	'The page-bar dismiss control is smaller than the 44 by 44 CSS pixel touch target.'
+);
+
+$announcement_pattern = WP_Block_Patterns_Registry::get_instance()->get_registered( 'npcink-ad/announcement' );
+$check( is_array( $announcement_pattern ), 'The compact announcement pattern was not registered.' );
+$announcement_blocks = is_array( $announcement_pattern ) ? parse_blocks( (string) ( $announcement_pattern['content'] ?? '' ) ) : array();
+$announcement_group  = $announcement_blocks[0] ?? array();
+$announcement_layout = is_array( $announcement_group ) ? ( $announcement_group['attrs']['layout'] ?? array() ) : array();
+$check(
+	is_array( $announcement_layout )
+	&& 'flex' === ( $announcement_layout['type'] ?? '' )
+	&& 'wrap' === ( $announcement_layout['flexWrap'] ?? '' )
+	&& 'space-between' === ( $announcement_layout['justifyContent'] ?? '' ),
+	'The compact announcement pattern does not use a wrapping horizontal layout.'
+);
+$announcement_inner_blocks = is_array( $announcement_group ) ? ( $announcement_group['innerBlocks'] ?? array() ) : array();
+$announcement_inner_names  = array_map(
+	static fn ( array $block ): string => (string) ( $block['blockName'] ?? '' ),
+	is_array( $announcement_inner_blocks ) ? $announcement_inner_blocks : array()
+);
+$check( in_array( 'core/paragraph', $announcement_inner_names, true ), 'The compact announcement pattern omitted its short copy.' );
+$check( in_array( 'core/buttons', $announcement_inner_names, true ), 'The compact announcement pattern omitted its call-to-action buttons block.' );
+$announcement_buttons_index = array_search( 'core/buttons', $announcement_inner_names, true );
+$announcement_buttons       = false !== $announcement_buttons_index ? $announcement_inner_blocks[ $announcement_buttons_index ] : array();
+$announcement_button_names  = array_map(
+	static fn ( array $block ): string => (string) ( $block['blockName'] ?? '' ),
+	is_array( $announcement_buttons ) ? ( $announcement_buttons['innerBlocks'] ?? array() ) : array()
+);
+$check( in_array( 'core/button', $announcement_button_names, true ), 'The compact announcement pattern omitted its editable Core Button CTA.' );
 
 $block_editor_script = wp_scripts()->registered['npcink-ad-block-editor'] ?? null;
 $check( $block_editor_script instanceof _WP_Dependency, 'The block editor script was not registered.' );
