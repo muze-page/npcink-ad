@@ -191,6 +191,23 @@ export function isRecordsRequestLoading(
 	return ! error && records === null && ( isResolving || ! hasFinished );
 }
 
+export function buildContentPickerQuery(
+	filter: string,
+	categoryIds: readonly number[] = [],
+	tagIds: readonly number[] = []
+): Record< string, unknown > {
+	return {
+		context: 'edit',
+		order: 'desc',
+		orderby: filter ? 'relevance' : 'date',
+		per_page: 20,
+		search: filter || undefined,
+		status: 'publish',
+		categories: categoryIds.length > 0 ? categoryIds : undefined,
+		tags: tagIds.length > 0 ? tagIds : undefined,
+	};
+}
+
 function normalizeIds( value: unknown ): number[] {
 	if ( ! Array.isArray( value ) ) {
 		return [];
@@ -205,17 +222,19 @@ function normalizeIds( value: unknown ): number[] {
 	].slice( 0, 50 );
 }
 
-function toInputDate( value: string | undefined ): string {
-	return value ? value.replace( ' ', 'T' ).slice( 0, 16 ) : '';
+export function splitScheduleDateTime( value: string = '' ): {
+	date: string;
+	time: string;
+} {
+	return { date: value.slice( 0, 10 ), time: value.slice( 11, 16 ) };
 }
 
-function fromInputDate( value: string ): string {
-	if ( ! value ) {
+export function combineScheduleDateTime( date: string, time: string ): string {
+	if ( ! date ) {
 		return '';
 	}
 
-	const normalized = value.replace( 'T', ' ' );
-	return normalized.length === 16 ? `${ normalized }:00` : normalized;
+	return `${ date } ${ time || '00:00' }:00`;
 }
 
 function siteTimezoneLabel( site: SiteBaseRecord | null ): string {
@@ -237,6 +256,57 @@ function siteTimezoneLabel( site: SiteBaseRecord | null ): string {
 	}
 
 	return __( 'configured in WordPress', 'npcink-ad' );
+}
+
+function ScheduleDateTimeControl( {
+	label,
+	value,
+	onChange,
+	help,
+	hasError,
+}: {
+	label: string;
+	value: string | undefined;
+	onChange: ( value: string ) => void;
+	help: string;
+	hasError: boolean;
+} ) {
+	const { date, time } = splitScheduleDateTime( value );
+
+	return (
+		<fieldset
+			className={ `npcink-ad-schedule-control${
+				hasError ? ' npcink-ad-control-error' : ''
+			}` }
+		>
+			<legend className="components-base-control__label">
+				{ label }
+			</legend>
+			<div className="npcink-ad-schedule-control__fields">
+				<TextControl
+					__next40pxDefaultSize
+					type="date"
+					label={ __( 'Date', 'npcink-ad' ) }
+					value={ date }
+					onChange={ ( nextDate ) =>
+						onChange( combineScheduleDateTime( nextDate, time ) )
+					}
+				/>
+				<TextControl
+					__next40pxDefaultSize
+					type="time"
+					label={ __( 'Time', 'npcink-ad' ) }
+					value={ time }
+					disabled={ ! date }
+					aria-invalid={ hasError }
+					help={ help }
+					onChange={ ( nextTime ) =>
+						onChange( combineScheduleDateTime( date, nextTime ) )
+					}
+				/>
+			</div>
+		</fieldset>
+	);
 }
 
 function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
@@ -582,32 +652,39 @@ function ContentPicker( {
 	selectedIds,
 	onAdd,
 	onRemove,
+	enableTermFilters = false,
 }: {
 	label: string;
 	help: string;
 	selectedIds: number[];
 	onAdd: ( id: number ) => void;
 	onRemove: ( id: number ) => void;
+	enableTermFilters?: boolean;
 } ) {
 	const [ filter, setFilter ] = React.useState( '' );
-	const query = React.useMemo(
-		() => ( {
-			context: 'edit',
-			order: 'desc',
-			orderby: filter ? 'relevance' : 'date',
-			per_page: 20,
-			search: filter || undefined,
-			status: 'publish',
-		} ),
+	const [ categoryFilterIds, setCategoryFilterIds ] = React.useState<
+		number[]
+	>( [] );
+	const [ tagFilterIds, setTagFilterIds ] = React.useState< number[] >( [] );
+	const hasTermFilters =
+		enableTermFilters &&
+		( categoryFilterIds.length > 0 || tagFilterIds.length > 0 );
+	const postQuery = React.useMemo(
+		() =>
+			buildContentPickerQuery( filter, categoryFilterIds, tagFilterIds ),
+		[ filter, categoryFilterIds, tagFilterIds ]
+	);
+	const pageQuery = React.useMemo(
+		() => buildContentPickerQuery( filter ),
 		[ filter ]
 	);
 	const postResolutionArgs = React.useMemo(
-		() => [ 'postType', 'post', query ] as const,
-		[ query ]
+		() => [ 'postType', 'post', postQuery ] as const,
+		[ postQuery ]
 	);
 	const pageResolutionArgs = React.useMemo(
-		() => [ 'postType', 'page', query ] as const,
-		[ query ]
+		() => [ 'postType', 'page', pageQuery ] as const,
+		[ pageQuery ]
 	);
 
 	const { records, postError, pageError, isLoading } = useSelect(
@@ -617,33 +694,41 @@ function ContentPicker( {
 			const posts = coreData.getEntityRecords( ...postResolutionArgs ) as
 				| ContentRecord[]
 				| null;
-			const pages = coreData.getEntityRecords( ...pageResolutionArgs ) as
-				| ContentRecord[]
-				| null;
+			const pages = hasTermFilters
+				? []
+				: ( coreData.getEntityRecords( ...pageResolutionArgs ) as
+						| ContentRecord[]
+						| null );
 			const nextPostError = resolution.getResolutionError(
 				'getEntityRecords',
 				postResolutionArgs
 			);
-			const nextPageError = resolution.getResolutionError(
-				'getEntityRecords',
-				pageResolutionArgs
-			);
+			const nextPageError = hasTermFilters
+				? null
+				: resolution.getResolutionError(
+						'getEntityRecords',
+						pageResolutionArgs
+				  );
 			const postHasFinished = resolution.hasFinishedResolution(
 				'getEntityRecords',
 				postResolutionArgs
 			);
-			const pageHasFinished = resolution.hasFinishedResolution(
-				'getEntityRecords',
-				pageResolutionArgs
-			);
+			const pageHasFinished = hasTermFilters
+				? true
+				: resolution.hasFinishedResolution(
+						'getEntityRecords',
+						pageResolutionArgs
+				  );
 			const postIsResolving = resolution.isResolving(
 				'getEntityRecords',
 				postResolutionArgs
 			);
-			const pageIsResolving = resolution.isResolving(
-				'getEntityRecords',
-				pageResolutionArgs
-			);
+			const pageIsResolving = hasTermFilters
+				? false
+				: resolution.isResolving(
+						'getEntityRecords',
+						pageResolutionArgs
+				  );
 
 			return {
 				records: [
@@ -673,7 +758,7 @@ function ContentPicker( {
 					),
 			};
 		},
-		[ postResolutionArgs, pageResolutionArgs ]
+		[ postResolutionArgs, pageResolutionArgs, hasTermFilters ]
 	);
 	const { invalidateResolution } = useDispatch(
 		coreDataStore
@@ -711,6 +796,61 @@ function ContentPicker( {
 
 	return (
 		<div className="npcink-ad-content-picker">
+			{ enableTermFilters && (
+				<div className="npcink-ad-settings-group">
+					<h3>{ __( 'Filter candidate posts', 'npcink-ad' ) }</h3>
+					<p>
+						{ __(
+							'These filters only narrow the posts shown below. Pages are hidden while a filter is active, and the saved rule still contains only the posts or pages you explicitly add.',
+							'npcink-ad'
+						) }
+					</p>
+					<div className="npcink-ad-settings-grid">
+						<TermPicker
+							taxonomy="category"
+							label={ __( 'Filter by categories', 'npcink-ad' ) }
+							help={ __(
+								'Optional. Matching any selected category is enough.',
+								'npcink-ad'
+							) }
+							selectedIds={ categoryFilterIds }
+							onAdd={ ( id ) =>
+								setCategoryFilterIds( ( current ) =>
+									current.includes( id )
+										? current
+										: [ ...current, id ]
+								)
+							}
+							onRemove={ ( id ) =>
+								setCategoryFilterIds( ( current ) =>
+									current.filter( ( item ) => item !== id )
+								)
+							}
+						/>
+						<TermPicker
+							taxonomy="post_tag"
+							label={ __( 'Filter by tags', 'npcink-ad' ) }
+							help={ __(
+								'Optional. Matching any selected tag is enough; when categories are also selected, posts must match both filters.',
+								'npcink-ad'
+							) }
+							selectedIds={ tagFilterIds }
+							onAdd={ ( id ) =>
+								setTagFilterIds( ( current ) =>
+									current.includes( id )
+										? current
+										: [ ...current, id ]
+								)
+							}
+							onRemove={ ( id ) =>
+								setTagFilterIds( ( current ) =>
+									current.filter( ( item ) => item !== id )
+								)
+							}
+						/>
+					</div>
+				</div>
+			) }
 			<ComboboxControl
 				__next40pxDefaultSize
 				label={ label }
@@ -1663,7 +1803,7 @@ function PromotionSettingsPanel() {
 							help={
 								isManualBlock
 									? __(
-											'For manual delivery, selected content adds an allow-list; exclusions always take priority.',
+											'Manual delivery supports an explicit allow-list of posts and pages; exclusions take priority. To target categories or tags automatically, first choose Before post content, After post content, or After paragraph N in Placement.',
 											'npcink-ad'
 									  )
 									: undefined
@@ -1696,6 +1836,7 @@ function PromotionSettingsPanel() {
 										'npcink-ad'
 									) }
 									selectedIds={ includeIds }
+									enableTermFilters
 									onAdd={ ( id ) => {
 										confirmPublicId( id );
 										updateMeta( '_npcink_ad_include_ids', [
@@ -1857,25 +1998,13 @@ function PromotionSettingsPanel() {
 							role="group"
 							aria-label={ deviceScheduleLabel }
 						>
-							<TextControl
-								__next40pxDefaultSize
-								type="datetime-local"
-								className={
-									scheduleHasIssue
-										? 'npcink-ad-control-error'
-										: undefined
-								}
-								aria-invalid={ scheduleHasIssue }
+							<ScheduleDateTimeControl
 								label={ __( 'Start showing', 'npcink-ad' ) }
-								value={ toInputDate(
-									meta._npcink_ad_start_at
-								) }
+								value={ meta._npcink_ad_start_at }
 								onChange={ ( value ) =>
-									updateMeta(
-										'_npcink_ad_start_at',
-										fromInputDate( value )
-									)
+									updateMeta( '_npcink_ad_start_at', value )
 								}
+								hasError={ scheduleHasIssue }
 								help={
 									scheduleHasIssue
 										? preflightIssueMessage(
@@ -1884,23 +2013,13 @@ function PromotionSettingsPanel() {
 										: timezoneHelp
 								}
 							/>
-							<TextControl
-								__next40pxDefaultSize
-								type="datetime-local"
-								className={
-									scheduleHasIssue
-										? 'npcink-ad-control-error'
-										: undefined
-								}
-								aria-invalid={ scheduleHasIssue }
+							<ScheduleDateTimeControl
 								label={ __( 'Stop showing', 'npcink-ad' ) }
-								value={ toInputDate( meta._npcink_ad_end_at ) }
+								value={ meta._npcink_ad_end_at }
 								onChange={ ( value ) =>
-									updateMeta(
-										'_npcink_ad_end_at',
-										fromInputDate( value )
-									)
+									updateMeta( '_npcink_ad_end_at', value )
 								}
+								hasError={ scheduleHasIssue }
 								help={
 									scheduleHasIssue
 										? preflightIssueMessage(

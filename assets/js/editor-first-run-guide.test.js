@@ -39,7 +39,66 @@ jest.mock( './preflight', () => ( {
 	MIN_PARAGRAPH_NUMBER: 1,
 } ) );
 
-import { getFirstRunGuideState, isRecordsRequestLoading } from './editor';
+import {
+	buildContentPickerQuery,
+	combineScheduleDateTime,
+	getFirstRunGuideState,
+	isRecordsRequestLoading,
+	splitScheduleDateTime,
+} from './editor';
+
+describe( 'content picker queries', () => {
+	test( 'keeps the default candidate search free of taxonomy filters', () => {
+		expect( buildContentPickerQuery( '' ) ).toMatchObject( {
+			orderby: 'date',
+			search: undefined,
+			status: 'publish',
+			categories: undefined,
+			tags: undefined,
+		} );
+	} );
+
+	test( 'adds category and tag filters only to the post candidate query', () => {
+		expect(
+			buildContentPickerQuery( 'summer', [ 12, 14 ], [ 21 ] )
+		).toMatchObject( {
+			orderby: 'relevance',
+			search: 'summer',
+			categories: [ 12, 14 ],
+			tags: [ 21 ],
+		} );
+	} );
+} );
+
+describe( 'schedule date and time values', () => {
+	test( 'splits stored WordPress-local values into minute-precision controls', () => {
+		expect( splitScheduleDateTime( '2026-07-23 19:14:00' ) ).toEqual( {
+			date: '2026-07-23',
+			time: '19:14',
+		} );
+		expect( splitScheduleDateTime( '2026-07-23T19:14' ) ).toEqual( {
+			date: '2026-07-23',
+			time: '19:14',
+		} );
+	} );
+
+	test( 'keeps empty values out of both controls', () => {
+		expect( splitScheduleDateTime( undefined ) ).toEqual( {
+			date: '',
+			time: '',
+		} );
+	} );
+
+	test( 'combines date and time without changing the stored schema', () => {
+		expect( combineScheduleDateTime( '2026-07-23', '19:14' ) ).toBe(
+			'2026-07-23 19:14:00'
+		);
+		expect( combineScheduleDateTime( '2026-07-23', '' ) ).toBe(
+			'2026-07-23 00:00:00'
+		);
+		expect( combineScheduleDateTime( '', '19:14' ) ).toBe( '' );
+	} );
+} );
 
 describe( 'isRecordsRequestLoading', () => {
 	test( 'keeps unresolved and active requests in loading state', () => {
