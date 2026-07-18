@@ -5,10 +5,31 @@ set -eu
 PLAYGROUND_CLI_VERSION='3.1.44'
 WP_VERSION="${WP_VERSION:-6.5}"
 PHP_VERSION="${PHP_VERSION:-8.1}"
+STARTUP_FAILURE_EXIT_CODE=75
+STARTUP_TIMEOUT_SECONDS="${NPCINK_AD_E2E_STARTUP_TIMEOUT_SECONDS:-120}"
+READINESS_REQUEST_TIMEOUT_SECONDS="${NPCINK_AD_E2E_READINESS_REQUEST_TIMEOUT_SECONDS:-3}"
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 PLUGIN_VERSION=$(sed -n '/^[[:space:]]*\*[[:space:]]*Version:/ { s/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*//; p; q; }' "$PROJECT_DIR/npcink-ad.php")
+
+require_positive_integer() {
+	variable_name=$1
+	variable_value=$2
+	case "$variable_value" in
+		''|*[!0-9]*)
+			echo "$variable_name must be a positive integer; received: $variable_value" >&2
+			exit 1
+			;;
+	esac
+	if [ "$variable_value" -lt 1 ]; then
+		echo "$variable_name must be greater than zero; received: $variable_value" >&2
+		exit 1
+	fi
+}
+
+require_positive_integer 'NPCINK_AD_E2E_STARTUP_TIMEOUT_SECONDS' "$STARTUP_TIMEOUT_SECONDS"
+require_positive_integer 'NPCINK_AD_E2E_READINESS_REQUEST_TIMEOUT_SECONDS' "$READINESS_REQUEST_TIMEOUT_SECONDS"
 
 if [ "$#" -eq 0 ] && [ -z "${NPCINK_AD_E2E_FIXTURE_MODE:-}" ]; then
 	NPCINK_AD_E2E_FIXTURE_MODE='standard' "$0"
@@ -78,6 +99,7 @@ trap cleanup EXIT HUP INT TERM
 
 cp "$PLUGIN_ZIP" "$TEMP_DIR/npcink-ad.zip"
 mkdir -p "$TEMP_DIR/mu-plugins"
+cp "$SCRIPT_DIR/fixture-lock.php" "$TEMP_DIR/mu-plugins/fixture-lock.php"
 cp "$FIXTURE_SOURCE" "$TEMP_DIR/mu-plugins/npcink-ad-editor-e2e-fixture.php"
 cp "$SCRIPT_DIR/health.txt" "$TEMP_DIR/mu-plugins/health.txt"
 
@@ -120,6 +142,65 @@ PROMOTION_READY_URL="$BASE_URL/wp-json/wp/v2/npcink_promotion?per_page=1"
 HEALTH_URL="$BASE_URL/wp-content/mu-plugins/health.txt"
 SERVER_LOG="$TEMP_DIR/playground.log"
 
+readiness_curl() {
+	curl --connect-timeout 1 --max-time "$READINESS_REQUEST_TIMEOUT_SECONDS" "$@"
+}
+
+preserve_failure_diagnostics() {
+	failure_kind=$1
+	attempt_number=${NPCINK_AD_E2E_STARTUP_ATTEMPT:-1}
+	diagnostics_root=${NPCINK_AD_E2E_DIAGNOSTICS_DIR:-$PROJECT_DIR/test-results/playground-startup}
+	diagnostics_key=$(printf '%s' "${THEME_SLUG:-$FIXTURE_MODE}-wp${WP_VERSION}-php${PHP_VERSION}-attempt${attempt_number}" | tr -c 'A-Za-z0-9._-' '-')
+	diagnostics_dir="$diagnostics_root/$diagnostics_key"
+
+	if ! mkdir -p "$diagnostics_dir"; then
+		echo "Could not create the Playground diagnostics directory: $diagnostics_dir" >&2
+		return
+	fi
+	cp "$SERVER_LOG" "$diagnostics_dir/playground.log" || echo 'Could not preserve the Playground server log.' >&2
+	if [ -f "$TEMP_DIR/ready.json" ]; then
+		cp "$TEMP_DIR/ready.json" "$diagnostics_dir/ready.json" || echo 'Could not preserve the last fixture response.' >&2
+	fi
+	if ! {
+		echo "failure_kind=$failure_kind"
+		echo "fixture_mode=$FIXTURE_MODE"
+		echo "theme_slug=${THEME_SLUG:-<default>}"
+		echo "wordpress_version=$WP_VERSION"
+		echo "php_version=$PHP_VERSION"
+		echo "startup_attempt=$attempt_number"
+		echo "fixture_http_status=${fixture_status:-<missing>}"
+		echo "promotion_http_status=${promotion_status:-<missing>}"
+		echo "login_http_status=${login_status:-<missing>}"
+		echo "mu_plugin_health=${health_status:-<missing>}"
+	} > "$diagnostics_dir/context.txt"; then
+		echo 'Could not preserve the Playground probe context.' >&2
+	fi
+
+	echo "Playground diagnostics saved to $diagnostics_dir" >&2
+}
+
+report_startup_failure() {
+	failure_reason=$1
+	startup_finished_at=$(date +%s)
+	startup_elapsed_seconds=$((startup_finished_at - startup_started_at))
+
+	echo "$failure_reason" >&2
+	echo "Startup budget: ${STARTUP_TIMEOUT_SECONDS}s; elapsed: ${startup_elapsed_seconds}s; probes: $attempt" >&2
+	echo "Fixture REST status: ${fixture_status:-<missing>}" >&2
+	echo "MU plugin mount health: ${health_status:-<missing>}" >&2
+	echo "Promotion REST status: ${promotion_status:-<missing>}" >&2
+	echo "Login page status: ${login_status:-<missing>}" >&2
+	if [ -s "$TEMP_DIR/ready.json" ]; then
+		echo 'Last fixture response:' >&2
+		if ! jq -c . "$TEMP_DIR/ready.json" >&2 2>/dev/null; then
+			head -c 1000 "$TEMP_DIR/ready.json" >&2 || true
+			echo >&2
+		fi
+	fi
+	echo 'Playground server log:' >&2
+	tail -n 200 "$SERVER_LOG" >&2
+}
+
 cd "$PROJECT_DIR"
 npx -y "@wp-playground/cli@$PLAYGROUND_CLI_VERSION" server \
 	--blueprint="$TEMP_DIR/blueprint.json" \
@@ -132,44 +213,51 @@ npx -y "@wp-playground/cli@$PLAYGROUND_CLI_VERSION" server \
 	--verbosity=normal >"$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
+printf '[]\n' > "$TEMP_DIR/ready.json"
+startup_started_at=$(date +%s)
+startup_deadline=$((startup_started_at + STARTUP_TIMEOUT_SECONDS))
 attempt=0
-while [ "$attempt" -lt 240 ]; do
+fixture_status=''
+promotion_status=''
+health_status=''
+login_status=''
+ready='false'
+while [ "$(date +%s)" -lt "$startup_deadline" ]; do
+	attempt=$((attempt + 1))
 	if ! kill -0 "$SERVER_PID" >/dev/null 2>&1; then
-		echo 'WordPress Playground stopped before it became ready.' >&2
-		tail -n 200 "$SERVER_LOG" >&2
-		exit 1
+		report_startup_failure 'WordPress Playground stopped before it became ready.'
+		preserve_failure_diagnostics 'playground-process-exit'
+		exit "$STARTUP_FAILURE_EXIT_CODE"
 	fi
 
-	curl --fail --silent --output "$TEMP_DIR/ready.json" "$READY_URL" >/dev/null 2>&1 || true
-	promotion_status=$(curl --silent --output /dev/null --write-out '%{http_code}' "$PROMOTION_READY_URL" || true)
-	health_status=$(curl --fail --silent "$HEALTH_URL" 2>/dev/null || true)
-	if [ "$health_status" = 'NPCINK_AD_E2E_MU_OK' ] && jq -e 'length == 1 and .[0].id > 0' "$TEMP_DIR/ready.json" >/dev/null 2>&1 && { [ "$promotion_status" = '200' ] || [ "$promotion_status" = '401' ]; } && curl --fail --silent --output /dev/null "$BASE_URL/wp-login.php"; then
+	fixture_status=$(readiness_curl --silent --output "$TEMP_DIR/ready.json" --write-out '%{http_code}' "$READY_URL" 2>/dev/null || true)
+	promotion_status=$(readiness_curl --silent --output /dev/null --write-out '%{http_code}' "$PROMOTION_READY_URL" 2>/dev/null || true)
+	health_status=$(readiness_curl --fail --silent "$HEALTH_URL" 2>/dev/null || true)
+	login_status=$(readiness_curl --silent --output /dev/null --write-out '%{http_code}' "$BASE_URL/wp-login.php" 2>/dev/null || true)
+	case "$login_status" in
+		2??|3??) login_ready='true' ;;
+		*) login_ready='false' ;;
+	esac
+	if [ "$fixture_status" = '200' ] && [ "$health_status" = 'NPCINK_AD_E2E_MU_OK' ] && jq -e 'length == 1 and .[0].id > 0' "$TEMP_DIR/ready.json" >/dev/null 2>&1 && { [ "$promotion_status" = '200' ] || [ "$promotion_status" = '401' ]; } && [ "$login_ready" = 'true' ]; then
+		ready='true'
 		break
 	fi
 
-	attempt=$((attempt + 1))
 	sleep 0.5
 done
 
-if ! jq -e 'length == 1 and .[0].id > 0' "$TEMP_DIR/ready.json" >/dev/null 2>&1; then
-	echo 'WordPress Playground did not expose the editor fixture page.' >&2
-	echo "MU plugin mount health: ${health_status:-<missing>}" >&2
-	echo "Promotion REST status: ${promotion_status:-<missing>}" >&2
-	tail -n 200 "$SERVER_LOG" >&2
-	exit 1
+if [ "$ready" != 'true' ]; then
+	report_startup_failure "WordPress Playground did not satisfy the editor readiness contract at $BASE_URL."
+	preserve_failure_diagnostics 'readiness-timeout'
+	exit "$STARTUP_FAILURE_EXIT_CODE"
 fi
 
-if ! curl --fail --silent --output /dev/null "$BASE_URL/wp-login.php"; then
-	echo "WordPress Playground did not become ready at $BASE_URL." >&2
-	tail -n 200 "$SERVER_LOG" >&2
-	exit 1
-fi
-
-echo "Running $FIXTURE_MODE editor E2E against WordPress $WP_VERSION / PHP $PHP_VERSION at $BASE_URL"
+echo "Running $FIXTURE_MODE editor E2E against WordPress $WP_VERSION / PHP $PHP_VERSION at $BASE_URL after $attempt readiness probe(s)"
 if ! NPCINK_AD_E2E_BASE_URL="$BASE_URL" \
 	NPCINK_AD_E2E_FIXTURE_MODE="$FIXTURE_MODE" \
 	pnpm exec playwright test --config=playwright.config.ts "$@"; then
 	echo 'Playground server log:' >&2
 	tail -n 200 "$SERVER_LOG" >&2
+	preserve_failure_diagnostics 'playwright-failure'
 	exit 1
 fi

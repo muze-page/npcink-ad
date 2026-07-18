@@ -9,7 +9,9 @@ afterward. Playground itself keeps its default server-worker setting. Because
 Playground workers share the fixture database but not generated files, the
 browser resolves the published fixture page through the real same-origin REST
 API and reads Promotion IDs from the prebuilt block instead of transferring the
-JSON file between workers.
+JSON file between workers. A lowest-post-ID election lock ensures that only one
+worker builds each shared fixture even when parallel bootstrap races through an
+option-based guard.
 
 The fixture contains 105 filler Promotions, a selected Promotion that sorts
 outside the initial 20-result page, and a published page containing that
@@ -68,3 +70,18 @@ WP_VERSION=6.5 PHP_VERSION=8.1 pnpm run test:e2e:editor -- tests/e2e/first-promo
 `PLUGIN_ZIP` may override the release package inferred from the plugin Version
 header. `NPCINK_AD_E2E_PORT` may fix the local port; otherwise the runner asks
 the operating system for an available port.
+
+Playground must satisfy the complete fixture, MU-plugin, Promotion REST, and
+login-page readiness contract within 120 seconds. Each readiness request is
+also capped at three seconds so a blocked Playground worker cannot extend the
+deadline by several minutes. Override those budgets with
+`NPCINK_AD_E2E_STARTUP_TIMEOUT_SECONDS` and
+`NPCINK_AD_E2E_READINESS_REQUEST_TIMEOUT_SECONDS` when diagnosing a slower
+machine.
+
+A startup failure exits with status `75`, while Playwright assertions and
+configuration errors keep their ordinary nonzero statuses. The theme matrix
+uses `run-with-playground-startup-retry.sh` to rebuild an ephemeral Playground
+exactly once only for status `75`; it never retries a functional assertion.
+Failure logs, the last fixture response, and probe context are retained under
+`test-results/playground-startup/` for local inspection and CI artifacts.

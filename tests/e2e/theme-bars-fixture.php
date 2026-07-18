@@ -12,6 +12,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once __DIR__ . '/fixture-lock.php';
+
 /**
  * Build the fixture once in the disposable Playground database.
  *
@@ -19,16 +21,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function npcink_ad_build_theme_bar_e2e_fixture(): void {
 	$ready_option = 'npcink_ad_e2e_fixture_ready';
-	$lock_option  = 'npcink_ad_e2e_fixture_building';
 
 	if ( ! post_type_exists( 'npcink_promotion' ) || get_option( $ready_option ) ) {
 		return;
 	}
-	if ( ! add_option( $lock_option, (string) microtime( true ), '', false ) ) {
-		return;
-	}
 
 	try {
+		if ( ! npcink_ad_claim_e2e_fixture_build( 'npcink-ad-theme-fixture-lock' ) ) {
+			return;
+		}
+
 		$page_id = wp_insert_post(
 			array(
 				'post_type'    => 'page',
