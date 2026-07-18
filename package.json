@@ -2,7 +2,9 @@
   "name": "npcink-ad",
   "version": "0.3.2",
   "private": true,
+  "packageManager": "pnpm@10.11.0",
   "scripts": {
+    "audit:dependencies": "pnpm audit --audit-level=high",
     "start": "wp-scripts start --webpack-src-dir=assets/js --webpack-output-dir=build",
     "build": "wp-scripts build --webpack-src-dir=assets/js --webpack-output-dir=build",
     "lint:js": "wp-scripts lint-js assets/js webpack.config.js",
