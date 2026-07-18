@@ -50,7 +50,6 @@ final class Plugin {
 		$preview   = new Preview_Request( $delivery, $repository );
 		$preflight = new Promotion_Preflight( $repository, $evaluator );
 
-		add_action( 'init', array( $this, 'load_textdomain' ), 1 );
 		add_action( 'init', array( Post_Types::class, 'register' ), 5 );
 		add_action( 'init', array( $delivery, 'register' ), 10 );
 		add_action( 'init', array( Patterns::class, 'register' ), 15 );
@@ -70,16 +69,5 @@ final class Plugin {
 			$promotion_list->register();
 			$promotion_action->register();
 		}
-	}
-
-	/**
-	 * Load bundled translations after WordPress has established the locale.
-	 */
-	public function load_textdomain(): void {
-		load_plugin_textdomain(
-			'npcink-ad',
-			false,
-			dirname( plugin_basename( NPCINK_AD_FILE ) ) . '/languages'
-		);
 	}
 }

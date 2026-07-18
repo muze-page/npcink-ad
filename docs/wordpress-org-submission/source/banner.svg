@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1544" height="500" viewBox="0 0 1544 500" role="img" aria-labelledby="title desc">
+  <title id="title">Npcink Ad WordPress.org banner</title>
+  <desc id="desc">Npcink Ad branding with a concise description of its WordPress-native site promotion workflow.</desc>
+  <defs>
+    <linearGradient id="bg" x1="96" y1="16" x2="1420" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0b1020"/>
+      <stop offset="0.58" stop-color="#17243d"/>
+      <stop offset="1" stop-color="#263b9b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(1240 100) rotate(132) scale(520 360)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6f8cff" stop-opacity=".62"/>
+      <stop offset="1" stop-color="#6f8cff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#fff" stroke-opacity=".055"/>
+    </pattern>
+    <linearGradient id="accent" x1="196" y1="183" x2="310" y2="316" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8fa4ff"/>
+      <stop offset="1" stop-color="#4f6df1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1544" height="500" fill="url(#bg)"/>
+  <rect width="1544" height="500" fill="url(#glow)"/>
+  <rect width="1544" height="500" fill="url(#grid)"/>
+  <g transform="translate(108 104)">
+    <rect width="292" height="292" rx="52" fill="#fff" fill-opacity=".98"/>
+    <rect x="30" y="32" width="232" height="34" rx="17" fill="#eef1ff"/>
+    <rect x="30" y="84" width="138" height="22" rx="11" fill="#cbd4ff"/>
+    <rect x="30" y="122" width="192" height="22" rx="11" fill="#e0e5f6"/>
+    <path d="M72 230h42l82 32V158l-82 32H72c-22 0-40 9-40 20s18 20 40 20Z" fill="url(#accent)"/>
+    <path d="M114 230l15 48c4 13-5 24-18 24h-9c-9 0-16-6-18-15l-12-57h42Z" fill="#263b9b"/>
+    <path d="M218 180c18 16 18 44 0 60" fill="none" stroke="#8fa4ff" stroke-width="14" stroke-linecap="round"/>
+  </g>
+  <g fill="#fff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="474" y="205" font-size="92" font-weight="760" letter-spacing="-3">Npcink Ad</text>
+    <text x="480" y="278" font-size="34" font-weight="520" fill="#dfe4ff">Site-owned promotions. WordPress-native.</text>
+    <g transform="translate(480 330)" font-size="25" font-weight="600">
+      <rect width="168" height="54" rx="27" fill="#fff" fill-opacity=".11"/>
+      <text x="33" y="36">Preview</text>
+      <rect x="184" width="176" height="54" rx="27" fill="#fff" fill-opacity=".11"/>
+      <text x="218" y="36">Schedule</text>
+      <rect x="376" width="168" height="54" rx="27" fill="#fff" fill-opacity=".11"/>
+      <text x="413" y="36">Publish</text>
+    </g>
+  </g>
+</svg>

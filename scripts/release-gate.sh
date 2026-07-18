@@ -81,6 +81,10 @@ pnpm run build
 
 echo "[release-gate] 6/10 Translation catalog checks"
 composer run i18n:check
+if grep -RIn --include='*.php' 'load_plugin_textdomain' npcink-ad.php src; then
+	echo "[release-gate] WordPress.org-hosted runtime code must use automatic language packs instead of load_plugin_textdomain()." >&2
+	exit 1
+fi
 
 echo "[release-gate] 7/10 Build contract and strict bundle budget checks"
 REQUIRES_WORDPRESS="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Requires at least:[[:space:]]*([^[:space:]]+).*/\1/p' npcink-ad.php | head -n 1)"
@@ -239,6 +243,7 @@ REQUIRED_ZIP_ENTRIES=(
   "${PLUGIN_DIR_NAME}/LICENSE"
   "${PLUGIN_DIR_NAME}/npcink-ad.php"
   "${PLUGIN_DIR_NAME}/readme.txt"
+  "${PLUGIN_DIR_NAME}/changelog.txt"
   "${PLUGIN_DIR_NAME}/uninstall.php"
   "${PLUGIN_DIR_NAME}/assets/blocks/npcink-ad-promotion/block.json"
   "${PLUGIN_DIR_NAME}/assets/css/admin-preview.css"

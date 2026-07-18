@@ -25,6 +25,8 @@ require_once ABSPATH . 'wp-admin/includes/plugin.php';
 
 $check = static function ( bool $condition, string $message ): void {
 	if ( ! $condition ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CLI smoke protocol emits a fixed developer assertion before WordPress handles the exception.
+		echo 'NPCINK_AD_SMOKE_FAIL ' . $message . PHP_EOL;
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Test failure messages are fixed developer strings.
 		throw new RuntimeException( $message );
 	}
@@ -211,14 +213,23 @@ $check(
 	'The Promotion editor script does not use the bundled languages directory.'
 );
 
+$wordpress_org_language_dir  = WP_LANG_DIR . '/plugins';
+$wordpress_org_language_pack = $wordpress_org_language_dir . '/npcink-ad-zh_CN.mo';
+$check( wp_mkdir_p( $wordpress_org_language_dir ), 'The WordPress.org language-pack directory could not be created.' );
+$check(
+	copy( WP_PLUGIN_DIR . '/npcink-ad/languages/npcink-ad-zh_CN.mo', $wordpress_org_language_pack ),
+	'The Simplified Chinese MO catalog could not be staged as a WordPress.org language pack.'
+);
+
+/** @var WP_Textdomain_Registry $wp_textdomain_registry */
+global $wp_textdomain_registry;
+// Real language packs exist before bootstrap; this late-staged smoke fixture must refresh WordPress 6.5's cached path.
+$wp_textdomain_registry->set( 'npcink-ad', 'zh_CN', $wordpress_org_language_dir );
+
 $force_simplified_chinese = static fn ( mixed $locale ): string => 'zh_CN';
 add_filter( 'pre_determine_locale', $force_simplified_chinese, PHP_INT_MAX );
 unload_textdomain( 'npcink-ad', true );
-$check(
-	load_plugin_textdomain( 'npcink-ad', false, 'npcink-ad/languages' ),
-	'The bundled Simplified Chinese MO catalog did not load.'
-);
-$check( '推广' === __( 'Promotions', 'npcink-ad' ), 'The PHP Simplified Chinese translation did not resolve.' );
+$check( '推广' === __( 'Promotions', 'npcink-ad' ), 'The WordPress.org PHP language pack did not resolve.' );
 $check(
 	'Npcink Ad 推广' === _x( 'Npcink Ad Promotion', 'block title', 'npcink-ad' ),
 	'The translated block metadata title did not resolve.'
@@ -252,7 +263,7 @@ $check(
 );
 remove_filter( 'pre_determine_locale', $force_simplified_chinese, PHP_INT_MAX );
 unload_textdomain( 'npcink-ad', true );
-load_plugin_textdomain( 'npcink-ad', false, 'npcink-ad/languages' );
+wp_delete_file( $wordpress_org_language_pack );
 
 do_action( 'wp_enqueue_scripts' );
 $check(

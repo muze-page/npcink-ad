@@ -127,4 +127,6 @@ Version 0.3.0 adds `bar_top` and `bar_bottom` as automatic locations on the same
 
 Version 0.3.1 keeps that delivery contract unchanged while making the dismiss target touch-sized, reserving its space with RTL-safe logical CSS, and refining the existing compact announcement pattern into wrapping short copy plus a Core Button CTA. It adds no location, visitor state, or separate bar builder.
 
+Version 0.3.2 keeps the product and delivery contract unchanged. It prepares the WordPress.org directory listing and project-owned visual assets, aligns PHP translations with the standard WordPress.org language-pack path, and tightens the release package contract. It adds no runtime feature, data migration, visitor state, or delivery model.
+
 Multiple eligible Promotions at one automatic location continue rendering in deterministic order, while management UI only advises that they **may** appear together. This direction does not add priority, weights, rotation, tablet targeting, arbitrary selectors or hooks, visitor state, tracking, or separate Slot/Placement records.
