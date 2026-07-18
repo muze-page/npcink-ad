@@ -264,6 +264,7 @@ REQUIRED_ZIP_ENTRIES=(
   "${PLUGIN_DIR_NAME}/src/Admin/Menu.php"
   "${PLUGIN_DIR_NAME}/src/Admin/Editor.php"
   "${PLUGIN_DIR_NAME}/src/Admin/Preview_Page.php"
+  "${PLUGIN_DIR_NAME}/src/Admin/Promotion_Duplicate_Action.php"
   "${PLUGIN_DIR_NAME}/src/Admin/Promotion_List.php"
   "${PLUGIN_DIR_NAME}/src/Admin/Promotion_Status_Action.php"
   "${PLUGIN_DIR_NAME}/src/Blocks/Blocks.php"

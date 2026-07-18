@@ -10,6 +10,7 @@ namespace Npcink\Ad;
 use Npcink\Ad\Admin\Editor;
 use Npcink\Ad\Admin\Menu;
 use Npcink\Ad\Admin\Preview_Page;
+use Npcink\Ad\Admin\Promotion_Duplicate_Action;
 use Npcink\Ad\Admin\Promotion_List;
 use Npcink\Ad\Admin\Promotion_Status_Action;
 use Npcink\Ad\Blocks\Blocks;
@@ -60,14 +61,16 @@ final class Plugin {
 		Lifecycle::register_new_site_hook();
 
 		if ( is_admin() ) {
-			$promotion_list   = new Promotion_List( $repository, $evaluator, new Overlap_Detector() );
-			$promotion_action = new Promotion_Status_Action( $repository, $evaluator );
+			$promotion_list             = new Promotion_List( $repository, $evaluator, new Overlap_Detector() );
+			$promotion_action           = new Promotion_Status_Action( $repository, $evaluator );
+			$promotion_duplicate_action = new Promotion_Duplicate_Action();
 
 			add_action( 'admin_menu', array( Menu::class, 'register' ) );
 			add_action( 'admin_menu', array( Preview_Page::class, 'register' ), 20 );
 			add_action( 'enqueue_block_editor_assets', array( Editor::class, 'enqueue' ) );
 			$promotion_list->register();
 			$promotion_action->register();
+			$promotion_duplicate_action->register();
 		}
 	}
 }

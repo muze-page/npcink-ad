@@ -39,6 +39,13 @@ if ( ! class_exists( 'WP_Post' ) ) {
 		public string $post_content;
 
 		/**
+		 * Post author ID.
+		 *
+		 * @var int
+		 */
+		public int $post_author;
+
+		/**
 		 * Post title.
 		 *
 		 * @var string
@@ -69,6 +76,7 @@ if ( ! class_exists( 'WP_Post' ) ) {
 			$this->post_type     = (string) ( $values['post_type'] ?? 'post' );
 			$this->post_status   = (string) ( $values['post_status'] ?? 'draft' );
 			$this->post_content  = (string) ( $values['post_content'] ?? '' );
+			$this->post_author   = (int) ( $values['post_author'] ?? 0 );
 			$this->post_title    = (string) ( $values['post_title'] ?? '' );
 			$this->post_date_gmt = (string) ( $values['post_date_gmt'] ?? '0000-00-00 00:00:00' );
 			$this->menu_order    = (int) ( $values['menu_order'] ?? 0 );
