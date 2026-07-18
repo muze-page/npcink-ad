@@ -41,6 +41,9 @@ pnpm check
 bash scripts/release-gate.sh
 ```
 
+贡献代码前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。其中定义了当前事实来源、
+产品边界、兼容策略和发布产物不可变规则。
+
 仓库维护完整的简体中文（`zh_CN`）PHP 与区块编辑器翻译源。WordPress.org 语言包可用时，安装站点通过标准语言包路径加载 PHP 翻译；编辑器继续使用打包 JSON 目录。新增或修改界面文案后执行：
 
 ```bash

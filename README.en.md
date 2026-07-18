@@ -41,6 +41,10 @@ pnpm check
 bash scripts/release-gate.sh
 ```
 
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before contributing. It defines the
+current sources of truth, product boundary, compatibility policy, and immutable
+release-artifact rules.
+
 The repository maintains complete Simplified Chinese (`zh_CN`) sources for PHP and the block editor. When a WordPress.org language pack is available, sites load PHP translations through the standard language-pack path, while the editor retains packaged JSON catalogs. After adding or changing interface copy, run:
 
 ```bash
