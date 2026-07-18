@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Npcink Ad icon</title>
+  <desc id="desc">A white site promotion card and blue announcement mark on a dark rounded square.</desc>
+  <defs>
+    <linearGradient id="bg" x1="24" y1="18" x2="226" y2="238" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#17243d"/>
+      <stop offset="1" stop-color="#0b1020"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="78" y1="74" x2="186" y2="181" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6f8cff"/>
+      <stop offset="1" stop-color="#3858e9"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)"/>
+  <rect x="46" y="48" width="164" height="160" rx="24" fill="#fff"/>
+  <rect x="64" y="66" width="128" height="20" rx="10" fill="#e8edff"/>
+  <rect x="64" y="98" width="82" height="14" rx="7" fill="#c9d2ff"/>
+  <rect x="64" y="122" width="108" height="14" rx="7" fill="#dfe4f5"/>
+  <path d="M82 174h24l45 18v-56l-45 18H82c-12 0-22 4-22 10s10 10 22 10Z" fill="url(#accent)"/>
+  <path d="M106 174l8 25c2 7-3 13-10 13h-5c-5 0-9-3-10-8l-7-30h24Z" fill="#263b9b"/>
+  <path d="M163 148c9 8 9 24 0 32" fill="none" stroke="#8fa4ff" stroke-width="8" stroke-linecap="round"/>
+</svg>

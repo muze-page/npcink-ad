@@ -1,0 +1,42 @@
+=== Npcink Ad Changelog ===
+
+== 0.3.2 ==
+
+* Prepare the concise WordPress.org listing, localized directory images, review notes, and release checklist.
+* Remove the unnecessary manual PHP text-domain loader and validate Simplified Chinese through the standard WordPress.org language-pack path.
+* Fix the GitHub prerelease workflow repository context.
+* Keep the single Promotion data model, live eligibility rules, and privacy boundary unchanged.
+
+== 0.3.1 ==
+
+* Increase the normal-flow page-bar dismiss target to 44 by 44 CSS pixels and reserve its space with RTL-safe logical padding.
+* Refine the compact announcement pattern into wrapping short copy plus an editable core Button CTA.
+* Add packaged mobile-width and RTL geometry checks while preserving current-page dismissal, device rules, and the dependency-free script budget.
+* Align the GPLv2 license, WordPress.org contributor, public source, and reproducible build disclosures.
+* Add official Plugin Check, classic/block theme compatibility, SHA-256 artifacts, and gated GitHub prerelease automation.
+
+== 0.3.0 ==
+
+* Add top and bottom page-bar locations to the existing Promotion rules and preview flow.
+* Render bars through standard theme hooks in normal document flow.
+* Add accessible current-page dismissal without cookies, local storage, frequency state, or tracking.
+
+== 0.2.2 ==
+
+* Split manual-block and Promotion-document editor assets.
+* Add first-Promotion guidance, cache-boundary disclosure, and complete packaged-plugin browser validation.
+* Treat site-controlled core Video as Promotion creative and reject missing or unsafe sources.
+
+== 0.2.1 ==
+
+* Add server-side title search and pagination to the manual block selector.
+* Resolve saved Promotion IDs independently so selections remain reliable outside the current result page.
+
+== 0.2.0 ==
+
+* Unify publication preflight, list status, preview verdicts, and live delivery on one eligibility policy.
+* Add quick pause/resume, bounded paragraph placement, canonical content scopes, explicit exclusions, and fixed device guidance.
+
+== 0.1.0 ==
+
+* Establish the internal pre-GA single Promotion publishing model and complete Simplified Chinese translations.
