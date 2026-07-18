@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Magick AD: PHP checks",
+      "label": "Npcink Ad: PHP checks",
       "type": "shell",
       "command": "composer check",
       "options": {
@@ -11,7 +11,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Magick AD: Frontend checks",
+      "label": "Npcink Ad: Frontend checks",
       "type": "shell",
       "command": "pnpm check",
       "options": {
@@ -20,7 +20,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Magick AD: Release gate",
+      "label": "Npcink Ad: Release gate",
       "type": "shell",
       "command": "bash scripts/release-gate.sh",
       "options": {
