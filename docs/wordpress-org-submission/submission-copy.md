@@ -103,6 +103,11 @@ content and accounts.
 
 ### Validation evidence
 
+The following evidence was refreshed on 2026-07-18 against the unchanged
+`npcink-ad-0.3.2.zip` downloaded from GitHub Release `v0.3.2` (`124605` bytes,
+SHA-256 `0ccaacf5452c316184e852180ce7bf9fb7785f36b9db26f59eed0725512e94de`).
+The ZIP has not been submitted to WordPress.org.
+
 - official Plugin Check 2.0.0: zero errors and two classified warnings;
 - PHPUnit, PHPCS, PHPStan, TypeScript, Jest, ESLint, and Stylelint;
 - packaged-plugin checks on WordPress 6.5 / PHP 8.1 and the current WordPress
