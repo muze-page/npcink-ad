@@ -102,5 +102,5 @@ belongs to the copy.
   allowlisted fields, cleared schedule, source immutability, rollback, notices,
   and redirect targets. Disposable WordPress and browser tests cover the real
   list-to-editor workflow.
-- This is development for a future `0.3.3`; it does not alter, rebuild, retag,
+- This is the `0.3.3` development line; it does not alter, rebuild, retag,
   or replace the accepted `v0.3.2` release artifact.

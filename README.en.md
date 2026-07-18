@@ -1,8 +1,8 @@
 # Npcink Ad
 
-Npcink Ad 0.3.2 is a WordPress-native, privacy-first workflow for site-owned promotions. It has one primary path: **create creative → set delivery rules → verify a real-page verdict → publish or pause**.
+Npcink Ad 0.3.3 is a WordPress-native, privacy-first workflow for site-owned promotions. It has one primary path: **create creative → set delivery rules → verify a real-page verdict → publish or pause**.
 
-> Version 0.3.2 continues the new pre-GA contract. It provides no compatibility layer for previous development data, APIs, blocks, or storage identifiers.
+> Version 0.3.3 continues the new pre-GA contract. It provides no compatibility layer for previous development data, APIs, blocks, or storage identifiers.
 
 ## Product boundary
 
@@ -13,6 +13,7 @@ Npcink Ad 0.3.2 is a WordPress-native, privacy-first workflow for site-owned pro
 - Gutenberg paragraph placement counts only top-level paragraph blocks; Classic content counts actual `<p>` elements. Live delivery renders nothing when the configured paragraph anchor is missing instead of silently moving the Promotion to the end.
 - Real-page preview uses the site's theme and the same PHP evaluator as live delivery. Managers may inspect blocked creative, but the verdict remains truthful.
 - The Promotion list summarizes rule status, placement, content scope, stop time, and reasons for inactivity, with inline pause/resume actions instead of another screen.
+- The Promotion list also exposes a nonce-bound, POST-only **Duplicate as draft** action that copies native block content and explicitly accepted delivery rules while resetting publication state and schedule.
 - A genuinely empty Promotion list explains the three-step path; incomplete Promotion editors show progress derived from the existing publication preflight without storing wizard state.
 - Server preflight rejects empty creative, missing public targets, invalid paragraph numbers, unavailable configured categories or tags, and invalid schedules before publication or scheduling. The editor mirrors those checks and advisory-checks a manual block or paragraph anchor on the selected preview page.
 - A site-controlled Core Video block remains creative in the same Promotion workflow. The editor and server require a root-relative or explicit HTTP(S) source. Npcink Ad sends no video API or tracking request, while the visitor's browser naturally requests the operator-selected media URL. This is not a VAST, pre-roll, playback-analytics, or popup-video system.
@@ -20,13 +21,13 @@ Npcink Ad 0.3.2 is a WordPress-native, privacy-first workflow for site-owned pro
 - Management REST requires `manage_npcink_ads`; activation grants it to WordPress administrators and editors.
 - Default delivery adds no tracking request, visitor cookie, custom table, or statistics queue.
 
-See [the product contract](docs/product-contract.md), [ADR 003](docs/decisions/003-single-promotion-record.md), [ADR 008](docs/decisions/008-manual-placement-and-device-guidance.md), [ADR 010](docs/decisions/010-site-controlled-video-creative.md), [ADR 011](docs/decisions/011-bounded-page-bar-delivery.md), [the architecture overview](docs/architecture-overview.md), the [Chinese project history and development retrospective](docs/PROJECT-HISTORY.zh-CN.md), the [first-Promotion user pilot protocol](docs/first-promotion-pilot.md), and the [0.3.2 WordPress.org release-readiness record](docs/0.3.2-wordpress-org-release-readiness.md).
+See [the product contract](docs/product-contract.md), [ADR 003](docs/decisions/003-single-promotion-record.md), [ADR 008](docs/decisions/008-manual-placement-and-device-guidance.md), [ADR 010](docs/decisions/010-site-controlled-video-creative.md), [ADR 011](docs/decisions/011-bounded-page-bar-delivery.md), [ADR 012](docs/decisions/012-safe-promotion-duplication.md), [the architecture overview](docs/architecture-overview.md), the [Chinese project history and development retrospective](docs/PROJECT-HISTORY.zh-CN.md), the [first-Promotion user pilot protocol](docs/first-promotion-pilot.md), and the [0.3.2 WordPress.org release-readiness record](docs/0.3.2-wordpress-org-release-readiness.md).
 
-Version 0.2.0 established the controlled delivery scope in [ADR 005](docs/decisions/005-controlled-delivery-expansion.md): [ADR 006](docs/decisions/006-paragraph-anchor-delivery.md) defines after-paragraph placement, [ADR 007](docs/decisions/007-canonical-editorial-scope.md) defines the mutually exclusive editorial scope, and [ADR 008](docs/decisions/008-manual-placement-and-device-guidance.md) defines explicit manual entrypoints and fixed device guidance. Version 0.2.1 closes the manual block selector reliability gap. Version 0.2.2 closes the first-Promotion, editor asset, cache-disclosure, and site-controlled-video validation gaps. Version 0.3.0 adds bounded normal-flow page bars without adding a second delivery system; 0.3.1 closes their mobile touch, RTL spacing, announcement-pattern, and release-readiness gaps; 0.3.2 keeps delivery unchanged while preparing the WordPress.org listing, standard language-pack boundary, and release contract.
+Version 0.2.0 established the controlled delivery scope in [ADR 005](docs/decisions/005-controlled-delivery-expansion.md): [ADR 006](docs/decisions/006-paragraph-anchor-delivery.md) defines after-paragraph placement, [ADR 007](docs/decisions/007-canonical-editorial-scope.md) defines the mutually exclusive editorial scope, and [ADR 008](docs/decisions/008-manual-placement-and-device-guidance.md) defines explicit manual entrypoints and fixed device guidance. Version 0.2.1 closes the manual block selector reliability gap. Version 0.2.2 closes the first-Promotion, editor asset, cache-disclosure, and site-controlled-video validation gaps. Version 0.3.0 adds bounded normal-flow page bars without adding a second delivery system; 0.3.1 closes their mobile touch, RTL spacing, announcement-pattern, and release-readiness gaps; 0.3.2 keeps delivery unchanged while preparing the WordPress.org listing, standard language-pack boundary, and release contract; 0.3.3 adds bounded draft duplication without changing frontend delivery.
 
 ## Non-goals
 
-Version 0.3.2 has no AdSense management, analytics, tracking, reports, A/B tests, CMP, popup builder, sticky/floating bar, frequency or geographic targeting, arbitrary PHP/JavaScript, template marketplace, custom database table, or legacy administration SPA.
+Version 0.3.3 has no AdSense management, analytics, tracking, reports, A/B tests, CMP, popup builder, sticky/floating bar, frequency or geographic targeting, arbitrary PHP/JavaScript, template marketplace, custom database table, or legacy administration SPA.
 
 ## Development and verification
 
@@ -73,4 +74,4 @@ bash scripts/release-gate.sh
 
 The artifacts are `dist/npcink-ad-<Version>.zip` and `dist/npcink-ad-<Version>.zip.sha256`, with the fixed ZIP top-level directory `npcink-ad/`. The gate requires the plugin header, `NPCINK_AD_VERSION`, `package.json`, and the readme Stable tag to share that version. In a tag-triggered build, `GITHUB_REF_NAME` must be `v<Version>`. It also verifies bundle budgets, required files, forbidden content, the SHA-256 digest, zero official Plugin Check errors, and the absence of legacy brand identifiers from the package. After all tag checks pass, GitHub Actions creates a prerelease containing both artifacts.
 
-Full-page-cache deployments must regenerate affected pages at publish, pause, resume, start, and stop boundaries. Version 0.3.2 warns when a WordPress advanced-cache drop-in is detected, but sites still need an appropriate TTL or purge path; Npcink Ad does not claim minute-accurate switching through arbitrary third-party caches.
+Full-page-cache deployments must regenerate affected pages at publish, pause, resume, start, and stop boundaries. Version 0.3.3 continues to warn when a WordPress advanced-cache drop-in is detected, but sites still need an appropriate TTL or purge path; Npcink Ad does not claim minute-accurate switching through arbitrary third-party caches.
