@@ -163,5 +163,17 @@ jobs:
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Verify Playground startup retry contract
+        run: tests/e2e/run-with-playground-startup-retry.test.sh
+
       - name: Run classic and block theme compatibility matrix
         run: tests/e2e/run-theme-matrix.sh
+
+      - name: Upload Playground failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: npcink-ad-theme-playground-diagnostics
+          path: test-results/playground-startup
+          if-no-files-found: ignore
+          retention-days: 7

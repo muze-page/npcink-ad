@@ -49,6 +49,7 @@ run_theme() {
 	NPCINK_AD_E2E_FIXTURE_MODE='theme-bars' \
 	NPCINK_AD_E2E_THEME_SLUG="$slug" \
 	NPCINK_AD_E2E_THEME_ZIP="$zip_path" \
+		"$SCRIPT_DIR/run-with-playground-startup-retry.sh" \
 		"$SCRIPT_DIR/run.sh" tests/e2e/theme-page-bars.spec.ts
 }
 
