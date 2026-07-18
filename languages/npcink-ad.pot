@@ -2,7 +2,7 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Npcink Ad 0.3.1\n"
+"Project-Id-Version: Npcink Ad 0.3.3\n"
 "Report-Msgid-Bugs-To: https://github.com/muze-page/npcink-ad/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -92,6 +92,75 @@ msgstr ""
 
 #: src/Admin/Preview_Page.php:138
 msgid "Npcink Ad real-page preview"
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:91
+msgid "Duplicate as draft"
+msgstr ""
+
+#. translators: %s: Promotion title or numeric ID.
+#: src/Admin/Promotion_Duplicate_Action.php:94
+#, php-format
+msgid "Duplicate as draft: %s"
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:133
+msgid "Promotion duplication requires a POST request."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:144
+msgid "The promotion duplication request is invalid."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:155
+#: src/Admin/Promotion_Status_Action.php:108
+msgid "The requested promotion does not exist."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:163
+msgid "You are not allowed to duplicate this promotion."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:268
+msgid "The promotion copy could not be created."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:284
+msgid "The promotion copy did not match the safe draft contract."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:294
+msgid "The promotion settings could not be copied."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:305
+msgid "The promotion schedule could not be reset."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:337
+msgid "Promotion copy"
+msgstr ""
+
+#. translators: %s: source Promotion title.
+#: src/Admin/Promotion_Duplicate_Action.php:342
+#, php-format
+msgid "%s — Copy"
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:374
+msgid "An incomplete promotion copy could not be removed."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:391
+msgid "The promotion was duplicated as an unscheduled draft. Review it before publishing."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:395
+msgid "The promotion could not be duplicated. No incomplete copy was kept."
+msgstr ""
+
+#: src/Admin/Promotion_Duplicate_Action.php:399
+msgid "The promotion could not be duplicated, and an incomplete draft may remain. Review the Promotion list."
 msgstr ""
 
 #: src/Admin/Promotion_List.php:125
@@ -264,10 +333,6 @@ msgstr ""
 
 #: src/Admin/Promotion_Status_Action.php:97
 msgid "The promotion status request is invalid."
-msgstr ""
-
-#: src/Admin/Promotion_Status_Action.php:108
-msgid "The requested promotion does not exist."
 msgstr ""
 
 #: src/Admin/Promotion_Status_Action.php:117

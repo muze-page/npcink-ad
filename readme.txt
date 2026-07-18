@@ -4,7 +4,7 @@ Tags: promotion, advertising, marketing, blocks, announcements
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.3.2
+Stable tag: 0.3.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,7 @@ Create one Promotion with core WordPress blocks, choose where and on which stand
 * Set an optional start and end time.
 * Preview on a real page and read the same server-side eligibility verdict used by live delivery.
 * Review current state, placement, content scope, stop time, and inactivity reasons in the Promotion list; pause or resume without another screen.
+* Duplicate an existing Promotion into a current-user draft while preserving only its creative and accepted placement rules; publication state and schedule are reset.
 * Catch empty creative, invalid targets, missing paragraph anchors, unsafe video sources, and incorrect schedules before publication.
 
 **Privacy-first by default**
@@ -86,6 +87,12 @@ The JavaScript and CSS files in `build/` are generated with Node.js 20 and pnpm 
 Composer dependencies are development-only quality tools and are not bundled in the release package.
 
 == Changelog ==
+
+= 0.3.3 =
+
+* Add a nonce-bound POST action that duplicates one editable Promotion as a current-user draft.
+* Copy native block content and an explicit placement-meta allowlist while resetting publication state and schedule.
+* Verify partial-write cleanup and preserve the existing delivery, privacy, and no-tracking boundaries.
 
 = 0.3.2 =
 

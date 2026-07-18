@@ -7,6 +7,7 @@
 
 use Npcink\Ad\Admin\Editor;
 use Npcink\Ad\Admin\Preview_Page;
+use Npcink\Ad\Admin\Promotion_Duplicate_Action;
 use Npcink\Ad\Admin\Promotion_List;
 use Npcink\Ad\Admin\Promotion_Status_Action;
 use Npcink\Ad\Blocks\Blocks;
@@ -230,6 +231,7 @@ $force_simplified_chinese = static fn ( mixed $locale ): string => 'zh_CN';
 add_filter( 'pre_determine_locale', $force_simplified_chinese, PHP_INT_MAX );
 unload_textdomain( 'npcink-ad', true );
 $check( '推广' === __( 'Promotions', 'npcink-ad' ), 'The WordPress.org PHP language pack did not resolve.' );
+$check( '复制为草稿' === __( 'Duplicate as draft', 'npcink-ad' ), 'The duplicate action Simplified Chinese translation did not resolve.' );
 $check(
 	'Npcink Ad 推广' === _x( 'Npcink Ad Promotion', 'block title', 'npcink-ad' ),
 	'The translated block metadata title did not resolve.'
@@ -503,6 +505,131 @@ $check( $page_a_id === $sanitized_ids[0], 'The first valid include ID was not pr
 $check( ! in_array( -1, $sanitized_ids, true ), 'A negative include ID was accepted.' );
 $check( ! in_array( 0, $sanitized_ids, true ), 'A zero include ID was accepted.' );
 update_post_meta( $promotion_id, Post_Types::INCLUDE_IDS_META, array( $page_a_id ) );
+update_post_meta( $promotion_id, Post_Types::CATEGORY_IDS_META, array( $category_id ) );
+update_post_meta( $promotion_id, Post_Types::TAG_IDS_META, array( $tag_id ) );
+update_post_meta( $promotion_id, Post_Types::PARAGRAPH_NUMBER_META, 7 );
+
+$source_meta_before_copy = array(
+	Post_Types::LOCATION_META         => get_post_meta( $promotion_id, Post_Types::LOCATION_META, true ),
+	Post_Types::CONTENT_SCOPE_META    => get_post_meta( $promotion_id, Post_Types::CONTENT_SCOPE_META, true ),
+	Post_Types::INCLUDE_IDS_META      => get_post_meta( $promotion_id, Post_Types::INCLUDE_IDS_META, true ),
+	Post_Types::EXCLUDE_IDS_META      => get_post_meta( $promotion_id, Post_Types::EXCLUDE_IDS_META, true ),
+	Post_Types::CATEGORY_IDS_META     => get_post_meta( $promotion_id, Post_Types::CATEGORY_IDS_META, true ),
+	Post_Types::TAG_IDS_META          => get_post_meta( $promotion_id, Post_Types::TAG_IDS_META, true ),
+	Post_Types::DEVICE_META           => get_post_meta( $promotion_id, Post_Types::DEVICE_META, true ),
+	Post_Types::PARAGRAPH_NUMBER_META => get_post_meta( $promotion_id, Post_Types::PARAGRAPH_NUMBER_META, true ),
+);
+update_post_meta( $promotion_id, '_npcink_ad_unknown_copy_fixture', 'must not copy' );
+$duplicate_action = new Promotion_Duplicate_Action();
+$original_request_method = $_SERVER['REQUEST_METHOD'] ?? null;
+$original_post_request    = $_POST;
+$original_request         = $_REQUEST;
+try {
+	$_SERVER['REQUEST_METHOD'] = 'GET';
+	$_POST                     = array();
+	$_REQUEST                  = array();
+	$check(
+		405 === $expect_wp_die( array( $duplicate_action, 'handle' ) ),
+		'The Promotion duplicate handler accepted a non-POST request.'
+	);
+
+	$_SERVER['REQUEST_METHOD'] = 'POST';
+	$_POST                     = array( 'promotion_id' => 0 );
+	$_REQUEST                  = $_POST;
+	$check(
+		400 === $expect_wp_die( array( $duplicate_action, 'handle' ) ),
+		'The Promotion duplicate handler accepted an invalid source ID.'
+	);
+
+	$_POST = array(
+		'promotion_id' => $promotion_id,
+		'_wpnonce'     => wp_create_nonce( Promotion_Duplicate_Action::nonce_action( $promotion_id + 1 ) ),
+	);
+	$_REQUEST = $_POST;
+	$check(
+		403 === $expect_wp_die( array( $duplicate_action, 'handle' ) ),
+		'The Promotion duplicate handler accepted a nonce bound to another source.'
+	);
+
+	$_POST = array(
+		'promotion_id' => $page_a_id,
+		'_wpnonce'     => wp_create_nonce( Promotion_Duplicate_Action::nonce_action( $page_a_id ) ),
+	);
+	$_REQUEST = $_POST;
+	$check(
+		404 === $expect_wp_die( array( $duplicate_action, 'handle' ) ),
+		'The Promotion duplicate handler accepted a non-Promotion source.'
+	);
+
+	wp_set_current_user( $subscriber_id );
+	$_POST = array(
+		'promotion_id' => $promotion_id,
+		'_wpnonce'     => wp_create_nonce( Promotion_Duplicate_Action::nonce_action( $promotion_id ) ),
+	);
+	$_REQUEST = $_POST;
+	$check(
+		403 === $expect_wp_die( array( $duplicate_action, 'handle' ) ),
+		'The Promotion duplicate handler accepted a low-privilege user.'
+	);
+} finally {
+	wp_set_current_user( 1 );
+	if ( null === $original_request_method ) {
+		unset( $_SERVER['REQUEST_METHOD'] );
+	} else {
+		$_SERVER['REQUEST_METHOD'] = $original_request_method;
+	}
+	$_POST    = $original_post_request;
+	$_REQUEST = $original_request;
+}
+$duplicate_method = new ReflectionMethod( $duplicate_action, 'duplicate_promotion' );
+$duplicate_result = $duplicate_method->invoke( $duplicate_action, get_post( $promotion_id ) );
+$check( ! is_wp_error( $duplicate_result ), 'The safe Promotion copy failed in a real WordPress environment.' );
+$duplicate_id   = absint( $duplicate_result );
+$duplicate_post = get_post( $duplicate_id );
+$check( $duplicate_post instanceof WP_Post, 'The safe Promotion copy did not create a native post.' );
+$check( 'npcink_promotion' === $duplicate_post->post_type, 'The safe Promotion copy used the wrong post type.' );
+$check( 'draft' === $duplicate_post->post_status, 'The safe Promotion copy was not a draft.' );
+$check( 1 === (int) $duplicate_post->post_author, 'The safe Promotion copy was not assigned to the current user.' );
+$check( 'Playground smoke promotion — Copy' === $duplicate_post->post_title, 'The safe Promotion copy title is incorrect.' );
+$check(
+	'<!-- wp:paragraph --><p>Playground smoke creative</p><!-- /wp:paragraph -->' === $duplicate_post->post_content,
+	'The safe Promotion copy changed the native block content.'
+);
+foreach ( $source_meta_before_copy as $meta_key => $meta_value ) {
+	$check(
+		get_post_meta( $duplicate_id, $meta_key, true ) === $meta_value,
+		'The safe Promotion copy changed an allowlisted metadata value: ' . $meta_key
+	);
+}
+$check( '' === get_post_meta( $duplicate_id, Post_Types::START_AT_META, true ), 'The safe Promotion copy retained its start time.' );
+$check( '' === get_post_meta( $duplicate_id, Post_Types::END_AT_META, true ), 'The safe Promotion copy retained its end time.' );
+$check( ! metadata_exists( 'post', $duplicate_id, '_npcink_ad_unknown_copy_fixture' ), 'The safe Promotion copy included unknown metadata.' );
+$check( 'publish' === get_post_status( $promotion_id ), 'The safe Promotion copy changed the source status.' );
+$check( 'must not copy' === get_post_meta( $promotion_id, '_npcink_ad_unknown_copy_fixture', true ), 'The safe Promotion copy changed the source metadata.' );
+$check( false !== wp_delete_post( $duplicate_id, true ), 'The successful copy fixture could not be removed.' );
+
+$promotion_count_before_failed_copy = array_sum( array_map( 'intval', get_object_vars( wp_count_posts( 'npcink_promotion' ) ) ) );
+$fail_duplicate_meta = static function ( mixed $check_value, int $object_id, string $meta_key ): mixed {
+	unset( $object_id );
+
+	return Post_Types::DEVICE_META === $meta_key ? false : $check_value;
+};
+add_filter( 'update_post_metadata', $fail_duplicate_meta, 10, 3 );
+try {
+	$failed_duplicate_result = $duplicate_method->invoke( $duplicate_action, get_post( $promotion_id ) );
+} finally {
+	remove_filter( 'update_post_metadata', $fail_duplicate_meta, 10 );
+}
+$check( is_wp_error( $failed_duplicate_result ), 'A failed metadata copy did not return WP_Error.' );
+$check(
+	'npcink_ad_duplicate_meta_failed' === $failed_duplicate_result->get_error_code(),
+	'A failed metadata copy returned the wrong error code.'
+);
+$promotion_count_after_failed_copy = array_sum( array_map( 'intval', get_object_vars( wp_count_posts( 'npcink_promotion' ) ) ) );
+$check(
+	$promotion_count_before_failed_copy === $promotion_count_after_failed_copy,
+	'A failed metadata copy left an incomplete Promotion record.'
+);
 
 $set_main_singular = static function ( int $post_id ): void {
 	global $post, $wp_query, $wp_the_query;

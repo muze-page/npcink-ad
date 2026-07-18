@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Npcink Ad 0.3.1\n"
+"Project-Id-Version: Npcink Ad 0.3.3\n"
 "Report-Msgid-Bugs-To: https://github.com/muze-page/npcink-ad/issues\n"
 "Last-Translator: Npcink\n"
 "Language-Team: Chinese (Simplified)\n"
@@ -479,6 +479,7 @@ msgstr "推广状态变更必须使用 POST 请求。"
 msgid "The promotion status request is invalid."
 msgstr "推广状态请求无效。"
 
+#: src/Admin/Promotion_Duplicate_Action.php:155
 #: src/Admin/Promotion_Status_Action.php:108
 msgid "The requested promotion does not exist."
 msgstr "请求的推广不存在。"
@@ -1145,3 +1146,67 @@ msgstr "页面横栏位于正常页面流中，可在当前页面关闭。它不
 #: src/Blocks/Patterns.php:82
 msgid "A compact site-owned announcement with short copy and a call-to-action button."
 msgstr "一个包含简短文案和行动按钮的紧凑站内公告。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:91
+msgid "Duplicate as draft"
+msgstr "复制为草稿"
+
+#. translators: %s: Promotion title or numeric ID.
+#: src/Admin/Promotion_Duplicate_Action.php:94
+#, php-format
+msgid "Duplicate as draft: %s"
+msgstr "复制为草稿：%s"
+
+#: src/Admin/Promotion_Duplicate_Action.php:133
+msgid "Promotion duplication requires a POST request."
+msgstr "复制推广需要使用 POST 请求。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:144
+msgid "The promotion duplication request is invalid."
+msgstr "此推广复制请求无效。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:163
+msgid "You are not allowed to duplicate this promotion."
+msgstr "您无权复制此推广。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:268
+msgid "The promotion copy could not be created."
+msgstr "无法创建推广副本。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:294
+msgid "The promotion settings could not be copied."
+msgstr "无法复制推广设置。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:305
+msgid "The promotion schedule could not be reset."
+msgstr "无法重置推广排期。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:337
+msgid "Promotion copy"
+msgstr "推广副本"
+
+#. translators: %s: source Promotion title.
+#: src/Admin/Promotion_Duplicate_Action.php:342
+#, php-format
+msgid "%s — Copy"
+msgstr "%s — 副本"
+
+#: src/Admin/Promotion_Duplicate_Action.php:391
+msgid "The promotion was duplicated as an unscheduled draft. Review it before publishing."
+msgstr "已将推广复制为无排期草稿。请在发布前检查。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:395
+msgid "The promotion could not be duplicated. No incomplete copy was kept."
+msgstr "无法复制推广，未保留不完整的副本。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:374
+msgid "An incomplete promotion copy could not be removed."
+msgstr "无法删除不完整的推广副本。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:399
+msgid "The promotion could not be duplicated, and an incomplete draft may remain. Review the Promotion list."
+msgstr "无法复制推广，且可能仍留有不完整的草稿。请检查推广列表。"
+
+#: src/Admin/Promotion_Duplicate_Action.php:284
+msgid "The promotion copy did not match the safe draft contract."
+msgstr "推广副本不符合安全草稿约束。"

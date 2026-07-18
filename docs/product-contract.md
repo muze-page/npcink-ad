@@ -129,4 +129,6 @@ Version 0.3.1 keeps that delivery contract unchanged while making the dismiss ta
 
 Version 0.3.2 keeps the product and delivery contract unchanged. It prepares the WordPress.org directory listing and project-owned visual assets, aligns PHP translations with the standard WordPress.org language-pack path, and tightens the release package contract. It adds no runtime feature, data migration, visitor state, or delivery model.
 
+Version 0.3.3 adds only [ADR 012](decisions/012-safe-promotion-duplication.md)'s **Duplicate as draft** management action. It copies native block content and an explicit placement-meta allowlist into an unscheduled draft owned by the current user. It does not copy publication state, dates, unknown metadata, or add templates, a second record type, frontend runtime, tracking, or visitor state. The accepted `v0.3.2` tag and Release artifact remain immutable and separate from this development line.
+
 Multiple eligible Promotions at one automatic location continue rendering in deterministic order, while management UI only advises that they **may** appear together. This direction does not add priority, weights, rotation, tablet targeting, arbitrary selectors or hooks, visitor state, tracking, or separate Slot/Placement records.

@@ -201,6 +201,8 @@ function npcink_ad_build_editor_e2e_fixture(): void {
 		update_post_meta( $automatic_promotion_id, '_npcink_ad_include_ids', array( $page_id ) );
 		update_post_meta( $automatic_promotion_id, '_npcink_ad_exclude_ids', array() );
 		update_post_meta( $automatic_promotion_id, '_npcink_ad_device', 'all' );
+		update_post_meta( $automatic_promotion_id, '_npcink_ad_start_at', current_datetime()->modify( '-1 day' )->format( 'Y-m-d H:i:s' ) );
+		update_post_meta( $automatic_promotion_id, '_npcink_ad_end_at', current_datetime()->modify( '+1 day' )->format( 'Y-m-d H:i:s' ) );
 
 		$fixture = array(
 			'username'   => $username,
