@@ -9,6 +9,9 @@
   `npcink-ad-0.3.2.zip.sha256` agree.
 - GitHub [Release Gate run 29627459512](https://github.com/muze-page/npcink-ad/actions/runs/29627459512)
   succeeded on tag commit `82df4e0ab5de1a6be60ae7aef25fc8c6b72f9361`.
+- On 2026-07-18, the `muze233` account holder confirmed that the account
+  email is current and monitored, and that `plugins@wordpress.org` has been
+  added to the mailbox allowlist.
 
 Commands rerun against the downloaded artifact:
 
@@ -41,9 +44,9 @@ row, entered the Promotion screen, and found the Npcink Ad admin menu.
 
 - [x] Confirm the final display name and requested slug are `Npcink Ad` and
   `npcink-ad`; a directory URL cannot be renamed after submission.
-- [ ] Use the `muze233` WordPress.org account and verify that its email is
+- [x] Use the `muze233` WordPress.org account and verify that its email is
   current, monitored, and suitable for representing the Npcink brand.
-- [ ] Whitelist `plugins@wordpress.org` and check spam during review.
+- [x] Whitelist `plugins@wordpress.org` and check spam during review.
 - [x] Confirm `Contributors: muze233`, Text Domain `npcink-ad`, WordPress 6.5,
   PHP 8.1, and GitHub source/support links in the submission material.
 - [x] Promote the WordPress.org material through `v0.3.2` instead of modifying
