@@ -1,0 +1,38 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "Npcink Ad Promotion scale benchmark",
+    "author": "Npcink",
+    "description": "Installs the packaged plugin and measures bounded 100/500 Promotion management paths."
+  },
+  "preferredVersions": {
+    "php": "8.1",
+    "wp": "6.5"
+  },
+  "steps": [
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "bundled",
+        "path": "/npcink-ad.zip"
+      },
+      "options": {
+        "activate": true,
+        "targetFolderName": "npcink-ad"
+      },
+      "ifAlreadyInstalled": "overwrite"
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/npcink-ad-scale-benchmark.php",
+      "data": {
+        "resource": "bundled",
+        "path": "/benchmark.php"
+      }
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require_once '/wordpress/wp-load.php'; try { require '/wordpress/npcink-ad-scale-benchmark.php'; } catch (Throwable $throwable) { $directory = WP_CONTENT_DIR . '/npcink-ad-performance-results'; wp_mkdir_p($directory); file_put_contents($directory . '/result.json', wp_json_encode(array('status' => 'NPCINK_AD_SCALE_BENCHMARK_HARNESS_ERROR', 'measured_at_utc' => gmdate('c'), 'wordpress' => get_bloginfo('version'), 'php' => PHP_VERSION, 'error' => get_class($throwable) . ': ' . $throwable->getMessage()), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL); }"
+    }
+  ]
+}
