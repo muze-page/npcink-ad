@@ -255,6 +255,28 @@ final class PromotionStatusActionTest extends TestCase {
 	}
 
 	/**
+	 * A WordPress-scheduled Promotion can be paused before it starts.
+	 */
+	public function test_future_pause_requires_a_real_transition(): void {
+		self::assertSame(
+			array(
+				'target_status' => 'draft',
+				'notice'        => null,
+			),
+			$this->transition_decision( 'future', 'pause' )
+		);
+	}
+
+	/**
+	 * Pause never overwrites unrelated native post statuses.
+	 */
+	public function test_pause_does_not_overwrite_other_post_statuses(): void {
+		foreach ( array( 'private', 'pending', 'trash' ) as $status ) {
+			self::assertSame( 'unsupported_status', $this->transition_decision( $status, 'pause' )['notice'] );
+		}
+	}
+
+	/**
 	 * Unsupported statuses remain protected from overwrite.
 	 */
 	public function test_resume_does_not_overwrite_other_post_statuses(): void {

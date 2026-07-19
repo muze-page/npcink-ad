@@ -5,6 +5,7 @@
 * Add a nonce-bound POST row action that duplicates one editable Promotion as a current-user draft.
 * Copy native block content and only the explicitly accepted placement metadata while resetting publication state, dates, and schedule.
 * Verify the created draft and every copied value, remove incomplete copies on failure, and report honestly when cleanup cannot be confirmed.
+* Allow a native WordPress-scheduled Promotion to be paused from the list before it starts, while keeping Resume limited to reviewed drafts.
 * Keep the single Promotion model, frontend delivery behavior, privacy boundary, and no-tracking contract unchanged.
 
 == 0.3.2 ==

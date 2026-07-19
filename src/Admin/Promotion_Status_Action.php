@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Handles tightly scoped publish-to-draft and draft-to-publish transitions.
+ * Handles tightly scoped publish/future-to-draft and draft-to-publish transitions.
  */
 final class Promotion_Status_Action {
 	private const ACTION       = 'npcink_ad_change_promotion_status';
@@ -175,17 +175,20 @@ final class Promotion_Status_Action {
 	 */
 	private function transition_decision( string $current_status, string $operation ): array {
 		$target_status = 'pause' === $operation ? 'draft' : 'publish';
-		if ( ! in_array( $current_status, array( 'publish', 'draft' ), true ) ) {
-			return array(
-				'target_status' => $target_status,
-				'notice'        => 'unsupported_status',
-			);
-		}
-
 		if ( $target_status === $current_status ) {
 			return array(
 				'target_status' => $target_status,
 				'notice'        => 'pause' === $operation ? 'already_paused' : 'already_resumed',
+			);
+		}
+
+		$allowed_statuses = 'pause' === $operation
+			? array( 'publish', 'future' )
+			: array( 'draft' );
+		if ( ! in_array( $current_status, $allowed_statuses, true ) ) {
+			return array(
+				'target_status' => $target_status,
+				'notice'        => 'unsupported_status',
 			);
 		}
 
@@ -338,7 +341,7 @@ final class Promotion_Status_Action {
 			),
 			'unsupported_status' => array(
 				'type' => 'warning',
-				'text' => __( 'Only published or draft promotions can use this status action.', 'npcink-ad' ),
+				'text' => __( 'Only published or scheduled promotions can be paused, and only draft promotions can be resumed.', 'npcink-ad' ),
 			),
 			'update_failed'      => array(
 				'type' => 'error',

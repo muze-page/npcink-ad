@@ -4,6 +4,8 @@ import { logInAsE2EAdmin } from "./support";
 const PAGE_SLUG = "npcink-ad-selector-e2e-page";
 const AUTOMATIC_PROMOTION_TITLE = "Status Action E2E Promotion";
 const AUTOMATIC_PROMOTION_CONTENT = "Automatic status E2E promotion.";
+const SCHEDULED_PROMOTION_TITLE = "Scheduled Status E2E Promotion";
+const SCHEDULED_PROMOTION_CONTENT = "Scheduled status E2E promotion.";
 
 async function resolveFixturePageId(page: Page): Promise<number> {
   const pageIds = await page.evaluate(async (slug) => {
@@ -26,13 +28,14 @@ async function resolveFixturePageId(page: Page): Promise<number> {
 async function openPromotionListRow(
   page: Page,
   promotionId: number,
+  promotionTitle: string,
 ): Promise<Locator> {
-  const search = encodeURIComponent(AUTOMATIC_PROMOTION_TITLE);
+  const search = encodeURIComponent(promotionTitle);
   await page.goto(`/wp-admin/edit.php?post_type=npcink_promotion&s=${search}`);
 
   const row = page.locator(`#post-${promotionId}`);
   await expect(row).toBeVisible();
-  await expect(row).toContainText(AUTOMATIC_PROMOTION_TITLE);
+  await expect(row).toContainText(promotionTitle);
   return row;
 }
 
@@ -72,7 +75,11 @@ test("pauses and resumes an automatic Promotion from the list", async ({
   expect(Number.isInteger(promotionId)).toBe(true);
   expect(promotionId).toBeGreaterThan(0);
 
-  let row = await openPromotionListRow(page, promotionId);
+  let row = await openPromotionListRow(
+    page,
+    promotionId,
+    AUTOMATIC_PROMOTION_TITLE,
+  );
   await expect(row).toContainText("Rule ready");
   await submitStatusAction(
     page,
@@ -98,7 +105,11 @@ test("pauses and resumes an automatic Promotion from the list", async ({
     page.locator(`[data-npcink-ad-promotion="${promotionId}"]`),
   ).toHaveCount(0);
 
-  row = await openPromotionListRow(page, promotionId);
+  row = await openPromotionListRow(
+    page,
+    promotionId,
+    AUTOMATIC_PROMOTION_TITLE,
+  );
   await submitStatusAction(
     page,
     `Resume: ${AUTOMATIC_PROMOTION_TITLE}`,
@@ -125,4 +136,85 @@ test("pauses and resumes an automatic Promotion from the list", async ({
   );
   await expect(resumedPromotion).toBeVisible();
   await expect(resumedPromotion).toContainText(AUTOMATIC_PROMOTION_CONTENT);
+});
+
+test("pauses a scheduled Promotion before it starts and resumes it now", async ({
+  page,
+}) => {
+  await logInAsE2EAdmin(page);
+  const fixturePageId = await resolveFixturePageId(page);
+
+  await page.goto(
+    `/wp-admin/edit.php?post_type=npcink_promotion&s=${encodeURIComponent(
+      SCHEDULED_PROMOTION_TITLE,
+    )}`,
+  );
+  let row = page
+    .locator("tr[id^='post-']")
+    .filter({ hasText: SCHEDULED_PROMOTION_TITLE });
+  await expect(row).toHaveCount(1);
+  const rowId = await row.getAttribute("id");
+  const promotionId = Number(rowId?.replace("post-", ""));
+  expect(Number.isInteger(promotionId)).toBe(true);
+  expect(promotionId).toBeGreaterThan(0);
+  await expect(row).toContainText("Not started");
+  await expect(
+    row.getByRole("button", {
+      name: `Pause: ${SCHEDULED_PROMOTION_TITLE}`,
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await page.goto(`/?page_id=${fixturePageId}`);
+  await expect(
+    page
+      .locator(".npcink-ad-promotion")
+      .filter({ hasText: SCHEDULED_PROMOTION_CONTENT }),
+  ).toHaveCount(0);
+
+  row = await openPromotionListRow(
+    page,
+    promotionId,
+    SCHEDULED_PROMOTION_TITLE,
+  );
+  await submitStatusAction(
+    page,
+    `Pause: ${SCHEDULED_PROMOTION_TITLE}`,
+    "paused",
+  );
+  row = page.locator(`#post-${promotionId}`);
+  await expect(row).toContainText("Paused");
+  await expect(
+    row.getByRole("button", {
+      name: `Resume: ${SCHEDULED_PROMOTION_TITLE}`,
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await submitStatusAction(
+    page,
+    `Resume: ${SCHEDULED_PROMOTION_TITLE}`,
+    "resumed",
+  );
+  row = page.locator(`#post-${promotionId}`);
+  await expect(row).toContainText("Rule ready");
+
+  await page.goto(`/?page_id=${fixturePageId}`);
+  const resumedPromotion = page
+    .locator(".npcink-ad-promotion")
+    .filter({ hasText: SCHEDULED_PROMOTION_CONTENT });
+  await expect(resumedPromotion).toHaveCount(1);
+  await expect(resumedPromotion).toBeVisible();
+
+  row = await openPromotionListRow(
+    page,
+    promotionId,
+    SCHEDULED_PROMOTION_TITLE,
+  );
+  await submitStatusAction(
+    page,
+    `Pause: ${SCHEDULED_PROMOTION_TITLE}`,
+    "paused",
+  );
+  await expect(page.locator(`#post-${promotionId}`)).toContainText("Paused");
 });

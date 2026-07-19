@@ -34,7 +34,10 @@ instead of depending on the Gutenberg iframe DOM.
 The status-action test confirms the automatic Promotion on the real fixture
 page, pauses it from the Promotion list, verifies the success notice, paused row
 state, and missing frontend output, then resumes it and verifies the rule-ready
-row state and restored frontend output.
+row state and restored frontend output. It also pauses a native
+WordPress-scheduled Promotion before its publication date, confirms that the
+future record becomes a draft, resumes it for immediate publication, verifies
+live delivery, and pauses it again for deterministic cleanup.
 
 The first-run test uses a separate Playground session with no stored
 Promotions. It verifies the empty-list guide, enters through **Add first

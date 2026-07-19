@@ -49,7 +49,7 @@
 - `Eligibility_Messages`：把稳定 reason codes 映射为所有管理/预览界面共用的文案；
 - `Preview_Request`：校验 capability + nonce，关闭缓存并在真实页面强制显示预览；
 - `Promotion_Preflight`：在 Core REST 发布/排程前合并完整候选记录并拒绝无效配置；
-- `Promotion_List` / `Promotion_Status_Action`：规则摘要与严格的 publish ↔ draft 状态操作；
+- `Promotion_List` / `Promotion_Status_Action`：规则摘要，以及严格的 publish/future → draft 暂停与 draft → publish 恢复操作；
 - `Promotion_Duplicate_Action`：通过绑定源 Promotion 的 nonce 与独立 POST 表单，将原生区块内容和显式 placement meta allowlist 复制为无排期草稿；失败时删除不完整副本；
 - `Editor` / `Preview_Page`：侧栏设置、即时预检、非阻断重叠提示与桌面/移动 iframe 画布；
 - `Blocks` / `Patterns`：一个动态引用区块和三个 Core block 起步样式。

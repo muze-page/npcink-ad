@@ -492,27 +492,23 @@ msgstr "您无权更改此推广的状态。"
 msgid "You are not allowed to publish promotions."
 msgstr "您无权发布推广。"
 
-#: src/Admin/Promotion_Status_Action.php:325
+#: src/Admin/Promotion_Status_Action.php:328
 msgid "The promotion is paused."
 msgstr "推广已暂停。"
 
-#: src/Admin/Promotion_Status_Action.php:333
+#: src/Admin/Promotion_Status_Action.php:336
 msgid "The promotion was already paused."
 msgstr "推广已经处于暂停状态。"
 
-#: src/Admin/Promotion_Status_Action.php:337
+#: src/Admin/Promotion_Status_Action.php:340
 msgid "The promotion was already published."
 msgstr "推广已经处于发布状态。"
 
-#: src/Admin/Promotion_Status_Action.php:341
-msgid "Only published or draft promotions can use this status action."
-msgstr "只有已发布或草稿状态的推广可以使用此状态操作。"
-
-#: src/Admin/Promotion_Status_Action.php:345
+#: src/Admin/Promotion_Status_Action.php:348
 msgid "The promotion status could not be changed."
 msgstr "无法更改推广状态。"
 
-#: src/Admin/Promotion_Status_Action.php:361
+#: src/Admin/Promotion_Status_Action.php:364
 msgid "The promotion was not resumed:"
 msgstr "推广未恢复："
 
@@ -687,7 +683,7 @@ msgstr "已配置分类/标签："
 msgid "Invalid category/tag selection"
 msgstr "分类/标签选择无效"
 
-#: src/Admin/Promotion_Status_Action.php:329
+#: src/Admin/Promotion_Status_Action.php:332
 msgid "The promotion was published. Delivery still depends on its schedule and content rules."
 msgstr "推广已发布。是否投放仍取决于排期和内容规则。"
 
@@ -1210,3 +1206,7 @@ msgstr "无法复制推广，且可能仍留有不完整的草稿。请检查推
 #: src/Admin/Promotion_Duplicate_Action.php:284
 msgid "The promotion copy did not match the safe draft contract."
 msgstr "推广副本不符合安全草稿约束。"
+
+#: src/Admin/Promotion_Status_Action.php:344
+msgid "Only published or scheduled promotions can be paused, and only draft promotions can be resumed."
+msgstr "只有已发布或已排程的推广可以暂停，只有草稿推广可以恢复。"
