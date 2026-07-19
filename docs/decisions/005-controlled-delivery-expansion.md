@@ -29,6 +29,7 @@ Npcink Ad 0.2 is a controlled extension of the single-Promotion model. This ADR 
 - That order is an implementation stability rule, not a user-facing priority model.
 - Management surfaces must show an advisory when stored rules indicate that Promotions may appear together at the same automatic location.
 - The advisory must use possibility language such as “may appear together.” It must not claim that a precise conflict exists, that a visitor will see both Promotions, or that one Promotion wins.
+- Management advisories may link to at most three exact candidate records so an operator can inspect the evidence without turning the notice into a priority interface. The list uses capability-aware edit links and cached titles; the editor reuses the already-present rule IDs and derives same-site admin links without adding titles, creative content, or per-record URLs to its inline payload. Any remaining candidates are reported only as a count.
 - The minimum advisory comparison uses these bounded semantics:
   - both Promotions use the same automatic location;
   - their schedule windows may intersect, treating start as inclusive and end as exclusive (`start <= now < end`) and an absent boundary as open; windows that only touch at one Promotion's end and the other's start do not intersect;
@@ -81,7 +82,7 @@ Rejected. ADR 003 remains authoritative: there is no observed need that justifie
 ## Consequences
 
 - The automatic post/page guard, advisory overlap, paragraph anchor, canonical editorial scope, and manual-placement/device guidance are version 0.2.0 behavior. The version bump, changelog, and final package closeout are complete in 0.2.0; a Git tag, GitHub Release, and public distribution remain separate repository release actions.
-- Overlap detection is advisory evidence only. Its wording and tests must preserve uncertainty instead of presenting a false conflict guarantee, and the advisory must stay outside eligibility reason codes and publication preflight failures.
+- Overlap detection is advisory evidence only. Its wording and tests must preserve uncertainty instead of presenting a false conflict guarantee, and the advisory must stay outside eligibility reason codes and publication preflight failures. Bounded links identify records for human review but do not imply priority or an exact live collision.
 - Rendering all eligible Promotions preserves existing behavior and avoids introducing hidden selection state.
 - The advanced scope must remain collapsed and bounded so the default publishing workflow keeps its current usability budget.
 - Any future request for custom post types, tablet targeting, priorities, rotation, visitor state, tracking, or separate delivery entities requires a new decision record with observed demand and a complete data, privacy, cache, permission, uninstall, and test contract.

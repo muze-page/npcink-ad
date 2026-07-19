@@ -25,6 +25,7 @@ Create one Promotion with core WordPress blocks, choose where and on which stand
 * Set an optional start and end time.
 * Preview on a real page and read the same server-side eligibility verdict used by live delivery.
 * Review current state, placement, content scope, stop time, and inactivity reasons in the Promotion list; pause published or scheduled Promotions and resume drafts without another screen.
+* Follow bounded links from a possible-overlap advisory to inspect up to three exact Promotions; the advisory never changes delivery or publication.
 * Duplicate an existing Promotion into a current-user draft while preserving only its creative and accepted placement rules; publication state and schedule are reset.
 * Catch empty creative, invalid targets, missing paragraph anchors, unsafe video sources, and incorrect schedules before publication.
 
@@ -94,6 +95,7 @@ Composer dependencies are development-only quality tools and are not bundled in 
 * Copy native block content and an explicit placement-meta allowlist while resetting publication state and schedule.
 * Verify partial-write cleanup and preserve the existing delivery, privacy, and no-tracking boundaries.
 * Pause a native WordPress-scheduled Promotion from the list before it starts and resume the resulting reviewed draft for immediate publication.
+* Make overlap advisories actionable with up to three exact Promotion links and a remaining count, without adding priority or rotation.
 
 = 0.3.2 =
 

@@ -30,6 +30,7 @@ final class Promotion_List {
 	private const SCOPE_COLUMN    = 'npcink_ad_content_scope';
 	private const END_AT_COLUMN   = 'npcink_ad_end_at';
 	private const REASONS_COLUMN  = 'npcink_ad_reasons';
+	private const OVERLAP_LINK_LIMIT = 3;
 
 	/**
 	 * Promotions normalized for management-only public-target checks.
@@ -564,9 +565,8 @@ final class Promotion_List {
 	 */
 	private function render_overlap_hint( array $promotion ): void {
 		$promotion_id = isset( $promotion['id'] ) ? (int) $promotion['id'] : 0;
-		$overlap_count = isset( $this->overlapping_ids[ $promotion_id ] )
-			? count( $this->overlapping_ids[ $promotion_id ] )
-			: 0;
+		$overlap_ids = $this->overlapping_ids[ $promotion_id ] ?? array();
+		$overlap_count = count( $overlap_ids );
 		if ( 1 > $overlap_count ) {
 			return;
 		}
@@ -582,7 +582,40 @@ final class Promotion_List {
 			$overlap_count
 		);
 
-		echo '<br /><small class="npcink-ad-overlap-hint">' . esc_html( $message ) . '</small>';
+		echo '<br /><small class="npcink-ad-overlap-hint">' . esc_html( $message );
+		echo '<br /><span class="npcink-ad-overlap-links">';
+		$shown = 0;
+		foreach ( array_slice( $overlap_ids, 0, self::OVERLAP_LINK_LIMIT ) as $overlap_id ) {
+			$edit_url = get_edit_post_link( $overlap_id, '' );
+			$title    = trim( (string) get_the_title( $overlap_id ) );
+			$label    = '' === $title ? '#' . $overlap_id : $title;
+			if ( 0 < $shown ) {
+				echo esc_html( ', ' );
+			}
+			if ( is_string( $edit_url ) && '' !== $edit_url ) {
+				echo '<a href="' . esc_url( $edit_url ) . '">' . esc_html( $label ) . '</a>';
+			} else {
+				echo esc_html( $label );
+			}
+			++$shown;
+		}
+
+		$remaining = $overlap_count - $shown;
+		if ( 0 < $remaining ) {
+			$remaining_message = sprintf(
+				/* translators: %d: number of additional potentially overlapping Promotions omitted from the bounded link list. */
+				_n(
+					'%d more potentially overlapping promotion is not shown.',
+					'%d more potentially overlapping promotions are not shown.',
+					$remaining,
+					'npcink-ad'
+				),
+				$remaining
+			);
+			echo esc_html( '; ' );
+			echo esc_html( $remaining_message );
+		}
+		echo '</span></small>';
 	}
 
 	/**

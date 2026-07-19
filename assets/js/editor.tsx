@@ -1346,6 +1346,9 @@ function PromotionSettingsPanel() {
 		},
 		settings?.publishedAutomaticPromotions ?? []
 	);
+	const overlapLinkIds = potentiallyOverlappingIds.slice( 0, 3 );
+	const hiddenOverlapCount =
+		potentiallyOverlappingIds.length - overlapLinkIds.length;
 	const effectivePreviewTarget =
 		previewTarget ||
 		effectiveIncludeIds[ 0 ] ||
@@ -2256,6 +2259,21 @@ function PromotionSettingsPanel() {
 							'This advisory does not block publishing.',
 							'npcink-ad'
 						) }
+						<div className="npcink-ad-overlap-links">
+							{ overlapLinkIds.map( ( overlapId ) => (
+								<a
+									key={ overlapId }
+									href={ `post.php?post=${ overlapId }&action=edit` }
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									#{ overlapId }
+								</a>
+							) ) }
+							{ hiddenOverlapCount > 0 && (
+								<span>+{ hiddenOverlapCount }</span>
+							) }
+						</div>
 					</Notice>
 				) }
 				{ hasAdvancedPageCache && (

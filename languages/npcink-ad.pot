@@ -163,155 +163,155 @@ msgstr ""
 msgid "The promotion could not be duplicated, and an incomplete draft may remain. Review the Promotion list."
 msgstr ""
 
-#: src/Admin/Promotion_List.php:125
+#: src/Admin/Promotion_List.php:126
 msgid "Npcink Ad detected the WordPress advanced page-cache drop-in. Publishing, pausing, resuming, and scheduled starts or stops may remain cached until affected pages are purged or the cache TTL expires."
 msgstr ""
 
-#: src/Admin/Promotion_List.php:152
+#: src/Admin/Promotion_List.php:153
 msgid "Publish your first Promotion in three steps"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:154
+#: src/Admin/Promotion_List.php:155
 msgid "Add the content you want to show."
 msgstr ""
 
-#: src/Admin/Promotion_List.php:155
+#: src/Admin/Promotion_List.php:156
 msgid "Choose its placement and content scope."
 msgstr ""
 
-#: src/Admin/Promotion_List.php:156
+#: src/Admin/Promotion_List.php:157
 msgid "Preview it on a real page, then publish."
 msgstr ""
 
-#: src/Admin/Promotion_List.php:158
+#: src/Admin/Promotion_List.php:159
 msgid "Add first Promotion"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:260
-msgid "Rule status"
-msgstr ""
-
 #: src/Admin/Promotion_List.php:261
-#: build/promotion-editor.js:10
-msgid "Placement"
+msgid "Rule status"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:262
 #: build/promotion-editor.js:10
-msgid "Content scope"
+msgid "Placement"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:263
-msgid "Stops"
+#: build/promotion-editor.js:10
+msgid "Content scope"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:264
+msgid "Stops"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:265
 msgid "Why not"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:356
+#: src/Admin/Promotion_List.php:357
 msgid "Needs completion"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:359
+#: src/Admin/Promotion_List.php:360
 msgid "Paused"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:362
-#: src/Admin/Promotion_List.php:368
+#: src/Admin/Promotion_List.php:363
+#: src/Admin/Promotion_List.php:369
 msgid "Not started"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:365
+#: src/Admin/Promotion_List.php:366
 msgid "Not published"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:371
+#: src/Admin/Promotion_List.php:372
 msgid "Ended"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:374
+#: src/Admin/Promotion_List.php:375
 msgid "Rule ready"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:395
+#: src/Admin/Promotion_List.php:396
 msgid "Pause"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:396
+#: src/Admin/Promotion_List.php:397
 msgid "Resume"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:470
+#: src/Admin/Promotion_List.php:471
 #: build/promotion-editor.js:16
 msgid "All posts"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:473
+#: src/Admin/Promotion_List.php:474
 #: build/promotion-editor.js:16
 msgid "All pages"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:478
+#: src/Admin/Promotion_List.php:479
 msgid "Posts matching categories/tags"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:479
+#: src/Admin/Promotion_List.php:480
 msgid "Configured terms:"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:481
+#: src/Admin/Promotion_List.php:482
 msgid "Invalid category/tag selection"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:491
+#: src/Admin/Promotion_List.php:492
 msgid "Selected public posts/pages:"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:494
+#: src/Admin/Promotion_List.php:495
 #: build/promotion-editor.js:16
 msgid "All posts and pages"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:500
+#: src/Admin/Promotion_List.php:501
 msgid "Configured exclusions:"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:539
+#: src/Admin/Promotion_List.php:540
 msgid "After paragraph (invalid)"
 msgstr ""
 
 #. translators: %d: paragraph number after which the Promotion appears.
 #. translators: %d: paragraph number.
-#: src/Admin/Promotion_List.php:544
+#: src/Admin/Promotion_List.php:545
 #: build/promotion-editor.js:17
 #, php-format,js-format
 msgid "After paragraph %d"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:550
+#: src/Admin/Promotion_List.php:551
 msgid "Block"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:551
+#: src/Admin/Promotion_List.php:552
 msgid "Before content"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:552
-msgid "After content"
-msgstr ""
-
 #: src/Admin/Promotion_List.php:553
-#: build/promotion-editor.js:10
-msgid "Top page bar"
+msgid "After content"
 msgstr ""
 
 #: src/Admin/Promotion_List.php:554
 #: build/promotion-editor.js:10
+msgid "Top page bar"
+msgstr ""
+
+#: src/Admin/Promotion_List.php:555
+#: build/promotion-editor.js:10
 msgid "Bottom page bar"
 msgstr ""
 
-#: src/Admin/Promotion_List.php:557
+#: src/Admin/Promotion_List.php:558
 msgid "Unknown"
 msgstr ""
 
@@ -323,7 +323,15 @@ msgid_plural "May appear together with %d published promotions."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Promotion_List.php:595
+#. translators: %d: number of additional potentially overlapping Promotions omitted from the bounded link list.
+#: src/Admin/Promotion_List.php:607
+#, php-format
+msgid "%d more potentially overlapping promotion is not shown."
+msgid_plural "%d more potentially overlapping promotions are not shown."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Admin/Promotion_List.php:628
 msgid "No end time"
 msgstr ""
 
