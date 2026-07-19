@@ -343,31 +343,31 @@ msgstr ""
 msgid "You are not allowed to publish promotions."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:325
+#: src/Admin/Promotion_Status_Action.php:328
 msgid "The promotion is paused."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:329
+#: src/Admin/Promotion_Status_Action.php:332
 msgid "The promotion was published. Delivery still depends on its schedule and content rules."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:333
+#: src/Admin/Promotion_Status_Action.php:336
 msgid "The promotion was already paused."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:337
+#: src/Admin/Promotion_Status_Action.php:340
 msgid "The promotion was already published."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:341
-msgid "Only published or draft promotions can use this status action."
+#: src/Admin/Promotion_Status_Action.php:344
+msgid "Only published or scheduled promotions can be paused, and only draft promotions can be resumed."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:345
+#: src/Admin/Promotion_Status_Action.php:348
 msgid "The promotion status could not be changed."
 msgstr ""
 
-#: src/Admin/Promotion_Status_Action.php:361
+#: src/Admin/Promotion_Status_Action.php:364
 msgid "The promotion was not resumed:"
 msgstr ""
 

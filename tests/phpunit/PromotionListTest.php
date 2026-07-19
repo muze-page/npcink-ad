@@ -229,15 +229,19 @@ final class PromotionListTest extends TestCase {
 	 */
 	public function test_status_buttons_use_standalone_footer_forms(): void {
 		$GLOBALS['npcink_ad_test_titles'][7] = 'Summer promotion';
-		$list          = $this->promotion_list();
+		$GLOBALS['npcink_ad_test_titles'][9] = 'Scheduled promotion';
+		$list           = $this->promotion_list();
 		$publish_button = $this->render_status_action( $list, 7, 'publish' );
 		$draft_button   = $this->render_status_action( $list, 8, 'draft' );
+		$future_button  = $this->render_status_action( $list, 9, 'future' );
 
-		self::assertStringNotContainsString( '<form', $publish_button . $draft_button );
+		self::assertStringNotContainsString( '<form', $publish_button . $draft_button . $future_button );
 		self::assertStringContainsString( 'form="npcink-ad-status-pause-7"', $publish_button );
 		self::assertStringContainsString( 'form="npcink-ad-status-resume-8"', $draft_button );
+		self::assertStringContainsString( 'form="npcink-ad-status-pause-9"', $future_button );
 		self::assertStringContainsString( 'aria-label="Pause: Summer promotion"', $publish_button );
 		self::assertStringContainsString( 'aria-label="Resume: #8"', $draft_button );
+		self::assertStringContainsString( 'aria-label="Pause: Scheduled promotion"', $future_button );
 
 		ob_start();
 		$list->render_status_forms();
@@ -245,6 +249,7 @@ final class PromotionListTest extends TestCase {
 
 		self::assertStringContainsString( '<form id="npcink-ad-status-pause-7" method="post"', $forms );
 		self::assertStringContainsString( '<form id="npcink-ad-status-resume-8" method="post"', $forms );
+		self::assertStringContainsString( '<form id="npcink-ad-status-pause-9" method="post"', $forms );
 		self::assertStringContainsString( 'action="https://example.test/wp-admin/admin-post.php"', $forms );
 		self::assertStringContainsString( 'name="action" value="npcink_ad_change_promotion_status"', $forms );
 		self::assertStringContainsString( 'name="promotion_id" value="7"', $forms );

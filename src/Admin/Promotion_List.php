@@ -382,11 +382,11 @@ final class Promotion_List {
 	private function render_status_action( array $promotion ): void {
 		$post_id = (int) ( $promotion['id'] ?? 0 );
 		$status  = (string) ( $promotion['status'] ?? '' );
-		if ( 1 > $post_id || ! in_array( $status, array( 'publish', 'draft' ), true ) ) {
+		if ( 1 > $post_id || ! in_array( $status, array( 'publish', 'future', 'draft' ), true ) ) {
 			return;
 		}
 
-		$operation = 'publish' === $status ? 'pause' : 'resume';
+		$operation = 'draft' === $status ? 'resume' : 'pause';
 		if ( ! $this->can_change_status( $post_id, $operation ) ) {
 			return;
 		}
