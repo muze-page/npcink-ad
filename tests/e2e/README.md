@@ -16,7 +16,8 @@ option-based guard.
 The fixture contains 105 filler Promotions, a selected Promotion that sorts
 outside the initial 20-result page, and a published page containing that
 selected dynamic block. It also creates one valid automatic Promotion whose
-selected-content rule targets only that page. Twenty-five fillers match one
+selected-content rule targets only that page, plus a scheduled Promotion and a
+draft with the same potential delivery context. Twenty-five fillers match one
 search term; the selector target sorts onto search page 2. The selector test
 first highlights an old suggestion and proves that Enter during the 300 ms
 pending-search window cannot change the saved ID. It then loads search page 2,
@@ -38,6 +39,10 @@ row state and restored frontend output. It also pauses a native
 WordPress-scheduled Promotion before its publication date, confirms that the
 future record becomes a draft, resumes it for immediate publication, verifies
 live delivery, and pauses it again for deterministic cleanup.
+
+The overlap-advisory test confirms that the list links to the exact published
+Promotion by title, then opens the draft editor's pre-publish check and verifies
+the bounded ID link, new-tab protection, and unchanged non-blocking wording.
 
 The first-run test uses a separate Playground session with no stored
 Promotions. It verifies the empty-list guide, enters through **Add first

@@ -344,6 +344,23 @@ if ( ! function_exists( 'get_the_title' ) ) {
 	}
 }
 
+if ( ! function_exists( 'get_edit_post_link' ) ) {
+	/**
+	 * Build one deterministic, capability-aware edit link.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $context Escaping context.
+	 */
+	function get_edit_post_link( int $post_id, string $context = 'display' ): ?string {
+		unset( $context );
+		if ( ! current_user_can( 'manage_npcink_ads', $post_id ) ) {
+			return null;
+		}
+
+		return 'https://example.test/wp-admin/post.php?post=' . $post_id . '&action=edit';
+	}
+}
+
 if ( ! function_exists( 'get_posts' ) ) {
 	/**
 	 * Return public post/page IDs from an in-memory bounded query.

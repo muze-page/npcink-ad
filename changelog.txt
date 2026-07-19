@@ -6,6 +6,7 @@
 * Copy native block content and only the explicitly accepted placement metadata while resetting publication state, dates, and schedule.
 * Verify the created draft and every copied value, remove incomplete copies on failure, and report honestly when cleanup cannot be confirmed.
 * Allow a native WordPress-scheduled Promotion to be paused from the list before it starts, while keeping Resume limited to reviewed drafts.
+* Link overlap advisories to at most three exact Promotions and report any remainder without adding priority, rotation, or delivery changes.
 * Keep the single Promotion model, frontend delivery behavior, privacy boundary, and no-tracking contract unchanged.
 
 == 0.3.2 ==

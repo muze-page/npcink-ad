@@ -530,15 +530,51 @@ final class PromotionListTest extends TestCase {
 				'post_content' => '<p>Mobile only</p>',
 			)
 		);
+		$second_overlap = new WP_Post(
+			array(
+				'ID'           => 204,
+				'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => '<p>Second overlap</p>',
+			)
+		);
+		$third_overlap = new WP_Post(
+			array(
+				'ID'           => 205,
+				'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => '<p>Third overlap</p>',
+			)
+		);
+		$fourth_overlap = new WP_Post(
+			array(
+				'ID'           => 206,
+				'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+				'post_status'  => 'publish',
+				'post_content' => '<p>Fourth overlap</p>',
+			)
+		);
 		$GLOBALS['npcink_ad_test_posts'] = array(
 			201 => $current,
 			202 => $overlap,
 			203 => $mobile,
+			204 => $second_overlap,
+			205 => $third_overlap,
+			206 => $fourth_overlap,
 		);
 		$GLOBALS['npcink_ad_test_meta']  = array(
 			201 => $this->automatic_selected_meta( array( 10, 11 ), 'desktop' ),
 			202 => $this->automatic_selected_meta( array( 11, 12 ), 'desktop' ),
 			203 => $this->automatic_selected_meta( array( 11 ), 'mobile' ),
+			204 => $this->automatic_selected_meta( array( 11 ), 'desktop' ),
+			205 => $this->automatic_selected_meta( array( 10 ), 'desktop' ),
+			206 => $this->automatic_selected_meta( array( 10, 12 ), 'desktop' ),
+		);
+		$GLOBALS['npcink_ad_test_titles'] = array(
+			202 => 'Published overlap A',
+			204 => 'Published overlap B',
+			205 => 'Published overlap C',
+			206 => 'Published overlap D',
 		);
 		$GLOBALS['npcink_ad_test_public_ids'] = array( 10, 11, 12 );
 		$GLOBALS['wp_query']                  = new WP_Query( array( $current, $overlap, $mobile ) );
@@ -550,7 +586,15 @@ final class PromotionListTest extends TestCase {
 		$queries = $GLOBALS['npcink_ad_test_get_posts_queries'];
 
 		self::assertStringContainsString( 'After content', $output );
-		self::assertStringContainsString( 'May appear together with 1 published promotion.', $output );
+		self::assertStringContainsString( 'May appear together with 4 published promotions.', $output );
+		self::assertStringContainsString( '>Published overlap A</a>', $output );
+		self::assertStringContainsString( '>Published overlap B</a>', $output );
+		self::assertStringContainsString( '>Published overlap C</a>', $output );
+		self::assertStringContainsString( 'post=202&amp;action=edit', $output );
+		self::assertStringContainsString( 'post=204&amp;action=edit', $output );
+		self::assertStringContainsString( 'post=205&amp;action=edit', $output );
+		self::assertStringNotContainsString( 'Published overlap D', $output );
+		self::assertStringContainsString( '1 more potentially overlapping promotion is not shown.', $output );
 		self::assertCount( 2, $queries );
 		self::assertSame( Post_Types::PROMOTION_POST_TYPE, $queries[0]['post_type'] );
 		self::assertSame( array( 10, 11, 12 ), $queries[1]['post__in'] );
