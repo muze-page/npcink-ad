@@ -323,7 +323,7 @@ $measure_scenario = static function ( int $expected_count ) use ( $measure, $dra
 				if ( ! $post instanceof WP_Post ) {
 					continue;
 				}
-				foreach ( array( 'npcink_ad_rule_status', 'npcink_ad_location', 'npcink_ad_content_scope', 'npcink_ad_end_at', 'npcink_ad_reasons' ) as $column ) {
+				foreach ( array( 'npcink_ad_rule_status', 'npcink_ad_location', 'npcink_ad_end_at' ) as $column ) {
 					$list->render_column( $column, $post->ID );
 				}
 			}

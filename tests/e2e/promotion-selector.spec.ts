@@ -184,12 +184,16 @@ test("searches, paginates, saves, and restores a Promotion selection", async ({
   expect(initiallySelectedId).toBeGreaterThan(0);
   await expect(selectedSummary).toContainText(SELECTED_PROMOTION_TITLE);
   await expect(selectedSummary).toContainText(`#${initiallySelectedId}`);
+  await expect(selectedSummary).toContainText("Current Promotion");
 
   await dismissWelcomeGuide(page);
-  await expect(page.getByText("Promotion", { exact: true })).toBeVisible();
-  const combobox = page.getByRole("combobox");
+  const combobox = page.getByRole("combobox", {
+    name: "Search and replace Promotion",
+    exact: true,
+  });
   await expect(combobox).toHaveCount(1);
   await expect(combobox).toBeVisible();
+  await expect(combobox).toHaveValue("");
   await combobox.click();
   await expect.poll(() => page.getByRole("option").count()).toBeGreaterThan(1);
   const oldSuggestion = await highlightDifferentOldSuggestion(page, combobox);
@@ -234,6 +238,7 @@ test("searches, paginates, saves, and restores a Promotion selection", async ({
   ).toBeVisible();
   await chooseOptionWithArrowKeys(page, combobox, SEARCH_TARGET_TITLE);
   await expect(selectedSummary).toContainText(SEARCH_TARGET_TITLE);
+  await expect(combobox).toHaveValue("");
   await expect
     .poll(() => selectedPromotionId(page, clientId))
     .not.toBe(initiallySelectedId);

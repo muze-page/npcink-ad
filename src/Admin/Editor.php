@@ -52,6 +52,8 @@ final class Editor {
 			'previewUrl'                   => Preview_Page::url(),
 			'nonce'                        => wp_create_nonce( 'npcink_ad_preview_' . $post->ID ),
 			'defaultTargetId'              => self::default_target_id(),
+			'hasCompletedFirstPublish'      => Post_Types::has_completed_first_publish( $post->ID, $post->post_status ),
+			'promotionListUrl'              => admin_url( 'edit.php?post_type=' . Post_Types::PROMOTION_POST_TYPE ),
 			'publicContentIds'              => $overlap_settings['publicContentIds'],
 			'validCategoryIds'              => $overlap_settings['validCategoryIds'],
 			'validTagIds'                   => $overlap_settings['validTagIds'],

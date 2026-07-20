@@ -30,6 +30,11 @@ final class Patterns {
 			array(
 				'title'       => __( 'Promotion CTA banner', 'npcink-ad' ),
 				'description' => __( 'A clear headline, supporting copy, and call-to-action button.', 'npcink-ad' ),
+				'keywords'    => array(
+					__( 'offer', 'npcink-ad' ),
+					__( 'campaign', 'npcink-ad' ),
+					__( 'call to action', 'npcink-ad' ),
+				),
 				'categories'  => array( 'npcink-ad' ),
 				'postTypes'   => array( Post_Types::PROMOTION_POST_TYPE ),
 				'content'     => '<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|40","right":"var:preset|spacing|40","bottom":"var:preset|spacing|40","left":"var:preset|spacing|40"}},"border":{"radius":"8px"}},"backgroundColor":"contrast","textColor":"base","layout":{"type":"constrained"}} -->
@@ -55,6 +60,11 @@ final class Patterns {
 			array(
 				'title'       => __( 'Promotion card', 'npcink-ad' ),
 				'description' => __( 'A compact bordered card for an offer, product, or affiliate link.', 'npcink-ad' ),
+				'keywords'    => array(
+					__( 'affiliate', 'npcink-ad' ),
+					__( 'product', 'npcink-ad' ),
+					__( 'recommendation', 'npcink-ad' ),
+				),
 				'categories'  => array( 'npcink-ad' ),
 				'postTypes'   => array( Post_Types::PROMOTION_POST_TYPE ),
 				'content'     => '<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|30","right":"var:preset|spacing|30","bottom":"var:preset|spacing|30","left":"var:preset|spacing|30"}},"border":{"width":"1px","radius":"8px"}},"layout":{"type":"constrained"}} -->
@@ -80,6 +90,11 @@ final class Patterns {
 			array(
 				'title'       => __( 'Compact announcement', 'npcink-ad' ),
 				'description' => __( 'A compact site-owned announcement with short copy and a call-to-action button.', 'npcink-ad' ),
+				'keywords'    => array(
+					__( 'announcement', 'npcink-ad' ),
+					__( 'notice', 'npcink-ad' ),
+					__( 'update', 'npcink-ad' ),
+				),
 				'categories'  => array( 'npcink-ad' ),
 				'postTypes'   => array( Post_Types::PROMOTION_POST_TYPE ),
 				'content'     => '<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20","padding":{"top":"var:preset|spacing|20","right":"var:preset|spacing|30","bottom":"var:preset|spacing|20","left":"var:preset|spacing|30"}},"border":{"width":"1px","radius":"8px"}},"backgroundColor":"base-2","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->

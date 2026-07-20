@@ -148,7 +148,7 @@ final class PreviewRequestTest extends TestCase {
 		$this->preview_request()->activate();
 
 		self::assertSame(
-			array( 'remove:the_content', 'add:the_content:999' ),
+			array( 'add:show_admin_bar:10', 'remove:the_content', 'add:the_content:999' ),
 			$GLOBALS['npcink_ad_test_preview_filters']
 		);
 		self::assertSame(
@@ -161,6 +161,7 @@ final class PreviewRequestTest extends TestCase {
 			$GLOBALS['npcink_ad_test_preview_removed_callbacks']
 		);
 		self::assertTrue( $GLOBALS['npcink_ad_test_preview_nocache'] );
+		self::assertFalse( $this->preview_request()->hide_admin_bar( true ) );
 	}
 
 	/**
@@ -187,7 +188,7 @@ final class PreviewRequestTest extends TestCase {
 		$request->activate();
 
 		self::assertSame(
-			array( 'remove:the_content', 'add:the_content:999' ),
+			array( 'add:show_admin_bar:10', 'remove:the_content', 'add:the_content:999' ),
 			$GLOBALS['npcink_ad_test_preview_filters']
 		);
 		self::assertTrue( $GLOBALS['npcink_ad_test_preview_nocache'] );

@@ -7,6 +7,8 @@
 
 namespace Npcink\Ad\Data;
 
+use WP_Post;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -27,6 +29,7 @@ final class Post_Types {
 	public const START_AT_META         = '_npcink_ad_start_at';
 	public const END_AT_META           = '_npcink_ad_end_at';
 	public const PARAGRAPH_NUMBER_META = '_npcink_ad_paragraph_number';
+	public const FIRST_PUBLISH_META    = '_npcink_ad_first_publish_completed';
 
 	public const LOCATIONS                = array( 'block', 'content_before', 'content_after', 'content_after_paragraph', 'bar_top', 'bar_bottom' );
 	public const AUTOMATIC_LOCATIONS      = array( 'content_before', 'content_after', 'content_after_paragraph', 'bar_top', 'bar_bottom' );
@@ -44,6 +47,44 @@ final class Post_Types {
 	public static function register(): void {
 		register_post_type( self::PROMOTION_POST_TYPE, self::promotion_args() );
 		self::register_meta();
+		add_action( 'transition_post_status', array( self::class, 'record_first_publish' ), 10, 3 );
+	}
+
+	/**
+	 * Remember that a Promotion has entered or completed the publish flow.
+	 *
+	 * The private marker is intentionally not exposed through REST or copied as
+	 * delivery configuration. It only keeps paused Promotions out of onboarding.
+	 *
+	 * @param string  $new_status New WordPress post status.
+	 * @param string  $old_status Previous WordPress post status.
+	 * @param WP_Post $post       Transitioned post.
+	 */
+	public static function record_first_publish( string $new_status, string $old_status, WP_Post $post ): void {
+		if ( self::PROMOTION_POST_TYPE !== $post->post_type ) {
+			return;
+		}
+
+		$published_statuses = array( 'publish', 'future' );
+		if (
+			! in_array( $new_status, $published_statuses, true ) &&
+			! in_array( $old_status, $published_statuses, true )
+		) {
+			return;
+		}
+
+		update_post_meta( $post->ID, self::FIRST_PUBLISH_META, '1' );
+	}
+
+	/**
+	 * Check the durable first-publish marker with current status as a safe fallback.
+	 *
+	 * @param int    $post_id Promotion post ID.
+	 * @param string $status  Current WordPress post status.
+	 */
+	public static function has_completed_first_publish( int $post_id, string $status ): bool {
+		return in_array( $status, array( 'publish', 'future' ), true )
+			|| '1' === (string) get_post_meta( $post_id, self::FIRST_PUBLISH_META, true );
 	}
 
 	/**

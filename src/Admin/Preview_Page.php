@@ -56,11 +56,39 @@ final class Preview_Page {
 	 * Enqueue the isolated preview-canvas stylesheet.
 	 */
 	public static function enqueue_assets(): void {
+		add_filter( 'admin_body_class', array( self::class, 'body_class' ) );
+		add_filter( 'admin_title', array( self::class, 'admin_title' ), 10, 2 );
+
 		wp_enqueue_style(
 			'npcink-ad-preview-page',
 			NPCINK_AD_URL . 'assets/css/admin-preview.css',
 			array(),
 			NPCINK_AD_VERSION
+		);
+	}
+
+	/**
+	 * Mark the preview screen so its admin chrome can become a focused workspace.
+	 *
+	 * @param string $classes Existing admin body classes.
+	 */
+	public static function body_class( string $classes ): string {
+		return trim( $classes . ' npcink-ad-preview-workspace' );
+	}
+
+	/**
+	 * Give the hidden admin page a useful browser-tab title.
+	 *
+	 * @param string $admin_title Existing complete admin title.
+	 * @param string $title       Existing screen title.
+	 */
+	public static function admin_title( string $admin_title, string $title ): string {
+		unset( $admin_title, $title );
+
+		return sprintf(
+			/* translators: %s: Site title. */
+			__( 'Npcink Ad real-page preview ‹ %s — WordPress', 'npcink-ad' ),
+			wp_strip_all_tags( get_bloginfo( 'name' ) )
 		);
 	}
 
@@ -121,18 +149,17 @@ final class Preview_Page {
 		?>
 		<div class="wrap npcink-ad-preview-page">
 			<div class="npcink-ad-preview-page__toolbar">
-				<div>
+				<div class="npcink-ad-preview-page__heading">
 					<h1><?php esc_html_e( 'Real-page preview', 'npcink-ad' ); ?></h1>
-					<p><?php esc_html_e( 'The promotion is rendered by the same server policy used on the live site. Preview mode may show blocked creative, but its verdict remains truthful.', 'npcink-ad' ); ?></p>
-					<p><?php esc_html_e( 'Desktop represents the fixed rule at 782px and above. Mobile represents the fixed rule at 781px and below; its canvas is capped at 390px as a representative width, not as the breakpoint.', 'npcink-ad' ); ?></p>
+					<p><?php esc_html_e( 'Uses the live delivery policy, including blocked verdicts. Desktop: 782px and above. Mobile: 781px and below in a representative 390px canvas.', 'npcink-ad' ); ?></p>
 				</div>
-				<div class="npcink-ad-preview-page__actions">
+				<nav class="npcink-ad-preview-page__actions" aria-label="<?php esc_attr_e( 'Preview controls', 'npcink-ad' ); ?>">
 					<a class="button <?php echo 'desktop' === $device ? 'button-primary' : ''; ?>" href="<?php echo esc_url( $desktop_url ); ?>" aria-current="<?php echo esc_attr( $desktop_current ); ?>"><?php esc_html_e( 'Desktop', 'npcink-ad' ); ?></a>
 					<a class="button <?php echo 'mobile' === $device ? 'button-primary' : ''; ?>" href="<?php echo esc_url( $mobile_url ); ?>" aria-current="<?php echo esc_attr( $mobile_current ); ?>"><?php esc_html_e( 'Mobile', 'npcink-ad' ); ?></a>
 					<?php if ( is_string( $edit_url ) && '' !== $edit_url ) : ?>
 						<a class="button" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Back to promotion', 'npcink-ad' ); ?></a>
 					<?php endif; ?>
-				</div>
+				</nav>
 			</div>
 			<div class="npcink-ad-preview-page__stage is-<?php echo esc_attr( $device ); ?>">
 				<iframe src="<?php echo esc_url( $preview_url ); ?>" title="<?php esc_attr_e( 'Npcink Ad real-page preview', 'npcink-ad' ); ?>"></iframe>

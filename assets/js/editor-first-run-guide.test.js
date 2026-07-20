@@ -41,11 +41,14 @@ jest.mock( './preflight', () => ( {
 
 import {
 	buildContentPickerQuery,
-	combineScheduleDateTime,
-	getFirstRunGuideState,
+	buildSelectedContentPickerQuery,
 	isRecordsRequestLoading,
+} from './content-picker-query';
+import { getFirstRunGuideState } from './first-run-guide';
+import {
+	combineScheduleDateTime,
 	splitScheduleDateTime,
-} from './editor';
+} from './schedule-control';
 
 describe( 'content picker queries', () => {
 	test( 'keeps the default candidate search free of taxonomy filters', () => {
@@ -66,6 +69,17 @@ describe( 'content picker queries', () => {
 			search: 'summer',
 			categories: [ 12, 14 ],
 			tags: [ 21 ],
+		} );
+	} );
+
+	test( 'loads saved selections independently from the current search', () => {
+		expect( buildSelectedContentPickerQuery( [ 18, 42 ] ) ).toEqual( {
+			context: 'edit',
+			include: [ 18, 42 ],
+			order: 'asc',
+			orderby: 'include',
+			per_page: 2,
+			status: 'publish',
 		} );
 	} );
 } );
@@ -232,4 +246,15 @@ describe( 'getFirstRunGuideState', () => {
 			).toBe( false );
 		}
 	);
+
+	test( 'keeps an already-published paused Promotion out of onboarding', () => {
+		expect(
+			getFirstRunGuideState( {
+				hasCompletedFirstPublish: true,
+				postStatus: 'draft',
+				preflightIssues: [],
+				previewTargetId: 12,
+			} ).isVisible
+		).toBe( false );
+	} );
 } );

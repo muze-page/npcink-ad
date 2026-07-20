@@ -65,6 +65,10 @@ final class Plugin {
 			$promotion_action           = new Promotion_Status_Action( $repository, $evaluator );
 			$promotion_duplicate_action = new Promotion_Duplicate_Action();
 
+			add_filter(
+				'plugin_action_links_' . plugin_basename( NPCINK_AD_FILE ),
+				array( Menu::class, 'add_settings_action_link' )
+			);
 			add_action( 'admin_menu', array( Menu::class, 'register' ) );
 			add_action( 'admin_menu', array( Preview_Page::class, 'register' ), 20 );
 			add_action( 'enqueue_block_editor_assets', array( Editor::class, 'enqueue' ) );

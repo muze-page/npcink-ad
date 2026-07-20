@@ -19,7 +19,7 @@ interface WordPressWindow extends Window {
   NpcinkAdEditorSettings?: {
     defaultTargetId: number;
   };
-	wp?: {
+  wp?: {
     data?: {
       dispatch?: (store: string) => {
         editPost?: (attributes: Record<string, unknown>) => void;
@@ -233,6 +233,24 @@ async function selectDeliveryTab(
   await expect(tab).toHaveAttribute("aria-selected", "true");
 }
 
+async function expectLocatorInsideViewport(
+  page: Page,
+  locator: Locator,
+): Promise<void> {
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  const viewport = page.viewportSize();
+  expect(viewport).not.toBeNull();
+  expect(box?.x).toBeGreaterThanOrEqual(0);
+  expect(box?.y).toBeGreaterThanOrEqual(0);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(
+    viewport?.width ?? 0,
+  );
+  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(
+    viewport?.height ?? 0,
+  );
+}
+
 async function setPromotionCreative(page: Page): Promise<void> {
   await page.evaluate(
     ({ title, content, cta }) => {
@@ -432,6 +450,9 @@ test("completes a first selected-page Promotion from creation to live pause and 
   const { deliveryPanel, dialog: deliveryDialog } =
     await openDeliverySettings(page);
   await selectDeliveryTab(deliveryDialog, "Placement");
+  await expect(
+    deliveryDialog.locator(".components-modal__content"),
+  ).not.toHaveCSS("min-height", "280px");
   const placement = deliveryDialog.getByRole("combobox", {
     name: "Placement",
     exact: true,
@@ -635,6 +656,45 @@ test("completes a first selected-page Promotion from creation to live pause and 
 
   const createdPromotionId = await savePromotion(page, "draft");
   await selectDeliveryTab(deliveryDialog, "Preview");
+  const currentPreviewPage = deliveryDialog
+    .locator(".npcink-ad-selection-card")
+    .filter({ hasText: "Current preview page" });
+  await expect(currentPreviewPage).toContainText(PAGE_TITLE);
+  const replacePreviewPage = deliveryDialog.getByRole("combobox", {
+    name: "Search and replace preview page",
+    exact: true,
+  });
+  await expect(replacePreviewPage).toBeVisible();
+  await expect(replacePreviewPage).toHaveValue("");
+
+  for (const viewport of [
+    { width: 1366, height: 900 },
+    { width: 1280, height: 800 },
+    { width: 782, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expectLocatorInsideViewport(page, deliveryDialog);
+    await expectLocatorInsideViewport(page, currentPreviewPage);
+    for (const tabName of [
+      "Placement",
+      "Content scope",
+      "Device and schedule",
+      "Preview",
+    ]) {
+      await expect(
+        deliveryDialog.getByRole("tab", { name: tabName, exact: true }),
+      ).toBeVisible();
+    }
+    const documentGeometry = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(documentGeometry.scrollWidth).toBeLessThanOrEqual(
+      documentGeometry.clientWidth,
+    );
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const modalPreviewButton = deliveryDialog.getByRole("button", {
     name: /^(Save and open preview|Open preview)$/,
   });
@@ -659,6 +719,26 @@ test("completes a first selected-page Promotion from creation to live pause and 
       url.searchParams.get("page") === "npcink-ad-preview"
     );
   });
+  await expect(previewPage).toHaveTitle(/Npcink Ad real-page preview/);
+  await expect(previewPage.locator("body")).toHaveClass(
+    /npcink-ad-preview-workspace/,
+  );
+  await expect(previewPage.locator("#adminmenumain")).toBeHidden();
+  await expect(previewPage.locator("#wpfooter")).toBeHidden();
+  await expect(
+    previewPage.getByRole("navigation", { name: "Preview controls" }),
+  ).toBeVisible();
+  const workspaceGeometry = await previewPage.evaluate(() => ({
+    bodyOverflow: getComputedStyle(document.body).overflow,
+    clientHeight: document.documentElement.clientHeight,
+    scrollHeight: document.documentElement.scrollHeight,
+    scrollY: window.scrollY,
+  }));
+  expect(workspaceGeometry.bodyOverflow).toBe("hidden");
+  expect(workspaceGeometry.scrollY).toBe(0);
+  expect(workspaceGeometry.scrollHeight).toBeLessThanOrEqual(
+    workspaceGeometry.clientHeight,
+  );
 
   const previewUrl = new URL(previewPage.url());
   expect(previewUrl.searchParams.get("promotion")).toBe(
@@ -685,6 +765,43 @@ test("completes a first selected-page Promotion from creation to live pause and 
   expect(previewHtml).toContain("npcink-ad-page-bar--top");
   expect(previewHtml).toContain("data-npcink-ad-dismiss");
   expect(previewHtml).toContain(PROMOTION_CONTENT);
+  expect(previewHtml).not.toContain('id="wpadminbar"');
+
+  const previewFrame = previewPage.frameLocator(
+    'iframe[title="Npcink Ad real-page preview"]',
+  );
+  await expect(previewFrame.locator("body")).toBeVisible();
+  await expect(previewFrame.locator("#wpadminbar")).toHaveCount(0);
+
+  await Promise.all([
+    previewPage.waitForURL(
+      (url) => url.searchParams.get("device") === "mobile",
+    ),
+    previewPage.getByRole("link", { name: "Mobile", exact: true }).click(),
+  ]);
+  await previewPage.setViewportSize({ width: 390, height: 844 });
+  for (const controlName of ["Desktop", "Mobile", "Back to promotion"]) {
+    await expect(
+      previewPage.getByRole("link", { name: controlName, exact: true }),
+    ).toBeVisible();
+  }
+  const mobilePreviewFrame = previewPage.locator(
+    'iframe[title="Npcink Ad real-page preview"]',
+  );
+  await expectLocatorInsideViewport(previewPage, mobilePreviewFrame);
+  const mobilePreviewBox = await mobilePreviewFrame.boundingBox();
+  expect(mobilePreviewBox).not.toBeNull();
+  expect(mobilePreviewBox?.width).toBeLessThanOrEqual(390);
+  expect(mobilePreviewBox?.height).toBeGreaterThan(500);
+  const mobileWorkspaceGeometry = await previewPage.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    scrollY: window.scrollY,
+  }));
+  expect(mobileWorkspaceGeometry.scrollWidth).toBeLessThanOrEqual(
+    mobileWorkspaceGeometry.clientWidth,
+  );
+  expect(mobileWorkspaceGeometry.scrollY).toBe(0);
   await previewPage.close();
 
   const editDeliverySettingsButton = deliveryPanel.getByRole("button", {
@@ -795,6 +912,33 @@ test("completes a first selected-page Promotion from creation to live pause and 
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   let row = await openPromotionListRow(page);
+  const listHead = page.locator(".wp-list-table thead");
+  await expect(
+    listHead.getByRole("columnheader", {
+      name: "Delivery status",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    listHead.getByRole("columnheader", {
+      name: "Delivery rule",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    listHead.getByRole("columnheader", { name: "Stops", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("th.column-npcink_ad_content_scope")).toHaveCount(
+    0,
+  );
+  await expect(page.locator("th.column-npcink_ad_reasons")).toHaveCount(0);
+  await expect(listHead.locator("th.column-author")).toBeHidden();
+  await expect(row.locator("td.column-npcink_ad_location")).toContainText(
+    "Top page bar",
+  );
+  await expect(row.locator("td.column-npcink_ad_location")).toContainText(
+    "Selected public posts/pages: 1",
+  );
   await expect(row).toContainText("Rule ready");
   await submitStatusAction(page, `Pause: ${PROMOTION_TITLE}`, "paused");
   row = page.locator(`#post-${createdPromotionId}`);
@@ -805,7 +949,23 @@ test("completes a first selected-page Promotion from creation to live pause and 
     page.locator(`[data-npcink-ad-promotion="${createdPromotionId}"]`),
   ).toHaveCount(0);
 
-  row = await openPromotionListRow(page);
+  await page.goto(`/wp-admin/post.php?post=${createdPromotionId}&action=edit`);
+  await dismissWelcomeGuide(page);
+  await waitForPromotionEditor(page);
+  await expect(page.getByTestId("npcink-ad-first-run-guide")).toHaveCount(0);
+  const pausedDeliveryPanel = await getDeliveryPanel(page);
+  await expect(pausedDeliveryPanel).toContainText("Promotion is paused.");
+  const resumeListLink = pausedDeliveryPanel.getByRole("link", {
+    name: "Open Promotions to resume.",
+    exact: true,
+  });
+  await expect(resumeListLink).toBeVisible();
+  await Promise.all([
+    page.waitForURL((url) => url.pathname.endsWith("/wp-admin/edit.php")),
+    resumeListLink.click(),
+  ]);
+  row = page.locator(`#post-${createdPromotionId}`);
+  await expect(row).toBeVisible();
   await submitStatusAction(page, `Resume: ${PROMOTION_TITLE}`, "resumed");
   row = page.locator(`#post-${createdPromotionId}`);
   await expect(row).toContainText("Rule ready");

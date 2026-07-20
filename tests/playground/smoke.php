@@ -195,6 +195,20 @@ $announcement_button_names  = array_map(
 );
 $check( in_array( 'core/button', $announcement_button_names, true ), 'The compact announcement pattern omitted its editable Core Button CTA.' );
 
+$pattern_keywords = array(
+	'npcink-ad/cta-banner'     => array( 'offer', 'campaign', 'call to action' ),
+	'npcink-ad/promotion-card' => array( 'affiliate', 'product', 'recommendation' ),
+	'npcink-ad/announcement'   => array( 'announcement', 'notice', 'update' ),
+);
+foreach ( $pattern_keywords as $pattern_name => $expected_keywords ) {
+	$pattern = WP_Block_Patterns_Registry::get_instance()->get_registered( $pattern_name );
+	$check( is_array( $pattern ), 'A task-oriented Promotion pattern was not registered: ' . $pattern_name );
+	$check(
+		$expected_keywords === ( $pattern['keywords'] ?? array() ),
+		'A Promotion pattern did not expose its bounded task-oriented search keywords: ' . $pattern_name
+	);
+}
+
 $block_editor_script = wp_scripts()->registered['npcink-ad-block-editor'] ?? null;
 $check( $block_editor_script instanceof _WP_Dependency, 'The block editor script was not registered.' );
 $check(
@@ -214,7 +228,11 @@ $check(
 );
 $page_bar_script_source = (string) file_get_contents( WP_PLUGIN_DIR . '/npcink-ad/build/page-bar.js' );
 $check( ! str_contains( $page_bar_script_source, 'localStorage' ), 'The page-bar script persisted dismissal in localStorage.' );
+$check( ! str_contains( $page_bar_script_source, 'sessionStorage' ), 'The page-bar script persisted dismissal in sessionStorage.' );
 $check( ! str_contains( $page_bar_script_source, 'cookie' ), 'The page-bar script wrote or read visitor Cookies.' );
+$check( ! str_contains( $page_bar_script_source, 'sendBeacon' ), 'The page-bar script restored visitor-event beacon tracking.' );
+$check( ! str_contains( $page_bar_script_source, 'fetch(' ), 'The page-bar script restored a frontend request path.' );
+$check( ! str_contains( $page_bar_script_source, 'XMLHttpRequest' ), 'The page-bar script restored an XMLHttpRequest path.' );
 
 Editor::register_assets();
 $promotion_editor_script = wp_scripts()->registered['npcink-ad-promotion-editor'] ?? null;
@@ -247,6 +265,9 @@ add_filter( 'pre_determine_locale', $force_simplified_chinese, PHP_INT_MAX );
 unload_textdomain( 'npcink-ad', true );
 $check( '推广' === __( 'Promotions', 'npcink-ad' ), 'The WordPress.org PHP language pack did not resolve.' );
 $check( '复制为草稿' === __( 'Duplicate as draft', 'npcink-ad' ), 'The duplicate action Simplified Chinese translation did not resolve.' );
+$check( 'Y-m-d' === __( 'Y/m/d', 'npcink-ad' ), 'The Promotion-list date format did not match the native Simplified Chinese Date column.' );
+$check( 'ag:i' === __( 'g:i a', 'npcink-ad' ), 'The Promotion-list time format did not match the native Simplified Chinese Date column.' );
+$check( '%1$s %2$s' === __( '%1$s at %2$s', 'npcink-ad' ), 'The Promotion-list datetime separator did not match the native Simplified Chinese Date column.' );
 $check(
 	'Npcink Ad 推广' === _x( 'Npcink Ad Promotion', 'block title', 'npcink-ad' ),
 	'The translated block metadata title did not resolve.'
@@ -523,6 +544,88 @@ update_post_meta( $promotion_id, Post_Types::INCLUDE_IDS_META, array( $page_a_id
 update_post_meta( $promotion_id, Post_Types::CATEGORY_IDS_META, array( $category_id ) );
 update_post_meta( $promotion_id, Post_Types::TAG_IDS_META, array( $tag_id ) );
 update_post_meta( $promotion_id, Post_Types::PARAGRAPH_NUMBER_META, 7 );
+
+$revision_original_content = '<!-- wp:paragraph --><p>Revision baseline creative</p><!-- /wp:paragraph -->';
+$revision_original_meta    = array(
+	Post_Types::LOCATION_META         => 'block',
+	Post_Types::CONTENT_SCOPE_META    => 'selected',
+	Post_Types::INCLUDE_IDS_META      => array( $page_a_id ),
+	Post_Types::EXCLUDE_IDS_META      => array( $page_b_id ),
+	Post_Types::CATEGORY_IDS_META     => array( $category_id ),
+	Post_Types::TAG_IDS_META          => array( $tag_id ),
+	Post_Types::DEVICE_META           => 'mobile',
+	Post_Types::START_AT_META         => '2026-08-01 09:00:00',
+	Post_Types::END_AT_META           => '2026-08-02 09:00:00',
+	Post_Types::PARAGRAPH_NUMBER_META => 5,
+);
+$revision_promotion_id    = wp_insert_post(
+	array(
+		'post_type'    => Post_Types::PROMOTION_POST_TYPE,
+		'post_status'  => 'draft',
+		'post_title'   => 'Revision baseline title',
+		'post_content' => $revision_original_content,
+	),
+	true
+);
+$check( ! is_wp_error( $revision_promotion_id ), 'Could not create the native revision fixture.' );
+$revision_promotion_id = absint( $revision_promotion_id );
+foreach ( $revision_original_meta as $meta_key => $meta_value ) {
+	update_post_meta( $revision_promotion_id, $meta_key, $meta_value );
+}
+$revision_id = wp_save_post_revision( $revision_promotion_id );
+$check( is_int( $revision_id ) && 0 < $revision_id, 'WordPress did not save the Promotion baseline revision.' );
+
+$revision_update = wp_update_post(
+	array(
+		'ID'           => $revision_promotion_id,
+		'post_title'   => 'Revision changed title',
+		'post_content' => '<!-- wp:paragraph --><p>Revision changed creative</p><!-- /wp:paragraph -->',
+	),
+	true
+);
+$check( ! is_wp_error( $revision_update ), 'Could not change the Promotion revision fixture.' );
+$revision_changed_meta = array(
+	Post_Types::LOCATION_META         => 'content_before',
+	Post_Types::CONTENT_SCOPE_META    => 'all',
+	Post_Types::INCLUDE_IDS_META      => array(),
+	Post_Types::EXCLUDE_IDS_META      => array(),
+	Post_Types::CATEGORY_IDS_META     => array(),
+	Post_Types::TAG_IDS_META          => array(),
+	Post_Types::DEVICE_META           => 'desktop',
+	Post_Types::START_AT_META         => '',
+	Post_Types::END_AT_META           => '',
+	Post_Types::PARAGRAPH_NUMBER_META => 11,
+);
+foreach ( $revision_changed_meta as $meta_key => $meta_value ) {
+	update_post_meta( $revision_promotion_id, $meta_key, $meta_value );
+}
+
+$restored_revision_post_id = wp_restore_post_revision( $revision_id );
+$check(
+	$revision_promotion_id === $restored_revision_post_id,
+	'WordPress did not restore the selected Promotion revision.'
+);
+$restored_revision_post = get_post( $revision_promotion_id );
+$check( $restored_revision_post instanceof WP_Post, 'The restored Promotion revision could not be reloaded.' );
+$check(
+	$restored_revision_post instanceof WP_Post && 'Revision baseline title' === $restored_revision_post->post_title,
+	'The native revision restore did not restore the Promotion title.'
+);
+$check(
+	$restored_revision_post instanceof WP_Post && $revision_original_content === $restored_revision_post->post_content,
+	'The native revision restore did not restore the Promotion block content.'
+);
+foreach ( $revision_original_meta as $meta_key => $meta_value ) {
+	$restored_meta_value = get_post_meta( $revision_promotion_id, $meta_key, true );
+	if ( Post_Types::PARAGRAPH_NUMBER_META === $meta_key ) {
+		$restored_meta_value = (int) $restored_meta_value;
+	}
+	$check(
+		$meta_value === $restored_meta_value,
+		'The native revision restore did not restore typed Promotion metadata: ' . $meta_key
+	);
+}
+$check( false !== wp_delete_post( $revision_promotion_id, true ), 'The native revision fixture could not be removed.' );
 
 $source_meta_before_copy = array(
 	Post_Types::LOCATION_META         => get_post_meta( $promotion_id, Post_Types::LOCATION_META, true ),
@@ -957,13 +1060,10 @@ Preview_Page::render();
 $preview_page_html = (string) ob_get_clean();
 $check( str_contains( $preview_page_html, 'npcink_ad_preview=' . $promotion_id ), 'A manager could not render the bound real-page preview URL.' );
 $check(
-	str_contains( $preview_page_html, 'The promotion is rendered by the same server policy used on the live site. Preview mode may show blocked creative, but its verdict remains truthful.' ),
-	'The preview page omitted its truthful-verdict explanation.'
+	str_contains( $preview_page_html, 'Uses the live delivery policy, including blocked verdicts. Desktop: 782px and above. Mobile: 781px and below in a representative 390px canvas.' ),
+	'The preview page omitted its compact policy and device explanation.'
 );
-$check(
-	str_contains( $preview_page_html, 'Desktop represents the fixed rule at 782px and above. Mobile represents the fixed rule at 781px and below; its canvas is capped at 390px as a representative width, not as the breakpoint.' ),
-	'The preview page omitted the fixed device boundary and representative canvas explanation.'
-);
+$check( str_contains( $preview_page_html, 'aria-label="Preview controls"' ), 'The preview page controls were not exposed as navigation.' );
 $check( 1 === substr_count( $preview_page_html, 'aria-current="page"' ), 'The preview page did not expose exactly one current device.' );
 $check(
 	1 === preg_match( '#<a[^>]*aria-current="page"[^>]*>Mobile</a>#', $preview_page_html ),
@@ -1017,6 +1117,7 @@ $_GET          = array(
 $block_preview_delivery = new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() );
 $block_preview_request  = new Preview_Request( $block_preview_delivery, new Repository() );
 $block_preview_request->activate();
+$check( false === apply_filters( 'show_admin_bar', true ), 'An authorized real-page preview did not hide the front-end admin bar.' );
 $check(
 	defined( 'DONOTCACHEPAGE' ) && true === DONOTCACHEPAGE,
 	'An authorized real-page preview did not disable full-page caching.'
@@ -1290,6 +1391,17 @@ $rest_server = rest_get_server();
 if ( 0 === did_action( 'rest_api_init' ) ) {
 	do_action( 'rest_api_init', $rest_server );
 }
+
+$custom_plugin_rest_routes = array_values(
+	array_filter(
+		array_keys( $rest_server->get_routes() ),
+		static fn ( string $route ): bool => str_starts_with( $route, '/npcink-ad/' ) || str_starts_with( $route, '/magick-ad/' )
+	)
+);
+$check(
+	array() === $custom_plugin_rest_routes,
+	'The native Promotion workflow restored a custom Npcink Ad or legacy Magick AD REST namespace.'
+);
 
 wp_set_current_user( 1 );
 $check( current_user_can( 'manage_npcink_ads' ), 'The REST write smoke did not run as the current administrator.' );
@@ -1796,6 +1908,25 @@ $plugin_tables = $wpdb->get_col(
 	)
 );
 $check( array() === $plugin_tables, 'The single-promotion workflow created custom tables.' );
+
+$legacy_background_hooks = array(
+	'magick_ad_flush_stats_cache',
+	'magick_ad_cleanup_stats_dim',
+	'magick_ad_cleanup_diagnostics_log',
+);
+foreach ( $legacy_background_hooks as $legacy_background_hook ) {
+	$check( false === has_action( $legacy_background_hook ), 'A legacy statistics or diagnostics Cron callback was restored.' );
+	$check( false === wp_next_scheduled( $legacy_background_hook ), 'A legacy statistics or diagnostics Cron event was scheduled.' );
+}
+$plugin_cron_events = array();
+foreach ( _get_cron_array() as $cron_hooks ) {
+	foreach ( array_keys( $cron_hooks ) as $cron_hook ) {
+		if ( str_starts_with( $cron_hook, 'npcink_ad_' ) || str_starts_with( $cron_hook, 'magick_ad_' ) ) {
+			$plugin_cron_events[] = $cron_hook;
+		}
+	}
+}
+$check( array() === array_values( array_unique( $plugin_cron_events ) ), 'The single-Promotion workflow scheduled a plugin background event.' );
 
 $placement_records = get_posts(
 	array(
