@@ -413,52 +413,88 @@ msgstr ""
 msgid "A clear headline, supporting copy, and call-to-action button."
 msgstr ""
 
-#: src/Blocks/Patterns.php:37
+#: src/Blocks/Patterns.php:34
+msgid "offer"
+msgstr ""
+
+#: src/Blocks/Patterns.php:35
+msgid "campaign"
+msgstr ""
+
+#: src/Blocks/Patterns.php:36
+msgid "call to action"
+msgstr ""
+
+#: src/Blocks/Patterns.php:42
 msgid "A useful offer for your readers"
 msgstr ""
 
-#: src/Blocks/Patterns.php:41
+#: src/Blocks/Patterns.php:46
 msgid "Explain the benefit in one short sentence."
 msgstr ""
 
-#: src/Blocks/Patterns.php:46
-#: src/Blocks/Patterns.php:92
+#: src/Blocks/Patterns.php:51
+#: src/Blocks/Patterns.php:107
 msgid "Learn more"
 msgstr ""
 
-#: src/Blocks/Patterns.php:56
+#: src/Blocks/Patterns.php:61
 msgid "Promotion card"
 msgstr ""
 
-#: src/Blocks/Patterns.php:57
+#: src/Blocks/Patterns.php:62
 msgid "A compact bordered card for an offer, product, or affiliate link."
 msgstr ""
 
-#: src/Blocks/Patterns.php:62
-msgid "Featured recommendation"
+#: src/Blocks/Patterns.php:64
+msgid "affiliate"
+msgstr ""
+
+#: src/Blocks/Patterns.php:65
+msgid "product"
 msgstr ""
 
 #: src/Blocks/Patterns.php:66
+msgid "recommendation"
+msgstr ""
+
+#: src/Blocks/Patterns.php:72
+msgid "Featured recommendation"
+msgstr ""
+
+#: src/Blocks/Patterns.php:76
 msgid "Describe why this recommendation is relevant to the current page."
 msgstr ""
 
-#: src/Blocks/Patterns.php:71
+#: src/Blocks/Patterns.php:81
 msgid "View offer"
 msgstr ""
 
-#: src/Blocks/Patterns.php:81
+#: src/Blocks/Patterns.php:91
 msgid "Compact announcement"
 msgstr ""
 
-#: src/Blocks/Patterns.php:82
+#: src/Blocks/Patterns.php:92
 msgid "A compact site-owned announcement with short copy and a call-to-action button."
 msgstr ""
 
-#: src/Blocks/Patterns.php:87
+#: src/Blocks/Patterns.php:94
+msgid "announcement"
+msgstr ""
+
+#: src/Blocks/Patterns.php:95
+msgid "notice"
+msgstr ""
+
+#: src/Blocks/Patterns.php:96
+msgid "update"
+msgstr ""
+
+#: src/Blocks/Patterns.php:102
 msgid "New:"
 msgstr ""
 
-#: src/Blocks/Patterns.php:87
+#: src/Blocks/Patterns.php:102
 msgid "Share a concise update and add a link to the next step."
 msgstr ""
 
@@ -782,6 +818,50 @@ msgid "The editor could not load the preview. Try again."
 msgstr ""
 
 #: build/promotion-editor.js:1
+msgid "Next"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Ready"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Choose a page"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Publish in three steps"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "This checklist follows the current content and delivery preflight."
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Add promotion content"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Done"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Needs content"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Confirm delivery rules"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Needs attention"
+msgstr ""
+
+#: build/promotion-editor.js:1
+msgid "Preview a real page and publish"
+msgstr ""
+
+#: build/promotion-editor.js:1
 msgid "Date"
 msgstr ""
 
@@ -813,50 +893,6 @@ msgstr ""
 #: build/promotion-editor.js:3
 #, js-format
 msgid "Paragraph number must be a whole number from %1$d to %2$d."
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "Next"
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "Ready"
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "Choose a page"
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "Publish in three steps"
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "This checklist follows the current content and delivery preflight."
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "Add promotion content"
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "Done"
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "Needs content"
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "Confirm delivery rules"
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "Needs attention"
-msgstr ""
-
-#: build/promotion-editor.js:3
-msgid "Preview a real page and publish"
 msgstr ""
 
 #: build/promotion-editor.js:3

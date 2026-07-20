@@ -114,48 +114,48 @@ msgstr "推广行动号召横幅"
 msgid "A clear headline, supporting copy, and call-to-action button."
 msgstr "清晰的标题、辅助文案和行动号召按钮。"
 
-#: src/Blocks/Patterns.php:37
+#: src/Blocks/Patterns.php:42
 msgid "A useful offer for your readers"
 msgstr "给读者的实用优惠"
 
-#: src/Blocks/Patterns.php:41
+#: src/Blocks/Patterns.php:46
 msgid "Explain the benefit in one short sentence."
 msgstr "用一句简短的话说明具体价值。"
 
-#: src/Blocks/Patterns.php:46
-#: src/Blocks/Patterns.php:92
+#: src/Blocks/Patterns.php:51
+#: src/Blocks/Patterns.php:107
 msgid "Learn more"
 msgstr "了解更多"
 
-#: src/Blocks/Patterns.php:56
+#: src/Blocks/Patterns.php:61
 msgid "Promotion card"
 msgstr "推广卡片"
 
-#: src/Blocks/Patterns.php:57
+#: src/Blocks/Patterns.php:62
 msgid "A compact bordered card for an offer, product, or affiliate link."
 msgstr "适用于优惠、产品或联盟链接的紧凑型边框卡片。"
 
-#: src/Blocks/Patterns.php:62
+#: src/Blocks/Patterns.php:72
 msgid "Featured recommendation"
 msgstr "精选推荐"
 
-#: src/Blocks/Patterns.php:66
+#: src/Blocks/Patterns.php:76
 msgid "Describe why this recommendation is relevant to the current page."
 msgstr "说明这项推荐为何与当前页面相关。"
 
-#: src/Blocks/Patterns.php:71
+#: src/Blocks/Patterns.php:81
 msgid "View offer"
 msgstr "查看优惠"
 
-#: src/Blocks/Patterns.php:81
+#: src/Blocks/Patterns.php:91
 msgid "Compact announcement"
 msgstr "简洁公告"
 
-#: src/Blocks/Patterns.php:87
+#: src/Blocks/Patterns.php:102
 msgid "New:"
 msgstr "新消息："
 
-#: src/Blocks/Patterns.php:87
+#: src/Blocks/Patterns.php:102
 msgid "Share a concise update and add a link to the next step."
 msgstr "发布一条简洁更新，并添加指向下一步的链接。"
 
@@ -912,47 +912,47 @@ msgstr "在真实页面中预览，然后发布。"
 msgid "Add first Promotion"
 msgstr "添加第一条推广"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "Next"
 msgstr "下一步"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "Ready"
 msgstr "就绪"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "Choose a page"
 msgstr "选择页面"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "Publish in three steps"
 msgstr "分三步发布"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "This checklist follows the current content and delivery preflight."
 msgstr "此清单根据当前内容和投放预检结果更新。"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "Add promotion content"
 msgstr "添加推广内容"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "Done"
 msgstr "已完成"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "Needs content"
 msgstr "需要内容"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "Confirm delivery rules"
 msgstr "确认投放规则"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "Needs attention"
 msgstr "需要处理"
 
-#: build/promotion-editor.js:3
+#: build/promotion-editor.js:1
 msgid "Preview a real page and publish"
 msgstr "在真实页面中预览并发布"
 
@@ -1128,7 +1128,7 @@ msgstr "关闭推广横栏"
 msgid "Page bars stay in the normal page flow and can be dismissed for the current page. They are not sticky and do not store visitor state."
 msgstr "页面横栏位于正常页面流中，可在当前页面关闭。它不会吸顶，也不会保存访客状态。"
 
-#: src/Blocks/Patterns.php:82
+#: src/Blocks/Patterns.php:92
 msgid "A compact site-owned announcement with short copy and a call-to-action button."
 msgstr "一个包含简短文案和行动按钮的紧凑站内公告。"
 
@@ -1287,3 +1287,39 @@ msgstr "搜索并替换预览页面"
 #: build/promotion-editor.js:19
 msgid "Search published posts and pages"
 msgstr "搜索已发布的文章和页面"
+
+#: src/Blocks/Patterns.php:34
+msgid "offer"
+msgstr "优惠"
+
+#: src/Blocks/Patterns.php:35
+msgid "campaign"
+msgstr "活动"
+
+#: src/Blocks/Patterns.php:36
+msgid "call to action"
+msgstr "行动号召"
+
+#: src/Blocks/Patterns.php:64
+msgid "affiliate"
+msgstr "联盟推广"
+
+#: src/Blocks/Patterns.php:65
+msgid "product"
+msgstr "产品"
+
+#: src/Blocks/Patterns.php:66
+msgid "recommendation"
+msgstr "推荐"
+
+#: src/Blocks/Patterns.php:94
+msgid "announcement"
+msgstr "公告"
+
+#: src/Blocks/Patterns.php:95
+msgid "notice"
+msgstr "通知"
+
+#: src/Blocks/Patterns.php:96
+msgid "update"
+msgstr "更新"

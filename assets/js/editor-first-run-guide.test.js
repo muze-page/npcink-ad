@@ -42,11 +42,13 @@ jest.mock( './preflight', () => ( {
 import {
 	buildContentPickerQuery,
 	buildSelectedContentPickerQuery,
-	combineScheduleDateTime,
-	getFirstRunGuideState,
 	isRecordsRequestLoading,
+} from './content-picker-query';
+import { getFirstRunGuideState } from './first-run-guide';
+import {
+	combineScheduleDateTime,
 	splitScheduleDateTime,
-} from './editor';
+} from './schedule-control';
 
 describe( 'content picker queries', () => {
 	test( 'keeps the default candidate search free of taxonomy filters', () => {

@@ -52,6 +52,7 @@
 - `Promotion_List` / `Promotion_Status_Action`：规则摘要，以及严格的 publish/future → draft 暂停与 draft → publish 恢复操作；
 - `Promotion_Duplicate_Action`：通过绑定源 Promotion 的 nonce 与独立 POST 表单，将原生区块内容和显式 placement meta allowlist 复制为无排期草稿；失败时删除不完整副本；
 - `Editor` / `Preview_Page`：侧栏设置、即时预检、非阻断重叠提示与桌面/移动 iframe 画布；
+- Promotion 编辑器继续使用单一入口和单一构建产物；`Editor` 只负责页面级编排，首次发布引导、排期控件和内容选择查询分别位于内部模块，不形成第二套状态、API 或运行时；
 - `Blocks` / `Patterns`：一个动态引用区块和三个 Core block 起步样式。
 
 ## 4. 稳定 reason codes
@@ -91,6 +92,7 @@
 - PHPUnit：配置、页面、时间边界、位置、列表状态和恢复状态机；
 - PHPCS / PHPStan：WordPress 编码、安全与类型边界；
 - TypeScript / JS / CSS lint：编辑器与动态区块；
+- 0.3.3 管理工作流的构建上限按整数 KiB 固定为：block editor JS 16、Promotion editor JS 41、两者合计 52、page-bar JS 1、单个 editor CSS 5；预算只校准到当前已审查基线，不把源码模块拆分包装成体积优化；
 - Promotion 编辑器 SlotFill 优先使用当前 `@wordpress/editor` 导出及其 `wp-editor` 依赖；WordPress 6.5 保留 `@wordpress/edit-post` / `wp-edit-post` fallback。`Requires at least` 低于 6.6 时，release gate 解析构建资产的 dependency array，要求该 fallback 依赖存在，并拒绝 6.6 之前不可用的 `react-jsx-runtime`；
 - Playground：WP 6.5/PHP 8.1 和当前版本的打包插件集成、五种 canonical content scope、真实 Core category/tag 直接关系与动态变更、term fail-closed、REST 发布/恢复预检、真实 `the_content` 优先级 `8 → 9 → 10` 的 marker 复制后单次渲染与残余清理、顶部/底部横栏挂钩与按需关闭脚本、固定 `781px`/`782px` CSS 契约、区块三属性边界、预览说明、时区/排期边界、无表/Options、卸载；
 - Local 浏览器：同一编辑页创建规则、列表范围摘要、真实主题预览、发布/暂停和匿名前台。

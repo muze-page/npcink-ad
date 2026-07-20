@@ -17,7 +17,10 @@ conditional no-storage dismissal script, the fixed `781px`/`782px` frontend CSS
 boundary, the exact three-attribute Promotion block contract, registered block
 description, visible preview breakpoint guidance, authorized and denied REST
 access, promotion-bound preview nonces, preview capability checks, absence of
-placement records/options/custom tables, and explicit uninstall cleanup. The
+custom Npcink Ad/Magick AD REST namespaces, visitor storage/network primitives,
+statistics Cron callbacks, placement records/options/custom tables, native
+Promotion revision restoration for block content and every typed delivery field,
+task-oriented starter-pattern keywords, and explicit uninstall cleanup. The
 runner uses a fixed Playground CLI release, builds a temporary Blueprint bundle, and deletes
 all temporary files on exit. It passes WordPress through the CLI and PHP through
 `preferredVersions`: this split is intentional because the current CLI's PHP

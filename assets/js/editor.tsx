@@ -13,15 +13,7 @@ import {
 } from '@wordpress/components';
 import { store as coreDataStore } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
-import {
-	PluginDocumentSettingPanel as LegacyPluginDocumentSettingPanel,
-	PluginPrePublishPanel as LegacyPluginPrePublishPanel,
-} from '@wordpress/edit-post';
-import {
-	PluginDocumentSettingPanel as CurrentPluginDocumentSettingPanel,
-	PluginPrePublishPanel as CurrentPluginPrePublishPanel,
-	store as editorStore,
-} from '@wordpress/editor';
+import { store as editorStore } from '@wordpress/editor';
 import { __, _n, sprintf } from '@wordpress/i18n';
 import { registerPlugin } from '@wordpress/plugins';
 
@@ -46,17 +38,22 @@ import {
 	advancePublishStatusRecovery,
 	createPublishStatusRecoveryState,
 } from './publish-status-recovery';
-import { selectEditorSlotFill } from './editor-slotfill-compat';
 import { SelectionCard } from './selection-card';
-
-const PluginDocumentSettingPanel = selectEditorSlotFill(
-	CurrentPluginDocumentSettingPanel,
-	LegacyPluginDocumentSettingPanel
-);
-const PluginPrePublishPanel = selectEditorSlotFill(
-	CurrentPluginPrePublishPanel,
-	LegacyPluginPrePublishPanel
-);
+import { FirstRunGuide, getFirstRunGuideState } from './first-run-guide';
+import {
+	PluginDocumentSettingPanel,
+	PluginPrePublishPanel,
+} from './editor-panels';
+import {
+	buildContentPickerQuery,
+	buildSelectedContentPickerQuery,
+	isRecordsRequestLoading,
+} from './content-picker-query';
+import {
+	ScheduleDateTimeControl,
+	siteTimezoneLabel,
+	type SiteBaseRecord,
+} from './schedule-control';
 
 interface PromotionMeta {
 	_npcink_ad_location?: PromotionLocation;
@@ -94,11 +91,6 @@ interface ContentOption {
 interface TermRecord {
 	id: number;
 	name: string;
-}
-
-interface SiteBaseRecord {
-	gmt_offset?: number | string;
-	timezone_string?: string;
 }
 
 interface ResolutionSelectors {
@@ -139,29 +131,11 @@ type ParagraphAnchorNoticeState =
 			paragraphNumber: number;
 	  };
 
-type FirstRunGuideStepState = 'complete' | 'incomplete' | 'ready' | 'blocked';
-
 type DeliverySettingsTab =
 	| 'placement'
 	| 'content_scope'
 	| 'device_schedule'
 	| 'preview';
-
-export interface FirstRunGuideState {
-	isVisible: boolean;
-	content: FirstRunGuideStepState;
-	delivery: FirstRunGuideStepState;
-	previewAndPublish: FirstRunGuideStepState;
-	hasPreviewTarget: boolean;
-}
-
-interface FirstRunGuideInput {
-	deliveryNeedsAttention?: boolean;
-	hasCompletedFirstPublish?: boolean;
-	postStatus: string;
-	preflightIssues: readonly PromotionPreflightIssueCode[];
-	previewTargetId: number;
-}
 
 interface PreviewFeedback {
 	kind:
@@ -182,45 +156,6 @@ function recordTitle( record: ContentRecord ): string {
 	}
 
 	return record.title?.raw || record.title?.rendered || `#${ record.id }`;
-}
-
-export function isRecordsRequestLoading(
-	records: readonly unknown[] | null,
-	error: unknown,
-	hasFinished: boolean,
-	isResolving: boolean
-): boolean {
-	return ! error && records === null && ( isResolving || ! hasFinished );
-}
-
-export function buildContentPickerQuery(
-	filter: string,
-	categoryIds: readonly number[] = [],
-	tagIds: readonly number[] = []
-): Record< string, unknown > {
-	return {
-		context: 'edit',
-		order: 'desc',
-		orderby: filter ? 'relevance' : 'date',
-		per_page: 20,
-		search: filter || undefined,
-		status: 'publish',
-		categories: categoryIds.length > 0 ? categoryIds : undefined,
-		tags: tagIds.length > 0 ? tagIds : undefined,
-	};
-}
-
-export function buildSelectedContentPickerQuery(
-	selectedIds: readonly number[]
-): Record< string, unknown > {
-	return {
-		context: 'edit',
-		include: selectedIds,
-		order: 'asc',
-		orderby: 'include',
-		per_page: Math.max( 1, selectedIds.length ),
-		status: 'publish',
-	};
 }
 
 function mergeContentRecords(
@@ -245,93 +180,6 @@ function normalizeIds( value: unknown ): number[] {
 				.filter( ( item ) => Number.isInteger( item ) && item > 0 )
 		),
 	].slice( 0, 50 );
-}
-
-export function splitScheduleDateTime( value: string = '' ): {
-	date: string;
-	time: string;
-} {
-	return { date: value.slice( 0, 10 ), time: value.slice( 11, 16 ) };
-}
-
-export function combineScheduleDateTime( date: string, time: string ): string {
-	if ( ! date ) {
-		return '';
-	}
-
-	return `${ date } ${ time || '00:00' }:00`;
-}
-
-function siteTimezoneLabel( site: SiteBaseRecord | null ): string {
-	if ( site?.timezone_string?.trim() ) {
-		return site.timezone_string.trim();
-	}
-
-	const offset = Number( site?.gmt_offset );
-	if ( Number.isFinite( offset ) ) {
-		const absoluteMinutes = Math.round( Math.abs( offset ) * 60 );
-		const hours = String( Math.floor( absoluteMinutes / 60 ) ).padStart(
-			2,
-			'0'
-		);
-		const minutes = String( absoluteMinutes % 60 ).padStart( 2, '0' );
-		const sign = offset >= 0 ? '+' : '-';
-
-		return `UTC${ sign }${ hours }:${ minutes }`;
-	}
-
-	return __( 'configured in WordPress', 'npcink-ad' );
-}
-
-function ScheduleDateTimeControl( {
-	label,
-	value,
-	onChange,
-	help,
-	hasError,
-}: {
-	label: string;
-	value: string | undefined;
-	onChange: ( value: string ) => void;
-	help: string;
-	hasError: boolean;
-} ) {
-	const { date, time } = splitScheduleDateTime( value );
-
-	return (
-		<fieldset
-			className={ `npcink-ad-schedule-control${
-				hasError ? ' npcink-ad-control-error' : ''
-			}` }
-		>
-			<legend className="components-base-control__label">
-				{ label }
-			</legend>
-			<div className="npcink-ad-schedule-control__fields">
-				<TextControl
-					__next40pxDefaultSize
-					type="date"
-					label={ __( 'Date', 'npcink-ad' ) }
-					value={ date }
-					onChange={ ( nextDate ) =>
-						onChange( combineScheduleDateTime( nextDate, time ) )
-					}
-				/>
-				<TextControl
-					__next40pxDefaultSize
-					type="time"
-					label={ __( 'Time', 'npcink-ad' ) }
-					value={ time }
-					disabled={ ! date }
-					aria-invalid={ hasError }
-					help={ help }
-					onChange={ ( nextTime ) =>
-						onChange( combineScheduleDateTime( date, nextTime ) )
-					}
-				/>
-			</div>
-		</fieldset>
-	);
 }
 
 function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
@@ -375,141 +223,6 @@ function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
 			);
 		}
 	}
-}
-
-/**
- * Derive the first-run checklist from the same preflight result used by the
- * delivery panel and server-side publish validation. Scheduled Promotions have
- * already completed the publish flow, so they leave the checklist with
- * published Promotions.
- *
- * @param input                          Current checklist inputs.
- * @param input.deliveryNeedsAttention   Whether server-backed delivery data is invalid.
- * @param input.hasCompletedFirstPublish Whether this Promotion has completed its first publish.
- * @param input.postStatus               Persisted WordPress post status.
- * @param input.preflightIssues          Issues from the canonical editor preflight.
- * @param input.previewTargetId          Effective real-page preview target ID.
- */
-export function getFirstRunGuideState( {
-	deliveryNeedsAttention = false,
-	hasCompletedFirstPublish = false,
-	postStatus,
-	preflightIssues,
-	previewTargetId,
-}: FirstRunGuideInput ): FirstRunGuideState {
-	const isContentIssue = ( issue: PromotionPreflightIssueCode ) =>
-		issue === 'empty_content' || issue === 'video_source_missing';
-	const isVisible =
-		! hasCompletedFirstPublish &&
-		postStatus !== 'publish' &&
-		postStatus !== 'future';
-	const contentComplete = ! preflightIssues.some( isContentIssue );
-	const deliveryComplete =
-		! deliveryNeedsAttention && preflightIssues.every( isContentIssue );
-	const hasPreviewTarget = previewTargetId > 0;
-
-	return {
-		isVisible,
-		content: contentComplete ? 'complete' : 'incomplete',
-		delivery: deliveryComplete ? 'complete' : 'incomplete',
-		previewAndPublish:
-			contentComplete && deliveryComplete && hasPreviewTarget
-				? 'ready'
-				: 'blocked',
-		hasPreviewTarget,
-	};
-}
-
-function FirstRunGuide( { state }: { state: FirstRunGuideState } ) {
-	if ( ! state.isVisible ) {
-		return null;
-	}
-
-	let previewStatus: string = __( 'Next', 'npcink-ad' );
-	if ( state.previewAndPublish === 'ready' ) {
-		previewStatus = __( 'Ready', 'npcink-ad' );
-	} else if (
-		state.content === 'complete' &&
-		state.delivery === 'complete' &&
-		! state.hasPreviewTarget
-	) {
-		previewStatus = __( 'Choose a page', 'npcink-ad' );
-	}
-
-	return (
-		<PluginDocumentSettingPanel
-			name="npcink-ad-first-run"
-			title={ __( 'Publish in three steps', 'npcink-ad' ) }
-			className="npcink-ad-editor-panel npcink-ad-first-run-guide"
-		>
-			<p className="npcink-ad-first-run-guide__intro">
-				{ __(
-					'This checklist follows the current content and delivery preflight.',
-					'npcink-ad'
-				) }
-			</p>
-			<ol
-				className="npcink-ad-first-run-guide__steps"
-				data-testid="npcink-ad-first-run-guide"
-			>
-				<li
-					data-testid="npcink-ad-first-run-step-content"
-					data-state={ state.content }
-				>
-					<span
-						className="npcink-ad-first-run-guide__number"
-						aria-hidden="true"
-					>
-						1
-					</span>
-					<span className="npcink-ad-first-run-guide__label">
-						{ __( 'Add promotion content', 'npcink-ad' ) }
-					</span>
-					<span className="npcink-ad-first-run-guide__status">
-						{ state.content === 'complete'
-							? __( 'Done', 'npcink-ad' )
-							: __( 'Needs content', 'npcink-ad' ) }
-					</span>
-				</li>
-				<li
-					data-testid="npcink-ad-first-run-step-delivery"
-					data-state={ state.delivery }
-				>
-					<span
-						className="npcink-ad-first-run-guide__number"
-						aria-hidden="true"
-					>
-						2
-					</span>
-					<span className="npcink-ad-first-run-guide__label">
-						{ __( 'Confirm delivery rules', 'npcink-ad' ) }
-					</span>
-					<span className="npcink-ad-first-run-guide__status">
-						{ state.delivery === 'complete'
-							? __( 'Ready', 'npcink-ad' )
-							: __( 'Needs attention', 'npcink-ad' ) }
-					</span>
-				</li>
-				<li
-					data-testid="npcink-ad-first-run-step-preview-publish"
-					data-state={ state.previewAndPublish }
-				>
-					<span
-						className="npcink-ad-first-run-guide__number"
-						aria-hidden="true"
-					>
-						3
-					</span>
-					<span className="npcink-ad-first-run-guide__label">
-						{ __( 'Preview a real page and publish', 'npcink-ad' ) }
-					</span>
-					<span className="npcink-ad-first-run-guide__status">
-						{ previewStatus }
-					</span>
-				</li>
-			</ol>
-		</PluginDocumentSettingPanel>
-	);
 }
 
 function ManualBlockInspectionNotice( {
