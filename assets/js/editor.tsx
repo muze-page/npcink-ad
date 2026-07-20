@@ -47,6 +47,7 @@ import {
 	createPublishStatusRecoveryState,
 } from './publish-status-recovery';
 import { selectEditorSlotFill } from './editor-slotfill-compat';
+import { SelectionCard } from './selection-card';
 
 const PluginDocumentSettingPanel = selectEditorSlotFill(
 	CurrentPluginDocumentSettingPanel,
@@ -156,6 +157,7 @@ export interface FirstRunGuideState {
 
 interface FirstRunGuideInput {
 	deliveryNeedsAttention?: boolean;
+	hasCompletedFirstPublish?: boolean;
 	postStatus: string;
 	preflightIssues: readonly PromotionPreflightIssueCode[];
 	previewTargetId: number;
@@ -206,6 +208,29 @@ export function buildContentPickerQuery(
 		categories: categoryIds.length > 0 ? categoryIds : undefined,
 		tags: tagIds.length > 0 ? tagIds : undefined,
 	};
+}
+
+export function buildSelectedContentPickerQuery(
+	selectedIds: readonly number[]
+): Record< string, unknown > {
+	return {
+		context: 'edit',
+		include: selectedIds,
+		order: 'asc',
+		orderby: 'include',
+		per_page: Math.max( 1, selectedIds.length ),
+		status: 'publish',
+	};
+}
+
+function mergeContentRecords(
+	...recordGroups: readonly ContentRecord[][]
+): ContentRecord[] {
+	return Array.from(
+		new Map(
+			recordGroups.flat().map( ( record ) => [ record.id, record ] )
+		).values()
+	);
 }
 
 function normalizeIds( value: unknown ): number[] {
@@ -358,21 +383,26 @@ function preflightIssueMessage( issue: PromotionPreflightIssueCode ): string {
  * already completed the publish flow, so they leave the checklist with
  * published Promotions.
  *
- * @param input                        Current checklist inputs.
- * @param input.deliveryNeedsAttention Whether server-backed delivery data is invalid.
- * @param input.postStatus             Persisted WordPress post status.
- * @param input.preflightIssues        Issues from the canonical editor preflight.
- * @param input.previewTargetId        Effective real-page preview target ID.
+ * @param input                          Current checklist inputs.
+ * @param input.deliveryNeedsAttention   Whether server-backed delivery data is invalid.
+ * @param input.hasCompletedFirstPublish Whether this Promotion has completed its first publish.
+ * @param input.postStatus               Persisted WordPress post status.
+ * @param input.preflightIssues          Issues from the canonical editor preflight.
+ * @param input.previewTargetId          Effective real-page preview target ID.
  */
 export function getFirstRunGuideState( {
 	deliveryNeedsAttention = false,
+	hasCompletedFirstPublish = false,
 	postStatus,
 	preflightIssues,
 	previewTargetId,
 }: FirstRunGuideInput ): FirstRunGuideState {
 	const isContentIssue = ( issue: PromotionPreflightIssueCode ) =>
 		issue === 'empty_content' || issue === 'video_source_missing';
-	const isVisible = postStatus !== 'publish' && postStatus !== 'future';
+	const isVisible =
+		! hasCompletedFirstPublish &&
+		postStatus !== 'publish' &&
+		postStatus !== 'future';
 	const contentComplete = ! preflightIssues.some( isContentIssue );
 	const deliveryComplete =
 		! deliveryNeedsAttention && preflightIssues.every( isContentIssue );
@@ -653,6 +683,9 @@ function ContentPicker( {
 	onAdd,
 	onRemove,
 	enableTermFilters = false,
+	currentSelectionLabel,
+	replaceLabel,
+	placeholder,
 }: {
 	label: string;
 	help: string;
@@ -660,6 +693,9 @@ function ContentPicker( {
 	onAdd: ( id: number ) => void;
 	onRemove: ( id: number ) => void;
 	enableTermFilters?: boolean;
+	currentSelectionLabel?: string;
+	replaceLabel?: string;
+	placeholder?: string;
 } ) {
 	const [ filter, setFilter ] = React.useState( '' );
 	const [ categoryFilterIds, setCategoryFilterIds ] = React.useState<
@@ -678,6 +714,17 @@ function ContentPicker( {
 		() => buildContentPickerQuery( filter ),
 		[ filter ]
 	);
+	const selectedIdsKey = selectedIds.join( ',' );
+	const selectedQuery = React.useMemo(
+		() =>
+			buildSelectedContentPickerQuery(
+				selectedIdsKey
+					.split( ',' )
+					.map( ( id ) => Number.parseInt( id, 10 ) )
+					.filter( ( id ) => id > 0 )
+			),
+		[ selectedIdsKey ]
+	);
 	const postResolutionArgs = React.useMemo(
 		() => [ 'postType', 'post', postQuery ] as const,
 		[ postQuery ]
@@ -686,11 +733,27 @@ function ContentPicker( {
 		() => [ 'postType', 'page', pageQuery ] as const,
 		[ pageQuery ]
 	);
+	const selectedPostResolutionArgs = React.useMemo(
+		() => [ 'postType', 'post', selectedQuery ] as const,
+		[ selectedQuery ]
+	);
+	const selectedPageResolutionArgs = React.useMemo(
+		() => [ 'postType', 'page', selectedQuery ] as const,
+		[ selectedQuery ]
+	);
 
-	const { records, postError, pageError, isLoading } = useSelect(
+	const {
+		records,
+		postError,
+		pageError,
+		selectedPostError,
+		selectedPageError,
+		isLoading,
+	} = useSelect(
 		( select ) => {
 			const coreData = select( coreDataStore );
 			const resolution = coreData as unknown as ResolutionSelectors;
+			const hasSelectedIds = selectedIdsKey !== '';
 			const posts = coreData.getEntityRecords( ...postResolutionArgs ) as
 				| ContentRecord[]
 				| null;
@@ -699,6 +762,16 @@ function ContentPicker( {
 				: ( coreData.getEntityRecords( ...pageResolutionArgs ) as
 						| ContentRecord[]
 						| null );
+			const selectedPosts = hasSelectedIds
+				? ( coreData.getEntityRecords(
+						...selectedPostResolutionArgs
+				  ) as ContentRecord[] | null )
+				: [];
+			const selectedPages = hasSelectedIds
+				? ( coreData.getEntityRecords(
+						...selectedPageResolutionArgs
+				  ) as ContentRecord[] | null )
+				: [];
 			const nextPostError = resolution.getResolutionError(
 				'getEntityRecords',
 				postResolutionArgs
@@ -709,6 +782,18 @@ function ContentPicker( {
 						'getEntityRecords',
 						pageResolutionArgs
 				  );
+			const nextSelectedPostError = hasSelectedIds
+				? resolution.getResolutionError(
+						'getEntityRecords',
+						selectedPostResolutionArgs
+				  )
+				: null;
+			const nextSelectedPageError = hasSelectedIds
+				? resolution.getResolutionError(
+						'getEntityRecords',
+						selectedPageResolutionArgs
+				  )
+				: null;
 			const postHasFinished = resolution.hasFinishedResolution(
 				'getEntityRecords',
 				postResolutionArgs
@@ -719,6 +804,18 @@ function ContentPicker( {
 						'getEntityRecords',
 						pageResolutionArgs
 				  );
+			const selectedPostHasFinished = hasSelectedIds
+				? resolution.hasFinishedResolution(
+						'getEntityRecords',
+						selectedPostResolutionArgs
+				  )
+				: true;
+			const selectedPageHasFinished = hasSelectedIds
+				? resolution.hasFinishedResolution(
+						'getEntityRecords',
+						selectedPageResolutionArgs
+				  )
+				: true;
 			const postIsResolving = resolution.isResolving(
 				'getEntityRecords',
 				postResolutionArgs
@@ -729,20 +826,42 @@ function ContentPicker( {
 						'getEntityRecords',
 						pageResolutionArgs
 				  );
+			const selectedPostIsResolving = hasSelectedIds
+				? resolution.isResolving(
+						'getEntityRecords',
+						selectedPostResolutionArgs
+				  )
+				: false;
+			const selectedPageIsResolving = hasSelectedIds
+				? resolution.isResolving(
+						'getEntityRecords',
+						selectedPageResolutionArgs
+				  )
+				: false;
 
 			return {
-				records: [
-					...( pages ?? [] ).map( ( page ) => ( {
+				records: mergeContentRecords(
+					( selectedPages ?? [] ).map( ( page ) => ( {
 						...page,
 						type: 'page',
 					} ) ),
-					...( posts ?? [] ).map( ( post ) => ( {
+					( selectedPosts ?? [] ).map( ( post ) => ( {
 						...post,
 						type: 'post',
 					} ) ),
-				],
+					( pages ?? [] ).map( ( page ) => ( {
+						...page,
+						type: 'page',
+					} ) ),
+					( posts ?? [] ).map( ( post ) => ( {
+						...post,
+						type: 'post',
+					} ) )
+				),
 				postError: nextPostError,
 				pageError: nextPageError,
+				selectedPostError: nextSelectedPostError,
+				selectedPageError: nextSelectedPageError,
 				isLoading:
 					isRecordsRequestLoading(
 						posts,
@@ -755,21 +874,54 @@ function ContentPicker( {
 						nextPageError,
 						pageHasFinished,
 						pageIsResolving
+					) ||
+					isRecordsRequestLoading(
+						selectedPosts,
+						nextSelectedPostError,
+						selectedPostHasFinished,
+						selectedPostIsResolving
+					) ||
+					isRecordsRequestLoading(
+						selectedPages,
+						nextSelectedPageError,
+						selectedPageHasFinished,
+						selectedPageIsResolving
 					),
 			};
 		},
-		[ postResolutionArgs, pageResolutionArgs, hasTermFilters ]
+		[
+			postResolutionArgs,
+			pageResolutionArgs,
+			selectedPostResolutionArgs,
+			selectedPageResolutionArgs,
+			hasTermFilters,
+			selectedIdsKey,
+		]
 	);
 	const { invalidateResolution } = useDispatch(
 		coreDataStore
 	) as unknown as ResolutionActions;
-	const hasResolutionError = Boolean( postError || pageError );
+	const hasResolutionError = Boolean(
+		postError || pageError || selectedPostError || selectedPageError
+	);
 	const retryRecords = () => {
 		if ( postError ) {
 			invalidateResolution( 'getEntityRecords', postResolutionArgs );
 		}
 		if ( pageError ) {
 			invalidateResolution( 'getEntityRecords', pageResolutionArgs );
+		}
+		if ( selectedPostError ) {
+			invalidateResolution(
+				'getEntityRecords',
+				selectedPostResolutionArgs
+			);
+		}
+		if ( selectedPageError ) {
+			invalidateResolution(
+				'getEntityRecords',
+				selectedPageResolutionArgs
+			);
 		}
 	};
 
@@ -792,6 +944,30 @@ function ContentPicker( {
 			record.id,
 			recordTitle( record ),
 		] )
+	);
+	const currentSelectionId = selectedIds[ 0 ] ?? 0;
+	const currentSelectionValue =
+		labels.get( currentSelectionId ) || `#${ currentSelectionId }`;
+	const selectedItems = selectedIds.length > 0 && (
+		<ul className="npcink-ad-content-picker__selected">
+			{ selectedIds.map( ( id ) => (
+				<li key={ id }>
+					<span>{ labels.get( id ) || `#${ id }` }</span>
+					<Button
+						variant="tertiary"
+						isDestructive
+						onClick={ () => onRemove( id ) }
+						aria-label={ sprintf(
+							/* translators: %s: content title. */
+							__( 'Remove %s', 'npcink-ad' ),
+							labels.get( id ) || `#${ id }`
+						) }
+					>
+						{ __( 'Remove', 'npcink-ad' ) }
+					</Button>
+				</li>
+			) ) }
+		</ul>
 	);
 
 	return (
@@ -851,13 +1027,35 @@ function ContentPicker( {
 					</div>
 				</div>
 			) }
+			{ currentSelectionLabel && currentSelectionId > 0 && (
+				<SelectionCard
+					label={ currentSelectionLabel }
+					value={ currentSelectionValue }
+					isLoading={
+						! labels.has( currentSelectionId ) && isLoading
+					}
+					clearText={ __( 'Clear', 'npcink-ad' ) }
+					clearLabel={ sprintf(
+						/* translators: %s: current content title. */
+						__( 'Clear current selection: %s', 'npcink-ad' ),
+						currentSelectionValue
+					) }
+					onClear={ () => onRemove( currentSelectionId ) }
+				/>
+			) }
 			<ComboboxControl
 				__next40pxDefaultSize
-				label={ label }
+				label={
+					currentSelectionLabel && currentSelectionId > 0
+						? replaceLabel || label
+						: label
+				}
 				help={ help }
 				value={ null }
 				options={ options }
 				isLoading={ isLoading }
+				allowReset={ false }
+				placeholder={ placeholder }
 				onFilterValueChange={ setFilter }
 				onChange={ ( value ) => {
 					const id = Number.parseInt( value || '', 10 );
@@ -880,27 +1078,7 @@ function ContentPicker( {
 					</Button>
 				</Notice>
 			) }
-			{ selectedIds.length > 0 && (
-				<ul className="npcink-ad-content-picker__selected">
-					{ selectedIds.map( ( id ) => (
-						<li key={ id }>
-							<span>{ labels.get( id ) || `#${ id }` }</span>
-							<Button
-								variant="tertiary"
-								isDestructive
-								onClick={ () => onRemove( id ) }
-								aria-label={ sprintf(
-									/* translators: %s: content title. */
-									__( 'Remove %s', 'npcink-ad' ),
-									labels.get( id ) || `#${ id }`
-								) }
-							>
-								{ __( 'Remove', 'npcink-ad' ) }
-							</Button>
-						</li>
-					) ) }
-				</ul>
-			) }
+			{ ! currentSelectionLabel && selectedItems }
 		</div>
 	);
 }
@@ -1245,6 +1423,10 @@ function PromotionSettingsPanel() {
 	const paragraphNumberValid = isValidParagraphNumber( paragraphNumber );
 	const settings = window.NpcinkAdEditorSettings;
 	const hasAdvancedPageCache = settings?.hasAdvancedPageCache === true;
+	const hasCompletedFirstPublish =
+		settings?.hasCompletedFirstPublish === true;
+	const isPausedAfterPublish =
+		hasCompletedFirstPublish && persistedStatus === 'draft';
 	const { includeIds: effectiveIncludeIds, excludeIds: effectiveExcludeIds } =
 		getEffectivePromotionTargetIds( includeIds, excludeIds, [
 			...( settings?.publicContentIds ?? [] ),
@@ -1304,6 +1486,31 @@ function PromotionSettingsPanel() {
 	);
 	const deliveryHasIssues =
 		placementHasIssue || contentScopeHasIssue || scheduleHasIssue;
+	let deliveryStatus: 'ready' | 'attention' | 'paused' = 'ready';
+	let deliveryStatusMessage: React.ReactNode = __(
+		'Delivery settings checked.',
+		'npcink-ad'
+	);
+	if ( deliveryHasIssues ) {
+		deliveryStatus = 'attention';
+		deliveryStatusMessage = __(
+			'Delivery settings need attention.',
+			'npcink-ad'
+		);
+	}
+	if ( isPausedAfterPublish ) {
+		deliveryStatus = 'paused';
+		deliveryStatusMessage = (
+			<>
+				{ __( 'Promotion is paused.', 'npcink-ad' ) }{ ' ' }
+				{ settings?.promotionListUrl && (
+					<a href={ settings.promotionListUrl }>
+						{ __( 'Open Promotions to resume.', 'npcink-ad' ) }
+					</a>
+				) }
+			</>
+		);
+	}
 	const unavailableTermsMessage = hasUnavailableTerms
 		? __(
 				'Some selected categories or tags are no longer available. Remove them before publishing.',
@@ -1358,6 +1565,7 @@ function PromotionSettingsPanel() {
 		0;
 	const firstRunGuideState = getFirstRunGuideState( {
 		deliveryNeedsAttention: hasUnavailableTerms,
+		hasCompletedFirstPublish,
 		postStatus: persistedStatus,
 		preflightIssues,
 		previewTargetId: effectivePreviewTarget,
@@ -2063,9 +2271,21 @@ function PromotionSettingsPanel() {
 				return (
 					<div className="npcink-ad-delivery-settings__panel">
 						<ContentPicker
-							label={ __( 'Preview page', 'npcink-ad' ) }
+							label={ __( 'Choose preview page', 'npcink-ad' ) }
 							help={ __(
-								'Choose the real post or page whose theme and layout should be used.',
+								'Choose the real post or page whose theme and layout should be used. The field below searches for a replacement; it does not clear the current page.',
+								'npcink-ad'
+							) }
+							currentSelectionLabel={ __(
+								'Current preview page',
+								'npcink-ad'
+							) }
+							replaceLabel={ __(
+								'Search and replace preview page',
+								'npcink-ad'
+							) }
+							placeholder={ __(
+								'Search published posts and pages',
 								'npcink-ad'
 							) }
 							selectedIds={
@@ -2158,11 +2378,9 @@ function PromotionSettingsPanel() {
 				</dl>
 				<p
 					className="npcink-ad-delivery-summary__status"
-					data-status={ deliveryHasIssues ? 'attention' : 'ready' }
+					data-status={ deliveryStatus }
 				>
-					{ deliveryHasIssues
-						? __( 'Delivery settings need attention.', 'npcink-ad' )
-						: __( 'Delivery settings checked.', 'npcink-ad' ) }
+					{ deliveryStatusMessage }
 				</p>
 				<Button variant="tertiary" onClick={ openDeliverySettings }>
 					{ __( 'Edit delivery settings', 'npcink-ad' ) }

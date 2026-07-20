@@ -310,6 +310,27 @@ if ( ! function_exists( 'get_post_meta' ) ) {
 	}
 }
 
+if ( ! function_exists( 'update_post_meta' ) ) {
+	/**
+	 * Update one in-memory metadata fixture.
+	 *
+	 * @param int    $post_id    Post ID.
+	 * @param string $meta_key   Metadata key.
+	 * @param mixed  $meta_value Metadata value.
+	 * @return int|bool
+	 */
+	function update_post_meta( int $post_id, string $meta_key, mixed $meta_value ): int|bool {
+		$GLOBALS['npcink_ad_test_update_meta_calls'][] = array( $post_id, $meta_key, $meta_value );
+		if ( ( $GLOBALS['npcink_ad_test_fail_meta_key'] ?? null ) === $meta_key ) {
+			return false;
+		}
+
+		$GLOBALS['npcink_ad_test_meta'][ $post_id ][ $meta_key ] = $meta_value;
+
+		return 1;
+	}
+}
+
 if ( ! function_exists( 'metadata_exists' ) ) {
 	/**
 	 * Distinguish absent metadata from an explicitly stored empty value.

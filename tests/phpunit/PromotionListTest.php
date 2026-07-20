@@ -17,6 +17,7 @@ use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/PromotionStatusWordPressStubs.php';
 require_once __DIR__ . '/PromotionStatusWordPressClasses.php';
+require_once __DIR__ . '/PromotionStatusWordPressScreen.php';
 require_once __DIR__ . '/PromotionStatusWordPressPost.php';
 require_once __DIR__ . '/PromotionStatusWordPressQuery.php';
 require_once __DIR__ . '/PromotionPreflightWordPressClasses.php';
@@ -317,9 +318,9 @@ final class PromotionListTest extends TestCase {
 	}
 
 	/**
-	 * The existing scope column exposes the canonical content contract.
+	 * Related delivery facts stay consolidated into three bounded columns.
 	 */
-	public function test_columns_rename_the_existing_scope_column_without_adding_another(): void {
+	public function test_columns_consolidate_status_reasons_placement_and_scope(): void {
 		$columns = $this->promotion_list()->columns(
 			array(
 				'title' => 'Title',
@@ -327,9 +328,34 @@ final class PromotionListTest extends TestCase {
 			)
 		);
 
-		self::assertSame( 'Content scope', $columns['npcink_ad_content_scope'] );
-		self::assertArrayNotHasKey( 'npcink_ad_page_scope', $columns );
-		self::assertSame( 'Date', $columns['date'] );
+		self::assertSame(
+			array(
+				'title'                 => 'Title',
+				'npcink_ad_rule_status' => 'Delivery status',
+				'npcink_ad_location'    => 'Delivery rule',
+				'npcink_ad_end_at'      => 'Stops',
+				'date'                  => 'Date',
+			),
+			$columns
+		);
+		self::assertArrayNotHasKey( 'npcink_ad_content_scope', $columns );
+		self::assertArrayNotHasKey( 'npcink_ad_reasons', $columns );
+	}
+
+	/**
+	 * The single-author column is hidden only by default on the Promotion list.
+	 */
+	public function test_author_column_is_default_hidden_only_on_the_promotion_list(): void {
+		$list   = $this->promotion_list();
+		$screen = new WP_Screen();
+		$screen->base = 'edit';
+		$screen->post_type = Post_Types::PROMOTION_POST_TYPE;
+
+		self::assertSame( array( 'comments', 'author' ), $list->default_hidden_columns( array( 'comments' ), $screen ) );
+		self::assertSame( array( 'author' ), $list->default_hidden_columns( array( 'author' ), $screen ) );
+
+		$screen->post_type = 'post';
+		self::assertSame( array( 'comments' ), $list->default_hidden_columns( array( 'comments' ), $screen ) );
 	}
 
 	/**
@@ -640,7 +666,7 @@ final class PromotionListTest extends TestCase {
 		$list               = $this->promotion_list();
 
 		ob_start();
-		$list->render_column( 'npcink_ad_content_scope', 1 );
+		$list->render_column( 'npcink_ad_location', 1 );
 		$scope = (string) ob_get_clean();
 		ob_start();
 		$list->render_column( 'npcink_ad_rule_status', 1 );

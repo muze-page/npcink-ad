@@ -16,6 +16,7 @@ use Npcink\Ad\Presentation\Eligibility_Messages;
 use WP_Post;
 use WP_Post_Type;
 use WP_Query;
+use WP_Screen;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -27,9 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Promotion_List {
 	private const STATUS_COLUMN   = 'npcink_ad_rule_status';
 	private const LOCATION_COLUMN = 'npcink_ad_location';
-	private const SCOPE_COLUMN    = 'npcink_ad_content_scope';
 	private const END_AT_COLUMN   = 'npcink_ad_end_at';
-	private const REASONS_COLUMN  = 'npcink_ad_reasons';
 	private const OVERLAP_LINK_LIMIT = 3;
 
 	/**
@@ -98,6 +97,7 @@ final class Promotion_List {
 			'manage_' . Post_Types::PROMOTION_POST_TYPE . '_posts_columns',
 			array( $this, 'columns' )
 		);
+		add_filter( 'default_hidden_columns', array( $this, 'default_hidden_columns' ), 10, 2 );
 		add_action(
 			'manage_' . Post_Types::PROMOTION_POST_TYPE . '_posts_custom_column',
 			array( $this, 'render_column' ),
@@ -258,11 +258,9 @@ final class Promotion_List {
 	 */
 	public function columns( array $columns ): array {
 		$added = array(
-			self::STATUS_COLUMN   => __( 'Rule status', 'npcink-ad' ),
-			self::LOCATION_COLUMN => __( 'Placement', 'npcink-ad' ),
-			self::SCOPE_COLUMN    => __( 'Content scope', 'npcink-ad' ),
+			self::STATUS_COLUMN   => __( 'Delivery status', 'npcink-ad' ),
+			self::LOCATION_COLUMN => __( 'Delivery rule', 'npcink-ad' ),
 			self::END_AT_COLUMN   => __( 'Stops', 'npcink-ad' ),
-			self::REASONS_COLUMN  => __( 'Why not', 'npcink-ad' ),
 		);
 
 		$date = $columns['date'] ?? null;
@@ -273,6 +271,25 @@ final class Promotion_List {
 		}
 
 		return $columns;
+	}
+
+	/**
+	 * Hide the low-value author column by default while keeping Screen Options available.
+	 *
+	 * @param array<string> $hidden Default hidden column names.
+	 * @param WP_Screen     $screen Current admin screen.
+	 * @return array<string>
+	 */
+	public function default_hidden_columns( array $hidden, WP_Screen $screen ): array {
+		if ( 'edit' !== $screen->base || Post_Types::PROMOTION_POST_TYPE !== $screen->post_type ) {
+			return $hidden;
+		}
+
+		if ( ! in_array( 'author', $hidden, true ) ) {
+			$hidden[] = 'author';
+		}
+
+		return $hidden;
 	}
 
 	/**
@@ -297,23 +314,10 @@ final class Promotion_List {
 				$this->render_status( $promotion );
 				break;
 			case self::LOCATION_COLUMN:
-				echo esc_html(
-					$this->location_label(
-						(string) ( $promotion['location'] ?? '' ),
-						(int) ( $promotion['paragraph_number'] ?? Post_Types::DEFAULT_PARAGRAPH_NUMBER ),
-						! array_key_exists( 'paragraph_number_valid', $promotion ) || (bool) $promotion['paragraph_number_valid']
-					)
-				);
-				$this->render_overlap_hint( $promotion );
-				break;
-			case self::SCOPE_COLUMN:
-				$this->render_scope( $promotion );
+				$this->render_rule( $promotion );
 				break;
 			case self::END_AT_COLUMN:
 				echo esc_html( $this->end_at_label( (int) ( $promotion['end_at'] ?? 0 ) ) );
-				break;
-			case self::REASONS_COLUMN:
-				$this->render_reasons( $promotion );
 				break;
 		}
 	}
@@ -327,9 +331,7 @@ final class Promotion_List {
 		return array(
 			self::STATUS_COLUMN,
 			self::LOCATION_COLUMN,
-			self::SCOPE_COLUMN,
 			self::END_AT_COLUMN,
-			self::REASONS_COLUMN,
 		);
 	}
 
@@ -341,6 +343,24 @@ final class Promotion_List {
 	private function render_status( array $promotion ): void {
 		echo '<strong>' . esc_html( $this->status_label( $promotion ) ) . '</strong>';
 		$this->render_status_action( $promotion );
+		$this->render_reasons( $promotion );
+	}
+
+	/**
+	 * Render placement, content scope, and any overlap advisory as one decision summary.
+	 *
+	 * @param array<string, mixed> $promotion Promotion domain data.
+	 */
+	private function render_rule( array $promotion ): void {
+		echo '<strong>' . esc_html(
+			$this->location_label(
+				(string) ( $promotion['location'] ?? '' ),
+				(int) ( $promotion['paragraph_number'] ?? Post_Types::DEFAULT_PARAGRAPH_NUMBER ),
+				! array_key_exists( 'paragraph_number_valid', $promotion ) || (bool) $promotion['paragraph_number_valid']
+			)
+		) . '</strong><br />';
+		$this->render_scope( $promotion );
+		$this->render_overlap_hint( $promotion );
 	}
 
 	/**
@@ -510,10 +530,10 @@ final class Promotion_List {
 	private function render_reasons( array $promotion ): void {
 		$readiness = $this->evaluator->assess_readiness( $promotion, $this->now() );
 		if ( $readiness['ready'] ) {
-			echo '&mdash;';
 			return;
 		}
 
+		echo '<br /><small class="npcink-ad-status-reasons">';
 		$messages = Eligibility_Messages::messages( $readiness['reasons'] );
 		foreach ( $messages as $index => $message ) {
 			if ( 0 < $index ) {
@@ -521,6 +541,7 @@ final class Promotion_List {
 			}
 			echo esc_html( $message );
 		}
+		echo '</small>';
 	}
 
 	/**

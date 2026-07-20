@@ -5,6 +5,8 @@ interface Window {
 		previewUrl: string;
 		nonce: string;
 		defaultTargetId: number;
+		hasCompletedFirstPublish: boolean;
+		promotionListUrl: string;
 		publicContentIds: number[];
 		validCategoryIds: number[];
 		validTagIds: number[];

@@ -85,12 +85,6 @@
             "The promotion never appears on these posts and pages.": [
                 "\u6b64\u63a8\u5e7f\u7edd\u4e0d\u4f1a\u51fa\u73b0\u5728\u8fd9\u4e9b\u6587\u7ae0\u548c\u9875\u9762\u4e0a\u3002"
             ],
-            "Preview page": [
-                "\u9884\u89c8\u9875\u9762"
-            ],
-            "Choose the real post or page whose theme and layout should be used.": [
-                "\u9009\u62e9\u8981\u4f7f\u7528\u5176\u4e3b\u9898\u548c\u5e03\u5c40\u7684\u771f\u5b9e\u6587\u7ae0\u6216\u9875\u9762\u3002"
-            ],
             "Save the promotion before opening a preview.": [
                 "\u8bf7\u5148\u4fdd\u5b58\u63a8\u5e7f\uff0c\u518d\u6253\u5f00\u9884\u89c8\u3002"
             ],
@@ -372,6 +366,33 @@
             ],
             "Page bars stay in the normal page flow and can be dismissed for the current page. They are not sticky and do not store visitor state.": [
                 "\u9875\u9762\u6a2a\u680f\u4f4d\u4e8e\u6b63\u5e38\u9875\u9762\u6d41\u4e2d\uff0c\u53ef\u5728\u5f53\u524d\u9875\u9762\u5173\u95ed\u3002\u5b83\u4e0d\u4f1a\u5438\u9876\uff0c\u4e5f\u4e0d\u4f1a\u4fdd\u5b58\u8bbf\u5ba2\u72b6\u6001\u3002"
+            ],
+            "Clear": [
+                "\u6e05\u9664"
+            ],
+            "Clear current selection: %s": [
+                "\u6e05\u9664\u5f53\u524d\u9009\u62e9\uff1a%s"
+            ],
+            "Promotion is paused.": [
+                "\u63a8\u5e7f\u5df2\u6682\u505c\u3002"
+            ],
+            "Open Promotions to resume.": [
+                "\u6253\u5f00\u201c\u63a8\u5e7f\u201d\u5217\u8868\u4ee5\u6062\u590d\u3002"
+            ],
+            "Choose preview page": [
+                "\u9009\u62e9\u9884\u89c8\u9875\u9762"
+            ],
+            "Choose the real post or page whose theme and layout should be used. The field below searches for a replacement; it does not clear the current page.": [
+                "\u9009\u62e9\u8981\u4f7f\u7528\u5176\u4e3b\u9898\u548c\u5e03\u5c40\u7684\u771f\u5b9e\u6587\u7ae0\u6216\u9875\u9762\u3002\u4e0b\u65b9\u5b57\u6bb5\u7528\u4e8e\u641c\u7d22\u66ff\u6362\u9879\uff0c\u4e0d\u4f1a\u6e05\u9664\u5f53\u524d\u9875\u9762\u3002"
+            ],
+            "Current preview page": [
+                "\u5f53\u524d\u9884\u89c8\u9875\u9762"
+            ],
+            "Search and replace preview page": [
+                "\u641c\u7d22\u5e76\u66ff\u6362\u9884\u89c8\u9875\u9762"
+            ],
+            "Search published posts and pages": [
+                "\u641c\u7d22\u5df2\u53d1\u5e03\u7684\u6587\u7ae0\u548c\u9875\u9762"
             ]
         }
     }

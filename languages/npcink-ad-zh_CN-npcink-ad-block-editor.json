@@ -10,9 +10,6 @@
                 "lang": "zh_CN",
                 "plural-forms": "nplurals=1; plural=0;"
             },
-            "Promotion": [
-                "\u63a8\u5e7f"
-            ],
             "Npcink Ad promotion": [
                 "Npcink Ad \u63a8\u5e7f"
             ],
@@ -99,6 +96,24 @@
             ],
             "Clear promotion search": [
                 "\u6e05\u9664\u63a8\u5e7f\u641c\u7d22"
+            ],
+            "Current Promotion": [
+                "\u5f53\u524d\u63a8\u5e7f"
+            ],
+            "Clear": [
+                "\u6e05\u9664"
+            ],
+            "Clear current Promotion": [
+                "\u6e05\u9664\u5f53\u524d\u63a8\u5e7f"
+            ],
+            "Search and replace Promotion": [
+                "\u641c\u7d22\u5e76\u66ff\u6362\u63a8\u5e7f"
+            ],
+            "Choose Promotion": [
+                "\u9009\u62e9\u63a8\u5e7f"
+            ],
+            "Search saved Promotions": [
+                "\u641c\u7d22\u5df2\u4fdd\u5b58\u7684\u63a8\u5e7f"
             ]
         }
     }

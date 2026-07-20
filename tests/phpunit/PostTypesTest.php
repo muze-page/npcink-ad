@@ -10,6 +10,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/PromotionStatusWordPressStubs.php';
+require_once __DIR__ . '/PromotionStatusWordPressPost.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Post_Types.php';
 
 /**
@@ -21,6 +22,41 @@ final class PostTypesTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		$GLOBALS['npcink_ad_test_registered_post_meta'] = array();
+		$GLOBALS['npcink_ad_test_meta']                 = array();
+		$GLOBALS['npcink_ad_test_update_meta_calls']    = array();
+	}
+
+	/**
+	 * Publish history survives a later pause without becoming editable REST state.
+	 */
+	public function test_first_publish_marker_survives_a_pause(): void {
+		$post = new WP_Post(
+			array(
+				'ID'        => 17,
+				'post_type' => Post_Types::PROMOTION_POST_TYPE,
+			)
+		);
+
+		Post_Types::record_first_publish( 'publish', 'draft', $post );
+		self::assertTrue( Post_Types::has_completed_first_publish( 17, 'publish' ) );
+		self::assertSame( '1', $GLOBALS['npcink_ad_test_meta'][17][ Post_Types::FIRST_PUBLISH_META ] );
+
+		Post_Types::record_first_publish( 'draft', 'publish', $post );
+		self::assertTrue( Post_Types::has_completed_first_publish( 17, 'draft' ) );
+		self::assertCount( 2, $GLOBALS['npcink_ad_test_update_meta_calls'] );
+
+		$unpublished = new WP_Post(
+			array(
+				'ID'        => 18,
+				'post_type' => Post_Types::PROMOTION_POST_TYPE,
+			)
+		);
+		Post_Types::record_first_publish( 'draft', 'auto-draft', $unpublished );
+		self::assertFalse( Post_Types::has_completed_first_publish( 18, 'draft' ) );
+
+		$register_meta = new ReflectionMethod( Post_Types::class, 'register_meta' );
+		$register_meta->invoke( null );
+		self::assertArrayNotHasKey( Post_Types::FIRST_PUBLISH_META, $GLOBALS['npcink_ad_test_registered_post_meta'] );
 	}
 
 	/**

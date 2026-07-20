@@ -957,13 +957,10 @@ Preview_Page::render();
 $preview_page_html = (string) ob_get_clean();
 $check( str_contains( $preview_page_html, 'npcink_ad_preview=' . $promotion_id ), 'A manager could not render the bound real-page preview URL.' );
 $check(
-	str_contains( $preview_page_html, 'The promotion is rendered by the same server policy used on the live site. Preview mode may show blocked creative, but its verdict remains truthful.' ),
-	'The preview page omitted its truthful-verdict explanation.'
+	str_contains( $preview_page_html, 'Uses the live delivery policy, including blocked verdicts. Desktop: 782px and above. Mobile: 781px and below in a representative 390px canvas.' ),
+	'The preview page omitted its compact policy and device explanation.'
 );
-$check(
-	str_contains( $preview_page_html, 'Desktop represents the fixed rule at 782px and above. Mobile represents the fixed rule at 781px and below; its canvas is capped at 390px as a representative width, not as the breakpoint.' ),
-	'The preview page omitted the fixed device boundary and representative canvas explanation.'
-);
+$check( str_contains( $preview_page_html, 'aria-label="Preview controls"' ), 'The preview page controls were not exposed as navigation.' );
 $check( 1 === substr_count( $preview_page_html, 'aria-current="page"' ), 'The preview page did not expose exactly one current device.' );
 $check(
 	1 === preg_match( '#<a[^>]*aria-current="page"[^>]*>Mobile</a>#', $preview_page_html ),
@@ -1017,6 +1014,7 @@ $_GET          = array(
 $block_preview_delivery = new Delivery( new Repository(), new Eligibility_Evaluator(), new Renderer() );
 $block_preview_request  = new Preview_Request( $block_preview_delivery, new Repository() );
 $block_preview_request->activate();
+$check( false === apply_filters( 'show_admin_bar', true ), 'An authorized real-page preview did not hide the front-end admin bar.' );
 $check(
 	defined( 'DONOTCACHEPAGE' ) && true === DONOTCACHEPAGE,
 	'An authorized real-page preview did not disable full-page caching.'

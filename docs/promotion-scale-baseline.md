@@ -8,18 +8,19 @@ Npcink Ad does not need a runtime scale optimization at the current 500
 published automatic Promotion boundary. In both supported evidence rows, the
 catalog stayed at 7 database queries and the editor and 20-row management list
 stayed at 11 queries when the fixture grew from 100 to 500 records. The three
-median durations remained below 81 ms and the 500-record editor inline settings
-were 111,951 bytes, about 10.7% of the fixed 1 MiB budget.
+median durations remained below 91 ms and the 500-record editor inline settings
+were 112,077 bytes, about 10.7% of the fixed 1 MiB budget.
 
-This baseline therefore adds a reproducible development gate but does not change
-`Repository`, `Editor`, `Promotion_List`, `Overlap_Detector`, or frontend
-delivery. Optimizing without a failing path would add cache invalidation and
-correctness risk without evidence of user value.
+These measurements therefore still do not justify a runtime scale
+optimization. The current editor and list presentation changes do not alter the
+catalog, cache-priming, overlap, or frontend-delivery design. Optimizing without
+a failing path would add cache invalidation and correctness risk without
+evidence of user value.
 
 ## Exact artifact and method
 
 - Development artifact: `dist/npcink-ad-0.3.3.zip`
-- SHA-256: `46770ffb14d5a0f681b75bca68fc6ff8e85b7d199da9fb1b28417dca43faa58d`
+- SHA-256: `c0d921c49847fb10eed9bc460871adf4b0e09598464564b3ff27026f9588a025`
 - Fixture: 100, then 500 published automatic Promotions; one draft editor
   candidate; one public target; a deterministic mix of all accepted automatic
   locations, content scopes, and devices.
@@ -27,7 +28,8 @@ correctness risk without evidence of user value.
   each sample; elapsed results use the median, while query and retained-memory
   gates use the maximum.
 - Paths: shared automatic catalog, actual editor inline-settings enqueue, and
-  all five custom columns plus status forms for a 20-row Promotion list.
+  all three consolidated custom columns plus status forms for a 20-row
+  Promotion list.
 
 The budgets were fixed before the successful runs:
 
@@ -58,16 +60,16 @@ All structural gates passed.
 
 | Environment | Records | Catalog median / queries | Editor median / queries / inline bytes | 20-row list median / queries / output bytes |
 |---|---:|---:|---:|---:|
-| WordPress 6.5.8 / PHP 8.1.34 | 100 | 18.425 ms / 7 | 22.608 ms / 11 / 22,536 | 28.155 ms / 11 / 23,490 |
-| WordPress 6.5.8 / PHP 8.1.34 | 500 | 63.970 ms / 7 | 70.150 ms / 11 / 111,951 | 80.441 ms / 11 / 23,980 |
-| WordPress 7.0.2 / PHP 8.5.5 | 100 | 14.466 ms / 7 | 17.746 ms / 11 / 22,536 | 21.513 ms / 11 / 23,490 |
-| WordPress 7.0.2 / PHP 8.5.5 | 500 | 50.987 ms / 7 | 55.556 ms / 11 / 111,951 | 61.980 ms / 11 / 23,980 |
+| WordPress 6.5.8 / PHP 8.1.34 | 100 | 23.174 ms / 7 | 25.721 ms / 11 / 22,662 | 32.665 ms / 11 / 23,810 |
+| WordPress 6.5.8 / PHP 8.1.34 | 500 | 70.280 ms / 7 | 78.672 ms / 11 / 112,077 | 90.658 ms / 11 / 24,300 |
+| WordPress 7.0.2 / PHP 8.5.5 | 100 | 16.076 ms / 7 | 20.086 ms / 11 / 22,662 | 23.449 ms / 11 / 23,810 |
+| WordPress 7.0.2 / PHP 8.5.5 | 500 | 57.003 ms / 7 | 64.255 ms / 11 / 112,077 | 68.699 ms / 11 / 24,300 |
 
 At the minimum-version row, retained-memory maxima at 500 records were
-4,112,256 bytes for the catalog, 3,306,736 bytes for editor settings, and
-3,282,160 bytes for the list. The latest-version row was lower on all three
-paths. The 500/100 median-duration ratios ranged from 2.857 to 3.525 for a 5x
-record increase; editor bytes grew by 4.968x, as expected for the bounded
+4,328,256 bytes for the catalog, 3,522,736 bytes for editor settings, and
+3,498,160 bytes for the list. The latest-version row was lower on all three
+paths. The 500/100 median-duration ratios ranged from 2.775 to 3.546 for a 5x
+record increase; editor bytes grew by 4.946x, as expected for the bounded
 per-record rule shape.
 
 ## Evidence boundary and re-run triggers

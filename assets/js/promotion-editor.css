@@ -150,6 +150,10 @@
 	background: #d63638;
 }
 
+.npcink-ad-delivery-summary__status[data-status="paused"]::before {
+	background: #dba617;
+}
+
 .npcink-ad-delivery-summary .components-button {
 	justify-content: center;
 	width: 100%;
@@ -167,7 +171,6 @@
 
 .npcink-ad-delivery-settings__content {
 	max-width: 760px;
-	min-height: 280px;
 	margin: 0 auto;
 	padding: 24px 0;
 }
@@ -233,7 +236,6 @@
 	}
 
 	.npcink-ad-delivery-settings__content {
-		min-height: 0;
 		padding: 16px 0;
 	}
 

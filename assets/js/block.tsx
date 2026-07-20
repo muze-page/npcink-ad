@@ -38,6 +38,7 @@ import {
 	promotionSelectorReducer,
 	promotionSelectorPageNumbers,
 } from './promotion-selector';
+import { SelectionCard } from './selection-card';
 
 type PromotionStatus = 'publish' | 'draft' | 'future' | 'private';
 
@@ -254,7 +255,7 @@ function Edit( {
 		...pages.map( ( page ) => page.records )
 	).filter( ( promotion ) => promotion.id !== selectedPromotionId );
 	const promotions = mergePromotionRecords(
-		selectedPromotion,
+		null,
 		isSearchPending ? [] : pagedPromotions
 	);
 	const selectedIsLoading = Boolean(
@@ -287,10 +288,9 @@ function Edit( {
 		} );
 	}
 
-	const selectedOptionLabel =
-		promotionOptions.find(
-			( option ) => option.value === String( selectedPromotionId )
-		)?.label ?? selectedFallbackLabel;
+	const selectedOptionLabel = selectedPromotion
+		? getPromotionOptionLabel( selectedPromotion )
+		: selectedFallbackLabel;
 	const firstPage = pages[ 0 ];
 	const pageError = pages.find( ( page ) => page.error );
 	const isPageLoading =
@@ -337,6 +337,7 @@ function Edit( {
 
 		setAttributes( { promotionId: candidateId } );
 		dispatchSelectorState( { type: 'reset_filter' } );
+		setComboboxResetKey( ( key ) => key + 1 );
 	};
 	const clearPromotionSearch = () => {
 		dispatchSelectorState( { type: 'reset_filter' } );
@@ -421,6 +422,20 @@ function Edit( {
 					title={ __( 'Promotion settings', 'npcink-ad' ) }
 					initialOpen
 				>
+					{ selectedPromotionId > 0 && (
+						<SelectionCard
+							label={ __( 'Current Promotion', 'npcink-ad' ) }
+							value={ selectedOptionLabel }
+							isLoading={ selectedIsLoading }
+							clearText={ __( 'Clear', 'npcink-ad' ) }
+							clearLabel={ __(
+								'Clear current Promotion',
+								'npcink-ad'
+							) }
+							onClear={ () => handlePromotionChange( null ) }
+							testId="npcink-ad-selected-promotion"
+						/>
+					) }
 					<div
 						onFocusCapture={ () => {
 							ignoreNextFocusReset.current = true;
@@ -429,13 +444,21 @@ function Edit( {
 						<ComboboxControl
 							key={ comboboxResetKey }
 							__next40pxDefaultSize
-							label={ __( 'Promotion', 'npcink-ad' ) }
-							value={
+							label={
 								selectedPromotionId > 0
-									? String( selectedPromotionId )
-									: null
+									? __(
+											'Search and replace Promotion',
+											'npcink-ad'
+									  )
+									: __( 'Choose Promotion', 'npcink-ad' )
 							}
+							value={ null }
 							options={ promotionOptions }
+							allowReset={ false }
+							placeholder={ __(
+								'Search saved Promotions',
+								'npcink-ad'
+							) }
 							onFilterValueChange={ handlePromotionFilterChange }
 							onChange={ handlePromotionChange }
 							help={
@@ -464,17 +487,6 @@ function Edit( {
 							>
 								{ __( 'Clear promotion search', 'npcink-ad' ) }
 							</Button>
-						</div>
-					) }
-					{ selectedPromotionId > 0 && (
-						<div
-							className="npcink-ad-promotion-selector__selected"
-							data-testid="npcink-ad-selected-promotion"
-							role="status"
-							aria-live="polite"
-						>
-							<span>{ selectedOptionLabel }</span>
-							{ selectedIsLoading && <Spinner /> }
 						</div>
 					) }
 					{ Boolean( selectedResolution?.error ) && (

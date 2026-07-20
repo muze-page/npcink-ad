@@ -50,9 +50,11 @@ Promotion**, and checks the editor guide from incomplete rules through the
 ready state and its disappearance after publication. Gutenberg title, content,
 and saves use only the top-level WordPress data store so the same test remains
 independent of the WordPress 7.0 editor iframe. It also verifies the generated
-real-page preview, category and tag candidate filters that save only explicit
-content IDs, live delivery, pause, resume, and cleanup. A full run starts one
-standard fixture session and one isolated first-run session.
+real-page preview as a focused single-scroll workspace, the delivery modal at
+1366, 1280, 782, and 390 pixels, category and tag candidate filters that save
+only explicit content IDs, live delivery, pause, the persisted post-publish
+sidebar state, resume, and cleanup. A full run starts one standard fixture
+session and one isolated first-run session.
 
 Build a release ZIP and install Chromium once:
 

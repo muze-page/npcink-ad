@@ -118,6 +118,7 @@ final class Preview_Request {
 		}
 		nocache_headers();
 		header( 'X-Robots-Tag: noindex, nofollow, noarchive', true );
+		add_filter( 'show_admin_bar', array( $this, 'hide_admin_bar' ) );
 
 		/*
 		 * Keep Delivery::prepare_content() at priority 8. Paragraph previews
@@ -126,6 +127,17 @@ final class Preview_Request {
 		 */
 		remove_filter( 'the_content', array( $this->delivery, 'filter_content' ), 10 );
 		add_filter( 'the_content', array( $this, 'filter_content' ), 999 );
+	}
+
+	/**
+	 * Remove the signed-in toolbar from the framed page so the canvas matches a visitor viewport.
+	 *
+	 * @param bool $show Whether WordPress would otherwise show the toolbar.
+	 */
+	public function hide_admin_bar( bool $show ): bool {
+		unset( $show );
+
+		return false;
 	}
 
 	/**
