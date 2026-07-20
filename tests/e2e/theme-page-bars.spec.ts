@@ -84,6 +84,45 @@ test("renders dismissible top and bottom bars through the active theme", async (
     viewportGeometry.clientWidth,
   );
 
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const desktopGeometry = await topBar.evaluate((bar) => {
+    const inner = bar.querySelector<HTMLElement>(".npcink-ad-page-bar__inner");
+    const dismiss = bar.querySelector<HTMLElement>("[data-npcink-ad-dismiss]");
+    if (!inner || !dismiss) {
+      throw new Error("Page-bar desktop geometry elements are missing.");
+    }
+
+    const barBox = bar.getBoundingClientRect();
+    const innerBox = inner.getBoundingClientRect();
+    const dismissBox = dismiss.getBoundingClientRect();
+    return {
+      barWidth: barBox.width,
+      innerWidth: innerBox.width,
+      innerMaxWidth: Number.parseFloat(getComputedStyle(inner).maxWidth),
+      inlineStartGap: innerBox.left - barBox.left,
+      inlineEndGap: barBox.right - innerBox.right,
+      dismissLeft: dismissBox.left,
+      dismissRight: dismissBox.right,
+      innerLeft: innerBox.left,
+      innerRight: innerBox.right,
+    };
+  });
+  expect(desktopGeometry.innerWidth).toBeLessThanOrEqual(
+    desktopGeometry.innerMaxWidth + 0.5,
+  );
+  expect(desktopGeometry.innerWidth).toBeLessThanOrEqual(
+    desktopGeometry.barWidth - 31.5,
+  );
+  expect(
+    Math.abs(desktopGeometry.inlineStartGap - desktopGeometry.inlineEndGap),
+  ).toBeLessThanOrEqual(1);
+  expect(desktopGeometry.dismissLeft).toBeGreaterThanOrEqual(
+    desktopGeometry.innerLeft,
+  );
+  expect(desktopGeometry.dismissRight).toBeLessThanOrEqual(
+    desktopGeometry.innerRight,
+  );
+
   await expect(page.locator("script[src*='/build/page-bar.js']")).toHaveCount(
     1,
   );

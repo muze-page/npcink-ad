@@ -107,8 +107,11 @@ final class RendererTest extends TestCase {
 		self::assertStringContainsString( 'npcink-ad-page-bar--top', $output );
 		self::assertStringContainsString( 'role="region"', $output );
 		self::assertStringContainsString( 'data-npcink-ad-bar', $output );
+		self::assertStringContainsString( 'npcink-ad-page-bar__inner', $output );
 		self::assertStringContainsString( 'data-npcink-ad-dismiss', $output );
+		self::assertStringContainsString( 'npcink-ad-page-bar__dismiss-icon', $output );
 		self::assertStringContainsString( 'aria-label="Dismiss promotion bar"', $output );
+		self::assertStringNotContainsString( '&times;', $output );
 		self::assertSame( array( 'npcink-ad-page-bar' ), $GLOBALS['npcink_ad_renderer_test_scripts'] );
 	}
 }

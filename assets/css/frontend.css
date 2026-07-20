@@ -31,11 +31,22 @@
 	border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 
+.npcink-ad-page-bar__inner {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 44px;
+	gap: 12px;
+	align-items: center;
+	box-sizing: border-box;
+	width: calc(100% - 32px);
+	max-width: var(--wp--style--global--wide-size, 1200px);
+	margin-inline: auto;
+}
+
 .npcink-ad-page-bar__content {
 	box-sizing: border-box;
+	min-width: 0;
 	width: 100%;
 	padding-block: 12px;
-	padding-inline: 16px 68px;
 	overflow-wrap: anywhere;
 }
 
@@ -48,24 +59,50 @@
 }
 
 .npcink-ad-page-bar__dismiss {
-	position: absolute;
+	position: relative;
 	z-index: 1;
-	top: 50%;
-	inset-inline-end: 12px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	box-sizing: border-box;
 	width: 44px;
 	height: 44px;
+	margin: 0;
 	padding: 0;
-	transform: translateY(-50%);
-	border: 1px solid currentcolor;
+	border: 0;
 	border-radius: 999px;
 	background: transparent;
 	color: inherit;
-	font: 700 22px/1 sans-serif;
+	-webkit-appearance: none;
+	appearance: none;
 	cursor: pointer;
 	touch-action: manipulation;
+}
+
+.npcink-ad-page-bar__dismiss::before {
+	position: absolute;
+	inset: 6px;
+	border-radius: inherit;
+	background: currentcolor;
+	content: "";
+	opacity: 0.06;
+}
+
+.npcink-ad-page-bar__dismiss:hover::before {
+	opacity: 0.1;
+}
+
+.npcink-ad-page-bar__dismiss:active::before {
+	opacity: 0.14;
+}
+
+.npcink-ad-page-bar__dismiss-icon {
+	position: relative;
+	z-index: 1;
+	display: block;
+	width: 16px;
+	height: 16px;
+	pointer-events: none;
 }
 
 .npcink-ad-page-bar__dismiss:focus-visible {

@@ -692,6 +692,10 @@ test("completes a first selected-page Promotion from creation to live pause and 
   expect(dismissBox).not.toBeNull();
   expect(dismissBox?.width).toBeGreaterThanOrEqual(44);
   expect(dismissBox?.height).toBeGreaterThanOrEqual(44);
+  const dismissIconBox = await dismissButton.locator("svg").boundingBox();
+  expect(dismissIconBox).not.toBeNull();
+  expect(dismissIconBox?.width).toBeLessThanOrEqual(16.5);
+  expect(dismissIconBox?.height).toBeLessThanOrEqual(16.5);
   const viewportGeometry = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth,
@@ -705,28 +709,35 @@ test("completes a first selected-page Promotion from creation to live pause and 
     document.documentElement.dir = "rtl";
   });
   const rtlGeometry = await livePromotion.evaluate((promotion) => {
+    const inner = promotion.querySelector<HTMLElement>(
+      ".npcink-ad-page-bar__inner",
+    );
     const content = promotion.querySelector<HTMLElement>(
       ".npcink-ad-page-bar__content",
     );
-    const firstCreative = content?.firstElementChild as HTMLElement | null;
     const dismiss = promotion.querySelector<HTMLElement>(
       "[data-npcink-ad-dismiss]",
     );
-    if (!content || !firstCreative || !dismiss) {
+    if (!inner || !content || !dismiss) {
       throw new Error("Page-bar geometry elements are missing.");
     }
 
-    const contentStyles = getComputedStyle(content);
-    const creativeBox = firstCreative.getBoundingClientRect();
+    const innerBox = inner.getBoundingClientRect();
+    const contentBox = content.getBoundingClientRect();
     const dismissBox = dismiss.getBoundingClientRect();
     return {
-      creativeLeft: creativeBox.left,
+      innerLeft: innerBox.left,
+      innerRight: innerBox.right,
+      contentLeft: contentBox.left,
       dismissRight: dismissBox.right,
-      paddingLeft: Number.parseFloat(contentStyles.paddingLeft),
+      viewportWidth: document.documentElement.clientWidth,
     };
   });
-  expect(rtlGeometry.paddingLeft).toBeGreaterThanOrEqual(68);
-  expect(rtlGeometry.creativeLeft).toBeGreaterThanOrEqual(
+  expect(rtlGeometry.innerLeft).toBeGreaterThanOrEqual(15.5);
+  expect(
+    rtlGeometry.viewportWidth - rtlGeometry.innerRight,
+  ).toBeGreaterThanOrEqual(15.5);
+  expect(rtlGeometry.contentLeft).toBeGreaterThanOrEqual(
     rtlGeometry.dismissRight,
   );
 
