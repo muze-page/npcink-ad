@@ -640,7 +640,7 @@ final class Promotion_List {
 	}
 
 	/**
-	 * Format the stop time in the site's timezone.
+	 * Format the stop time like the native Date column in the site's timezone.
 	 *
 	 * @param int $end_at Stop timestamp.
 	 */
@@ -649,9 +649,26 @@ final class Promotion_List {
 			return __( 'No end time', 'npcink-ad' );
 		}
 
-		$format = (string) get_option( 'date_format' ) . ' ' . (string) get_option( 'time_format' );
+		$timezone = wp_timezone();
+		$date     = wp_date(
+			/* translators: Promotion list date format, matching the native WordPress Date column. */
+			__( 'Y/m/d', 'npcink-ad' ),
+			$end_at,
+			$timezone
+		);
+		$time = wp_date(
+			/* translators: Promotion list time format, matching the native WordPress Date column. */
+			__( 'g:i a', 'npcink-ad' ),
+			$end_at,
+			$timezone
+		);
 
-		return wp_date( trim( $format ), $end_at, wp_timezone() );
+		return sprintf(
+			/* translators: 1: Stop date, 2: Stop time. */
+			__( '%1$s at %2$s', 'npcink-ad' ),
+			$date,
+			$time
+		);
 	}
 
 	/**

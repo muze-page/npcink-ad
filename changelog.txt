@@ -10,6 +10,7 @@
 * Align page-bar creative and dismissal controls to the active theme's wide content size, with a centered 1200px fallback for classic themes.
 * Keep a 44 by 44 dismiss target while refining its visible surface to 32px and its WordPress close icon to 16px.
 * Add a direct editor-sidebar preview action while keeping page selection and placement diagnostics in the focused delivery settings.
+* Add a Plugins-screen Settings shortcut and format Promotion stop times like the adjacent native Date column.
 * Keep the single Promotion model, frontend delivery behavior, privacy boundary, and no-tracking contract unchanged.
 
 == 0.3.2 ==

@@ -80,6 +80,22 @@ if ( ! function_exists( 'wp_timezone' ) ) {
 	}
 }
 
+if ( ! function_exists( 'get_option' ) ) {
+	/**
+	 * Return one deterministic WordPress option for isolated tests.
+	 *
+	 * @param string $option  Option name.
+	 * @param mixed  $default Default value.
+	 */
+	function get_option( string $option, mixed $default = false ): mixed {
+		$options = $GLOBALS['npcink_ad_test_options'] ?? array();
+
+		return is_array( $options ) && array_key_exists( $option, $options )
+			? $options[ $option ]
+			: $default;
+	}
+}
+
 if ( ! function_exists( 'get_post_type_object' ) ) {
 	/**
 	 * Get the test Promotion post type object.

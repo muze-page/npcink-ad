@@ -22,6 +22,7 @@ require_once __DIR__ . '/PromotionStatusWordPressPost.php';
 require_once __DIR__ . '/PromotionStatusWordPressQuery.php';
 require_once __DIR__ . '/PromotionPreflightWordPressClasses.php';
 require_once __DIR__ . '/EditorialScopeWordPressStubs.php';
+require_once __DIR__ . '/EditorWordPressStubs.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Post_Types.php';
 require_once dirname( __DIR__, 2 ) . '/src/Data/Repository.php';
 require_once dirname( __DIR__, 2 ) . '/src/Environment/Page_Cache.php';
@@ -48,6 +49,7 @@ final class PromotionListTest extends TestCase {
 		$GLOBALS['npcink_ad_test_actions']           = array();
 		$GLOBALS['npcink_ad_test_filters']           = array();
 		$GLOBALS['npcink_ad_test_capabilities']      = array();
+		$GLOBALS['npcink_ad_test_options']           = array();
 		$GLOBALS['npcink_ad_test_post_counts']       = (object) array();
 		$GLOBALS['npcink_ad_test_count_posts_calls'] = array();
 		$GLOBALS['npcink_ad_test_current_screen']    = (object) array(
@@ -340,6 +342,21 @@ final class PromotionListTest extends TestCase {
 		);
 		self::assertArrayNotHasKey( 'npcink_ad_content_scope', $columns );
 		self::assertArrayNotHasKey( 'npcink_ad_reasons', $columns );
+	}
+
+	/**
+	 * Stop times match the native Date column instead of unrelated site formats.
+	 */
+	public function test_stop_time_matches_native_date_column_format(): void {
+		$GLOBALS['npcink_ad_test_options'] = array(
+			'date_format' => 'j F, Y',
+			'time_format' => 'g:i a',
+		);
+		$end_at = ( new DateTimeImmutable( '2026-07-23 19:14:00', new DateTimeZone( 'UTC' ) ) )->getTimestamp();
+		$list   = $this->promotion_list();
+		$method = new ReflectionMethod( $list, 'end_at_label' );
+
+		self::assertSame( '2026/07/23 at 7:14 pm', $method->invoke( $list, $end_at ) );
 	}
 
 	/**

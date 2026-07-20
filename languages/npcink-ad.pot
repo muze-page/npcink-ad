@@ -16,8 +16,8 @@ msgstr ""
 
 #. Plugin Name of the plugin
 #: npcink-ad.php
-#: src/Admin/Menu.php:27
-#: src/Admin/Menu.php:28
+#: src/Admin/Menu.php:45
+#: src/Admin/Menu.php:46
 #: src/Blocks/Patterns.php:25
 msgid "Npcink Ad"
 msgstr ""
@@ -32,8 +32,12 @@ msgstr ""
 msgid "Npcink"
 msgstr ""
 
-#: src/Admin/Menu.php:38
-#: src/Admin/Menu.php:39
+#: src/Admin/Menu.php:30
+msgid "Settings"
+msgstr ""
+
+#: src/Admin/Menu.php:56
+#: src/Admin/Menu.php:57
 #: src/Data/Post_Types.php:122
 #: src/Data/Post_Types.php:131
 msgid "Promotions"
@@ -329,6 +333,22 @@ msgstr[1] ""
 
 #: src/Admin/Promotion_List.php:649
 msgid "No end time"
+msgstr ""
+
+#. translators: Promotion list date format, matching the native WordPress Date column.
+#: src/Admin/Promotion_List.php:655
+msgid "Y/m/d"
+msgstr ""
+
+#. translators: Promotion list time format, matching the native WordPress Date column.
+#: src/Admin/Promotion_List.php:661
+msgid "g:i a"
+msgstr ""
+
+#. translators: 1: Stop date, 2: Stop time.
+#: src/Admin/Promotion_List.php:668
+#, php-format
+msgid "%1$s at %2$s"
 msgstr ""
 
 #: src/Admin/Promotion_Status_Action.php:83

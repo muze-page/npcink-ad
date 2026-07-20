@@ -99,6 +99,7 @@ Composer dependencies are development-only quality tools and are not bundled in 
 * Align page-bar creative and dismissal controls to the active theme's wide content size while keeping the bar background full width.
 * Refine the page-bar close control without shrinking its 44 by 44 touch target or changing current-page dismissal.
 * Open the real-page preview directly from the editor sidebar while keeping preview-page selection and diagnostics in delivery settings.
+* Add a Plugins-screen Settings shortcut and align Promotion stop times with the native Date column.
 
 = 0.3.2 =
 

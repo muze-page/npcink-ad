@@ -247,6 +247,9 @@ add_filter( 'pre_determine_locale', $force_simplified_chinese, PHP_INT_MAX );
 unload_textdomain( 'npcink-ad', true );
 $check( '推广' === __( 'Promotions', 'npcink-ad' ), 'The WordPress.org PHP language pack did not resolve.' );
 $check( '复制为草稿' === __( 'Duplicate as draft', 'npcink-ad' ), 'The duplicate action Simplified Chinese translation did not resolve.' );
+$check( 'Y-m-d' === __( 'Y/m/d', 'npcink-ad' ), 'The Promotion-list date format did not match the native Simplified Chinese Date column.' );
+$check( 'ag:i' === __( 'g:i a', 'npcink-ad' ), 'The Promotion-list time format did not match the native Simplified Chinese Date column.' );
+$check( '%1$s %2$s' === __( '%1$s at %2$s', 'npcink-ad' ), 'The Promotion-list datetime separator did not match the native Simplified Chinese Date column.' );
 $check(
 	'Npcink Ad 推广' === _x( 'Npcink Ad Promotion', 'block title', 'npcink-ad' ),
 	'The translated block metadata title did not resolve.'
