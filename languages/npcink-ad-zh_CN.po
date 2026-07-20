@@ -189,17 +189,17 @@ msgstr "推广预览需要使用公开的文章或页面。"
 msgid "Manual block preview is shown after the page content. The live position is controlled by where the block is inserted."
 msgstr "手动区块预览显示在页面内容之后。正式位置由区块的插入位置决定。"
 
-#: src/Frontend/Renderer.php:90
+#: src/Frontend/Renderer.php:95
 msgid "Eligible: this promotion will display in the selected page and device context."
 msgstr "符合展示条件：此推广会在所选页面和设备环境中显示。"
 
 #. translators: %s: one or more promotion eligibility explanations.
-#: src/Frontend/Renderer.php:94
+#: src/Frontend/Renderer.php:99
 #, php-format
 msgid "Not currently eligible: %s"
 msgstr "当前不符合展示条件：%s"
 
-#: src/Frontend/Renderer.php:120
+#: src/Frontend/Renderer.php:125
 msgid "Npcink Ad:"
 msgstr "Npcink Ad："
 
@@ -389,7 +389,7 @@ msgstr "正在准备预览…"
 msgid "The promotion could not be saved. Resolve the editor error, then try again."
 msgstr "无法保存推广。请解决编辑器错误后重试。"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:10
 msgid "Save and open preview"
 msgstr "保存并打开预览"
 
@@ -554,7 +554,7 @@ msgstr "发布前请添加推广内容。"
 msgid "Stop showing must be later than Start showing."
 msgstr "停止展示时间必须晚于开始展示时间。"
 
-#: build/promotion-editor.js:18
+#: build/promotion-editor.js:10
 msgid "Open preview"
 msgstr "打开预览"
 
@@ -927,7 +927,6 @@ msgid "Ready"
 msgstr "就绪"
 
 #: build/promotion-editor.js:3
-#: build/promotion-editor.js:17
 msgid "Choose a page"
 msgstr "选择页面"
 
@@ -1069,10 +1068,6 @@ msgstr "设备与排期 — 需要处理"
 msgid "Close settings"
 msgstr "关闭设置"
 
-#: build/promotion-editor.js:17
-msgid "Page selected"
-msgstr "已选页面"
-
 #: src/Presentation/Eligibility_Messages.php:35
 msgid "A video in the promotion has no usable source."
 msgstr "推广中的某个视频没有可用来源。"
@@ -1131,7 +1126,7 @@ msgstr "当前主题没有渲染所选的页面横栏挂钩，因此此展示位
 msgid "Promotion bar"
 msgstr "推广横栏"
 
-#: src/Frontend/Renderer.php:62
+#: src/Frontend/Renderer.php:67
 msgid "Dismiss promotion bar"
 msgstr "关闭推广横栏"
 

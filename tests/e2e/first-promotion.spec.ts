@@ -16,7 +16,10 @@ const PROMOTION_CONTENT = `First-run E2E creative ${Date.now()}-${
 const PROMOTION_CTA = "Review this deliberately descriptive next step";
 
 interface WordPressWindow extends Window {
-  wp?: {
+  NpcinkAdEditorSettings?: {
+    defaultTargetId: number;
+  };
+	wp?: {
     data?: {
       dispatch?: (store: string) => {
         editPost?: (attributes: Record<string, unknown>) => void;
@@ -173,22 +176,16 @@ async function openDeliverySettings(page: Page): Promise<{
   deliveryPanel: Locator;
   dialog: Locator;
 }> {
-  await openSettingsPanel(page, "Npcink Ad delivery");
-  const deliveryPanel = page.locator(".components-panel__body").filter({
-    has: page.getByRole("button", {
-      name: "Npcink Ad delivery",
-      exact: true,
-    }),
-  });
-  await expect(deliveryPanel).toBeVisible();
-  await expect(
-    deliveryPanel.getByLabel("Placement", { exact: true }),
-  ).toHaveCount(0);
-
+  const deliveryPanel = await getDeliveryPanel(page);
   const editDeliverySettings = deliveryPanel.getByRole("button", {
     name: "Edit delivery settings",
     exact: true,
   });
+  await expect(
+    deliveryPanel.getByRole("button", {
+      name: /^(Choose a page|Save and open preview|Open preview)$/,
+    }),
+  ).toHaveCount(1);
   await expect(editDeliverySettings).toHaveCount(1);
   await expect(editDeliverySettings).toBeVisible();
   await editDeliverySettings.click();
@@ -210,6 +207,21 @@ async function openDeliverySettings(page: Page): Promise<{
   }
 
   return { deliveryPanel, dialog };
+}
+
+async function getDeliveryPanel(page: Page): Promise<Locator> {
+  await openSettingsPanel(page, "Npcink Ad delivery");
+  const deliveryPanel = page.locator(".components-panel__body").filter({
+    has: page.getByRole("button", {
+      name: "Npcink Ad delivery",
+      exact: true,
+    }),
+  });
+  await expect(deliveryPanel).toBeVisible();
+  await expect(
+    deliveryPanel.getByLabel("Placement", { exact: true }),
+  ).toHaveCount(0);
+  return deliveryPanel;
 }
 
 async function selectDeliveryTab(
@@ -384,7 +396,38 @@ test("completes a first selected-page Promotion from creation to live pause and 
   await expect(deliveryStep).toHaveAttribute("data-state", "complete");
   await expect(previewPublishStep).toHaveAttribute("data-state", "blocked");
 
+  await page.evaluate(() => {
+    const settings = (window as WordPressWindow).NpcinkAdEditorSettings;
+    if (settings) {
+      settings.defaultTargetId = 0;
+    }
+  });
   await setPromotionCreative(page);
+
+  const initialDeliveryPanel = await getDeliveryPanel(page);
+  const configurePreviewButton = initialDeliveryPanel.getByRole("button", {
+    name: "Save and open preview",
+    exact: true,
+  });
+  await configurePreviewButton.click();
+  const previewSettingsDialog = page.getByRole("dialog", {
+    name: "Npcink Ad delivery settings",
+    exact: true,
+  });
+  await expect(previewSettingsDialog).toBeVisible();
+  await expect(
+    previewSettingsDialog.getByRole("tab", {
+      name: "Preview",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(previewSettingsDialog).toContainText(
+    "Choose a published page or post to use as the preview context.",
+  );
+  await previewSettingsDialog
+    .getByRole("button", { name: "Close settings", exact: true })
+    .click();
+  await expect(previewSettingsDialog).toHaveCount(0);
 
   const { deliveryPanel, dialog: deliveryDialog } =
     await openDeliverySettings(page);
@@ -592,8 +635,18 @@ test("completes a first selected-page Promotion from creation to live pause and 
 
   const createdPromotionId = await savePromotion(page, "draft");
   await selectDeliveryTab(deliveryDialog, "Preview");
-  const openPreviewButton = deliveryDialog.getByRole("button", {
+  const modalPreviewButton = deliveryDialog.getByRole("button", {
     name: /^(Save and open preview|Open preview)$/,
+  });
+  await expect(modalPreviewButton).toBeEnabled();
+
+  await deliveryDialog
+    .getByRole("button", { name: "Close settings", exact: true })
+    .click();
+  await expect(deliveryDialog).toHaveCount(0);
+  const openPreviewButton = deliveryPanel.getByRole("button", {
+    name: "Open preview",
+    exact: true,
   });
   await expect(openPreviewButton).toBeEnabled();
 
@@ -634,10 +687,6 @@ test("completes a first selected-page Promotion from creation to live pause and 
   expect(previewHtml).toContain(PROMOTION_CONTENT);
   await previewPage.close();
 
-  await deliveryDialog
-    .getByRole("button", { name: "Close settings", exact: true })
-    .click();
-  await expect(deliveryDialog).toHaveCount(0);
   const editDeliverySettingsButton = deliveryPanel.getByRole("button", {
     name: "Edit delivery settings",
     exact: true,
@@ -647,7 +696,7 @@ test("completes a first selected-page Promotion from creation to live pause and 
   await expect(deliveryPanel).toContainText("Top page bar");
   await expect(deliveryPanel).toContainText("Only selected content");
   await expect(deliveryPanel).toContainText("All devices · No schedule");
-  await expect(deliveryPanel).toContainText("Page selected");
+  await expect(openPreviewButton).toBeVisible();
 
   await editDeliverySettingsButton.click();
   const reopenedDeliveryDialog = page.getByRole("dialog", {

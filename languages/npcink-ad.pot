@@ -500,21 +500,21 @@ msgstr ""
 msgid "Promotion bar"
 msgstr ""
 
-#: src/Frontend/Renderer.php:62
+#: src/Frontend/Renderer.php:67
 msgid "Dismiss promotion bar"
 msgstr ""
 
-#: src/Frontend/Renderer.php:90
+#: src/Frontend/Renderer.php:95
 msgid "Eligible: this promotion will display in the selected page and device context."
 msgstr ""
 
 #. translators: %s: one or more promotion eligibility explanations.
-#: src/Frontend/Renderer.php:94
+#: src/Frontend/Renderer.php:99
 #, php-format
 msgid "Not currently eligible: %s"
 msgstr ""
 
-#: src/Frontend/Renderer.php:120
+#: src/Frontend/Renderer.php:125
 msgid "Npcink Ad:"
 msgstr ""
 
@@ -784,7 +784,6 @@ msgid "Ready"
 msgstr ""
 
 #: build/promotion-editor.js:3
-#: build/promotion-editor.js:17
 msgid "Choose a page"
 msgstr ""
 
@@ -976,6 +975,14 @@ msgid "Device and schedule"
 msgstr ""
 
 #: build/promotion-editor.js:10
+msgid "Save and open preview"
+msgstr ""
+
+#: build/promotion-editor.js:10
+msgid "Open preview"
+msgstr ""
+
+#: build/promotion-editor.js:10
 msgid "After post content"
 msgstr ""
 
@@ -1064,10 +1071,6 @@ msgstr ""
 
 #: build/promotion-editor.js:17
 msgid "Npcink Ad delivery"
-msgstr ""
-
-#: build/promotion-editor.js:17
-msgid "Page selected"
 msgstr ""
 
 #: build/promotion-editor.js:17
@@ -1163,14 +1166,6 @@ msgstr ""
 
 #: build/promotion-editor.js:18
 msgid "Choose the real post or page whose theme and layout should be used."
-msgstr ""
-
-#: build/promotion-editor.js:18
-msgid "Save and open preview"
-msgstr ""
-
-#: build/promotion-editor.js:18
-msgid "Open preview"
 msgstr ""
 
 #: build/promotion-editor.js:18
