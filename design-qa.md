@@ -4,12 +4,11 @@ Date: 2026-07-20
 
 ## Comparison target
 
-- Original problem reference: `/var/folders/1p/rhqz17yx3v5b_jcrlqk8xrnr0000gn/T/codex-clipboard-4829af41-47ed-42b1-8e64-f1ef0ce39a82.png`
+- Original problem reference: [Figma source capture, node 1:2](https://www.figma.com/design/Ln1B5rYUYArc10HEcvhwMh?node-id=1-2)
 - Source visual truth: [Figma target, node 4:7](https://www.figma.com/design/Ln1B5rYUYArc10HEcvhwMh?node-id=4-7)
 - Full comparison evidence: [Figma target and Local implementation, node 9:2](https://www.figma.com/design/Ln1B5rYUYArc10HEcvhwMh?node-id=9-2)
-- Desktop implementation screenshot: `/Users/muze/.codex/visualizations/2026/07/18/019f744d-a9b7-7273-8ed1-d6fb31129f88/npcink-ad-page-bar-0.3.3-desktop.png`
-- Mobile implementation screenshot: `/Users/muze/.codex/visualizations/2026/07/18/019f744d-a9b7-7273-8ed1-d6fb31129f88/npcink-ad-page-bar-0.3.3-mobile.png`
-- Saved combined comparison: `/Users/muze/.codex/visualizations/2026/07/18/019f744d-a9b7-7273-8ed1-d6fb31129f88/npcink-ad-page-bar-0.3.3-target-vs-local.png`
+- Desktop implementation screenshot: [Figma Local capture, node 8:3](https://www.figma.com/design/Ln1B5rYUYArc10HEcvhwMh?node-id=8-3)
+- Mobile implementation screenshot: [Figma Local capture, node 8:2](https://www.figma.com/design/Ln1B5rYUYArc10HEcvhwMh?node-id=8-2)
 
 ## Rendered state
 
