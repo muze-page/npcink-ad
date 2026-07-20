@@ -43,7 +43,7 @@ The WordPress.org release supports complete Simplified Chinese language packs fo
 2. Open Npcink Ad > Promotions and add a Promotion.
 3. Build the creative with WordPress blocks and open Edit delivery settings.
 4. Choose placement, content scope, device, and optional schedule.
-5. Open Real-page preview and confirm the runtime verdict.
+5. Open Real-page preview directly from the editor sidebar and confirm the runtime verdict; use the Preview settings tab to choose or change its page.
 6. Publish the Promotion. Change it to Draft whenever it should be paused.
 
 For Manual block placement, save the Promotion, insert the Npcink Ad Promotion block on the intended page, and select that same Promotion. The `[npcink_ad promotion="ID"]` shortcode is an expert alternative.
@@ -98,6 +98,7 @@ Composer dependencies are development-only quality tools and are not bundled in 
 * Make overlap advisories actionable with up to three exact Promotion links and a remaining count, without adding priority or rotation.
 * Align page-bar creative and dismissal controls to the active theme's wide content size while keeping the bar background full width.
 * Refine the page-bar close control without shrinking its 44 by 44 touch target or changing current-page dismissal.
+* Open the real-page preview directly from the editor sidebar while keeping preview-page selection and diagnostics in delivery settings.
 
 = 0.3.2 =
 

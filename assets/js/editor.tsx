@@ -1349,6 +1349,8 @@ function PromotionSettingsPanel() {
 	const overlapLinkIds = potentiallyOverlappingIds.slice( 0, 3 );
 	const hiddenOverlapCount =
 		potentiallyOverlappingIds.length - overlapLinkIds.length;
+	const isParagraphLocation = location === 'content_after_paragraph';
+	const isBarLocation = location === 'bar_top' || location === 'bar_bottom';
 	const effectivePreviewTarget =
 		previewTarget ||
 		effectiveIncludeIds[ 0 ] ||
@@ -1360,12 +1362,13 @@ function PromotionSettingsPanel() {
 		preflightIssues,
 		previewTargetId: effectivePreviewTarget,
 	} );
-	const isParagraphLocation = location === 'content_after_paragraph';
-	const isBarLocation = location === 'bar_top' || location === 'bar_bottom';
 	const placementLabel = __( 'Placement', 'npcink-ad' );
 	const contentScopeLabel = __( 'Content scope', 'npcink-ad' );
 	const deviceScheduleLabel = __( 'Device and schedule', 'npcink-ad' );
 	const previewLabel = __( 'Preview', 'npcink-ad' );
+	const previewButtonLabel = isDirty
+		? __( 'Save and open preview', 'npcink-ad' )
+		: __( 'Open preview', 'npcink-ad' );
 	const placementOptions: ContentOption[] = [
 		{
 			label: __( 'After post content', 'npcink-ad' ),
@@ -1662,6 +1665,13 @@ function PromotionSettingsPanel() {
 
 	const openPreview = async () => {
 		setPreviewFeedback( null );
+		if (
+			! effectivePreviewTarget ||
+			( isParagraphLocation && ! paragraphNumberValid )
+		) {
+			setDeliverySettingsTab( 'preview' );
+			setDeliverySettingsOpen( true );
+		}
 		if ( ! settings || ! postId ) {
 			setPreviewFeedback( {
 				kind: 'unsaved',
@@ -2102,9 +2112,7 @@ function PromotionSettingsPanel() {
 							isBusy={ isSaving }
 							onClick={ openPreview }
 						>
-							{ isDirty
-								? __( 'Save and open preview', 'npcink-ad' )
-								: __( 'Open preview', 'npcink-ad' ) }
+							{ previewButtonLabel }
 						</Button>
 					</div>
 				);
@@ -2138,9 +2146,13 @@ function PromotionSettingsPanel() {
 					<div>
 						<dt>{ previewLabel }</dt>
 						<dd>
-							{ effectivePreviewTarget
-								? __( 'Page selected', 'npcink-ad' )
-								: __( 'Choose a page', 'npcink-ad' ) }
+							<Button
+								variant="link"
+								disabled={ isSaving }
+								onClick={ openPreview }
+							>
+								{ previewButtonLabel }
+							</Button>
 						</dd>
 					</div>
 				</dl>
@@ -2152,11 +2164,7 @@ function PromotionSettingsPanel() {
 						? __( 'Delivery settings need attention.', 'npcink-ad' )
 						: __( 'Delivery settings checked.', 'npcink-ad' ) }
 				</p>
-				<Button
-					__next40pxDefaultSize
-					variant="secondary"
-					onClick={ openDeliverySettings }
-				>
+				<Button variant="tertiary" onClick={ openDeliverySettings }>
 					{ __( 'Edit delivery settings', 'npcink-ad' ) }
 				</Button>
 			</PluginDocumentSettingPanel>
