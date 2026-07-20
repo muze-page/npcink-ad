@@ -6,6 +6,7 @@
 /.phpunit.cache
 /tests
 /docs
+/design-qa.md
 /assets/js
 /scripts
 /.gitignore

@@ -96,6 +96,8 @@ Composer dependencies are development-only quality tools and are not bundled in 
 * Verify partial-write cleanup and preserve the existing delivery, privacy, and no-tracking boundaries.
 * Pause a native WordPress-scheduled Promotion from the list before it starts and resume the resulting reviewed draft for immediate publication.
 * Make overlap advisories actionable with up to three exact Promotion links and a remaining count, without adding priority or rotation.
+* Align page-bar creative and dismissal controls to the active theme's wide content size while keeping the bar background full width.
+* Refine the page-bar close control without shrinking its 44 by 44 touch target or changing current-page dismissal.
 
 = 0.3.2 =
 

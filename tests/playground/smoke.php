@@ -143,14 +143,29 @@ $check(
 $check( 1 === substr_count( $frontend_css, '.npcink-ad-device-desktop' ), 'The desktop device selector is duplicated outside its fixed breakpoint rule.' );
 $check( 1 === substr_count( $frontend_css, '.npcink-ad-device-mobile' ), 'The mobile device selector is duplicated outside its fixed breakpoint rule.' );
 $check( str_contains( $frontend_css, '.npcink-ad-page-bar' ), 'The packaged frontend CSS omitted page-bar presentation.' );
-$check( str_contains( $frontend_css, 'padding-inline: 16px 68px;' ), 'The page-bar content does not reserve logical end space for its dismiss control.' );
-$check( str_contains( $frontend_css, 'inset-inline-end: 12px;' ), 'The page-bar dismiss control is not positioned at the logical end.' );
+$check( str_contains( $frontend_css, '.npcink-ad-page-bar__inner' ), 'The page-bar omitted its theme-width inner container.' );
+$check(
+	str_contains( $frontend_css, 'width: calc(100% - 32px);' )
+	&& str_contains( $frontend_css, 'max-width: var(--wp--style--global--wide-size, 1200px);' ),
+	'The page-bar inner container does not use the theme wide size with a classic-theme fallback.'
+);
+$check(
+	str_contains( $frontend_css, 'grid-template-columns: minmax(0, 1fr) 44px;' ),
+	'The page-bar inner container does not reserve a dedicated dismiss-control column.'
+);
 $check(
 	1 === preg_match(
 		'/\.npcink-ad-page-bar__dismiss\s*\{[^}]*\bwidth:\s*44px;[^}]*\bheight:\s*44px;/s',
 		$frontend_css
 	),
 	'The page-bar dismiss control is smaller than the 44 by 44 CSS pixel touch target.'
+);
+$check(
+	1 === preg_match(
+		'/\.npcink-ad-page-bar__dismiss-icon\s*\{[^}]*\bwidth:\s*16px;[^}]*\bheight:\s*16px;/s',
+		$frontend_css
+	),
+	'The page-bar dismiss icon is not visually separated from its 44 by 44 touch target.'
 );
 
 $announcement_pattern = WP_Block_Patterns_Registry::get_instance()->get_registered( 'npcink-ad/announcement' );

@@ -7,6 +7,8 @@
 * Verify the created draft and every copied value, remove incomplete copies on failure, and report honestly when cleanup cannot be confirmed.
 * Allow a native WordPress-scheduled Promotion to be paused from the list before it starts, while keeping Resume limited to reviewed drafts.
 * Link overlap advisories to at most three exact Promotions and report any remainder without adding priority, rotation, or delivery changes.
+* Align page-bar creative and dismissal controls to the active theme's wide content size, with a centered 1200px fallback for classic themes.
+* Keep a 44 by 44 dismiss target while refining its visible surface to 32px and its WordPress close icon to 16px.
 * Keep the single Promotion model, frontend delivery behavior, privacy boundary, and no-tracking contract unchanged.
 
 == 0.3.2 ==

@@ -57,7 +57,12 @@ final class Renderer {
 			$attributes = ' role="region" data-npcink-ad-bar';
 			$label      = __( 'Promotion bar', 'npcink-ad' );
 			$content    = sprintf(
-				'<div class="npcink-ad-page-bar__content">%1$s</div><button type="button" class="npcink-ad-page-bar__dismiss" data-npcink-ad-dismiss aria-label="%2$s"><span aria-hidden="true">&times;</span></button>',
+				'<div class="npcink-ad-page-bar__inner">'
+				. '<div class="npcink-ad-page-bar__content">%1$s</div>'
+				. '<button type="button" class="npcink-ad-page-bar__dismiss" data-npcink-ad-dismiss aria-label="%2$s">'
+				. '<svg class="npcink-ad-page-bar__dismiss-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">'
+				. '<path d="M12 13.06l3.712 3.713 1.061-1.06L13.061 12l3.712-3.712-1.06-1.06L12 10.938 8.288 7.227l-1.061 1.06L10.939 12l-3.712 3.712 1.06 1.061L12 13.061z"></path>'
+				. '</svg></button></div>',
 				$content,
 				esc_attr__( 'Dismiss promotion bar', 'npcink-ad' )
 			);
